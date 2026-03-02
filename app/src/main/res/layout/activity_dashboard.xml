@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_cream">
+
+    <TextView
+        android:id="@+id/tvTrainingStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="@color/brand_dark"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="10dp"
+        android:text="DNES: PULL"
+        android:textColor="@color/brand_cream"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.05"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/circleContainer"
+        android:layout_width="320dp"
+        android:layout_height="320dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTrainingStatus">
+
+        <ProgressBar
+            android:id="@+id/progressProtein"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="40dp"
+            android:scaleX="-1"
+            android:progressDrawable="@drawable/circle_progress_protein" />
+
+        <ProgressBar
+            android:id="@+id/progressCarbs"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="52dp"
+            android:scaleX="-1"
+            android:progressDrawable="@drawable/circle_progress_carbs" />
+
+        <ProgressBar
+            android:id="@+id/progressFat"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="64dp"
+            android:scaleX="-1"
+            android:progressDrawable="@drawable/circle_progress_fat" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvCalories"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:text="0"
+                android:textColor="@color/brand_dark"
+                android:textSize="54sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.15"
+                android:text="KCAL CÍL"
+                android:textColor="@color/brand_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/layoutMacros"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="24dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/circleContainer">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="6dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/brand_dark">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:gravity="center" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Bílkoviny" android:textSize="11sp" android:textColor="@color/brand_cream" android:textStyle="bold"/>
+                <TextView android:id="@+id/tvValueProtein" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0g" android:textColor="@color/brand_cream" android:textStyle="bold" android:textSize="20sp" android:fontFamily="monospace"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="6dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/brand_primary">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:gravity="center" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sacharidy" android:textSize="11sp" android:textColor="@color/brand_cream" android:textStyle="bold"/>
+                <TextView android:id="@+id/tvValueCarbs" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0g" android:textColor="@color/brand_cream" android:textStyle="bold" android:textSize="20sp" android:fontFamily="monospace"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="6dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/brand_accent_deep">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:gravity="center" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tuky" android:textSize="11sp" android:textColor="@color/brand_cream" android:textStyle="bold"/>
+                <TextView android:id="@+id/tvValueFat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0g" android:textColor="@color/brand_cream" android:textStyle="bold" android:textSize="20sp" android:fontFamily="monospace"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardWater"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="18dp"
+        android:layout_marginTop="20dp"
+        app:cardBackgroundColor="@color/brand_cream"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1.5dp"
+        app:strokeColor="@color/brand_accent_warm"
+        app:layout_constraintTop_toBottomOf="@id/layoutMacros">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="18dp" android:gravity="center_vertical">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="💧 Denní hydratace"
+                android:textColor="@color/brand_dark"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+            <TextView
+                android:id="@+id/tvValueWater"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0 L"
+                android:textColor="@color/brand_accent_warm"
+                android:textSize="22sp"
+                android:fontFamily="monospace"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

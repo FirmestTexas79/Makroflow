@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <path
+        android:id="@+id/hexagon_path"
+        android:fillColor="#FEFAE0"
+        android:pathData="M50,5 L10,27.5 L10,72.5 L50,95 L90,72.5 L90,27.5 Z
+                          M50,15 L81.3,32.5 L81.3,67.5 L50,85 L18.7,67.5 L18.7,32.5 Z" />
+
+    <path
+        android:id="@+id/flow_path"
+        android:fillColor="#FEFAE0"
+        android:pathData="M18.7,50
+                          C18.7,50 29.1,32 42.5,45
+                          C55.9,58 70.9,68 81.3,50
+                          L81.3,56
+                          C70.9,74 55.9,64 42.5,51
+                          C29.1,38 18.7,56 18.7,56
+                          Z" />
+</vector>

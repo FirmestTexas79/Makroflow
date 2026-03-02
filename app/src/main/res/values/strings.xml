@@ -1,0 +1,47 @@
+<resources>
+    <string name="app_name">Makroflow</string>
+    <string name="title_profile">Můj profil</string>
+    <string name="hint_age">Věk</string>
+    <string name="hint_height">Výška (cm)</string>
+    <string name="hint_weight_akt">Aktuální váha (kg)</string>
+    <string name="hint_weight_cil">Cílová váha (kg)</string>
+    <string name="btn_save">ULOŽIT</string>
+    <string name="toast_saved">Profil uložen!</string>
+    <string name="toast_error">Vyplňte prosím všechna pole</string>
+    <string name="desc_lezerni">Ležérní – sedavý životní styl, minimum pohybu (kancelář).</string>
+    <string name="desc_aktivni">Aktivní – hodně chůze během dne, lehčí manuální práce.</string>
+    <string name="desc_sportovec">Sportovec – těžká manuální práce nebo velmi vysoký výdej.</string>
+    <string name="day_monday">Pondělí</string>
+    <string name="day_tuesday">Úterý</string>
+    <string name="day_wednesday">Středa</string>
+    <string name="day_thursday">Čtvrtek</string>
+    <string name="day_friday">Pátek</string>
+    <string name="day_saturday">Sobota</string>
+    <string name="day_sunday">Neděle</string>
+
+    <string name="dnesPush">Dnes: Push</string>
+    <string name="dnesPull">Dnes: Pull</string>
+    <string name="dnesLegs">Dnes: Legs</string>
+
+    <string name="type_pred_tren">PŘED TRÉNINKEM</string>
+    <string name="type_po_tren">PO TRÉNINKU</string>
+
+    <string name="type_rest">Rest</string>
+    <string name="type_push">Push</string>
+    <string name="type_pull">Pull</string>
+    <string name="type_legs">Legs</string>
+
+    <string name="protein">Bílkoviny</string>
+    <string name="sacharide">Sacharidy</string>
+    <string name="fat">Tuky</string>
+    <string name="obvody">OBVODY PARTIÍ (DOBROVOLNÉ)</string>
+    <string name="woman">ŽENA</string>
+    <string name="weight">Váha</string>
+    <string name="height">Výška</string>
+    <string name="age">Věk</string>
+    <string name="save_all">ULOŽIT VŠE</string>
+    <string name="before_training">PŘED TRÉNINKEM</string>
+    <string name="after_training">PO TRÉNINKU</string>
+    <string name="sacharidy">SACHARIDY ⚡</string>
+    <string name="proteiny">PROTEINY 💪</string>
+</resources>

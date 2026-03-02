@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_cream">
+
+    <LinearLayout
+        android:id="@+id/topMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingVertical="12dp"
+        android:background="@color/brand_cream"
+        android:elevation="0dp">
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggleSnackTiming"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            app:checkedButton="@+id/btnPreWorkout">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPreWorkout"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="130dp"
+                android:layout_height="54dp"
+                android:text="PŘED"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                app:cornerRadius="27dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:strokeColor="@color/brand_primary"
+                android:textColor="@color/brand_dark" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPostWorkout"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="130dp"
+                android:layout_height="54dp"
+                android:text="PO"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                app:cornerRadius="27dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:strokeColor="@color/brand_primary"
+                android:textColor="@color/brand_dark" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+    </LinearLayout>
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_below="@id/topMenu"
+        android:background="#1A283618" />
+
+    <LinearLayout
+        android:id="@+id/snackListsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/divider"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:paddingTop="16dp"
+        android:baselineAligned="false">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SACHARIDY ⚡"
+                android:gravity="center"
+                android:textColor="@color/brand_accent_warm"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:letterSpacing="0.05"
+                android:layout_marginBottom="12dp"/>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scrollbars="none">
+                <LinearLayout
+                    android:id="@+id/listCarbs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="4dp"/>
+            </ScrollView>
+        </LinearLayout>
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:layout_marginVertical="40dp"
+            android:background="#0D283618" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="PROTEINY 💪"
+                android:gravity="center"
+                android:textColor="@color/brand_primary"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:letterSpacing="0.05"
+                android:layout_marginBottom="12dp"/>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scrollbars="none">
+                <LinearLayout
+                    android:id="@+id/listProteins"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="4dp"/>
+            </ScrollView>
+        </LinearLayout>
+    </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAddSnack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="32dp"
+        android:src="@android:drawable/ic_input_add"
+        app:backgroundTint="@color/brand_accent_deep"
+        app:tint="@color/brand_cream"
+        app:elevation="6dp"
+        app:borderWidth="0dp"/>
+
+</RelativeLayout>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FEFAE0">
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/nav_host_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="32dp"
+        android:layout_above="@+id/bottomNavLayout" />
+
+    <RelativeLayout
+        android:id="@+id/bottomNavLayout"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_alignParentBottom="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:layout_alignParentBottom="true"
+            android:background="@drawable/bg_bottom_nav_with_curve"
+            android:orientation="horizontal">
+
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottomNavigation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                app:elevation="0dp"
+                app:itemIconSize="28dp"
+                app:itemPaddingTop="10dp"
+                app:itemIconTint="#FEFAE0"
+                app:itemTextColor="#FEFAE0"
+                app:labelVisibilityMode="labeled"
+                app:menu="@menu/bottom_menu" />
+        </LinearLayout>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:src="@drawable/ic_logo_white"
+            app:backgroundTint="#283618"
+            app:borderWidth="3dp"
+            app:elevation="10dp"
+            app:fabCustomSize="68dp"
+            app:maxImageSize="32dp"
+            app:strokeColor="#606C38"
+            app:tint="#FEFAE0" />
+    </RelativeLayout>
+</RelativeLayout>
