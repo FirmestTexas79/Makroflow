@@ -39,7 +39,6 @@ class SnackFragment : Fragment() {
     private var isSelectionMode = false
     private var startX = 0f
 
-    // Pomocné proměnné pro přepočet (hodnoty na 1g) [cite: 2026-02-20]
     private var baseP = 0f
     private var baseS = 0f
     private var baseT = 0f
@@ -88,9 +87,12 @@ class SnackFragment : Fragment() {
     private fun displaySnacks(allSnacks: List<SnackEntity>) {
         listCarbs.removeAllViews()
         listProteins.removeAllViews()
+
         val filtered = allSnacks.filter { it.isPre == isPreSelected }
+
+        // Logika pro výpočet maximální hodnoty pro škálování pruhů [cite: 2026-03-01]
         val absoluteMax = allSnacks.flatMap { listOf(it.p, it.s, it.t) }.maxOrNull() ?: 1f
-        val globalCeiling = absoluteMax * 1.15f
+        val globalCeiling = absoluteMax * 1.1f // 10% rezerva pro vizuální komfort
 
         filtered.forEach { snack ->
             val card = layoutInflater.inflate(R.layout.item_snack_block, null)
@@ -99,12 +101,30 @@ class SnackFragment : Fragment() {
             card.findViewById<TextView>(R.id.valS).text = "S: ${snack.s.toInt()}g"
             card.findViewById<TextView>(R.id.valT).text = "T: ${snack.t.toInt()}g"
 
+            // --- NÁVRAT LOGIKY VODOROVNÝCH SLOUPCŮ ---
+            val barP = card.findViewById<View>(R.id.barP)
+            val barS = card.findViewById<View>(R.id.barS)
+            val barT = card.findViewById<View>(R.id.barT)
+
+            // Nastavení šířky pruhů pomocí LayoutParams (weight) [cite: 2026-02-20]
+            setupMacroBar(barP, snack.p, globalCeiling)
+            setupMacroBar(barS, snack.s, globalCeiling)
+            setupMacroBar(barT, snack.t, globalCeiling)
+
             card.setOnTouchListener { v, event ->
                 handleDeleteGesture(v, event, snack)
             }
 
+            // Rozřazení do sloupců podle převládající složky [cite: 2026-03-01]
             if (snack.p > snack.s) listProteins.addView(card) else listCarbs.addView(card)
         }
+    }
+
+    private fun setupMacroBar(bar: View, value: Float, max: Float) {
+        val params = bar.layoutParams as LinearLayout.LayoutParams
+        // Výpočet poměrné šířky (0.0 až 1.0)
+        params.weight = if (value > 0) (value / max) else 0.001f
+        bar.layoutParams = params
     }
 
     private fun showAddDialog() {
@@ -121,10 +141,9 @@ class SnackFragment : Fragment() {
 
         setupSwitchColors(switchPre)
 
-        // BARCODE SCANNER [cite: 2026-03-01]
         tilName.setEndIconOnClickListener { startBarcodeScanner(v) }
 
-        // SMART MATH: Přepočet maker při změně váhy [cite: 2026-02-20]
+        // Smart Math přepočet při změně gramáže [cite: 2026-02-20]
         etWeight.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 val weight = s.toString().toFloatOrNull() ?: 100f
@@ -147,11 +166,9 @@ class SnackFragment : Fragment() {
     private fun startBarcodeScanner(dialogView: View) {
         val options = GmsBarcodeScannerOptions.Builder().build()
         val scanner = GmsBarcodeScanning.getClient(requireContext(), options)
-
-        scanner.startScan()
-            .addOnSuccessListener { barcode ->
-                barcode.rawValue?.let { code -> fetchFoodData(code, dialogView) }
-            }
+        scanner.startScan().addOnSuccessListener { barcode ->
+            barcode.rawValue?.let { code -> fetchFoodData(code, dialogView) }
+        }
     }
 
     private fun fetchFoodData(barcode: String, view: View) {
@@ -159,31 +176,21 @@ class SnackFragment : Fragment() {
             try {
                 val response = URL("https://world.openfoodfacts.org/api/v2/product/$barcode.json").readText()
                 val json = JSONObject(response)
-
                 if (json.getInt("status") == 1) {
                     val product = json.getJSONObject("product")
                     val nutriments = product.getJSONObject("nutriments")
-
                     withContext(Dispatchers.Main) {
-                        val name = product.optString("product_name", "Neznámý produkt")
-                        // Uložíme základní hodnoty na 1g pro pozdější přepočet [cite: 2026-02-20]
                         baseP = (nutriments.optDouble("proteins_100g", 0.0) / 100.0).toFloat()
                         baseS = (nutriments.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat()
                         baseT = (nutriments.optDouble("fat_100g", 0.0) / 100.0).toFloat()
-
-                        view.findViewById<EditText>(R.id.etSnackName).setText(name)
+                        view.findViewById<EditText>(R.id.etSnackName).setText(product.optString("product_name", "Neznámý produkt"))
                         view.findViewById<EditText>(R.id.etSnackWeight).setText("100")
                         view.findViewById<EditText>(R.id.etSnackP).setText((baseP * 100).toString())
                         view.findViewById<EditText>(R.id.etSnackS).setText((baseS * 100).toString())
                         view.findViewById<EditText>(R.id.etSnackT).setText((baseT * 100).toString())
-                        Toast.makeText(requireContext(), "Načteno z databáze", Toast.LENGTH_SHORT).show()
                     }
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "Chyba při stahování dat", Toast.LENGTH_SHORT).show()
-                }
-            }
+            } catch (e: Exception) { /* Chyba sítě */ }
         }
     }
 

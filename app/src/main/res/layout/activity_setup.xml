@@ -246,6 +246,7 @@
         android:id="@+id/btnSave"
         android:layout_width="0dp"
         android:layout_height="60dp"
+        android:layout_marginBottom="150dp"
         android:text="@string/save_all"
         android:textColor="@color/brand_cream"
         android:textSize="16sp"
