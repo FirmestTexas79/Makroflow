@@ -22,12 +22,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Název snacku"
+        android:textColorHint="@color/brand_dark"
         app:boxStrokeColor="@color/brand_primary"
-        app:hintTextColor="@color/brand_dark"
+        app:hintTextColor="@color/brand_primary"
         app:endIconMode="custom"
         app:endIconDrawable="@drawable/ic_barcode_scan"
         app:endIconTint="@color/brand_primary"
-        app:placeholderText="např. Protein bar">
+        app:placeholderText="např. Protein bar"
+        app:placeholderTextColor="@color/brand_accent_deep">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etSnackName"
             android:layout_width="match_parent"
@@ -42,10 +44,11 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:hint="Váha balení"
+        android:textColorHint="@color/brand_dark"
         app:suffixText="g"
         app:suffixTextColor="@color/brand_dark"
         app:boxStrokeColor="@color/brand_primary"
-        app:hintTextColor="@color/brand_dark">
+        app:hintTextColor="@color/brand_primary">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etSnackWeight"
             android:layout_width="match_parent"
@@ -67,6 +70,7 @@
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
             android:hint="B"
+            android:textColorHint="@color/brand_dark"
             app:startIconDrawable="@drawable/ic_dot_protein"
             app:startIconTint="@color/brand_primary"
             app:boxStrokeColor="@color/brand_primary">
@@ -86,6 +90,7 @@
             android:layout_weight="1"
             android:layout_marginHorizontal="6dp"
             android:hint="S"
+            android:textColorHint="@color/brand_dark"
             app:startIconDrawable="@drawable/ic_dot_carbs"
             app:startIconTint="@color/brand_accent_warm"
             app:boxStrokeColor="@color/brand_accent_warm">
@@ -105,6 +110,7 @@
             android:layout_weight="1"
             android:layout_marginStart="6dp"
             android:hint="T"
+            android:textColorHint="@color/brand_dark"
             app:startIconDrawable="@drawable/ic_dot_fat"
             app:startIconTint="@color/brand_accent_deep"
             app:boxStrokeColor="@color/brand_accent_deep">
@@ -119,13 +125,14 @@
     </LinearLayout>
 
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardSwitchContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         app:cardBackgroundColor="@color/brand_cream"
         app:cardCornerRadius="12dp"
         app:cardElevation="0dp"
-        app:strokeWidth="1dp"
+        app:strokeWidth="1.5dp"
         app:strokeColor="@color/brand_accent_warm">
 
         <com.google.android.material.switchmaterial.SwitchMaterial
@@ -136,8 +143,8 @@
             android:text="Předtréninkový snack"
             android:textColor="@color/brand_dark"
             android:textStyle="bold"
-            app:thumbTint="@color/brand_primary"
-            app:trackTint="@color/brand_accent_warm" />
+            app:thumbTint="@color/brand_primary" />
+
     </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton

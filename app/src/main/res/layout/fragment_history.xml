@@ -4,7 +4,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/brand_cream">
+    android:background="@color/brand_cream"
+    android:paddingTop="36dp"
+    android:clipToPadding="false">
 
     <CalendarView
         android:id="@+id/calendarView"
@@ -29,7 +31,8 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingLeft="8dp"
-            android:paddingRight="8dp">
+            android:paddingRight="8dp"
+            android:paddingBottom="100dp">
 
             <TextView
                 android:id="@+id/tvSelectedDate"
@@ -86,7 +89,7 @@
                 android:layout_marginTop="16dp"
                 app:cardBackgroundColor="@color/white"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
+                app:cardElevation="2dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="@color/brand_accent_deep"
                 app:contentPadding="16dp">
@@ -107,14 +110,10 @@
                     <cz.uhk.macroflow.SymmetryGraphView
                         android:id="@+id/historySymmetryGraph"
                         android:layout_width="match_parent"
-                        android:layout_height="220dp"
+                        android:layout_height="200dp"
                         android:layout_marginTop="4dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="32dp" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

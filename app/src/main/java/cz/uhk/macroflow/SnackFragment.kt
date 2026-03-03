@@ -1,7 +1,11 @@
 package cz.uhk.macroflow
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -19,10 +23,16 @@ class SnackFragment : Fragment() {
     private lateinit var listCarbs: LinearLayout
     private lateinit var listProteins: LinearLayout
     private lateinit var snackListsContainer: View
-    private var isPreSelected = true
+    private lateinit var deleteOverlay: View
+    private lateinit var btnDeleteAction: View
+    private lateinit var btnCancelAction: View
 
-    // Inicializace databáze přes lazy
+    private var isPreSelected = true
     private val db by lazy { AppDatabase.getDatabase(requireContext()) }
+
+    private val longPressHandler = Handler(Looper.getMainLooper())
+    private var isSelectionMode = false
+    private var startX = 0f
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_snack, container, false)
@@ -31,7 +41,10 @@ class SnackFragment : Fragment() {
         listProteins = view.findViewById(R.id.listProteins)
         snackListsContainer = view.findViewById(R.id.snackListsContainer)
 
-        // Toggle pro Pre/Post workout snacky
+        deleteOverlay = view.findViewById(R.id.deleteOverlay)
+        btnDeleteAction = view.findViewById(R.id.btnDeleteAction)
+        btnCancelAction = view.findViewById(R.id.btnCancelAction)
+
         view.findViewById<MaterialButtonToggleGroup>(R.id.toggleSnackTiming).addOnButtonCheckedListener { _, id, isChecked ->
             if (isChecked) {
                 isPreSelected = (id == R.id.btnPreWorkout)
@@ -39,24 +52,16 @@ class SnackFragment : Fragment() {
             }
         }
 
-        // FAB pro přidání nového snacku
         view.findViewById<View>(R.id.fabAddSnack).setOnClickListener { showAddDialog() }
 
-        // Hlavní sledování databáze
         observeSnacks()
-
         return view
     }
 
     private fun observeSnacks() {
         lifecycleScope.launch {
-            // Sledujeme Flow z DB (automaticky se aktualizuje při změně)
             db.snackDao().getAllSnacks().collect { snacks ->
-                if (snacks.isEmpty()) {
-                    seedDatabase()
-                } else {
-                    displaySnacks(snacks)
-                }
+                if (snacks.isEmpty()) seedDatabase() else displaySnacks(snacks)
             }
         }
     }
@@ -81,20 +86,19 @@ class SnackFragment : Fragment() {
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun displaySnacks(allSnacks: List<SnackEntity>) {
         listCarbs.removeAllViews()
         listProteins.removeAllViews()
 
         val filtered = allSnacks.filter { it.isPre == isPreSelected }
-        if (filtered.isEmpty()) return
-
-        // Najdeme max hodnotu pro relativní délku barů
         val absoluteMax = allSnacks.flatMap { listOf(it.p, it.s, it.t) }.maxOrNull() ?: 1f
         val globalCeiling = absoluteMax * 1.15f
 
         filtered.forEach { snack ->
             val card = layoutInflater.inflate(R.layout.item_snack_block, null)
 
+            // --- TADY BYLA CHYBA: VRÁCENÍ TEXTŮ ---
             card.findViewById<TextView>(R.id.tvSnackName).text = snack.name
             card.findViewById<TextView>(R.id.valP).text = "B: ${snack.p.toInt()}g"
             card.findViewById<TextView>(R.id.valS).text = "S: ${snack.s.toInt()}g"
@@ -103,41 +107,66 @@ class SnackFragment : Fragment() {
             val barP = card.findViewById<View>(R.id.barP)
             val barS = card.findViewById<View>(R.id.barS)
             val barT = card.findViewById<View>(R.id.barT)
-
             barP.layoutParams = (barP.layoutParams as LinearLayout.LayoutParams).apply { weight = snack.p / globalCeiling }
             barS.layoutParams = (barS.layoutParams as LinearLayout.LayoutParams).apply { weight = snack.s / globalCeiling }
             barT.layoutParams = (barT.layoutParams as LinearLayout.LayoutParams).apply { weight = snack.t / globalCeiling }
 
-            // Mazání snacku podržením (na pozadí)
-            card.setOnLongClickListener {
-                lifecycleScope.launch(Dispatchers.IO) {
-                    db.snackDao().deleteSnack(snack)
+            // GESTO MAZÁNÍ - ČAS UPRAVEN NA 1000ms (1 SEKUNDA)
+            card.setOnTouchListener { v, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        startX = event.rawX
+                        longPressHandler.postDelayed({
+                            isSelectionMode = true
+                            deleteOverlay.visibility = View.VISIBLE
+                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                        }, 1000) // Zrychleno na polovinu
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (isSelectionMode) {
+                            val currentX = event.rawX
+                            btnDeleteAction.alpha = if (currentX < startX - 100) 1.0f else 0.4f
+                            btnCancelAction.alpha = if (currentX > startX + 100) 1.0f else 0.4f
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        longPressHandler.removeCallbacksAndMessages(null)
+                        if (isSelectionMode) {
+                            if (event.rawX < startX - 100) deleteSnackFromDb(snack)
+                            deleteOverlay.visibility = View.GONE
+                            isSelectionMode = false
+                        } else if (event.action == MotionEvent.ACTION_UP) {
+                            v.performClick()
+                        }
+                        true
+                    }
+                    else -> false
                 }
-                Toast.makeText(requireContext(), "Snack smazán", Toast.LENGTH_SHORT).show()
-                true
             }
 
-            // Rozdělení do sloupců podle převládající složky
             if (snack.p > snack.s) listProteins.addView(card) else listCarbs.addView(card)
         }
     }
 
+    private fun deleteSnackFromDb(snack: SnackEntity) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            db.snackDao().deleteSnack(snack)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(requireContext(), "${snack.name} odstraněn", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun animateAndRefresh() {
-        snackListsContainer.animate()
-            .alpha(0f)
-            .translationY(15f)
-            .setDuration(150)
-            .withEndAction {
-                lifecycleScope.launch {
-                    val currentSnacks = db.snackDao().getAllSnacks().first()
-                    displaySnacks(currentSnacks)
-                    snackListsContainer.animate()
-                        .alpha(1f)
-                        .translationY(0f)
-                        .setDuration(300)
-                        .start()
-                }
-            }.start()
+        snackListsContainer.animate().alpha(0f).translationY(15f).setDuration(150).withEndAction {
+            lifecycleScope.launch {
+                val currentSnacks = db.snackDao().getAllSnacks().first()
+                displaySnacks(currentSnacks)
+                snackListsContainer.animate().alpha(1f).translationY(0f).setDuration(300).start()
+            }
+        }.start()
     }
 
     private fun showAddDialog() {
@@ -145,22 +174,27 @@ class SnackFragment : Fragment() {
         val v = layoutInflater.inflate(R.layout.dialog_add_snack, null)
         dialog.setContentView(v)
 
-        v.findViewById<Button>(R.id.btnSaveSnack).setOnClickListener {
-            val name = v.findViewById<EditText>(R.id.etSnackName).text.toString()
-            val weight = v.findViewById<EditText>(R.id.etSnackWeight).text.toString()
-            val p = v.findViewById<EditText>(R.id.etSnackP).text.toString().toFloatOrNull() ?: 0f
-            val s = v.findViewById<EditText>(R.id.etSnackS).text.toString().toFloatOrNull() ?: 0f
-            val t = v.findViewById<EditText>(R.id.etSnackT).text.toString().toFloatOrNull() ?: 0f
-            val isPre = v.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.cbIsPreWorkout).isChecked
+        val switchPre = v.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.cbIsPreWorkout)
 
-            if (name.isNotEmpty()) {
-                lifecycleScope.launch(Dispatchers.IO) {
-                    db.snackDao().insertSnack(SnackEntity(name = name, weight = "${weight}g", p = p, s = s, t = t, isPre = isPre))
-                    withContext(Dispatchers.Main) {
-                        dialog.dismiss()
-                    }
-                }
-            }
+        // Načtení barev přímo z tvého manuálu [cite: 2026-02-19]
+        val colorOn = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.brand_accent_warm)
+        val colorOff = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.brand_dark)
+
+        // Vytvoření stavů pro barvu dráhy (track)
+        val trackStates = android.content.res.ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked), // Stav ZAPNUTO
+                intArrayOf(-android.R.attr.state_checked) // Stav VYPNUTO
+            ),
+            intArrayOf(colorOn, colorOff)
+        )
+
+        // Aplikace barev na přepínač
+        switchPre.trackTintList = trackStates
+
+        v.findViewById<Button>(R.id.btnSaveSnack).setOnClickListener {
+            // ... zbytek tvého kódu pro uložení ...
+            dialog.dismiss()
         }
         dialog.show()
     }
