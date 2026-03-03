@@ -15,6 +15,8 @@
         android:layout_height="wrap_content"
         android:text="NASTAVENÍ PROFILU"
         android:textColor="@color/brand_dark"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="20dp"
         android:textSize="22sp"
         android:textStyle="bold"
         android:letterSpacing="0.05"
@@ -37,7 +39,7 @@
             style="?attr/materialButtonOutlinedStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="MUŽ"
+            android:text="@string/man"
             android:textColor="@color/brand_dark"
             app:strokeColor="@color/brand_primary" />
 
@@ -53,11 +55,15 @@
 
     <LinearLayout
         android:id="@+id/inputsLayout"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginTop="20dp"
-        app:layout_constraintTop_toBottomOf="@id/toggleGender">
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        app:layout_constraintTop_toBottomOf="@id/toggleGender"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
@@ -183,7 +189,7 @@
 
     <TextView
         android:id="@+id/tvLifestyleDesc"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:textAlignment="center"
@@ -196,15 +202,17 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardOptionalMetrics"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
+        android:layout_marginTop="24dp"
         app:cardBackgroundColor="@color/brand_cream"
         app:cardCornerRadius="16dp"
         app:cardElevation="0dp"
         app:strokeWidth="1.5dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
         app:strokeColor="@color/brand_dark"
-        app:layout_constraintTop_toBottomOf="@id/circleLifestyle"
+        app:layout_constraintTop_toBottomOf="@id/tvLifestyleDesc"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -213,13 +221,15 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:padding="16dp"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
             android:gravity="center_vertical">
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="MOJE OBVODY"
+                android:text="@string/moje_obvody"
                 android:textColor="@color/brand_dark"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -234,14 +244,16 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSave"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="60dp"
-        android:text="ULOŽIT VŠE"
+        android:text="@string/save_all"
         android:textColor="@color/brand_cream"
         android:textSize="16sp"
         android:textStyle="bold"
         app:backgroundTint="@color/brand_primary"
         app:cornerRadius="16dp"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

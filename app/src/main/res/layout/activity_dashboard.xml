@@ -4,22 +4,60 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/brand_cream">
+    android:background="@color/brand_cream"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <ImageView
+        android:id="@+id/leafMonsteraTop"
+        android:layout_width="320dp"
+        android:layout_height="320dp"
+        android:layout_marginTop="-100dp"
+        android:layout_marginEnd="-120dp"
+        android:src="@drawable/bg_monstera_leaf_1"
+        android:alpha="0.12"
+        android:rotation="-200"
+        app:tint="#283618" app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <ImageView
+        android:id="@+id/leafMonsteraMid"
+        android:layout_width="210dp"
+        android:layout_height="150dp"
+        android:layout_marginTop="-70dp"
+        android:layout_marginStart="-40dp"
+        android:src="@drawable/bg_monstera_leaf_2"
+        android:alpha="0.08"
+        android:rotation="-35"
+        app:tint="#606C38" app:layout_constraintTop_toTopOf="@id/circleContainer"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/leafMonsteraBottom"
+        android:layout_width="600dp"
+        android:layout_height="600dp"
+        android:layout_marginBottom="-290dp"
+        android:layout_marginStart="-130dp"
+        android:src="@drawable/bg_monstera_leaf_1"
+        android:alpha="0.10"
+        android:rotation="110"
+        app:tint="#DDA15E" app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
         android:id="@+id/tvTrainingStatus"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="64dp"
         android:background="@drawable/bg_status_pill"
         android:backgroundTint="@color/brand_dark"
         android:paddingHorizontal="24dp"
         android:paddingVertical="10dp"
-        android:text="DNES: PULL"
+        android:text="DNES: LEGS"
         android:textColor="@color/brand_cream"
         android:textSize="14sp"
         android:textStyle="bold"
-        android:letterSpacing="0.05"
+        android:elevation="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -28,7 +66,7 @@
         android:id="@+id/circleContainer"
         android:layout_width="320dp"
         android:layout_height="320dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="24dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTrainingStatus">
@@ -72,7 +110,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-black"
-                android:text="0"
+                android:text="3730"
                 android:textColor="@color/brand_dark"
                 android:textSize="54sp" />
 
@@ -92,7 +130,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="12dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="32dp"
         android:orientation="horizontal"
         app:layout_constraintTop_toBottomOf="@id/circleContainer">
 
@@ -102,11 +140,11 @@
             android:layout_weight="1"
             android:layout_margin="6dp"
             app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
+            app:cardElevation="6dp"
             app:cardBackgroundColor="@color/brand_dark">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:gravity="center" android:orientation="vertical">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Bílkoviny" android:textSize="11sp" android:textColor="@color/brand_cream" android:textStyle="bold"/>
-                <TextView android:id="@+id/tvValueProtein" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0g" android:textColor="@color/brand_cream" android:textStyle="bold" android:textSize="20sp" android:fontFamily="monospace"/>
+                <TextView android:id="@+id/tvValueProtein" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="189g" android:textColor="@color/brand_cream" android:textStyle="bold" android:textSize="20sp" android:fontFamily="monospace"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -116,11 +154,11 @@
             android:layout_weight="1"
             android:layout_margin="6dp"
             app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
+            app:cardElevation="6dp"
             app:cardBackgroundColor="@color/brand_primary">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:gravity="center" android:orientation="vertical">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sacharidy" android:textSize="11sp" android:textColor="@color/brand_cream" android:textStyle="bold"/>
-                <TextView android:id="@+id/tvValueCarbs" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0g" android:textColor="@color/brand_cream" android:textStyle="bold" android:textSize="20sp" android:fontFamily="monospace"/>
+                <TextView android:id="@+id/tvValueCarbs" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="600g" android:textColor="@color/brand_cream" android:textStyle="bold" android:textSize="20sp" android:fontFamily="monospace"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -130,11 +168,11 @@
             android:layout_weight="1"
             android:layout_margin="6dp"
             app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
+            app:cardElevation="6dp"
             app:cardBackgroundColor="@color/brand_accent_deep">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:gravity="center" android:orientation="vertical">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tuky" android:textSize="11sp" android:textColor="@color/brand_cream" android:textStyle="bold"/>
-                <TextView android:id="@+id/tvValueFat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0g" android:textColor="@color/brand_cream" android:textStyle="bold" android:textSize="20sp" android:fontFamily="monospace"/>
+                <TextView android:id="@+id/tvValueFat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="63g" android:textColor="@color/brand_cream" android:textStyle="bold" android:textSize="20sp" android:fontFamily="monospace"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
@@ -144,15 +182,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="18dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="24dp"
         app:cardBackgroundColor="@color/brand_cream"
         app:cardCornerRadius="24dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="1.5dp"
+        app:cardElevation="4dp"
+        app:strokeWidth="2dp"
         app:strokeColor="@color/brand_accent_warm"
         app:layout_constraintTop_toBottomOf="@id/layoutMacros">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="18dp" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="20dp" android:gravity="center_vertical">
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -165,9 +203,9 @@
                 android:id="@+id/tvValueWater"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0.0 L"
+                android:text="4.6 L"
                 android:textColor="@color/brand_accent_warm"
-                android:textSize="22sp"
+                android:textSize="24sp"
                 android:fontFamily="monospace"
                 android:textStyle="bold" />
         </LinearLayout>

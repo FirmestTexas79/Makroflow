@@ -3,20 +3,18 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FEFAE0">
-
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/nav_host_fragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingTop="32dp"
-        android:layout_above="@+id/bottomNavLayout" />
+    android:background="#FEFAE0"> <FrameLayout
+    android:id="@+id/nav_host_fragment"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_above="@id/bottomNavLayout" />
 
     <RelativeLayout
         android:id="@+id/bottomNavLayout"
         android:layout_width="match_parent"
         android:layout_height="120dp"
-        android:layout_alignParentBottom="true">
+        android:layout_alignParentBottom="true"
+        android:clipChildren="false">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -29,6 +27,7 @@
                 android:id="@+id/bottomNavigation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
                 android:background="@android:color/transparent"
                 app:elevation="0dp"
                 app:itemIconSize="28dp"
