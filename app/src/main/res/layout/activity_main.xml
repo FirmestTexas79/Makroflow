@@ -3,11 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FEFAE0"> <FrameLayout
-    android:id="@+id/nav_host_fragment"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:layout_above="@id/bottomNavLayout" />
+    android:background="#FEFAE0">
+
+    <FrameLayout
+        android:id="@+id/nav_host_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
     <RelativeLayout
         android:id="@+id/bottomNavLayout"
