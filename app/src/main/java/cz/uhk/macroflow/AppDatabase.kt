@@ -5,9 +5,11 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [SnackEntity::class], version = 1)
+// Zvýšena verze na 2, přidána CheckInEntity [cite: 2026-03-01]
+@Database(entities = [SnackEntity::class, CheckInEntity::class], version = 2)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun snackDao(): SnackDao
+    abstract fun checkInDao(): CheckInDao // Nový přístup k check-inům [cite: 2026-03-01]
 
     companion object {
         @Volatile
@@ -19,7 +21,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "macroflow_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration() // Důležité pro hladký přechod na verzi 2 [cite: 2026-03-01]
+                    .build()
                 INSTANCE = instance
                 instance
             }

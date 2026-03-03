@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_cream">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/btnSaveCheckIn">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RANNÍ RITUÁL"
+                android:textColor="@color/brand_dark"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:hint="Dnešní váha"
+                app:suffixText="kg"
+                app:boxStrokeColor="@color/brand_primary">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etCheckInWeight"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:text="83.0" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Míra energie (1-5)"
+                android:textColor="@color/brand_dark" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderEnergy"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="1.0"
+                android:valueTo="5.0"
+                android:stepSize="1.0"
+                app:thumbColor="@color/brand_primary"
+                app:trackColorActive="@color/brand_primary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Kvalita spánku (1-5)"
+                android:textColor="@color/brand_dark" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderSleep"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="1.0"
+                android:valueTo="5.0"
+                android:stepSize="1.0"
+                app:thumbColor="@color/brand_accent_warm"
+                app:trackColorActive="@color/brand_accent_warm" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="40dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSaveCheckIn"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_margin="16dp"
+        android:text="ULOŽIT RITUÁL"
+        app:cornerRadius="16dp"
+        app:backgroundTint="@color/brand_primary"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
