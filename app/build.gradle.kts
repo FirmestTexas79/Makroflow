@@ -51,7 +51,14 @@ dependencies {
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    // ViewModel a LiveData - pro propojení dat s obrazovkou
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+
+    // --- OPRAVENÉ KNIHOVNY PRO SKENER A DATA ---
+
+    // Google Code Scanner (volá systémové UI, ideální pro Pixel 10 Pro) [cite: 2026-03-01]
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+
+    // Pro jednoduché stahování dat z OpenFoodFacts bez nutnosti složitého Retrofitu [cite: 2026-03-01]
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
