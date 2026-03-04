@@ -127,51 +127,84 @@ class SnackFragment : Fragment() {
         bar.layoutParams = params
     }
 
+    // ... (předchozí kód)
+
     private fun showAddDialog() {
         val dialog = BottomSheetDialog(requireContext())
         val v = layoutInflater.inflate(R.layout.dialog_add_snack, null)
         dialog.setContentView(v)
 
-        val switchPre = v.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.cbIsPreWorkout)
-        val tilName = v.findViewById<TextInputLayout>(R.id.tilSnackName)
+        // 1. Všechny reference hned na začátek
+        val btnSave = v.findViewById<Button>(R.id.btnSaveSnack)
+        val etName = v.findViewById<EditText>(R.id.etSnackName)
         val etWeight = v.findViewById<EditText>(R.id.etSnackWeight)
         val etP = v.findViewById<EditText>(R.id.etSnackP)
         val etS = v.findViewById<EditText>(R.id.etSnackS)
         val etT = v.findViewById<EditText>(R.id.etSnackT)
+        val switchPre = v.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.cbIsPreWorkout)
+        val tilName = v.findViewById<TextInputLayout>(R.id.tilSnackName)
 
         setupSwitchColors(switchPre)
 
-        tilName.setEndIconOnClickListener { startBarcodeScanner(v) }
+        // 2. Click listener pro uložení - teď už má přímou referenci na dialog a view
+        btnSave.setOnClickListener {
+            val name = etName.text.toString()
+            val weight = etWeight.text.toString()
+            val p = etP.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
+            val s = etS.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
+            val t = etT.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
+            val isPre = switchPre.isChecked
 
-        // Smart Math přepočet při změně gramáže [cite: 2026-02-20]
+            if (name.isNotEmpty()) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    db.snackDao().insertSnack(
+                        SnackEntity(name = name, weight = "${weight}g", p = p, s = s, t = t, isPre = isPre)
+                    )
+                    withContext(Dispatchers.Main) {
+                        dialog.dismiss()
+                        // Volitelně toast pro potvrzení
+                        Toast.makeText(requireContext(), "Snack $name uložen", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                etName.error = "Zadej název"
+            }
+        }
+
+        // 3. Ostatní logika (Barcode a TextWatcher)
+        tilName.setEndIconOnClickListener {
+            startBarcodeScanner(etName, etWeight, etP, etS, etT)
+        }
+
         etWeight.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 val weight = s.toString().toFloatOrNull() ?: 100f
                 if (baseP > 0 || baseS > 0 || baseT > 0) {
-                    etP.setText("%.1f".format(baseP * weight))
-                    etS.setText("%.1f".format(baseS * weight))
-                    etT.setText("%.1f".format(baseT * weight))
+                    // Přepočítáme makra na základě nové váhy a základních hodnot z 1g
+                    etP.setText("%.1f".format(baseP * weight).replace(",", "."))
+                    etS.setText("%.1f".format(baseS * weight).replace(",", "."))
+                    etT.setText("%.1f".format(baseT * weight).replace(",", "."))
                 }
             }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
-        v.findViewById<Button>(R.id.btnSaveSnack).setOnClickListener {
-            saveSnackFromDialog(v, dialog)
-        }
         dialog.show()
     }
 
-    private fun startBarcodeScanner(dialogView: View) {
+    private fun startBarcodeScanner(etName: EditText, etWeight: EditText, etP: EditText, etS: EditText, etT: EditText) {
         val options = GmsBarcodeScannerOptions.Builder().build()
         val scanner = GmsBarcodeScanning.getClient(requireContext(), options)
         scanner.startScan().addOnSuccessListener { barcode ->
-            barcode.rawValue?.let { code -> fetchFoodData(code, dialogView) }
+            barcode.rawValue?.let { code ->
+                // Posíláme přímo ty UI prvky
+                fetchFoodData(code, etName, etWeight, etP, etS, etT)
+            }
         }
     }
 
-    private fun fetchFoodData(barcode: String, view: View) {
+    private fun fetchFoodData(barcode: String, etName: EditText, etWeight: EditText, etP: EditText, etS: EditText, etT: EditText) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val response = URL("https://world.openfoodfacts.org/api/v2/product/$barcode.json").readText()
@@ -179,18 +212,36 @@ class SnackFragment : Fragment() {
                 if (json.getInt("status") == 1) {
                     val product = json.getJSONObject("product")
                     val nutriments = product.getJSONObject("nutriments")
+
+                    // Získání hodnot s defaultem 0.0, pokud v JSONu chybí
+                    val p100 = nutriments.optDouble("proteins_100g", 0.0)
+                    val s100 = nutriments.optDouble("carbohydrates_100g", 0.0)
+                    val t100 = nutriments.optDouble("fat_100g", 0.0)
+                    val productName = product.optString("product_name", "Neznámý produkt")
+
                     withContext(Dispatchers.Main) {
-                        baseP = (nutriments.optDouble("proteins_100g", 0.0) / 100.0).toFloat()
-                        baseS = (nutriments.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat()
-                        baseT = (nutriments.optDouble("fat_100g", 0.0) / 100.0).toFloat()
-                        view.findViewById<EditText>(R.id.etSnackName).setText(product.optString("product_name", "Neznámý produkt"))
-                        view.findViewById<EditText>(R.id.etSnackWeight).setText("100")
-                        view.findViewById<EditText>(R.id.etSnackP).setText((baseP * 100).toString())
-                        view.findViewById<EditText>(R.id.etSnackS).setText((baseS * 100).toString())
-                        view.findViewById<EditText>(R.id.etSnackT).setText((baseT * 100).toString())
+                        // Nastavíme bázi pro Smart Math přepočet
+                        baseP = (p100 / 100.0).toFloat()
+                        baseS = (s100 / 100.0).toFloat()
+                        baseT = (t100 / 100.0).toFloat()
+
+                        // Přímý zápis do polí
+                        etName.setText(productName)
+                        etWeight.setText("100")
+                        etP.setText("%.1f".format(p100).replace(",", "."))
+                        etS.setText("%.1f".format(s100).replace(",", "."))
+                        etT.setText("%.1f".format(t100).replace(",", "."))
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "Produkt nenalezen v databázi", Toast.LENGTH_SHORT).show()
                     }
                 }
-            } catch (e: Exception) { /* Chyba sítě */ }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Chyba sítě nebo skenování", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
