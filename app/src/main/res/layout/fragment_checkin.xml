@@ -77,6 +77,24 @@
                 app:thumbColor="@color/brand_accent_warm"
                 app:trackColorActive="@color/brand_accent_warm" />
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Jak moc jsi hladový? (1-5)"
+                android:textColor="@color/brand_dark" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderHunger"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="1.0"
+                android:valueTo="5.0"
+                android:stepSize="1.0"
+                app:thumbColor="@color/brand_dark"
+                app:trackColorActive="@color/brand_primary" />
+
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="40dp" />

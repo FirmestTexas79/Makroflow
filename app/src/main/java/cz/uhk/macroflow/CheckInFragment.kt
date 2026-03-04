@@ -1,5 +1,6 @@
 package cz.uhk.macroflow
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -25,20 +26,28 @@ class CheckInFragment : Fragment() {
         val etWeight = view.findViewById<EditText>(R.id.etCheckInWeight)
         val sliderEnergy = view.findViewById<Slider>(R.id.sliderEnergy)
         val sliderSleep = view.findViewById<Slider>(R.id.sliderSleep)
+        val sliderHunger = view.findViewById<Slider>(R.id.sliderHunger)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveCheckIn)
 
-        etWeight.setText("83.0") // Předvyplněno po tvém objemu [cite: 2026-02-02]
+        // Načteme aktuální váhu z profilu pro usnadnění
+        val userPrefs = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        etWeight.setText(userPrefs.getString("weightAkt", "83.0"))
 
         btnSave.setOnClickListener {
             val weight = etWeight.text.toString().toDoubleOrNull() ?: 83.0
             val energy = sliderEnergy.value.toInt()
             val sleep = sliderSleep.value.toInt()
+            val hunger = sliderHunger.value.toInt()
 
-            saveToDatabase(weight, energy, sleep)
+            // 1. Uložíme váhu do globálního profilu
+            userPrefs.edit().putString("weightAkt", weight.toString()).apply()
+
+            // 2. Uložíme denní záznam do DB
+            saveToDatabase(weight, energy, sleep, hunger)
         }
     }
 
-    private fun saveToDatabase(weight: Double, energy: Int, sleep: Int) {
+    private fun saveToDatabase(weight: Double, energy: Int, sleep: Int, hunger: Int) {
         val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val today = sdf.format(Date())
 
@@ -47,7 +56,7 @@ class CheckInFragment : Fragment() {
             weight = weight,
             energyLevel = energy,
             sleepQuality = sleep,
-            hungerLevel = 3
+            hungerLevel = hunger
         )
 
         thread {
@@ -56,8 +65,7 @@ class CheckInFragment : Fragment() {
                 db.checkInDao().insertCheckIn(checkIn)
 
                 activity?.runOnUiThread {
-                    Toast.makeText(requireContext(), "Rituál uložen!", Toast.LENGTH_SHORT).show()
-                    // ZAVŘENÍ FRAGMENTU A NÁVRAT NA DASHBOARD [cite: 2026-03-01]
+                    Toast.makeText(requireContext(), "Rituál i váha v profilu uloženy!", Toast.LENGTH_SHORT).show()
                     parentFragmentManager.popBackStack()
                 }
             } catch (e: Exception) {
