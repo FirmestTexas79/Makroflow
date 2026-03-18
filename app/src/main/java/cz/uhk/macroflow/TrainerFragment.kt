@@ -7,13 +7,12 @@ import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.*
 import android.os.Bundle
-import android.util.Size
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -24,6 +23,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.ObjectDetection
+import com.google.mlkit.vision.objects.ObjectDetector
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
 
 data class TrajectoryPoint(val x: Float, val y: Float, val goingDown: Boolean, val timestamp: Long)
@@ -34,6 +34,7 @@ class TrainerFragment : Fragment() {
     private lateinit var tvStatus: TextView
     private lateinit var btnAction: MaterialButton
     private lateinit var pathOverlay: BarbellPathOverlay
+    private var objectDetector: ObjectDetector? = null
 
     private var isRecording = false
     private var lastKnownY: Float? = null
@@ -66,9 +67,9 @@ class TrainerFragment : Fragment() {
         }
         private val paintOutline = Paint().apply {
             color = Color.parseColor("#606C38")
-            strokeWidth = 8f
+            strokeWidth = 6f
             style = Paint.Style.STROKE
-            pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
+            pathEffect = DashPathEffect(floatArrayOf(15f, 15f), 0f)
             isAntiAlias = true
         }
 
@@ -90,9 +91,9 @@ class TrainerFragment : Fragment() {
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
-            if (isRecording && currentTrackedBox != null) {
-                val box = currentTrackedBox!!
-                canvas.drawCircle(box.centerX(), box.centerY(), (box.width() / 2f) + 10f, paintOutline)
+            // Kreslíme sledovací kolečko
+            currentTrackedBox?.let { box ->
+                canvas.drawCircle(box.centerX(), box.centerY(), box.width() / 2f, paintOutline)
             }
             if (points.size < 2) return
             for (i in 1 until points.size) {
@@ -107,14 +108,17 @@ class TrainerFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val root = inflater.inflate(R.layout.fragment_trainer, container, false)
         viewFinder = root.findViewById(R.id.viewFinder)
-        viewFinder.scaleType = PreviewView.ScaleType.FILL_CENTER
-
         tvStatus = root.findViewById(R.id.tvDetectionStatus)
         btnAction = root.findViewById(R.id.btnStartTraining)
         val cameraCard = root.findViewById<MaterialCardView>(R.id.cameraCard)
 
         pathOverlay = BarbellPathOverlay(requireContext())
         cameraCard.addView(pathOverlay)
+
+        val options = ObjectDetectorOptions.Builder()
+            .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
+            .build()
+        objectDetector = ObjectDetection.getClient(options)
 
         root.findViewById<ImageButton>(R.id.btnBack).setOnClickListener {
             parentFragmentManager.popBackStack()
@@ -138,26 +142,22 @@ class TrainerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
-            == PackageManager.PERMISSION_GRANTED) setupCamera()
-        else requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            setupCamera()
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
     }
-
-    // ... (imports stejné)
 
     private fun setupCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
-
-            // Kvalitu necháme na kameře, nepoužíváme setTargetResolution
             val preview = Preview.Builder().build().apply {
                 setSurfaceProvider(viewFinder.surfaceProvider)
             }
-
             val imageAnalysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                // Zrušili jsme TargetResolution pro vyšší kvalitu
                 .build()
 
             imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(requireContext())) { proxy ->
@@ -167,96 +167,108 @@ class TrainerFragment : Fragment() {
             try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(viewLifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis)
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) { Log.e("TRAINER", "Chyba kamery", e) }
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
     @SuppressLint("UnsafeOptInUsageError")
     private fun analyzeImage(proxy: ImageProxy) {
         val mediaImage = proxy.image ?: return
-        val rotationDegrees = proxy.imageInfo.rotationDegrees
+        val rotation = proxy.imageInfo.rotationDegrees
+        val image = InputImage.fromMediaImage(mediaImage, rotation)
 
-        // Rozměry zdroje (z kamery)
-        val imgW = if (rotationDegrees == 90 || rotationDegrees == 270) mediaImage.height.toFloat() else mediaImage.width.toFloat()
-        val imgH = if (rotationDegrees == 90 || rotationDegrees == 270) mediaImage.width.toFloat() else mediaImage.height.toFloat()
-
-        val image = InputImage.fromMediaImage(mediaImage, rotationDegrees)
-        val options = ObjectDetectorOptions.Builder()
-            .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
-            .build()
-
-        ObjectDetection.getClient(options).process(image)
-            .addOnSuccessListener { results ->
-                val bestResult = results.firstOrNull { obj ->
-                    val box = obj.boundingBox
-                    val aspectRatio = box.width().toFloat() / box.height().toFloat()
-                    aspectRatio in 0.7f..1.3f && box.width() > 50
-                }
+        objectDetector?.process(image)
+            ?.addOnSuccessListener { results ->
+                val bestResult = results.firstOrNull { it.boundingBox.width() > 50 }
 
                 if (bestResult != null) {
                     framesSinceLastValid = 0
                     tvStatus.text = "OBJEKT ZAMĚŘEN"
-                    tvStatus.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#606C38"))
+
+                    val box = bestResult.boundingBox
+                    val imgW = mediaImage.width.toFloat()
+                    val imgH = mediaImage.height.toFloat()
+
+                    // 1. VÝPOČET MĚŘÍTKA A OFFSETU (Toto opraví posun doprava dolů)
+                    // PreviewView v 'fillCenter' režimu obraz roztahuje.
+                    // Musíme zjistit, o kolik je obraz posunutý.
+                    val viewW = pathOverlay.width.toFloat()
+                    val viewH = pathOverlay.height.toFloat()
+
+                    // Poměr stran (pro 90/270 rotaci prohazujeme imgW a imgH)
+                    val scaleX = viewW / imgH
+                    val scaleY = viewH / imgW
+                    val scale = Math.max(scaleX, scaleY)
+
+                    // Offsety vyrovnají to, co "přečuhuje" mimo obrazovku
+                    val offsetX = (viewW - imgH * scale) / 2f
+                    val offsetY = (viewH - imgW * scale) / 2f
+
+                    // 2. Mapování se započtením offsetu
+                    // ... uvnitř onSuccessListener, tam kde máš ty výpočty ...
+
+// 2. Mapování se započtením offsetu
+                    val relX = box.centerX().toFloat() / imgW
+                    val relY = box.centerY().toFloat() / imgH
+
+                    val targetX: Float
+                    val targetY: Float
+                    val rawRadius: Float
+
+
+
+                    if (rotation == 90 || rotation == 270) {
+                        // Přidáváme k X (posun doprava), ubíráme z Y (posun nahoru)
+                        targetX = relX * pathOverlay.width + (offsetX * 1.2f)
+                        targetY = relY * pathOverlay.height + (offsetY * 0.8f)
+
+                        rawRadius = ((box.height().toFloat() / imgW) * pathOverlay.width / 2f) * scale
+                    } else {
+                        targetX = relX * pathOverlay.width + offsetX
+                        targetY = relY * pathOverlay.height + offsetY
+                        rawRadius = ((box.width().toFloat() / imgW) * pathOverlay.width / 2f) * scale
+                    }
+
+                    // 3. EXTRÉMNÍ VYHLAZENÍ (Smoothing) - tvoje původní 0.25f
+                    val smoothedX = if (lastValidPoint == null) targetX else lastValidPoint!!.x + (targetX - lastValidPoint!!.x) * 0.25f
+                    val smoothedY = if (lastValidPoint == null) targetY else lastValidPoint!!.y + (targetY - lastValidPoint!!.y) * 0.25f
+                    val currentPoint = PointF(smoothedX, smoothedY)
+
+                    // 4. FIXACE VELIKOSTI
+                    val finalRadius = if (lastValidPoint == null) rawRadius else {
+                        rawRadius.coerceIn(40f, 150f)
+                    }
 
                     if (isRecording) {
-                        val box = bestResult.boundingBox
-
-                        // --- FINÁLNÍ MATEMATIKA PRO VYCENTROVÁNÍ ---
-
-                        // 1. Kde je objekt na kameře v procentech (0.0 až 1.0)
-                        val relX = box.centerX().toFloat() / (if (rotationDegrees % 180 != 0) mediaImage.height else mediaImage.width).toFloat()
-                        val relY = box.centerY().toFloat() / (if (rotationDegrees % 180 != 0) mediaImage.width else mediaImage.height).toFloat()
-
-                        // 2. Poměry stran okna (3:4) vs obrazu kamery (16:9)
-                        val viewAspectRatio = pathOverlay.width.toFloat() / pathOverlay.height.toFloat()
-                        val imageAspectRatio = imgW / imgH
-
-                        var finalX: Float
-                        var finalY: Float
-
-                        // Logika FILL_CENTER: ořezáváme šířku, výška sedí
-                        val scale = pathOverlay.height.toFloat() / imgH
-                        val visibleWidthOnImage = pathOverlay.width.toFloat() / scale
-                        val startX = (imgW - visibleWidthOnImage) / 2f
-
-                        // Přepočet X: vezmeme centerX v pixelech, odečteme začátek viditelné zóny a vynásobíme měřítkem
-                        val currentRawX = (box.centerX().toFloat() - startX) * scale
-                        val currentRawY = relY * pathOverlay.height
-
-                        // Smoothing (Lerp) - aby to neskákalo
-                        val lerpX = if (lastValidPoint == null) currentRawX else lastValidPoint!!.x + (currentRawX - lastValidPoint!!.x) * 0.4f
-                        val lerpY = if (lastValidPoint == null) currentRawY else lastValidPoint!!.y + (currentRawY - lastValidPoint!!.y) * 0.4f
-
-                        val currentPoint = PointF(lerpX, lerpY)
                         val isDown = if (lastKnownY != null) currentPoint.y > lastKnownY!! else true
-
                         pathOverlay.addPoint(currentPoint.x, currentPoint.y, isDown)
 
-                        // Radius outline kruhu (škálovaný podle výšky)
-                        val radius = (box.width().toFloat() * scale) / 2f
-                        pathOverlay.setTrackedBox(RectF(currentPoint.x - radius, currentPoint.y - radius, currentPoint.x + radius, currentPoint.y + radius))
+                        pathOverlay.setTrackedBox(RectF(
+                            currentPoint.x - finalRadius,
+                            currentPoint.y - finalRadius,
+                            currentPoint.x + finalRadius,
+                            currentPoint.y + finalRadius
+                        ))
 
-                        lastValidPoint = currentPoint
                         lastKnownY = currentPoint.y
                     }
+                    lastValidPoint = currentPoint
                 } else {
                     handleDetectionLoss()
                 }
             }
-            .addOnCompleteListener { proxy.close() }
+            ?.addOnCompleteListener { proxy.close() }
     }
-
     private fun handleDetectionLoss() {
-        if (isRecording && lastValidPoint != null && framesSinceLastValid < 5) {
-            framesSinceLastValid++
-            tvStatus.text = "DRŽÍM LOCK..."
-            pathOverlay.addPoint(lastValidPoint!!.x, lastValidPoint!!.y, lastKnownY!! > (lastValidPoint!!.y - 1))
-        } else {
-            framesSinceLastValid++
+        framesSinceLastValid++
+        // --- KLÍČOVÝ RESET TRAJEKTORIE ---
+        // Když se objekt ztratí (třeba na 10 framů), resetujeme trajektorii.
+        // Tím zabráníme té "dlouhé čáře" přes obrazovku, když se objekt znova najde.
+        if (framesSinceLastValid > 10) {
             tvStatus.text = "HLEDÁM..."
             tvStatus.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#BC6C25"))
             pathOverlay.setTrackedBox(null)
-            if (framesSinceLastValid > 5) lastValidPoint = null
+            lastValidPoint = null // Tím vynutíme bezpečné vyhlazení v příštím framu
         }
     }
 }
