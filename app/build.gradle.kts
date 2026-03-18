@@ -61,4 +61,14 @@ dependencies {
 
     // Pro jednoduché stahování dat z OpenFoodFacts bez nutnosti složitého Retrofitu [cite: 2026-03-01]
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // --- PŘIDÁNO PRO TRENÉRA (Barbell Path Tracking) ---
+    val camerax_version = "1.3.1"
+    implementation("androidx.camera:camera-core:$camerax_version")
+    implementation("androidx.camera:camera-camera2:$camerax_version")
+    implementation("androidx.camera:camera-lifecycle:$camerax_version")
+    implementation("androidx.camera:camera-view:$camerax_version")
+
+    // ML Kit pro detekci objektů (kotouče) [cite: 2026-03-01]
+    implementation("com.google.mlkit:object-detection:17.0.0")
 }
