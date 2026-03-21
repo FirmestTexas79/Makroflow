@@ -49,31 +49,58 @@
         app:layout_constraintTop_toBottomOf="@id/tvTrainingStatus">
 
         <ProgressBar
-            android:id="@+id/progressProtein"
+            android:id="@+id/progressProtein_Target"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="60dp"
+            android:padding="55dp"
             android:scaleX="-1"
+            android:alpha="0.4"
             android:progressDrawable="@drawable/circle_progress_protein" />
-
         <ProgressBar
-            android:id="@+id/progressCarbs"
+            android:id="@+id/progressProtein_Eaten"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="40dp"
+            android:padding="55dp"
             android:scaleX="-1"
+            android:progressDrawable="@drawable/circle_progress_protein_light" />
+
+        <ProgressBar
+            android:id="@+id/progressCarbs_Target"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="27.5dp"
+            android:scaleX="-1"
+            android:alpha="0.4"
             android:progressDrawable="@drawable/circle_progress_carbs" />
-
         <ProgressBar
-            android:id="@+id/progressFat"
+            android:id="@+id/progressCarbs_Eaten"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="44dp"
+            android:padding="27.5dp"
             android:scaleX="-1"
+            android:progressDrawable="@drawable/circle_progress_carbs_light" />
+
+        <ProgressBar
+            android:id="@+id/progressFat_Target"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="0dp"
+            android:scaleX="-1"
+            android:alpha="0.4"
             android:progressDrawable="@drawable/circle_progress_fat" />
+        <ProgressBar
+            android:id="@+id/progressFat_Eaten"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="0dp"
+            android:scaleX="-1"
+            android:progressDrawable="@drawable/circle_progress_fat_light" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -86,9 +113,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-black"
-                android:text="3730"
+                android:text="0"
                 android:textColor="#283618"
-                android:textSize="48sp" />
+                android:textSize="24sp" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

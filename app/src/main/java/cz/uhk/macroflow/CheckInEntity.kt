@@ -11,5 +11,8 @@ data class CheckInEntity(
     val energyLevel: Int,
     val sleepQuality: Int,
     val hungerLevel: Int,
+    val trainingReps: Int = 0,      // Počet opakování z TrainerFragmentu
+    val trainingIntensity: Float = 0f, // Např. průměrná rychlost nebo náročnost
     val mood: String = ""
 )
+

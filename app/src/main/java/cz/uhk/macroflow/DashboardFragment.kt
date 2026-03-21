@@ -11,16 +11,23 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.slider.Slider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.concurrent.thread
 
 class DashboardFragment : Fragment() {
 
+    private lateinit var today: String
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         return inflater.inflate(R.layout.activity_dashboard, container, false)
     }
 
@@ -31,9 +38,8 @@ class DashboardFragment : Fragment() {
         val coachCard = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
-        // Tlačítko pro spuštění chytrého trenéra
-        val btnTrainer = view.findViewById<MaterialCardView>(R.id.cardStartTraining)
-        btnTrainer.setOnClickListener {
+        // Spuštění tréninku [cite: 2026-03-01]
+        view.findViewById<MaterialCardView>(R.id.cardStartTraining).setOnClickListener {
             parentFragmentManager.beginTransaction()
                 .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
                 .replace(R.id.nav_host_fragment, TrainerFragment())
@@ -53,9 +59,42 @@ class DashboardFragment : Fragment() {
                 ritualOverlay.visibility = View.GONE
             }.start()
         }
+    }
 
-        displayMacros(view)
-        loadCoachAdvice(view)
+    // KLÍČOVÁ ZMĚNA: Refresh dat pokaždé, když se fragment stane aktivním
+    override fun onResume() {
+        super.onResume()
+        view?.let { refreshAllData(it) }
+    }
+
+    private fun refreshAllData(view: View) {
+        // Použijeme Main.immediate, aby se UI update nezpožďoval v frontě
+        lifecycleScope.launch(Dispatchers.Main.immediate) {
+            val context = context ?: return@launch
+            val db = AppDatabase.getDatabase(context)
+
+            // Načtení dat přesuneme do IO, ale výsledek zpracujeme hned
+            val consumedList = withContext(Dispatchers.IO) {
+                db.consumedSnackDao().getConsumedByDate(today).first()
+            }
+            val checkIn = withContext(Dispatchers.IO) {
+                db.checkInDao().getCheckInByDateSync(today)
+            }
+
+            // 2. Výpočet (vše v rámci jednoho bloku, aby se to nemohlo "rozbít")
+            val status = MacroFlowEngine.calculateDailyStatus(context, consumedList)
+            val advice = MacroFlowEngine.getCoachAdvice(status, checkIn)
+
+            // 3. Update UI - voláme přímo a hned
+            updateCoachUI(advice)
+            updateMacrosUI(view, status)
+
+            // Update váhy v poli
+            val displayWeight = checkIn?.weight ?: withContext(Dispatchers.IO) {
+                db.checkInDao().getAllCheckInsSync().firstOrNull()?.weight ?: 83.0
+            }
+            view.findViewById<EditText>(R.id.etWeight)?.setText(displayWeight.toString())
+        }
     }
 
     private fun saveCheckInData(view: View) {
@@ -64,81 +103,79 @@ class DashboardFragment : Fragment() {
         val sleep = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
 
-        val userPrefs = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-        userPrefs.edit().putString("weightAkt", weightVal.toString()).apply()
+        // Uložení váhy pro MacroCalculator [cite: 2026-02-02, 2026-03-10]
+        requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+            .edit().putString("weightAkt", weightVal.toString()).apply()
 
-        thread {
+        lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(requireContext())
-            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            val newCheckIn = CheckInEntity(date = today, weight = weightVal, energyLevel = energy, sleepQuality = sleep, hungerLevel = hunger)
-            db.checkInDao().insertCheckIn(newCheckIn)
+            db.checkInDao().insertCheckIn(CheckInEntity(
+                date = today, weight = weightVal, energyLevel = energy, sleepQuality = sleep, hungerLevel = hunger
+            ))
 
-            activity?.runOnUiThread {
-                displayMacros(view)
-                updateCoachUI(weightVal, energy, sleep, hunger)
-                Toast.makeText(context, "Váha ${weightVal}kg uložena!", Toast.LENGTH_SHORT).show()
+            withContext(Dispatchers.Main) {
+                refreshAllData(view) // Překreslí rady i makra
+                Toast.makeText(context, "Denní report uložen!", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun loadCoachAdvice(view: View) {
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        thread {
-            val db = AppDatabase.getDatabase(requireContext())
-            val todayCheckIn = db.checkInDao().getCheckInByDateSync(today)
-            val allCheckIns = db.checkInDao().getAllCheckInsSync()
-
-            activity?.runOnUiThread {
-                if (todayCheckIn != null) {
-                    updateCoachUI(todayCheckIn.weight, todayCheckIn.energyLevel, todayCheckIn.sleepQuality, todayCheckIn.hungerLevel)
-                } else {
-                    val lastWeight = allCheckIns.firstOrNull()?.weight ?: 83.0
-                    view.findViewById<EditText>(R.id.etWeight)?.setText(lastWeight.toString())
-                    view.findViewById<TextView>(R.id.tvCoachMessage).text = "Ještě jsi neudělal ranní rituál. Klikni zde!"
-                }
-            }
-        }
+    private fun updateCoachUI(advice: String) {
+        val tvMessage = view?.findViewById<TextView>(R.id.tvCoachMessage)
+        tvMessage?.text = advice
     }
 
-    private fun updateCoachUI(weight: Double, energy: Int, sleep: Int, hunger: Int) {
-        val tvMessage = view?.findViewById<TextView>(R.id.tvCoachMessage) ?: return
-        tvMessage.text = when {
-            sleep >= 4 && energy <= 3 && hunger >= 4 -> "Spánek byl top, ale motor je prázdný. Tvých ${weight} kg potřebuje dnes víc paliva! 🍝"
-            sleep <= 2 && energy >= 4 -> "Jedeš na dluh! Energie tam je, ale tělo ${weight} kg po špatné noci v šoku. Dneska bez kofeinu odpoledne! ☕🚫"
-            hunger >= 5 -> "Pozor na vlčí hlad! Těch ${weight} kg dneska potřebuje pořádný objem jídla a bílkovin. 🥩"
-            energy <= 2 && sleep <= 2 -> "Krizový režim. Tělo ${weight} kg dneska potřebuje úplný rest a regeneraci. 🛌"
-            energy >= 4 && sleep >= 4 -> "Ideální konstelace! Tvých ${weight} kg je připraveno na rekordy. Rozbij to! 🔥"
-            else -> "Váha ${weight} kg v normě. Sleduj svůj hlad a drž se plánu!"
-        }
+    private fun updateMacrosUI(view: View, status: DailyStatus) {
+        // Texty [cite: 2026-03-04]
+        view.findViewById<TextView>(R.id.tvCalories).text = "${status.eatenCal.toInt()} / ${status.target.calories.toInt()}"
+        view.findViewById<TextView>(R.id.tvValueProtein).text = "${status.eatenP.toInt()}g / ${status.target.protein.toInt()}g"
+        view.findViewById<TextView>(R.id.tvValueCarbs).text = "${status.eatenS.toInt()}g / ${status.target.carbs.toInt()}g"
+        view.findViewById<TextView>(R.id.tvValueFat).text = "${status.eatenT.toInt()}g / ${status.target.fat.toInt()}g"
+
+        // Kruhy
+        animateProgressCircles(view, status)
     }
 
-    private fun displayMacros(view: View) {
-        val data = MacroCalculator.calculate(requireContext())
-        view.findViewById<TextView>(R.id.tvCalories).text = "${data.calories.toInt()}"
-        view.findViewById<TextView>(R.id.tvValueProtein).text = "${data.protein.toInt()}g"
-        view.findViewById<TextView>(R.id.tvValueCarbs).text = "${data.carbs.toInt()}g"
-        view.findViewById<TextView>(R.id.tvValueFat).text = "${data.fat.toInt()}g"
-        view.findViewById<TextView>(R.id.tvTrainingStatus).text = "DNES: ${data.trainingType.uppercase()}"
-        val tvWater = view.findViewById<TextView>(R.id.tvWaterValue)
-        if (tvWater != null) tvWater.text = String.format(Locale.US, "%.1f L", data.water)
+    private fun animateProgressCircles(view: View, status: DailyStatus) {
+        val pbPT = view.findViewById<ProgressBar>(R.id.progressProtein_Target)
+        val pbPE = view.findViewById<ProgressBar>(R.id.progressProtein_Eaten)
+        val pbCT = view.findViewById<ProgressBar>(R.id.progressCarbs_Target)
+        val pbCE = view.findViewById<ProgressBar>(R.id.progressCarbs_Eaten)
+        val pbFT = view.findViewById<ProgressBar>(R.id.progressFat_Target)
+        val pbFE = view.findViewById<ProgressBar>(R.id.progressFat_Eaten)
 
-        val pbF = view.findViewById<ProgressBar>(R.id.progressFat)
-        val pbC = view.findViewById<ProgressBar>(R.id.progressCarbs)
-        val pbP = view.findViewById<ProgressBar>(R.id.progressProtein)
-        val pCal = data.protein * 4; val cCal = data.carbs * 4; val fCal = data.fat * 9
-        val total = pCal + cCal + fCal
+        val totalWeightTarget = status.target.protein + status.target.carbs + status.target.fat
 
-        if (total > 0) {
-            val fProp = (fCal / total).toFloat()
-            val cProp = (cCal / total).toFloat()
+        if (totalWeightTarget > 0) {
+            val fProp = (status.target.fat / totalWeightTarget).toFloat()
+            val cProp = (status.target.carbs / totalWeightTarget).toFloat()
             val startAngle = -90f
-            pbF.rotation = startAngle
-            pbC.rotation = startAngle - (fProp * 360f)
-            pbP.rotation = startAngle - (fProp * 360f) - (cProp * 360f)
-            pbF.max = 1000; pbC.max = 1000; pbP.max = 1000
-            ObjectAnimator.ofInt(pbF, "progress", 0, (fProp * 1000).toInt()).setDuration(800).start()
-            ObjectAnimator.ofInt(pbC, "progress", 0, (cProp * 1000).toInt()).setDuration(1000).start()
-            ObjectAnimator.ofInt(pbP, "progress", 0, (1000 - (fProp * 1000 + cProp * 1000).toInt())).setDuration(1200).start()
+
+            val fTarget = (fProp * 1000).toInt()
+            val cTarget = (cProp * 1000).toInt()
+            val pTarget = 1000 - (fTarget + cTarget)
+
+            val fatRot = startAngle
+            val carbsRot = startAngle - (fProp * 360f)
+            val proteinRot = carbsRot - (cProp * 360f)
+
+            pbFT.rotation = fatRot; pbFE.rotation = fatRot
+            pbCT.rotation = carbsRot; pbCE.rotation = carbsRot
+            pbPT.rotation = proteinRot; pbPE.rotation = proteinRot
+
+            listOf(pbFT, pbCT, pbPT).forEach { it.max = 1000 }
+            pbFT.secondaryProgress = fTarget
+            pbCT.secondaryProgress = cTarget
+            pbPT.secondaryProgress = pTarget
+
+            val fCurrent = ((status.eatenT / status.target.fat).coerceAtMost(1.0) * fTarget).toInt()
+            val cCurrent = ((status.eatenS / status.target.carbs).coerceAtMost(1.0) * cTarget).toInt()
+            val pCurrent = ((status.eatenP / status.target.protein).coerceAtMost(1.0) * pTarget).toInt()
+
+            listOf(pbFE, pbCE, pbPE).forEach { it.max = 1000 }
+            ObjectAnimator.ofInt(pbFE, "progress", pbFE.progress, fCurrent).setDuration(800).start()
+            ObjectAnimator.ofInt(pbCE, "progress", pbCE.progress, cCurrent).setDuration(1000).start()
+            ObjectAnimator.ofInt(pbPE, "progress", pbPE.progress, pCurrent).setDuration(1200).start()
         }
     }
 }

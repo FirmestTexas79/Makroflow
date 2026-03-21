@@ -23,6 +23,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.*
 
 class SnackFragment : Fragment() {
 
@@ -89,10 +91,8 @@ class SnackFragment : Fragment() {
         listProteins.removeAllViews()
 
         val filtered = allSnacks.filter { it.isPre == isPreSelected }
-
-        // Logika pro výpočet maximální hodnoty pro škálování pruhů [cite: 2026-03-01]
         val absoluteMax = allSnacks.flatMap { listOf(it.p, it.s, it.t) }.maxOrNull() ?: 1f
-        val globalCeiling = absoluteMax * 1.1f // 10% rezerva pro vizuální komfort
+        val globalCeiling = absoluteMax * 1.1f
 
         filtered.forEach { snack ->
             val card = layoutInflater.inflate(R.layout.item_snack_block, null)
@@ -101,40 +101,59 @@ class SnackFragment : Fragment() {
             card.findViewById<TextView>(R.id.valS).text = "S: ${snack.s.toInt()}g"
             card.findViewById<TextView>(R.id.valT).text = "T: ${snack.t.toInt()}g"
 
-            // --- NÁVRAT LOGIKY VODOROVNÝCH SLOUPCŮ ---
-            val barP = card.findViewById<View>(R.id.barP)
-            val barS = card.findViewById<View>(R.id.barS)
-            val barT = card.findViewById<View>(R.id.barT)
+            setupMacroBar(card.findViewById(R.id.barP), snack.p, globalCeiling)
+            setupMacroBar(card.findViewById(R.id.barS), snack.s, globalCeiling)
+            setupMacroBar(card.findViewById(R.id.barT), snack.t, globalCeiling)
 
-            // Nastavení šířky pruhů pomocí LayoutParams (weight) [cite: 2026-02-20]
-            setupMacroBar(barP, snack.p, globalCeiling)
-            setupMacroBar(barS, snack.s, globalCeiling)
-            setupMacroBar(barT, snack.t, globalCeiling)
+            // Akce při kliknutí - konzumace [cite: 2026-03-04]
+            card.setOnClickListener {
+                consumeSnack(snack)
+            }
 
+            // Gesta pro mazání zůstávají
             card.setOnTouchListener { v, event ->
                 handleDeleteGesture(v, event, snack)
             }
 
-            // Rozřazení do sloupců podle převládající složky [cite: 2026-03-01]
             if (snack.p > snack.s) listProteins.addView(card) else listCarbs.addView(card)
         }
     }
 
     private fun setupMacroBar(bar: View, value: Float, max: Float) {
         val params = bar.layoutParams as LinearLayout.LayoutParams
-        // Výpočet poměrné šířky (0.0 až 1.0)
         params.weight = if (value > 0) (value / max) else 0.001f
         bar.layoutParams = params
     }
 
-    // ... (předchozí kód)
+    // Nová funkce pro zápis snědeného jídla do DB
+    private fun consumeSnack(snack: SnackEntity) {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val calories = ((snack.p * 4) + (snack.s * 4) + (snack.t * 9)).toInt()
+
+        val consumed = ConsumedSnackEntity(
+            date = today,
+            name = snack.name,
+            p = snack.p,
+            s = snack.s,
+            t = snack.t,
+            calories = calories
+        )
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            db.consumedSnackDao().insertConsumed(consumed)
+            withContext(Dispatchers.Main) {
+                // Haptická odezva pro lepší pocit z "zaškrtnutí" [cite: 2026-03-04]
+                view?.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                Toast.makeText(requireContext(), "${snack.name} přidáno do dnešního dne! 🔥", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     private fun showAddDialog() {
         val dialog = BottomSheetDialog(requireContext())
         val v = layoutInflater.inflate(R.layout.dialog_add_snack, null)
         dialog.setContentView(v)
 
-        // 1. Všechny reference hned na začátek
         val btnSave = v.findViewById<Button>(R.id.btnSaveSnack)
         val etName = v.findViewById<EditText>(R.id.etSnackName)
         val etWeight = v.findViewById<EditText>(R.id.etSnackWeight)
@@ -146,7 +165,6 @@ class SnackFragment : Fragment() {
 
         setupSwitchColors(switchPre)
 
-        // 2. Click listener pro uložení - teď už má přímou referenci na dialog a view
         btnSave.setOnClickListener {
             val name = etName.text.toString()
             val weight = etWeight.text.toString()
@@ -157,21 +175,14 @@ class SnackFragment : Fragment() {
 
             if (name.isNotEmpty()) {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    db.snackDao().insertSnack(
-                        SnackEntity(name = name, weight = "${weight}g", p = p, s = s, t = t, isPre = isPre)
-                    )
-                    withContext(Dispatchers.Main) {
-                        dialog.dismiss()
-                        // Volitelně toast pro potvrzení
-                        Toast.makeText(requireContext(), "Snack $name uložen", Toast.LENGTH_SHORT).show()
-                    }
+                    db.snackDao().insertSnack(SnackEntity(name = name, weight = "${weight}g", p = p, s = s, t = t, isPre = isPre))
+                    withContext(Dispatchers.Main) { dialog.dismiss() }
                 }
             } else {
                 etName.error = "Zadej název"
             }
         }
 
-        // 3. Ostatní logika (Barcode a TextWatcher)
         tilName.setEndIconOnClickListener {
             startBarcodeScanner(etName, etWeight, etP, etS, etT)
         }
@@ -180,7 +191,6 @@ class SnackFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {
                 val weight = s.toString().toFloatOrNull() ?: 100f
                 if (baseP > 0 || baseS > 0 || baseT > 0) {
-                    // Přepočítáme makra na základě nové váhy a základních hodnot z 1g
                     etP.setText("%.1f".format(baseP * weight).replace(",", "."))
                     etS.setText("%.1f".format(baseS * weight).replace(",", "."))
                     etT.setText("%.1f".format(baseT * weight).replace(",", "."))
@@ -197,10 +207,7 @@ class SnackFragment : Fragment() {
         val options = GmsBarcodeScannerOptions.Builder().build()
         val scanner = GmsBarcodeScanning.getClient(requireContext(), options)
         scanner.startScan().addOnSuccessListener { barcode ->
-            barcode.rawValue?.let { code ->
-                // Posíláme přímo ty UI prvky
-                fetchFoodData(code, etName, etWeight, etP, etS, etT)
-            }
+            barcode.rawValue?.let { code -> fetchFoodData(code, etName, etWeight, etP, etS, etT) }
         }
     }
 
@@ -212,36 +219,23 @@ class SnackFragment : Fragment() {
                 if (json.getInt("status") == 1) {
                     val product = json.getJSONObject("product")
                     val nutriments = product.getJSONObject("nutriments")
-
-                    // Získání hodnot s defaultem 0.0, pokud v JSONu chybí
                     val p100 = nutriments.optDouble("proteins_100g", 0.0)
                     val s100 = nutriments.optDouble("carbohydrates_100g", 0.0)
                     val t100 = nutriments.optDouble("fat_100g", 0.0)
                     val productName = product.optString("product_name", "Neznámý produkt")
 
                     withContext(Dispatchers.Main) {
-                        // Nastavíme bázi pro Smart Math přepočet
                         baseP = (p100 / 100.0).toFloat()
                         baseS = (s100 / 100.0).toFloat()
                         baseT = (t100 / 100.0).toFloat()
-
-                        // Přímý zápis do polí
                         etName.setText(productName)
                         etWeight.setText("100")
                         etP.setText("%.1f".format(p100).replace(",", "."))
                         etS.setText("%.1f".format(s100).replace(",", "."))
                         etT.setText("%.1f".format(t100).replace(",", "."))
                     }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Produkt nenalezen v databázi", Toast.LENGTH_SHORT).show()
-                    }
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "Chyba sítě nebo skenování", Toast.LENGTH_SHORT).show()
-                }
-            }
+            } catch (e: Exception) { /* Chyba sítě */ }
         }
     }
 
@@ -252,22 +246,6 @@ class SnackFragment : Fragment() {
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
             intArrayOf(colorOn, colorOff)
         )
-    }
-
-    private fun saveSnackFromDialog(v: View, dialog: BottomSheetDialog) {
-        val name = v.findViewById<EditText>(R.id.etSnackName).text.toString()
-        val weight = v.findViewById<EditText>(R.id.etSnackWeight).text.toString()
-        val p = v.findViewById<EditText>(R.id.etSnackP).text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-        val s = v.findViewById<EditText>(R.id.etSnackS).text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-        val t = v.findViewById<EditText>(R.id.etSnackT).text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-        val isPre = v.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.cbIsPreWorkout).isChecked
-
-        if (name.isNotEmpty()) {
-            lifecycleScope.launch(Dispatchers.IO) {
-                db.snackDao().insertSnack(SnackEntity(name = name, weight = "${weight}g", p = p, s = s, t = t, isPre = isPre))
-                withContext(Dispatchers.Main) { dialog.dismiss() }
-            }
-        }
     }
 
     private fun handleDeleteGesture(v: View, event: MotionEvent, snack: SnackEntity): Boolean {

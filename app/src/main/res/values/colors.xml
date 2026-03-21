@@ -11,4 +11,8 @@
     <color name="color_low">#AED581</color>
     <color name="color_medium">#81C784</color>
     <color name="color_high">#4CAF50</color>
+
+    <color name="brand_dark_light">#455A2D</color>
+    <color name="brand_primary_light">#8C9C5B</color>
+    <color name="brand_accent_deep_light">#D68B45</color>
 </resources>
