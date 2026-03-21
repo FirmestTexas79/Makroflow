@@ -62,7 +62,15 @@ class SnackFragment : Fragment() {
             }
         }
 
-        view.findViewById<View>(R.id.fabAddSnack).setOnClickListener { showAddDialog() }
+        view.findViewById<View>(R.id.btnOpenTinder)?.setOnClickListener {
+            val dialog = FoodSwipeDialog()
+            dialog.show(parentFragmentManager, "FoodSwipe")
+        }
+
+        view.findViewById<View>(R.id.fabAddSnack)?.setOnClickListener {
+            showAddDialog()
+        }
+
         observeSnacks()
         return view
     }
@@ -78,9 +86,31 @@ class SnackFragment : Fragment() {
     private fun seedDatabase() {
         lifecycleScope.launch(Dispatchers.IO) {
             val defaultItems = listOf(
-                SnackEntity(name = "Banán s medem", weight = "150g", p = 1f, s = 35f, t = 0f, isPre = true),
-                SnackEntity(name = "Syrovátkový Izolát", weight = "30g", p = 25f, s = 2f, t = 1f, isPre = false)
+                // --- PROTEINOVÁ JÍDLA (P > S) -> Půjdou do listProteins [cite: 2026-03-04] ---
+                SnackEntity(name = "Hovězí steak (Sirloin)", weight = "150g", p = 35f, s = 0f, t = 12f, isPre = false),
+                SnackEntity(name = "Syrovátkový Izolát", weight = "30g", p = 26f, s = 2f, t = 1f, isPre = true),
+                SnackEntity(name = "Grilované kuřecí prso", weight = "150g", p = 32f, s = 0f, t = 3f, isPre = false),
+                SnackEntity(name = "Řecký jogurt (Skyr)", weight = "140g", p = 16f, s = 5f, t = 0f, isPre = true),
+                SnackEntity(name = "Tvaroh s ořechy", weight = "200g", p = 24f, s = 8f, t = 10f, isPre = false),
+                SnackEntity(name = "Tuňák ve vl. šťávě", weight = "130g", p = 28f, s = 0f, t = 1f, isPre = false),
+                SnackEntity(name = "Tofu na pánvi", weight = "150g", p = 18f, s = 4f, t = 9f, isPre = true),
+                SnackEntity(name = "Vajíčka natvrdo", weight = "120g", p = 15f, s = 1f, t = 11f, isPre = false),
+                SnackEntity(name = "Krůtí šunka", weight = "100g", p = 20f, s = 1f, t = 2f, isPre = false),
+                SnackEntity(name = "Cottage cheese", weight = "180g", p = 22f, s = 6f, t = 8f, isPre = true),
+
+                // --- SACHARIDOVÁ JÍDLA (S > P) -> Půjdou do listCarbs [cite: 2026-03-04] ---
+                SnackEntity(name = "Banán s medem", weight = "150g", p = 1.5f, s = 38f, t = 0.5f, isPre = true),
+                SnackEntity(name = "Ovesná kaše s jablkem", weight = "250g", p = 8f, s = 45f, t = 6f, isPre = true),
+                SnackEntity(name = "Rýžové chlebíčky", weight = "40g", p = 3f, s = 32f, t = 1f, isPre = true),
+                SnackEntity(name = "Těstoviny s pestem", weight = "200g", p = 12f, s = 55f, t = 14f, isPre = false),
+                SnackEntity(name = "Toast s džemem", weight = "80g", p = 5f, s = 42f, t = 3f, isPre = true),
+                SnackEntity(name = "Kuskus se zeleninou", weight = "200g", p = 9f, s = 48f, t = 4f, isPre = false),
+                SnackEntity(name = "Sušené datle", weight = "50g", p = 1f, s = 35f, t = 0f, isPre = true),
+                SnackEntity(name = "Gnocchi s rajčaty", weight = "220g", p = 7f, s = 52f, t = 5f, isPre = false),
+                SnackEntity(name = "Palačinky s ovocem", weight = "180g", p = 10f, s = 40f, t = 8f, isPre = true),
+                SnackEntity(name = "Pečená brambora", weight = "200g", p = 4f, s = 40f, t = 0f, isPre = false)
             )
+
             defaultItems.forEach { db.snackDao().insertSnack(it) }
         }
     }
@@ -128,10 +158,12 @@ class SnackFragment : Fragment() {
     // Nová funkce pro zápis snědeného jídla do DB
     private fun consumeSnack(snack: SnackEntity) {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()) // PŘIDEJ TENTO ŘÁDEK
         val calories = ((snack.p * 4) + (snack.s * 4) + (snack.t * 9)).toInt()
 
         val consumed = ConsumedSnackEntity(
             date = today,
+            time = currentTime, // PŘIDEJ TENTO PARAMETR SEM
             name = snack.name,
             p = snack.p,
             s = snack.s,

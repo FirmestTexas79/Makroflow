@@ -52,7 +52,25 @@ object MacroFlowEngine {
             else -> "Váha $weight kg v normě. Sleduj svůj hlad a drž se plánu!"
         }
     }
+
+    suspend fun logSwipedFood(context: Context, name: String, p: Double, s: Double, t: Double, cal: Double) {
+        withContext(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(context)
+            val now = Date()
+            val snack = ConsumedSnackEntity(
+                date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now),
+                time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now),
+                name = name,
+                p = p.toFloat(),
+                s = s.toFloat(),
+                t = t.toFloat(),
+                calories = cal.toInt()
+            )
+            db.consumedSnackDao().insertConsumed(snack)
+        }
+    }
 }
+
 
 data class DailyStatus(
     val caloriesLeft: Double,

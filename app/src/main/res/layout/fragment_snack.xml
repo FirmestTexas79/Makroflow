@@ -154,6 +154,20 @@
         app:elevation="6dp"
         app:borderWidth="0dp"/>
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnOpenTinder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="24dp"
+        android:layout_marginBottom="104dp"
+        android:src="@android:drawable/ic_menu_sort_by_size"
+        app:backgroundTint="#606C38"
+        app:tint="@color/brand_cream"
+        app:elevation="6dp"
+        app:borderWidth="0dp"/>
+
     <LinearLayout
         android:id="@+id/deleteOverlay"
         android:layout_width="match_parent"
