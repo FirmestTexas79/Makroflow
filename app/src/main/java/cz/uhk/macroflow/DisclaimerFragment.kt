@@ -13,6 +13,6 @@ class DisclaimerFragment : Fragment() {
     ): View = inflater.inflate(R.layout.fragment_placeholder, container, false).also {
         it.findViewById<TextView>(R.id.tvPlaceholderTitle).text = "📋 PROHLÁŠENÍ"
         it.findViewById<TextView>(R.id.tvPlaceholderDesc).text =
-            "Tato aplikace slouží pouze k informačním účelům a nenahrazuje odbornou lékařskou nebo nutriční péči."
+            "Makroflow není špion. Tvoje váha, míry a to, kolik jsi dneska snědl banánů, jsou tvá soukromá věc. Data ukládáme do tvého cloudu jen proto, aby se ti nesmazaly medaile, až si koupíš novej mobil. Neprodáváme tvoje info korporacím, vládám ani tajným službám. Máme radši tvoje svaly než tvoje data"
     }
 }
