@@ -5,14 +5,12 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "checkins")
 data class CheckInEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val date: String,
+    @PrimaryKey val date: String, // Datum je teď unikátní klíč
     val weight: Double,
     val energyLevel: Int,
     val sleepQuality: Int,
     val hungerLevel: Int,
-    val trainingReps: Int = 0,      // Počet opakování z TrainerFragmentu
-    val trainingIntensity: Float = 0f, // Např. průměrná rychlost nebo náročnost
+    val trainingReps: Int = 0,
+    val trainingIntensity: Float = 0f,
     val mood: String = ""
 )
-

@@ -103,19 +103,26 @@ class DashboardFragment : Fragment() {
         val sleep = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
 
-        // Uložení váhy pro MacroCalculator [cite: 2026-02-02, 2026-03-10]
+        // Uložíme do Prefs pro okamžitý výpočet v MacroCalculatoru
         requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
             .edit().putString("weightAkt", weightVal.toString()).apply()
 
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(requireContext())
+
+            // Teď insert skutečně NAHRADÍ stará data pro dnešek,
+            // protože 'date' (today) je primární klíč.
             db.checkInDao().insertCheckIn(CheckInEntity(
-                date = today, weight = weightVal, energyLevel = energy, sleepQuality = sleep, hungerLevel = hunger
+                date = today,
+                weight = weightVal,
+                energyLevel = energy,
+                sleepQuality = sleep,
+                hungerLevel = hunger
             ))
 
             withContext(Dispatchers.Main) {
-                refreshAllData(view) // Překreslí rady i makra
-                Toast.makeText(context, "Denní report uložen!", Toast.LENGTH_SHORT).show()
+                refreshAllData(view)
+                Toast.makeText(context, "Denní report aktualizován!", Toast.LENGTH_SHORT).show()
             }
         }
     }
