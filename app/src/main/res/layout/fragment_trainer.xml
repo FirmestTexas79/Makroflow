@@ -50,9 +50,6 @@
         android:layout_marginHorizontal="24dp"
         android:layout_marginTop="20dp"
         app:cardCornerRadius="24dp"
-        app:cardElevation="0dp"
-        app:strokeColor="#606C38"
-        app:strokeWidth="2dp"
         app:layout_constraintDimensionRatio="3:4"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -66,14 +63,7 @@
                 android:id="@+id/viewFinder"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                app:scaleType="fillCenter" />
-
-            <cz.uhk.macroflow.TrainerOverlayView
-                android:id="@+id/trainerOverlay"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-        </FrameLayout>
+                app:scaleType="fillCenter" /> </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton
