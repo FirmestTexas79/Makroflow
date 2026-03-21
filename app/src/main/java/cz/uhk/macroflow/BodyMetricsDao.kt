@@ -14,4 +14,7 @@ interface BodyMetricsDao {
 
     @Query("SELECT * FROM body_metrics ORDER BY date DESC")
     fun getAllFlow(): Flow<List<BodyMetricsEntity>>
+
+    @Query("SELECT * FROM body_metrics")
+    fun getAllSync(): List<BodyMetricsEntity>
 }

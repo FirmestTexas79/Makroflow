@@ -14,7 +14,8 @@ import androidx.room.RoomDatabase
         UserProfileEntity::class,
         BodyMetricsEntity::class
     ],
-    version = 5
+    version = 5,
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 

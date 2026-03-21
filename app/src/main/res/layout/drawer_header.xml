@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/brand_dark"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:paddingTop="48dp"
+    android:paddingBottom="24dp">
+
+    <!-- Avatar kruh -->
+    <FrameLayout
+        android:layout_width="72dp"
+        android:layout_height="72dp">
+
+        <!-- Pozadí avataru -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_lifestyle_circle"
+            android:backgroundTint="#606C38" />
+
+        <!-- Iniciály / ikona -->
+        <TextView
+            android:id="@+id/tvAvatarInitials"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#FEFAE0"
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-black" />
+
+        <!-- Zelená tečka — online indikátor -->
+        <View
+            android:id="@+id/viewOnlineDot"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_lifestyle_circle"
+            android:backgroundTint="#4CAF50"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- Jméno -->
+    <TextView
+        android:id="@+id/tvDrawerName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Sportovec"
+        android:textColor="#FEFAE0"
+        android:textSize="18sp"
+        android:fontFamily="sans-serif-black" />
+
+    <!-- Email / stav -->
+    <TextView
+        android:id="@+id/tvDrawerEmail"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Offline režim"
+        android:textColor="#DDA15E"
+        android:textSize="13sp" />
+
+    <!-- Přihlásit se tlačítko — zobrazí se jen v offline režimu -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnDrawerLogin"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="12dp"
+        android:text="Přihlásit / Registrovat"
+        android:textSize="12sp"
+        android:textColor="@color/brand_dark"
+        app:backgroundTint="#FEFAE0"
+        app:cornerRadius="20dp"
+        app:strokeWidth="0dp"
+        android:visibility="visible" />
+
+</LinearLayout>

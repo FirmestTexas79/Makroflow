@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "324719841390",
+    "project_id": "macroflow-app",
+    "storage_bucket": "macroflow-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:324719841390:android:b66160e0d66487aac7567f",
+        "android_client_info": {
+          "package_name": "cz.uhk.macroflow"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "324719841390-6jsjv4r81io965kjjk7v169mvcf25q2n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cz.uhk.macroflow",
+            "certificate_hash": "622dbdcac1d79c6f1415411aef8296784d9bf3c9"
+          }
+        },
+        {
+          "client_id": "324719841390-m9gpje20qlppd5i4ks1ejkdl6f88jc65.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCIARwIUd12ghpAe2-onq0_LO4R_D9orw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "324719841390-m9gpje20qlppd5i4ks1ejkdl6f88jc65.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

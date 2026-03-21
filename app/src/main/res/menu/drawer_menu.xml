@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:id="@+id/groupMain">
+
+        <item
+            android:id="@+id/drawerProfile"
+            android:icon="@drawable/ic_logo_black"
+            android:title="Můj profil"
+            android:checkable="true" />
+
+        <item
+            android:id="@+id/drawerAchievements"
+            android:icon="@drawable/ic_high"
+            android:title="Achievements"
+            android:checkable="true" />
+
+        <item
+            android:id="@+id/drawerSettings"
+            android:icon="@drawable/ic_save"
+            android:title="Nastavení"
+            android:checkable="true" />
+
+    </group>
+
+    <group android:id="@+id/groupLegal">
+
+        <item
+            android:id="@+id/drawerDisclaimer"
+            android:icon="@drawable/ic_macro_fat"
+            android:title="Prohlášení"
+            android:checkable="false" />
+
+    </group>
+
+    <group android:id="@+id/groupAccount">
+
+        <item
+            android:id="@+id/drawerSignOut"
+            android:icon="@drawable/ic_back"
+            android:title="Odhlásit se"
+            android:checkable="false" />
+
+    </group>
+
+</menu>

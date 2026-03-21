@@ -26,7 +26,9 @@ class DashboardFragment : Fragment() {
 
     private lateinit var today: String
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View? {
         today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         return inflater.inflate(R.layout.activity_dashboard, container, false)
     }
@@ -35,10 +37,10 @@ class DashboardFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val ritualOverlay = view.findViewById<MaterialCardView>(R.id.cardRitualOverlay)
-        val coachCard = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
-        val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
+        val coachCard     = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
+        val btnSave       = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
-        // Spuštění tréninku [cite: 2026-03-01]
+        // Spuštění trenéra
         view.findViewById<MaterialCardView>(R.id.cardStartTraining).setOnClickListener {
             parentFragmentManager.beginTransaction()
                 .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
@@ -47,33 +49,46 @@ class DashboardFragment : Fragment() {
                 .commit()
         }
 
+        // Propojení hamburger ikony s Drawerem v MainActivity
+        view.findViewById<View>(R.id.btnOpenDrawer).setOnClickListener {
+            (activity as? MainActivity)?.openDrawer()
+        }
+
+        // Otevření rituálu
         coachCard.setOnClickListener {
             ritualOverlay.visibility = View.VISIBLE
             ritualOverlay.alpha = 0f
             ritualOverlay.animate().alpha(1f).setDuration(300).start()
         }
 
+        // Uložení rituálu
         btnSave.setOnClickListener {
             saveCheckInData(view)
             ritualOverlay.animate().alpha(0f).setDuration(200).withEndAction {
                 ritualOverlay.visibility = View.GONE
             }.start()
         }
+
+        // Zobraz jméno / email přihlášeného uživatele pokud je k dispozici TextView
+        FirebaseRepository.currentUser?.let { user ->
+            view.findViewById<TextView>(R.id.tvUserGreeting)?.text =
+                "Ahoj, ${user.displayName?.substringBefore(" ") ?: "sportovče"}! 👋"
+        }
     }
 
-    // KLÍČOVÁ ZMĚNA: Refresh dat pokaždé, když se fragment stane aktivním
     override fun onResume() {
         super.onResume()
         view?.let { refreshAllData(it) }
     }
 
+    // ----------------------------------------------------------------
+    // Refresh všech dat na dashboardu
+    // ----------------------------------------------------------------
     private fun refreshAllData(view: View) {
-        // Použijeme Main.immediate, aby se UI update nezpožďoval v frontě
         lifecycleScope.launch(Dispatchers.Main.immediate) {
             val context = context ?: return@launch
             val db = AppDatabase.getDatabase(context)
 
-            // Načtení dat přesuneme do IO, ale výsledek zpracujeme hned
             val consumedList = withContext(Dispatchers.IO) {
                 db.consumedSnackDao().getConsumedByDate(today).first()
             }
@@ -81,15 +96,14 @@ class DashboardFragment : Fragment() {
                 db.checkInDao().getCheckInByDateSync(today)
             }
 
-            // 2. Výpočet (vše v rámci jednoho bloku, aby se to nemohlo "rozbít")
             val status = MacroFlowEngine.calculateDailyStatus(context, consumedList)
             val advice = MacroFlowEngine.getCoachAdvice(status, checkIn)
 
-            // 3. Update UI - voláme přímo a hned
             updateCoachUI(advice)
             updateMacrosUI(view, status)
+            updateWaterUI(view, status)
+            updateTrainingStatusUI(view, context)
 
-            // Update váhy v poli
             val displayWeight = checkIn?.weight ?: withContext(Dispatchers.IO) {
                 db.checkInDao().getAllCheckInsSync().firstOrNull()?.weight ?: 83.0
             }
@@ -97,49 +111,88 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    // ----------------------------------------------------------------
+    // Uložení check-inu — Room + Firebase
+    // ----------------------------------------------------------------
     private fun saveCheckInData(view: View) {
-        val weightVal = view.findViewById<EditText>(R.id.etWeight).text.toString().toDoubleOrNull() ?: 83.0
+        val weightVal = view.findViewById<EditText>(R.id.etWeight)
+            .text.toString().toDoubleOrNull() ?: 83.0
         val energy = view.findViewById<Slider>(R.id.sliderEnergy).value.toInt()
-        val sleep = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
+        val sleep  = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
 
-        // Uložíme do Prefs pro okamžitý výpočet v MacroCalculatoru
-        requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        // Okamžitá aktualizace váhy v SharedPrefs pro MacroCalculator
+        requireContext()
+            .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
             .edit().putString("weightAkt", weightVal.toString()).apply()
+
+        val checkInEntity = CheckInEntity(
+            date         = today,
+            weight       = weightVal,
+            energyLevel  = energy,
+            sleepQuality = sleep,
+            hungerLevel  = hunger
+        )
 
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // Teď insert skutečně NAHRADÍ stará data pro dnešek,
-            // protože 'date' (today) je primární klíč.
-            db.checkInDao().insertCheckIn(CheckInEntity(
-                date = today,
-                weight = weightVal,
-                energyLevel = energy,
-                sleepQuality = sleep,
-                hungerLevel = hunger
-            ))
+            // 1. Ulož lokálně do Room
+            db.checkInDao().insertCheckIn(checkInEntity)
+
+            // 2. Nahraj do Firebase (jen pokud je přihlášen)
+            if (FirebaseRepository.isLoggedIn) {
+                try {
+                    FirebaseRepository.uploadCheckIn(checkInEntity)
+                } catch (e: Exception) {
+                    // Tiché selhání — data jsou v Room, sync příště
+                }
+            }
 
             withContext(Dispatchers.Main) {
-                refreshAllData(view)
-                Toast.makeText(context, "Denní report aktualizován!", Toast.LENGTH_SHORT).show()
+                view.let { refreshAllData(it) }
+                Toast.makeText(
+                    context,
+                    if (FirebaseRepository.isLoggedIn)
+                        "Rituál uložen a synchronizován ☁️"
+                    else
+                        "Rituál uložen lokálně",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
 
+    // ----------------------------------------------------------------
+    // UI update metody
+    // ----------------------------------------------------------------
     private fun updateCoachUI(advice: String) {
-        val tvMessage = view?.findViewById<TextView>(R.id.tvCoachMessage)
-        tvMessage?.text = advice
+        view?.findViewById<TextView>(R.id.tvCoachMessage)?.text = advice
+    }
+
+    private fun updateWaterUI(view: View, status: DailyStatus) {
+        val liters = String.format("%.1f L", status.target.water)
+        view.findViewById<TextView>(R.id.tvWaterValue)?.text = liters
+    }
+
+    private fun updateTrainingStatusUI(view: View, context: Context) {
+        val sdf = SimpleDateFormat("EEEE", Locale.ENGLISH)
+        val dayName = sdf.format(Date())
+        val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
+        val type = prefs.getString("type_$dayName", "rest")?.uppercase() ?: "REST"
+        view.findViewById<TextView>(R.id.tvTrainingStatus)?.text = "DNES: $type"
     }
 
     private fun updateMacrosUI(view: View, status: DailyStatus) {
-        // Texty [cite: 2026-03-04]
-        view.findViewById<TextView>(R.id.tvCalories).text = "${status.eatenCal.toInt()} / ${status.target.calories.toInt()}"
-        view.findViewById<TextView>(R.id.tvValueProtein).text = "${status.eatenP.toInt()}g / ${status.target.protein.toInt()}g"
-        view.findViewById<TextView>(R.id.tvValueCarbs).text = "${status.eatenS.toInt()}g / ${status.target.carbs.toInt()}g"
-        view.findViewById<TextView>(R.id.tvValueFat).text = "${status.eatenT.toInt()}g / ${status.target.fat.toInt()}g"
+        view.findViewById<TextView>(R.id.tvCalories)?.text =
+            "${status.eatenCal.toInt()} / ${status.target.calories.toInt()}"
+        view.findViewById<TextView>(R.id.tvValueProtein)?.text =
+            "${status.eatenP.toInt()}g / ${status.target.protein.toInt()}g"
+        view.findViewById<TextView>(R.id.tvValueCarbs)?.text =
+            "${status.eatenS.toInt()}g / ${status.target.carbs.toInt()}g"
+        view.findViewById<TextView>(R.id.tvValueFat)?.text =
+            "${status.eatenT.toInt()}g / ${status.target.fat.toInt()}g"
 
-        // Kruhy
         animateProgressCircles(view, status)
     }
 
@@ -152,37 +205,36 @@ class DashboardFragment : Fragment() {
         val pbFE = view.findViewById<ProgressBar>(R.id.progressFat_Eaten)
 
         val totalWeightTarget = status.target.protein + status.target.carbs + status.target.fat
+        if (totalWeightTarget <= 0) return
 
-        if (totalWeightTarget > 0) {
-            val fProp = (status.target.fat / totalWeightTarget).toFloat()
-            val cProp = (status.target.carbs / totalWeightTarget).toFloat()
-            val startAngle = -90f
+        val fProp = (status.target.fat / totalWeightTarget).toFloat()
+        val cProp = (status.target.carbs / totalWeightTarget).toFloat()
+        val startAngle = -90f
 
-            val fTarget = (fProp * 1000).toInt()
-            val cTarget = (cProp * 1000).toInt()
-            val pTarget = 1000 - (fTarget + cTarget)
+        val fTarget = (fProp * 1000).toInt()
+        val cTarget = (cProp * 1000).toInt()
+        val pTarget = 1000 - (fTarget + cTarget)
 
-            val fatRot = startAngle
-            val carbsRot = startAngle - (fProp * 360f)
-            val proteinRot = carbsRot - (cProp * 360f)
+        val fatRot     = startAngle
+        val carbsRot   = startAngle - (fProp * 360f)
+        val proteinRot = carbsRot - (cProp * 360f)
 
-            pbFT.rotation = fatRot; pbFE.rotation = fatRot
-            pbCT.rotation = carbsRot; pbCE.rotation = carbsRot
-            pbPT.rotation = proteinRot; pbPE.rotation = proteinRot
+        pbFT.rotation = fatRot;     pbFE.rotation = fatRot
+        pbCT.rotation = carbsRot;   pbCE.rotation = carbsRot
+        pbPT.rotation = proteinRot; pbPE.rotation = proteinRot
 
-            listOf(pbFT, pbCT, pbPT).forEach { it.max = 1000 }
-            pbFT.secondaryProgress = fTarget
-            pbCT.secondaryProgress = cTarget
-            pbPT.secondaryProgress = pTarget
+        listOf(pbFT, pbCT, pbPT).forEach { it.max = 1000 }
+        pbFT.secondaryProgress = fTarget
+        pbCT.secondaryProgress = cTarget
+        pbPT.secondaryProgress = pTarget
 
-            val fCurrent = ((status.eatenT / status.target.fat).coerceAtMost(1.0) * fTarget).toInt()
-            val cCurrent = ((status.eatenS / status.target.carbs).coerceAtMost(1.0) * cTarget).toInt()
-            val pCurrent = ((status.eatenP / status.target.protein).coerceAtMost(1.0) * pTarget).toInt()
+        val fCurrent = ((status.eatenT / status.target.fat).coerceAtMost(1.0) * fTarget).toInt()
+        val cCurrent = ((status.eatenS / status.target.carbs).coerceAtMost(1.0) * cTarget).toInt()
+        val pCurrent = ((status.eatenP / status.target.protein).coerceAtMost(1.0) * pTarget).toInt()
 
-            listOf(pbFE, pbCE, pbPE).forEach { it.max = 1000 }
-            ObjectAnimator.ofInt(pbFE, "progress", pbFE.progress, fCurrent).setDuration(800).start()
-            ObjectAnimator.ofInt(pbCE, "progress", pbCE.progress, cCurrent).setDuration(1000).start()
-            ObjectAnimator.ofInt(pbPE, "progress", pbPE.progress, pCurrent).setDuration(1200).start()
-        }
+        listOf(pbFE, pbCE, pbPE).forEach { it.max = 1000 }
+        ObjectAnimator.ofInt(pbFE, "progress", pbFE.progress, fCurrent).setDuration(800).start()
+        ObjectAnimator.ofInt(pbCE, "progress", pbCE.progress, cCurrent).setDuration(1000).start()
+        ObjectAnimator.ofInt(pbPE, "progress", pbPE.progress, pCurrent).setDuration(1200).start()
     }
 }

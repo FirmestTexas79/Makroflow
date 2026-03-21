@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.devtools.ksp) // Přidej toto
+    id("com.google.gms.google-services") // <--- PŘIDEJ TENTO ŘÁDEK
 }
 
 android {
@@ -46,6 +47,9 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+    // Activity KTX — potřeba pro onBackPressedDispatcher.addCallback
+    implementation("androidx.activity:activity-ktx:1.8.0")
+
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
@@ -71,4 +75,12 @@ dependencies {
 
     // ML Kit pro detekci objektů (kotouče) [cite: 2026-03-01]
     implementation("com.google.mlkit:object-detection:17.0.0")
+
+    // Firebase BoM — řídí verze všech Firebase knihoven
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+
+// Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 }
