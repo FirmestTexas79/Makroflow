@@ -26,6 +26,9 @@ import androidx.core.content.edit
 class DashboardFragment : Fragment() {
 
     private lateinit var today: String
+    private lateinit var waterPill: cz.uhk.macroflow.WaterPillView
+    private var waterGoalMl: Int = 2500
+    private var waterCurrentMl: Int = 0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -92,11 +95,26 @@ class DashboardFragment : Fragment() {
             }.start()
         }
 
-        // Zobraz jméno / email přihlášeného uživatele pokud je k dispozici TextView
-        FirebaseRepository.currentUser?.let { user ->
-            view.findViewById<TextView>(R.id.tvUserGreeting)?.text =
-                "Ahoj, ${user.displayName?.substringBefore(" ") ?: "sportovče"}! 👋"
+        // Inicializace water pillu
+        waterPill = view.findViewById(R.id.waterPillView)
+        waterPill.setOnClickListener {
+            val dialog = WaterDialog()
+            dialog.onWaterLogged = { addedMl ->
+                waterCurrentMl += addedMl
+                updateWaterPill(view)
+            }
+            dialog.show(parentFragmentManager, "WaterDialog")
         }
+
+        // Zobraz jméno / email přihlášeného uživatele pokud je k dispozici TextView
+        // Pozdrav — přihlášený uživatel nebo výchozí podtitulek
+        val greetingTv = view.findViewById<TextView>(R.id.tvUserGreeting)
+        FirebaseRepository.currentUser?.let { user ->
+            greetingTv?.text = "Ahoj, ${user.displayName?.substringBefore(" ") ?: "sportovče"}! 👋"
+        } ?: run {
+            greetingTv?.text = "Sleduj svůj den. Každé sousto se počítá."
+        }
+        greetingTv?.visibility = android.view.View.VISIBLE
     }
 
     override fun onResume() {
@@ -130,7 +148,7 @@ class DashboardFragment : Fragment() {
             val displayWeight = checkIn?.weight ?: withContext(Dispatchers.IO) {
                 db.checkInDao().getAllCheckInsSync().firstOrNull()?.weight ?: 83.0
             }
-            view.findViewById<EditText>(R.id.etWeight)?.setText(displayWeight.toString())
+            // etWeight odstraněn - váha se zobrazuje jen v overlay rituálu
         }
     }
 
@@ -144,6 +162,10 @@ class DashboardFragment : Fragment() {
         val sleep  = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
 
+        requireContext()
+            .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+            .edit { putString("weightAkt", weightVal.toString()) }
+
         val checkInEntity = CheckInEntity(
             date         = today,
             weight       = weightVal,
@@ -155,22 +177,12 @@ class DashboardFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.Main) {
             val db = AppDatabase.getDatabase(requireContext())
 
+            // 1. Uložíme nejdříve lokálně do Room (blokujeme Main vlákno jen na zlomek vteřiny pro IO)
             withContext(Dispatchers.IO) {
-                // 1. Uloz check-in
                 db.checkInDao().insertCheckIn(checkInEntity)
-
-                // 2. Aktualizuj vahu v UserProfileEntity -> ProfileFragment uvidi spravnou vahu
-                val existingProfile = db.userProfileDao().getProfileSync()
-                val updatedProfile = (existingProfile ?: UserProfileEntity()).copy(weight = weightVal)
-                db.userProfileDao().saveProfile(updatedProfile)
-
-                // 3. Synchronizuj SharedPrefs (MacroCalculator fallback)
-                requireContext()
-                    .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-                    .edit().putString("weightAkt", weightVal.toString()).apply()
             }
 
-            // 4. Refreshni UI okamzite
+            // 2. Refreshneme UI OKAMŽITĚ z lokálních dat v Roomu
             refreshAllData(requireView())
 
             Toast.makeText(
@@ -200,8 +212,33 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateWaterUI(view: View, status: DailyStatus) {
-        val liters = String.format("%.1f L", status.target.water)
-        view.findViewById<TextView>(R.id.tvWaterValue)?.text = liters
+        waterGoalMl = (status.target.water * 1000).toInt()
+        lifecycleScope.launch {
+            val db = AppDatabase.getDatabase(requireContext())
+            waterCurrentMl = withContext(Dispatchers.IO) {
+                db.waterDao().getTotalMlForDateSync(today)
+            }
+            updateWaterPill(view)
+
+            // Sleduj dehydrataci — 4h+ bez pití
+            val lastTs = withContext(Dispatchers.IO) {
+                db.waterDao().getLastDrinkTimestamp(today)
+            }
+            if (lastTs != null) {
+                val hoursSince = (System.currentTimeMillis() - lastTs) / 3_600_000f
+                if (::waterPill.isInitialized) waterPill.isDehydrated = hoursSince >= 4f
+            }
+        }
+    }
+
+    private fun updateWaterPill(view: View) {
+        if (!::waterPill.isInitialized) return
+        val fraction = if (waterGoalMl > 0) waterCurrentMl.toFloat() / waterGoalMl else 0f
+        waterPill.progressFraction = fraction
+        waterPill.goalReached      = fraction >= 1f
+        waterPill.tvMain = "${waterCurrentMl} ml"
+        waterPill.tvSub  = "z ${waterGoalMl} ml · 💧"
+        waterPill.invalidate()
     }
 
     private fun updateTrainingStatusUI(view: View, context: Context) {

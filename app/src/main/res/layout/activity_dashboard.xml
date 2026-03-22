@@ -1,334 +1,520 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/brand_cream"
-    android:clipChildren="false"
-    android:clipToPadding="false">
+    android:background="#FEFAE0">
 
-    <!-- Dekorativní list -->
+    <!-- ══ DEKORATIVNÍ LISTY ══ -->
     <ImageView
-        android:id="@+id/leafTop"
-        android:layout_width="320dp"
-        android:layout_height="320dp"
-        android:layout_marginTop="-100dp"
-        android:layout_marginEnd="-120dp"
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-60dp"
+        android:layout_marginEnd="-80dp"
         android:src="@drawable/bg_monstera_leaf_1"
-        android:alpha="0.10"
-        android:rotation="-200"
-        app:tint="#283618"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:alpha="0.07"
+        android:rotation="-20"
+        app:tint="#283618" />
 
+    <ImageView
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="-30dp"
+        android:layout_marginBottom="160dp"
+        android:src="@drawable/bg_monstera_leaf_2"
+        android:alpha="0.06"
+        android:rotation="50"
+        app:tint="#606C38" />
 
-    <!-- ScrollView s veškerým obsahem -->
-    <androidx.core.widget.NestedScrollView
+    <!-- ══ HLAVNÍ LAYOUT — bez scrollování ══ -->
+    <LinearLayout
         android:id="@+id/dashboardScroll"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:paddingBottom="120dp"
-        android:clipToPadding="false"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingBottom="120dp">
 
-        <LinearLayout
+        <!-- ══ HEADER ══ -->
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:paddingHorizontal="24dp"
+            android:paddingTop="52dp"
+            android:paddingBottom="4dp">
 
-            <!-- Pill: typ tréninku -->
+            <!-- Training pill štítek -->
             <TextView
                 android:id="@+id/tvTrainingStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="64dp"
                 android:background="@drawable/bg_status_pill"
                 android:backgroundTint="#283618"
-                android:paddingHorizontal="24dp"
-                android:paddingVertical="10dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="6dp"
                 android:text="DNES: REST"
                 android:textColor="#FEFAE0"
-                android:textSize="14sp"
+                android:textSize="11sp"
                 android:textStyle="bold"
-                android:elevation="4dp" />
+                android:letterSpacing="0.12"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- Pozdrav uživatele -->
+            <!-- Velký nadpis -->
+            <TextView
+                android:id="@+id/tvDashboardTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="sans-serif-black"
+                android:text="Dashboard"
+                android:textColor="#283618"
+                android:textSize="36sp"
+                android:lineSpacingMultiplier="0.9"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvTrainingStatus" />
+
+            <!-- Pozdrav / podtitulek -->
             <TextView
                 android:id="@+id/tvUserGreeting"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="2dp"
+                android:text="Sleduj svůj den. Každé sousto se počítá."
+                android:textColor="#606C38"
                 android:textSize="13sp"
-                android:textColor="@color/brand_primary"
-                android:visibility="gone" />
+                android:alpha="0.75"
+                android:visibility="visible"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvDashboardTitle" />
 
-            <!-- Kruhové progress bary -->
-            <FrameLayout
-                android:id="@+id/circleContainer"
-                android:layout_width="300dp"
-                android:layout_height="300dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="16dp">
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <ProgressBar
-                    android:id="@+id/progressProtein_Target"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="55dp"
-                    android:scaleX="-1"
-                    android:alpha="0.4"
-                    android:progressDrawable="@drawable/circle_progress_protein" />
-                <ProgressBar
-                    android:id="@+id/progressProtein_Eaten"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="55dp"
-                    android:scaleX="-1"
-                    android:progressDrawable="@drawable/circle_progress_protein_light" />
-                <ProgressBar
-                    android:id="@+id/progressCarbs_Target"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="27.5dp"
-                    android:scaleX="-1"
-                    android:alpha="0.4"
-                    android:progressDrawable="@drawable/circle_progress_carbs" />
-                <ProgressBar
-                    android:id="@+id/progressCarbs_Eaten"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="27.5dp"
-                    android:scaleX="-1"
-                    android:progressDrawable="@drawable/circle_progress_carbs_light" />
-                <ProgressBar
-                    android:id="@+id/progressFat_Target"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="0dp"
-                    android:scaleX="-1"
-                    android:alpha="0.4"
-                    android:progressDrawable="@drawable/circle_progress_fat" />
-                <ProgressBar
-                    android:id="@+id/progressFat_Eaten"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="0dp"
-                    android:scaleX="-1"
-                    android:progressDrawable="@drawable/circle_progress_fat_light" />
+        <!-- ══ KRUHOVÝ GRAF + KALORIE ══ -->
+        <FrameLayout
+            android:id="@+id/circleContainer"
+            android:layout_width="300dp"
+            android:layout_height="300dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="-12dp">
 
-                <!-- Střed — kalorie -->
-                <LinearLayout
+            <ProgressBar
+                android:id="@+id/progressProtein_Target"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="52dp"
+                android:scaleX="-1"
+                android:alpha="0.35"
+                android:progressDrawable="@drawable/circle_progress_protein" />
+            <ProgressBar
+                android:id="@+id/progressProtein_Eaten"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="52dp"
+                android:scaleX="-1"
+                android:progressDrawable="@drawable/circle_progress_protein_light" />
+            <ProgressBar
+                android:id="@+id/progressCarbs_Target"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="26dp"
+                android:scaleX="-1"
+                android:alpha="0.35"
+                android:progressDrawable="@drawable/circle_progress_carbs" />
+            <ProgressBar
+                android:id="@+id/progressCarbs_Eaten"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="26dp"
+                android:scaleX="-1"
+                android:progressDrawable="@drawable/circle_progress_carbs_light" />
+            <ProgressBar
+                android:id="@+id/progressFat_Target"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="0dp"
+                android:scaleX="-1"
+                android:alpha="0.35"
+                android:progressDrawable="@drawable/circle_progress_fat" />
+            <ProgressBar
+                android:id="@+id/progressFat_Eaten"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="0dp"
+                android:scaleX="-1"
+                android:progressDrawable="@drawable/circle_progress_fat_light" />
+
+            <!-- Střed — kalorie -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/tvCalories"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
+                    android:fontFamily="sans-serif-black"
+                    android:text="0"
+                    android:textColor="#283618"
+                    android:textSize="22sp"
+                    android:maxLines="1"
+                    android:ellipsize="none" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="KCAL CÍL"
+                    android:textColor="#606C38"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- ══ ODDĚLOVAČ MAKRA ══ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginBottom="10dp">
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:background="#20283618" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:text="MAKRA DNES"
+                android:textColor="#606C38"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.14" />
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:background="#20283618" />
+        </LinearLayout>
+
+        <!-- ══ MAKRO KARTY ══ -->
+        <LinearLayout
+            android:id="@+id/layoutMacros"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="5dp"
+                app:cardCornerRadius="20dp"
+                app:cardBackgroundColor="#283618"
+                app:cardElevation="0dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="10dp"
                     android:gravity="center"
                     android:orientation="vertical">
                     <TextView
-                        android:id="@+id/tvCalories"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:text="BÍLKOVINY"
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.08"
+                        android:textColor="#FEFAE0"
+                        android:alpha="0.7" />
+                    <TextView
+                        android:id="@+id/tvValueProtein"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="0 / 0g"
+                        android:textColor="#FEFAE0"
                         android:fontFamily="sans-serif-black"
-                        android:text="0"
-                        android:textColor="#283618"
-                        android:textSize="24sp" />
+                        android:textSize="12sp"
+                        android:maxLines="1"
+                        android:ellipsize="none" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="5dp"
+                app:cardCornerRadius="20dp"
+                app:cardBackgroundColor="#606C38"
+                app:cardElevation="0dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="10dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="KCAL CÍL"
-                        android:textColor="#606C38"
-                        android:textSize="12sp"
+                        android:text="SACHARIDY"
+                        android:textSize="9sp"
                         android:textStyle="bold"
-                        android:letterSpacing="0.1" />
-                </LinearLayout>
-            </FrameLayout>
-
-            <!-- Makro karty -->
-            <LinearLayout
-                android:id="@+id/layoutMacros"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="16dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_margin="4dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardBackgroundColor="#283618">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:padding="12dp" android:gravity="center" android:orientation="vertical">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Bílkoviny" android:textSize="10sp" android:textColor="#FEFAE0"/>
-                        <TextView android:id="@+id/tvValueProtein" android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" android:text="0g / 0g"
-                            android:textColor="#FEFAE0" android:textStyle="bold" android:textSize="14sp"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_margin="4dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardBackgroundColor="#606C38">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:padding="12dp" android:gravity="center" android:orientation="vertical">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Sacharidy" android:textSize="10sp" android:textColor="#FEFAE0"/>
-                        <TextView android:id="@+id/tvValueCarbs" android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" android:text="0g / 0g"
-                            android:textColor="#FEFAE0" android:textStyle="bold" android:textSize="14sp"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_margin="4dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardBackgroundColor="#BC6C25">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:padding="12dp" android:gravity="center" android:orientation="vertical">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Tuky" android:textSize="10sp" android:textColor="#FEFAE0"/>
-                        <TextView android:id="@+id/tvValueFat" android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" android:text="0g / 0g"
-                            android:textColor="#FEFAE0" android:textStyle="bold" android:textSize="14sp"/>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-
-            <!-- Coach karta -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardCoachAdvice"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="20dp"
-                android:layout_marginTop="20dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="#FEFAE0"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="2dp"
-                app:strokeColor="#606C38"
-                app:strokeWidth="1dp">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:padding="16dp" android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="💡 TIP OD TRENÉRA" android:textColor="#606C38"
-                        android:textSize="11sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/tvCoachMessage" android:layout_width="match_parent"
-                        android:layout_height="wrap_content" android:layout_marginTop="4dp"
-                        android:text="Načítám tvůj stav..." android:textColor="#283618" android:textSize="14sp" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp" android:text="Klikni pro ranní rituál →"
-                        android:textColor="#606C38" android:textSize="11sp" android:alpha="0.7" />
+                        android:letterSpacing="0.08"
+                        android:textColor="#FEFAE0"
+                        android:alpha="0.7" />
+                    <TextView
+                        android:id="@+id/tvValueCarbs"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="0 / 0g"
+                        android:textColor="#FEFAE0"
+                        android:fontFamily="sans-serif-black"
+                        android:textSize="12sp"
+                        android:maxLines="1"
+                        android:ellipsize="none" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Hydratace -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardWater"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="20dp"
-                android:layout_marginTop="12dp"
-                app:cardBackgroundColor="#606C38"
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_weight="1"
+                android:layout_marginStart="5dp"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="2dp">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:padding="16dp" android:gravity="center_vertical" android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:text="💧 CÍL HYDRATACE"
-                        android:textColor="#FEFAE0" android:textSize="11sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/tvWaterValue" android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" android:text="— L"
-                        android:textColor="#FEFAE0" android:textSize="18sp" android:textStyle="bold" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Trenér -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardStartTraining"
-                android:layout_width="match_parent"
-                android:layout_height="80dp"
-                android:layout_marginHorizontal="20dp"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="8dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?android:attr/selectableItemBackground"
-                app:cardBackgroundColor="#283618"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="6dp">
-
-                <androidx.constraintlayout.widget.ConstraintLayout
+                app:cardBackgroundColor="#BC6C25"
+                app:cardElevation="0dp">
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:paddingHorizontal="20dp">
-
-                    <ImageView
-                        android:id="@+id/ivTrainingIcon"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:src="@drawable/ic_barcode_scan"
-                        app:tint="#FEFAE0"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    android:padding="10dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:orientation="vertical"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/ivChevron"
-                        app:layout_constraintStart_toEndOf="@id/ivTrainingIcon"
-                        app:layout_constraintTop_toTopOf="parent">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="CHYTRÝ TRENÉR" android:textColor="#FEFAE0"
-                            android:textSize="16sp" android:textStyle="bold" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Analýza hloubky a trajektorie"
-                            android:textColor="#DDA15E" android:textSize="12sp" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:id="@+id/ivChevron"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_chevron_right"
-                        app:tint="#FEFAE0"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                        android:text="TUKY"
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.08"
+                        android:textColor="#FEFAE0"
+                        android:alpha="0.7" />
+                    <TextView
+                        android:id="@+id/tvValueFat"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="0 / 0g"
+                        android:textColor="#FEFAE0"
+                        android:fontFamily="sans-serif-black"
+                        android:textSize="12sp"
+                        android:maxLines="1"
+                        android:ellipsize="none" />
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
 
-    <!-- Rituál overlay — mimo ScrollView, překrývá vše -->
+        <!-- ══ COACH KARTA ══ -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardCoachAdvice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="#FEFAE0"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#20283618"
+            app:strokeWidth="1.5dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:orientation="vertical">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="💡 TIP OD TRENÉRA"
+                        android:textColor="#606C38"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Klikni pro rituál →"
+                        android:textColor="#606C38"
+                        android:textSize="10sp"
+                        android:alpha="0.5" />
+                </LinearLayout>
+                <TextView
+                    android:id="@+id/tvCoachMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Načítám tvůj stav..."
+                    android:textColor="#283618"
+                    android:textSize="14sp"
+                    android:lineSpacingMultiplier="1.3" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ══ VODA + TRÉNINK PILLS ══ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <cz.uhk.macroflow.WaterPillView
+                android:id="@+id/waterPillView"
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTodayWorkout"
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                app:cardCornerRadius="36dp"
+                app:cardBackgroundColor="#283618"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:paddingHorizontal="14dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Dnes cvičíš v:"
+                        android:textColor="#FEFAE0"
+                        android:textSize="12sp"
+                        android:alpha="0.6" />
+                    <TextView
+                        android:id="@+id/tvTodayWorkoutPill"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="—"
+                        android:textColor="#DDA15E"
+                        android:textSize="20sp"
+                        android:fontFamily="sans-serif-black" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+        <!-- ══ CHYTRÝ TRENÉR ══ -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardStartTraining"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="32dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            app:cardBackgroundColor="#283618"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingHorizontal="20dp">
+
+                <ImageView
+                    android:id="@+id/ivTrainingIcon"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/ic_barcode_scan"
+                    app:tint="#FEFAE0"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:orientation="vertical"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/ivChevron"
+                    app:layout_constraintStart_toEndOf="@id/ivTrainingIcon"
+                    app:layout_constraintTop_toTopOf="parent">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="CHYTRÝ TRENÉR"
+                        android:textColor="#FEFAE0"
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-black" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Analýza hloubky a trajektorie"
+                        android:textColor="#DDA15E"
+                        android:textSize="12sp"
+                        android:alpha="0.85" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/ivChevron"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="#FEFAE0"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+    <!-- ══ RANNÍ RITUÁL OVERLAY ══ -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardRitualOverlay"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:layout_marginHorizontal="24dp"
         android:layout_marginVertical="48dp"
         android:visibility="gone"
@@ -337,11 +523,7 @@
         app:cardCornerRadius="28dp"
         app:cardElevation="30dp"
         app:strokeWidth="2dp"
-        app:strokeColor="#283618"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:strokeColor="#283618">
 
         <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
@@ -354,11 +536,26 @@
                 android:orientation="vertical"
                 android:padding="24dp">
 
+                <!-- Overlay header -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#DDA15E"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="5dp"
                     android:text="RANNÍ RITUÁL"
+                    android:textColor="#FEFAE0"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
                     android:fontFamily="sans-serif-black"
+                    android:text="Jak se dnes cítíš?"
                     android:textSize="22sp"
                     android:textColor="#283618" />
 
@@ -369,7 +566,8 @@
                     android:layout_marginBottom="16dp"
                     android:text="Zaznamenej svůj stav pro dnešek"
                     android:textSize="13sp"
-                    android:textColor="#606C38" />
+                    android:textColor="#606C38"
+                    android:alpha="0.8" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -387,9 +585,27 @@
                         android:textColor="@color/brand_dark" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Oddělovač slidery -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="4dp">
+                    <View android:layout_width="0dp" android:layout_height="1dp"
+                        android:layout_weight="1" android:background="#20283618" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="10dp" android:text="TVŮJ STAV"
+                        android:textColor="#606C38" android:textSize="9sp" android:textStyle="bold"
+                        android:letterSpacing="0.14" />
+                    <View android:layout_width="0dp" android:layout_height="1dp"
+                        android:layout_weight="1" android:background="#20283618" />
+                </LinearLayout>
+
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp" android:text="Míra energie (1–5)"
-                    android:textColor="@color/brand_dark" android:textStyle="bold" android:textSize="13sp" />
+                    android:layout_marginTop="8dp" android:text="Míra energie (1–5)"
+                    android:textColor="@color/brand_dark" android:textStyle="bold" android:textSize="12sp" />
                 <com.google.android.material.slider.Slider
                     android:id="@+id/sliderEnergy"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -397,8 +613,8 @@
                     app:thumbColor="@color/brand_primary" app:trackColorActive="@color/brand_primary" />
 
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp" android:text="Kvalita spánku (1–5)"
-                    android:textColor="@color/brand_dark" android:textStyle="bold" android:textSize="13sp" />
+                    android:layout_marginTop="8dp" android:text="Kvalita spánku (1–5)"
+                    android:textColor="@color/brand_dark" android:textStyle="bold" android:textSize="12sp" />
                 <com.google.android.material.slider.Slider
                     android:id="@+id/sliderSleep"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -406,8 +622,8 @@
                     app:thumbColor="@color/brand_accent_warm" app:trackColorActive="@color/brand_accent_warm" />
 
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp" android:text="Jak moc jsi hladový? (1–5)"
-                    android:textColor="@color/brand_dark" android:textStyle="bold" android:textSize="13sp" />
+                    android:layout_marginTop="8dp" android:text="Jak moc jsi hladový? (1–5)"
+                    android:textColor="@color/brand_dark" android:textStyle="bold" android:textSize="12sp" />
                 <com.google.android.material.slider.Slider
                     android:id="@+id/sliderHunger"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -417,9 +633,10 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSaveRitual"
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
-                    android:layout_marginTop="24dp"
-                    android:text="ULOŽIT A ZAČÍT"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="20dp"
+                    android:text="ULOŽIT A ZAČÍT 🔥"
+                    android:textStyle="bold"
                     android:backgroundTint="#283618"
                     app:cornerRadius="16dp" />
 
@@ -427,4 +644,4 @@
         </androidx.core.widget.NestedScrollView>
     </com.google.android.material.card.MaterialCardView>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

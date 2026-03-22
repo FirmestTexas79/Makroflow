@@ -36,7 +36,6 @@ class ProfileFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.activity_setup, container, false)
-        view.setPadding(0, 44, 0, 0)
 
         etWeight = view.findViewById(R.id.etWeight)
         etHeight = view.findViewById(R.id.etHeight)
@@ -336,11 +335,11 @@ class ProfileFragment : Fragment() {
         if (!isExpanded) {
             isExpanded = true
             circleContainer.animate()
-                .scaleX(1.4f).scaleY(1.4f).translationY(-60f).setDuration(450).start()
+                .scaleX(1.15f).scaleY(1.15f).translationY(0f).setDuration(450).start()
             tvDesc.text = description
             tvDesc.visibility = View.VISIBLE
             tvDesc.alpha = 0f
-            tvDesc.animate().alpha(1f).translationY(-10f).setDuration(450).start()
+            tvDesc.animate().alpha(1f).translationY(0f).setDuration(450).start()
         } else {
             tvDesc.text = description
         }

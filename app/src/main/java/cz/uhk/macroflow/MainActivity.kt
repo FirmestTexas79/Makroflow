@@ -1,21 +1,16 @@
 package cz.uhk.macroflow
 
 import android.content.Intent
-import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.ImageButton
 import android.widget.TextView
-import androidx.activity.SystemBarStyle
 import androidx.activity.addCallback
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updateLayoutParams
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -28,16 +23,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navigationView: NavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. Zapne Edge-To-Edge roztažení pro moderní Androidy (včetně průhledného status baru)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-        )
         super.onCreate(savedInstanceState)
-
-        // Pojistka pro starší verze
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
         setContentView(R.layout.activity_main)
+        hideStatusBar()
 
         // Inicializace UI prvků
         drawerLayout = findViewById(R.id.drawerLayout)
@@ -47,14 +35,6 @@ class MainActivity : AppCompatActivity() {
         val btnOpenDrawer = findViewById<ImageButton>(R.id.btnOpenDrawer)
         val topBar = findViewById<View>(R.id.topBar)
 
-        // Odsazení top baru pod hodiny
-        ViewCompat.setOnApplyWindowInsetsListener(topBar) { view, insets ->
-            val statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                topMargin = statusBarHeight
-            }
-            insets
-        }
 
         bottomNav.itemActiveIndicatorColor = null
 
@@ -154,5 +134,28 @@ class MainActivity : AppCompatActivity() {
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
             .replace(R.id.nav_host_fragment, fragment)
             .commit()
+    }
+
+    private fun hideStatusBar() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.let {
+                it.hide(WindowInsets.Type.statusBars())
+                it.systemBarsBehavior =
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_FULLSCREEN
+                            or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    )
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideStatusBar()
     }
 }

@@ -1,117 +1,589 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/brand_cream"
-    android:clipToPadding="false"
-    >
+    android:background="#FEFAE0">
 
-    <CalendarView
-        android:id="@+id/calendarView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:theme="@style/MacroflowCalendarTheme"
-        app:layout_constraintTop_toTopOf="parent" />
+    <!-- Dekorativní listy v pozadí -->
+    <ImageView
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-50dp"
+        android:layout_marginEnd="-60dp"
+        android:src="@drawable/bg_monstera_leaf_1"
+        android:alpha="0.06"
+        android:rotation="-15"
+        app:tint="#283618" />
+
+    <ImageView
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="-20dp"
+        android:layout_marginBottom="120dp"
+        android:src="@drawable/bg_monstera_leaf_2"
+        android:alpha="0.07"
+        android:rotation="60"
+        app:tint="#606C38" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="4dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/calendarView">
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="120dp"
+        android:overScrollMode="never">
 
         <LinearLayout
-            android:id="@+id/historyDetailContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingLeft="8dp"
-            android:paddingRight="8dp"
-            android:paddingBottom="100dp">
+            android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvSelectedDate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Vyberte datum"
-                android:textColor="@color/brand_dark"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.02" />
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardHistoryMacros"
+            <!-- ══ HEADER ══ -->
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/brand_accent_warm"
-                app:contentPadding="16dp">
+                android:paddingHorizontal="24dp"
+                android:paddingTop="56dp"
+                android:paddingBottom="4dp">
+
+                <TextView
+                    android:id="@+id/tvHistoryBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#606C38"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="6dp"
+                    android:text="DENÍK POKROKU"
+                    android:textColor="#FEFAE0"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/tvHistoryTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="sans-serif-black"
+                    android:text="Historie"
+                    android:textColor="#283618"
+                    android:textSize="42sp"
+                    android:lineSpacingMultiplier="0.9"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvHistoryBadge" />
+
+                <TextView
+                    android:id="@+id/tvHistorySub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Vyber den a sleduj svůj plán a symetrii"
+                    android:textColor="#606C38"
+                    android:textSize="13sp"
+                    android:alpha="0.75"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvHistoryTitle" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- ══ KALENDÁŘ — vlastní tmavý styl ══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="20dp"
+                app:cardCornerRadius="24dp"
+                app:cardBackgroundColor="#283618"
+                app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:padding="4dp">
 
-                    <TextView
-                        android:id="@+id/tvHistoryKcal"
-                        android:layout_width="wrap_content"
+                    <!-- Navigace měsíce -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="0 kcal"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/brand_dark"/>
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="12dp"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="4dp">
 
-                    <TextView
-                        android:id="@+id/tvHistoryPST"
-                        android:layout_width="wrap_content"
+                        <ImageButton
+                            android:id="@+id/btnPrevMonth"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="#30FEFAE0"
+                            android:src="@drawable/ic_chevron_right"
+                            android:rotation="180"
+                            app:tint="#FEFAE0"
+                            android:scaleType="center" />
+
+                        <TextView
+                            android:id="@+id/tvMonthLabel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:text="Březen 2026"
+                            android:textColor="#FEFAE0"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:fontFamily="sans-serif-black" />
+
+                        <ImageButton
+                            android:id="@+id/btnNextMonth"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="#30FEFAE0"
+                            android:src="@drawable/ic_chevron_right"
+                            app:tint="#FEFAE0"
+                            android:scaleType="center" />
+
+                    </LinearLayout>
+
+                    <!-- Hlavičky dní Po-Ne -->
+                    <LinearLayout
+                        android:id="@+id/calDayHeaders"
+                        android:layout_width="match_parent"
+                        android:layout_height="32dp"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="8dp">
+
+                        <TextView android:layout_width="0dp" android:layout_height="match_parent"
+                            android:layout_weight="1" android:gravity="center" android:text="Po"
+                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                        <TextView android:layout_width="0dp" android:layout_height="match_parent"
+                            android:layout_weight="1" android:gravity="center" android:text="Út"
+                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                        <TextView android:layout_width="0dp" android:layout_height="match_parent"
+                            android:layout_weight="1" android:gravity="center" android:text="St"
+                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                        <TextView android:layout_width="0dp" android:layout_height="match_parent"
+                            android:layout_weight="1" android:gravity="center" android:text="Čt"
+                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                        <TextView android:layout_width="0dp" android:layout_height="match_parent"
+                            android:layout_weight="1" android:gravity="center" android:text="Pá"
+                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                        <TextView android:layout_width="0dp" android:layout_height="match_parent"
+                            android:layout_weight="1" android:gravity="center" android:text="So"
+                            android:textColor="#8BFEFAE0" android:textSize="11sp" android:textStyle="bold" />
+                        <TextView android:layout_width="0dp" android:layout_height="match_parent"
+                            android:layout_weight="1" android:gravity="center" android:text="Ne"
+                            android:textColor="#8BFEFAE0" android:textSize="11sp" android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Mřížka dnů — 6 řádků x 7 sloupců, generovaná v kódu -->
+                    <GridLayout
+                        android:id="@+id/calGrid"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="P: 0g | S: 0g | T: 0g"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/brand_primary"
-                        android:fontFamily="monospace"
-                        android:textSize="14sp"/>
+                        android:columnCount="7"
+                        android:paddingHorizontal="8dp"
+                        android:paddingBottom="12dp" />
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- ══ VYBRANÝ DEN — pill štítek ══ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#20283618" />
+
+                <TextView
+                    android:id="@+id/tvSelectedDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="12dp"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#283618"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="7dp"
+                    android:text="DNES"
+                    android:textColor="#FEFAE0"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#20283618" />
+
+            </LinearLayout>
+
+            <!-- ══ MAKRA KARTY — 2x2 grid ══ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="4dp">
+
+                <!-- Kalorie — velká karta -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_height="90dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardBackgroundColor="#283618"
+                    app:cardElevation="0dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="12dp">
+                        <TextView
+                            android:id="@+id/tvHistoryKcal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="—"
+                            android:textColor="#DDA15E"
+                            android:textSize="22sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="KCAL PLÁN"
+                            android:textColor="#FEFAE0"
+                            android:textSize="9sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Typ tréninku -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_height="90dp"
+                    android:layout_weight="1"
+                    app:cardCornerRadius="20dp"
+                    app:cardBackgroundColor="#606C38"
+                    app:cardElevation="0dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="12dp">
+                        <TextView
+                            android:id="@+id/tvHistoryTraining"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="—"
+                            android:textColor="#FEFAE0"
+                            android:textSize="18sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="TYP DNE"
+                            android:textColor="#FEFAE0"
+                            android:textSize="9sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+            <!-- Makro detail karta B/S/T -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="8dp"
+                app:cardCornerRadius="20dp"
+                app:cardBackgroundColor="#FEFAE0"
+                app:cardElevation="0dp"
+                app:strokeColor="#18283618"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
+
+                    <!-- Bílkoviny -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <TextView
+                            android:id="@+id/tvHistoryProtein"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="—"
+                            android:textColor="#606C38"
+                            android:textSize="18sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="BÍLKOVINY"
+                            android:textColor="#606C38"
+                            android:textSize="9sp"
+                            android:textStyle="bold"
+                            android:alpha="0.7"
+                            android:letterSpacing="0.08" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="center_vertical"
+                        android:background="#20283618" />
+
+                    <!-- Sacharidy -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <TextView
+                            android:id="@+id/tvHistoryCarbs"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="—"
+                            android:textColor="#DDA15E"
+                            android:textSize="18sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SACHARIDY"
+                            android:textColor="#DDA15E"
+                            android:textSize="9sp"
+                            android:textStyle="bold"
+                            android:alpha="0.8"
+                            android:letterSpacing="0.08" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="center_vertical"
+                        android:background="#20283618" />
+
+                    <!-- Tuky -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <TextView
+                            android:id="@+id/tvHistoryFat"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="—"
+                            android:textColor="#BC6C25"
+                            android:textSize="18sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="TUKY"
+                            android:textColor="#BC6C25"
+                            android:textSize="9sp"
+                            android:textStyle="bold"
+                            android:alpha="0.8"
+                            android:letterSpacing="0.08" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ══ SYMETRIE KARTY ══ -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardHistoryMetrics"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/brand_accent_deep"
-                app:contentPadding="16dp">
+                app:cardCornerRadius="24dp"
+                app:cardBackgroundColor="#FEFAE0"
+                app:cardElevation="0dp"
+                app:strokeColor="#18283618"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <!-- Symetrie header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Symetrie těla"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/brand_dark"/>
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Symetrie těla"
+                                android:textColor="#283618"
+                                android:textSize="16sp"
+                                android:fontFamily="sans-serif-black" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Zadej míry v sekci Profil"
+                                android:textColor="#606C38"
+                                android:textSize="11sp"
+                                android:alpha="0.7" />
+
+                        </LinearLayout>
+
+                        <!-- Pill status symetrie -->
+                        <TextView
+                            android:id="@+id/tvSymmetryStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="#DDA15E"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="5dp"
+                            android:text="BEZ DAT"
+                            android:textColor="#FEFAE0"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.08" />
+
+                    </LinearLayout>
+
+                    <!-- Graf symetrie -->
                     <cz.uhk.macroflow.SymmetryGraphView
                         android:id="@+id/historySymmetryGraph"
                         android:layout_width="match_parent"
-                        android:layout_height="200dp"
-                        android:layout_marginTop="4dp" />
+                        android:layout_height="300dp"
+                        android:layout_marginTop="12dp"
+                        android:visibility="invisible" />
+
+                    <!-- Placeholder — žádná data -->
+                    <LinearLayout
+                        android:id="@+id/layoutNoMetrics"
+                        android:layout_width="match_parent"
+                        android:layout_height="120dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:visibility="visible">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📏"
+                            android:textSize="32sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Pro tento den nemáš zadané míry"
+                            android:textColor="#283618"
+                            android:textSize="13sp"
+                            android:alpha="0.5"
+                            android:gravity="center" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ══ TIP KARTA ══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="20dp"
+                app:cardBackgroundColor="#283618"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="18dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="📐"
+                        android:textSize="22sp"
+                        android:gravity="center" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Jak číst symetrii"
+                            android:textColor="#DDA15E"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Čím více polygon vyplní pavučinu, tím lepší symetrie. Krk je referenční bod."
+                            android:textColor="#FEFAE0"
+                            android:textSize="12sp"
+                            android:alpha="0.75" />
+
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-</androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
