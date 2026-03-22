@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 
 object FirebaseRepository {
@@ -14,7 +15,6 @@ object FirebaseRepository {
     val currentUser: FirebaseUser? get() = auth.currentUser
     val isLoggedIn: Boolean get() = currentUser != null
 
-    // --- Zkratka na dokument uživatele ---
     private fun userDoc() = db.collection("users").document(currentUser!!.uid)
 
     // ========== PROFIL ==========
@@ -124,34 +124,103 @@ object FirebaseRepository {
         }
     }
 
+    // --- VLASTNÍ POTRAVINY (Číselník) ---
+    suspend fun uploadCustomSnack(snack: SnackEntity) {
+        val data = mapOf(
+            "name" to snack.name,
+            "weight" to snack.weight,
+            "p" to snack.p,
+            "s" to snack.s,
+            "t" to snack.t,
+            "isPre" to snack.isPre
+        )
+        userDoc().collection("custom_snacks").document(snack.id.toString())
+            .set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun downloadAllCustomSnacks(): List<SnackEntity> {
+        val snap = userDoc().collection("custom_snacks").get().await()
+        return snap.documents.mapNotNull { doc ->
+            SnackEntity(
+                id = doc.id.toIntOrNull() ?: 0,
+                name = doc.getString("name") ?: "",
+                weight = doc.getString("weight") ?: "",
+                p = (doc.getDouble("p") ?: 0.0).toFloat(),
+                s = (doc.getDouble("s") ?: 0.0).toFloat(),
+                t = (doc.getDouble("t") ?: 0.0).toFloat(),
+                isPre = doc.getBoolean("isPre") ?: false
+            )
+        }
+    }
+
+    // --- SNĚDENÉ POTRAVINY (Historie konzumace) ---
+    suspend fun uploadConsumedSnack(consumed: ConsumedSnackEntity) {
+        val data = mapOf(
+            "date" to consumed.date,
+            "time" to consumed.time,
+            "name" to consumed.name,
+            "p" to consumed.p,
+            "s" to consumed.s,
+            "t" to consumed.t,
+            "calories" to consumed.calories
+        )
+        userDoc().collection("consumed_history").document(consumed.id.toString())
+            .set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun downloadConsumedByDate(date: String): List<ConsumedSnackEntity> {
+        val snaps = userDoc().collection("consumed_history")
+            .whereEqualTo("date", date).get().await()
+
+        return snaps.documents.mapNotNull { doc ->
+            ConsumedSnackEntity(
+                id = doc.id.toIntOrNull() ?: 0,
+                date = doc.getString("date") ?: date,
+                time = doc.getString("time") ?: "",
+                name = doc.getString("name") ?: "",
+                p = (doc.getDouble("p") ?: 0.0).toFloat(),
+                s = (doc.getDouble("s") ?: 0.0).toFloat(),
+                t = (doc.getDouble("t") ?: 0.0).toFloat(),
+                calories = (doc.getLong("calories") ?: 0L).toInt()
+            )
+        }
+    }
+
     // ========== SYNC (Room → Cloud po přihlášení) ==========
 
     suspend fun syncLocalDataToCloud(context: android.content.Context) {
         val db = AppDatabase.getDatabase(context)
 
-        // Profil
+        // 1. Profil
         db.userProfileDao().getProfileSync()?.let { uploadProfile(it) }
 
-        // Tréninkový plán
+        // 2. Tréninkový plán
         val prefs = context.getSharedPreferences("TrainingPrefs", android.content.Context.MODE_PRIVATE)
         val days = listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
         val plan = days.associateWith { prefs.getString("type_$it", "rest") ?: "rest" }
         uploadTrainingPlan(plan)
 
-        // Check-iny
+        // 3. Check-iny
         db.checkInDao().getAllCheckInsSync().forEach { uploadCheckIn(it) }
 
-        // Tělesné míry
+        // 4. Tělesné míry
         db.bodyMetricsDao().getAllSync().forEach { uploadBodyMetrics(it) }
+
+        // 5. Vlastní snacky (využívá tvé Flow a vytáhne z něj aktuální snapshot)
+        db.snackDao().getAllSnacks().first().forEach { uploadCustomSnack(it) }
+
+        // 6. Historie konzumace (prochází dnešní datum přes tvé Flow)
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        db.consumedSnackDao().getConsumedByDate(today).first().forEach { uploadConsumedSnack(it) }
     }
 
     suspend fun syncCloudDataToLocal(context: android.content.Context) {
         val localDb = AppDatabase.getDatabase(context)
 
-        // Profil
+        // 1. Profil
         downloadProfile()?.let { localDb.userProfileDao().saveProfile(it) }
 
-        // Tréninkový plán
+        // 2. Tréninkový plán
         val plan = downloadTrainingPlan()
         if (plan.isNotEmpty()) {
             val prefs = context.getSharedPreferences("TrainingPrefs", android.content.Context.MODE_PRIVATE)
@@ -160,11 +229,18 @@ object FirebaseRepository {
             editor.apply()
         }
 
-        // Check-iny
+        // 3. Check-iny
         downloadAllCheckIns().forEach { localDb.checkInDao().insertCheckIn(it) }
 
-        // Tělesné míry
+        // 4. Tělesné míry
         downloadAllBodyMetrics().forEach { localDb.bodyMetricsDao().save(it) }
+
+        // 5. Vlastní snacky
+        downloadAllCustomSnacks().forEach { localDb.snackDao().insertSnack(it) }
+
+        // 6. Historie konzumace
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        downloadConsumedByDate(today).forEach { localDb.consumedSnackDao().insertConsumed(it) }
     }
 
     fun signOut() = auth.signOut()

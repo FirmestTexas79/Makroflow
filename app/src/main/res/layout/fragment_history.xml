@@ -5,17 +5,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/brand_cream"
-    android:paddingTop="36dp"
-    android:clipToPadding="false">
+    android:clipToPadding="false"
+    >
 
     <CalendarView
         android:id="@+id/calendarView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:focusedMonthDateColor="@color/brand_dark"
-        android:unfocusedMonthDateColor="@color/brand_primary"
-        android:selectedWeekBackgroundColor="@color/brand_accent_warm"
-        android:weekSeparatorLineColor="@color/brand_accent_deep"
+        android:theme="@style/MacroflowCalendarTheme"
         app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.core.widget.NestedScrollView

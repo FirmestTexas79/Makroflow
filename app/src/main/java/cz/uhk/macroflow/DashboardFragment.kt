@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.content.edit
 
 class DashboardFragment : Fragment() {
 
@@ -47,11 +48,6 @@ class DashboardFragment : Fragment() {
                 .replace(R.id.nav_host_fragment, TrainerFragment())
                 .addToBackStack(null)
                 .commit()
-        }
-
-        // Propojení hamburger ikony s Drawerem v MainActivity
-        view.findViewById<View>(R.id.btnOpenDrawer).setOnClickListener {
-            (activity as? MainActivity)?.openDrawer()
         }
 
         // Otevření rituálu
@@ -121,10 +117,9 @@ class DashboardFragment : Fragment() {
         val sleep  = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
 
-        // Okamžitá aktualizace váhy v SharedPrefs pro MacroCalculator
         requireContext()
             .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-            .edit().putString("weightAkt", weightVal.toString()).apply()
+            .edit { putString("weightAkt", weightVal.toString()) }
 
         val checkInEntity = CheckInEntity(
             date         = today,
@@ -137,26 +132,25 @@ class DashboardFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // 1. Ulož lokálně do Room
+            // 1. Ulož lokálně do Room (počkej, až se to zapíše)
             db.checkInDao().insertCheckIn(checkInEntity)
 
-            // 2. Nahraj do Firebase (jen pokud je přihlášen)
+            // 2. Nahraj do Firebase (pokud jsi přihlášen)
             if (FirebaseRepository.isLoggedIn) {
                 try {
                     FirebaseRepository.uploadCheckIn(checkInEntity)
                 } catch (e: Exception) {
-                    // Tiché selhání — data jsou v Room, sync příště
+                    // Tiché selhání
                 }
             }
 
+            // 3. Teprve TEĎ, když je uloženo, skoč na hlavní vlákno a načti data znovu
             withContext(Dispatchers.Main) {
-                view.let { refreshAllData(it) }
+                refreshAllData(view) // Zde předáváme view bezpečně
+
                 Toast.makeText(
                     context,
-                    if (FirebaseRepository.isLoggedIn)
-                        "Rituál uložen a synchronizován ☁️"
-                    else
-                        "Rituál uložen lokálně",
+                    if (FirebaseRepository.isLoggedIn) "Rituál uložen a synchronizován ☁️" else "Rituál uložen lokálně",
                     Toast.LENGTH_SHORT
                 ).show()
             }

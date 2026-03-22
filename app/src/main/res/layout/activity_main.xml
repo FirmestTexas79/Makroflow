@@ -5,96 +5,82 @@
     android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true">
+    android:fitsSystemWindows="false"> <RelativeLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FEFAE0"> <FrameLayout
+    android:id="@+id/nav_host_fragment"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
 
-    <!-- ═══════════════════════════════════════
-         HLAVNÍ OBSAH
-    ═══════════════════════════════════════ -->
     <RelativeLayout
+        android:id="@+id/topBar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#FEFAE0">
+        android:layout_height="56dp"
+        android:layout_alignParentTop="true"
+        android:paddingHorizontal="16dp"
+        android:background="@android:color/transparent"
+        android:elevation="4dp">
 
-        <!-- Fragment kontejner -->
-        <FrameLayout
-            android:id="@+id/nav_host_fragment"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <!-- Horní lišta s ikonou draweru -->
-        <RelativeLayout
-            android:id="@+id/topBar"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_alignParentTop="true"
-            android:paddingHorizontal="16dp"
-            android:background="@android:color/transparent"
-            android:elevation="4dp">
-
-            <!-- Ikona otevření draweru — vpravo nahoře -->
-            <ImageButton
-                android:id="@+id/btnOpenDrawer"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_drawer_user"
-                android:contentDescription="Menu" />
-
-        </RelativeLayout>
-
-        <!-- Spodní navigace -->
-        <RelativeLayout
-            android:id="@+id/bottomNavLayout"
-            android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:layout_alignParentBottom="true"
-            android:clipChildren="false">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:layout_alignParentBottom="true"
-                android:background="@drawable/bg_bottom_nav_with_curve"
-                android:orientation="horizontal">
-
-                <com.google.android.material.bottomnavigation.BottomNavigationView
-                    android:id="@+id/bottomNavigation"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom"
-                    android:background="@android:color/transparent"
-                    app:elevation="0dp"
-                    app:itemIconSize="28dp"
-                    app:itemPaddingTop="10dp"
-                    app:itemIconTint="#FEFAE0"
-                    app:itemTextColor="#FEFAE0"
-                    app:labelVisibilityMode="labeled"
-                    app:menu="@menu/bottom_menu" />
-            </LinearLayout>
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/fabHome"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentTop="true"
-                android:layout_centerHorizontal="true"
-                android:src="@drawable/ic_logo_white"
-                app:backgroundTint="#283618"
-                app:borderWidth="3dp"
-                app:elevation="10dp"
-                app:fabCustomSize="68dp"
-                app:maxImageSize="32dp"
-                app:strokeColor="#606C38"
-                app:tint="#FEFAE0" />
-        </RelativeLayout>
+        <ImageButton
+            android:id="@+id/btnOpenDrawer"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_drawer_user"
+            android:contentDescription="Menu" />
 
     </RelativeLayout>
 
-    <!-- ═══════════════════════════════════════
-         DRAWER — zprava
-    ═══════════════════════════════════════ -->
+    <RelativeLayout
+        android:id="@+id/bottomNavLayout"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_alignParentBottom="true"
+        android:clipChildren="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:layout_alignParentBottom="true"
+            android:background="@drawable/bg_bottom_nav_with_curve"
+            android:orientation="horizontal">
+
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottomNavigation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="@android:color/transparent"
+                app:elevation="0dp"
+                app:itemIconSize="28dp"
+                app:itemPaddingTop="10dp"
+                app:itemIconTint="#FEFAE0"
+                app:itemTextColor="#FEFAE0"
+                app:labelVisibilityMode="labeled"
+                app:menu="@menu/bottom_menu" />
+        </LinearLayout>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:src="@drawable/ic_logo_white"
+            app:backgroundTint="#283618"
+            app:borderWidth="3dp"
+            app:elevation="10dp"
+            app:fabCustomSize="68dp"
+            app:maxImageSize="32dp"
+            app:strokeColor="#606C38"
+            app:tint="#FEFAE0" />
+    </RelativeLayout>
+
+</RelativeLayout>
+
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navigationView"
         android:layout_width="300dp"

@@ -22,19 +22,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Hamburger ikona — vpravo nahoře, nad vším -->
-    <ImageButton
-        android:id="@+id/btnOpenDrawer"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:layout_marginTop="52dp"
-        android:layout_marginEnd="16dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_drawer_user"
-        android:elevation="8dp"
-        app:tint="@color/brand_dark"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- ScrollView s veškerým obsahem -->
     <androidx.core.widget.NestedScrollView
