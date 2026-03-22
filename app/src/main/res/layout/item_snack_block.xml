@@ -1,58 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardSnack"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="12dp"
-    android:layout_marginVertical="10dp"
+    android:layout_marginBottom="10dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground"
+    app:cardBackgroundColor="#FEFAE0"
     app:cardCornerRadius="20dp"
-    app:cardElevation="5dp"
-    app:cardBackgroundColor="#FFFFFF">
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="#18283618">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingHorizontal="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="12dp">
 
-        <TextView
-            android:id="@+id/tvSnackName"
+        <!-- Řádek 1: Název + kalorie -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#283618"
-            android:textStyle="bold"
-            android:textSize="16sp"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/tvSnackWeight"
+            <TextView
+                android:id="@+id/tvSnackName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Název snacku"
+                android:textColor="#283618"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <!-- Hmotnost pill -->
+            <TextView
+                android:id="@+id/tvSnackWeight"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#12283618"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp"
+                android:text="100g"
+                android:textColor="#606C38"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- Řádek 2: Makro hodnoty -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="11sp"
-            android:alpha="0.5"
-            android:layout_marginBottom="16dp"/>
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="10dp">
-            <TextView android:id="@+id/valP" android:layout_width="55dp" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="#606C38" android:textStyle="bold"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="10dp" android:orientation="horizontal" android:weightSum="1">
-                <View android:id="@+id/barP" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0" android:background="@drawable/rounded_bar_p"/>
-                <View android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"/> </LinearLayout>
+            <!-- B: bílkoviny — zelené -->
+            <TextView
+                android:id="@+id/valP"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="B: 0g"
+                android:textColor="#606C38"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="10dp"
+                android:layout_marginHorizontal="8dp"
+                android:background="#30283618" />
+
+            <!-- S: sacharidy — zlaté -->
+            <TextView
+                android:id="@+id/valS"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="S: 0g"
+                android:textColor="#DDA15E"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="10dp"
+                android:layout_marginHorizontal="8dp"
+                android:background="#30283618" />
+
+            <!-- T: tuky — oranžové -->
+            <TextView
+                android:id="@+id/valT"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="T: 0g"
+                android:textColor="#BC6C25"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
         </LinearLayout>
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="10dp">
-            <TextView android:id="@+id/valS" android:layout_width="55dp" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="#DDA15E" android:textStyle="bold"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="10dp" android:orientation="horizontal" android:weightSum="1">
-                <View android:id="@+id/barS" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0" android:background="@drawable/rounded_bar_s"/>
-                <View android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"/>
-            </LinearLayout>
-        </LinearLayout>
+        <!-- Řádek 3: Makro-flow bary -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:weightSum="100"
+            android:clipChildren="true"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="#0D283618">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-            <TextView android:id="@+id/valT" android:layout_width="55dp" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="#BC6C25" android:textStyle="bold"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="10dp" android:orientation="horizontal" android:weightSum="1">
-                <View android:id="@+id/barT" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0" android:background="@drawable/rounded_bar_t"/>
-                <View android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"/>
-            </LinearLayout>
+            <!-- Bar bílkoviny -->
+            <View
+                android:id="@+id/barP"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="10"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#606C38" />
+
+            <!-- Bar sacharidy -->
+            <View
+                android:id="@+id/barS"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="10"
+                android:layout_marginStart="2dp"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#DDA15E" />
+
+            <!-- Bar tuky -->
+            <View
+                android:id="@+id/barT"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="10"
+                android:layout_marginStart="2dp"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#BC6C25" />
+
+            <!-- Zbývající prostor — vyplní zbytek do 100 -->
+            <View
+                android:id="@+id/barEmpty"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="70" />
+
         </LinearLayout>
 
     </LinearLayout>
+
 </com.google.android.material.card.MaterialCardView>

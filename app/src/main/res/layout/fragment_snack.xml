@@ -1,218 +1,350 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/brand_cream"
-    android:paddingTop="32dp">
+    android:background="#FEFAE0">
 
-    <LinearLayout
-        android:id="@+id/topMenu"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingVertical="12dp"
-        android:background="@color/brand_cream"
-        android:elevation="0dp">
+    <!-- ══════════════════════════════════════════
+         DEKORATIVNÍ LISTY V POZADÍ
+    ══════════════════════════════════════════ -->
 
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/toggleSnackTiming"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"
-            app:singleSelection="true"
-            app:selectionRequired="true"
-            app:checkedButton="@+id/btnPreWorkout">
+    <!-- Velký list vpravo nahoře -->
+    <ImageView
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-40dp"
+        android:layout_marginEnd="-70dp"
+        android:src="@drawable/bg_monstera_leaf_1"
+        android:alpha="0.07"
+        android:rotation="-30"
+        app:tint="#283618" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPreWorkout"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="130dp"
-                android:layout_height="54dp"
-                android:text="PŘED"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                app:cornerRadius="27dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                app:strokeColor="@color/brand_primary"
-                android:textColor="@color/brand_dark" />
+    <!-- Malý list vlevo dole -->
+    <ImageView
+        android:layout_width="130dp"
+        android:layout_height="130dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="-30dp"
+        android:layout_marginBottom="100dp"
+        android:src="@drawable/bg_monstera_leaf_2"
+        android:alpha="0.08"
+        android:rotation="40"
+        app:tint="#606C38" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPostWorkout"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="130dp"
-                android:layout_height="54dp"
-                android:text="PO"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                app:cornerRadius="27dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                app:strokeColor="@color/brand_primary"
-                android:textColor="@color/brand_dark" />
-        </com.google.android.material.button.MaterialButtonToggleGroup>
-    </LinearLayout>
-
-    <View
-        android:id="@+id/divider"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_below="@id/topMenu"
-        android:background="#1A283618" />
-
-    <LinearLayout
+    <!-- ══════════════════════════════════════════
+         HLAVNÍ SCROLL OBSAH
+    ══════════════════════════════════════════ -->
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/snackListsContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/divider"
-        android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
-        android:paddingTop="16dp"
-        android:baselineAligned="false">
+        android:clipToPadding="false"
+        android:paddingBottom="140dp"
+        android:overScrollMode="never">
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <TextView
+            <!-- ── HEADER ── -->
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="SACHARIDY ⚡"
-                android:gravity="center"
-                android:textColor="@color/brand_accent_warm"
-                android:textStyle="bold"
-                android:textSize="13sp"
-                android:letterSpacing="0.05"
-                android:layout_marginBottom="12dp"/>
+                android:paddingHorizontal="24dp"
+                android:paddingTop="56dp"
+                android:paddingBottom="4dp">
 
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scrollbars="none">
-                <LinearLayout
-                    android:id="@+id/listCarbs"
-                    android:layout_width="match_parent"
+                <!-- Zlatý pill štítek -->
+                <TextView
+                    android:id="@+id/tvSnackBadge"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="4dp"/>
-            </ScrollView>
-        </LinearLayout>
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#DDA15E"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="6dp"
+                    android:text="MAKRO ŠPAJZKA"
+                    android:textColor="#FEFAE0"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:layout_marginVertical="40dp"
-            android:background="#0D283618" />
+                <!-- Velký nadpis -->
+                <TextView
+                    android:id="@+id/tvSnackTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="sans-serif-black"
+                    android:text="Snacky"
+                    android:textColor="#283618"
+                    android:textSize="42sp"
+                    android:lineSpacingMultiplier="0.9"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvSnackBadge" />
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical">
+                <!-- Podtitulek -->
+                <TextView
+                    android:id="@+id/tvSnackSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Klikni a přidej do dnešního dne"
+                    android:textColor="#606C38"
+                    android:textSize="13sp"
+                    android:alpha="0.75"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvSnackTitle" />
 
-            <TextView
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- ── PŘEPÍNAČ PŘED / PO ── -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="wrap_content"
+                android:layout_height="56dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="20dp"
+                app:cardCornerRadius="28dp"
+                app:cardBackgroundColor="#F0EDD0"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggleSnackTiming"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    app:singleSelection="true"
+                    app:selectionRequired="true"
+                    app:checkedButton="@+id/btnPreWorkout">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPreWorkout"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="150dp"
+                        android:layout_height="match_parent"
+                        android:text="⚡ PŘED tréninkem"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:cornerRadius="28dp"
+                        app:strokeWidth="0dp"
+                        android:textColor="#283618" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPostWorkout"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="150dp"
+                        android:layout_height="match_parent"
+                        android:text="💪 PO tréninku"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:cornerRadius="28dp"
+                        app:strokeWidth="0dp"
+                        android:textColor="#283618" />
+
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ── ODDĚLOVAČ ── -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="PROTEINY 💪"
-                android:gravity="center"
-                android:textColor="@color/brand_primary"
-                android:textStyle="bold"
-                android:textSize="13sp"
-                android:letterSpacing="0.05"
-                android:layout_marginBottom="12dp"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp">
 
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scrollbars="none">
-                <LinearLayout
-                    android:id="@+id/listProteins"
-                    android:layout_width="match_parent"
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#20283618" />
+
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="4dp"/>
-            </ScrollView>
+                    android:layout_marginHorizontal="12dp"
+                    android:text="SACHARIDY ⚡"
+                    android:textColor="#DDA15E"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#20283618" />
+
+            </LinearLayout>
+
+            <!-- Sacharidy seznam -->
+            <LinearLayout
+                android:id="@+id/listCarbs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp" />
+
+            <!-- ── ODDĚLOVAČ PROTEINY ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="8dp">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#20283618" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="12dp"
+                    android:text="BÍLKOVINY 💪"
+                    android:textColor="#606C38"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#20283618" />
+
+            </LinearLayout>
+
+            <!-- Proteiny seznam -->
+            <LinearLayout
+                android:id="@+id/listProteins"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp" />
+
         </LinearLayout>
-    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabAddSnack"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="104dp"
-        android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/brand_accent_deep"
-        app:tint="@color/brand_cream"
-        app:elevation="6dp"
-        app:borderWidth="0dp"/>
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/btnOpenTinder"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="24dp"
-        android:layout_marginBottom="104dp"
-        android:src="@android:drawable/ic_menu_sort_by_size"
-        app:backgroundTint="#606C38"
-        app:tint="@color/brand_cream"
-        app:elevation="6dp"
-        app:borderWidth="0dp"/>
-
+    <!-- ══════════════════════════════════════════
+         DELETE OVERLAY — drž pro smazání
+    ══════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/deleteOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#CCFEFAE0"
+        android:background="#EEFEFAE0"
         android:gravity="center"
         android:orientation="horizontal"
         android:visibility="gone">
 
         <LinearLayout
             android:id="@+id/btnDeleteAction"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="110dp"
+            android:layout_height="110dp"
             android:gravity="center"
             android:orientation="vertical"
-            android:layout_marginEnd="40dp">
+            android:layout_marginEnd="48dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="#20BC6C25"
+            android:padding="16dp">
             <ImageView
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:src="@drawable/ic_delete_confirm" />
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@drawable/ic_delete_confirm"
+                app:tint="#BC6C25" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
                 android:text="SMAZAT"
                 android:textColor="#BC6C25"
-                android:textStyle="bold" />
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/btnCancelAction"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="110dp"
+            android:layout_height="110dp"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="#20606C38"
+            android:padding="16dp">
             <ImageView
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:src="@drawable/ic_cancel_confirm" />
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@drawable/ic_cancel_confirm"
+                app:tint="#606C38" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
                 android:text="ZPĚT"
                 android:textColor="#606C38"
-                android:textStyle="bold" />
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
         </LinearLayout>
     </LinearLayout>
 
-</RelativeLayout>
+    <!-- ══════════════════════════════════════════
+         FAB TLAČÍTKA — přidat snack + tinder
+    ══════════════════════════════════════════ -->
+
+    <!-- Swipe Tinder tlačítko — vlevo -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/btnOpenTinder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="108dp"
+        android:text="Swipe jídlo"
+        android:textColor="#FEFAE0"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        app:icon="@android:drawable/ic_menu_sort_by_size"
+        app:iconTint="#FEFAE0"
+        app:backgroundTint="#606C38"
+        app:elevation="6dp"
+        app:cornerRadius="28dp" />
+
+    <!-- Přidat snack — vpravo -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fabAddSnack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="108dp"
+        android:text="Přidat"
+        android:textColor="#FEFAE0"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        app:icon="@android:drawable/ic_input_add"
+        app:iconTint="#FEFAE0"
+        app:backgroundTint="#283618"
+        app:elevation="6dp"
+        app:cornerRadius="28dp" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
