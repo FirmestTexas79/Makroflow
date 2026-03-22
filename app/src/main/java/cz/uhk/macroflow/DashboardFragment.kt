@@ -60,9 +60,19 @@ class DashboardFragment : Fragment() {
                     db.checkInDao().getCheckInByDateSync(today)
                 }
 
+                // Vždy naplnit pole váhy — z dnešního check-inu, nebo posledního, nebo SharedPrefs
+                val weightToShow = todayCheckIn?.weight
+                    ?: withContext(Dispatchers.IO) {
+                        db.checkInDao().getAllCheckInsSync().firstOrNull()?.weight
+                    }
+                    ?: requireContext()
+                        .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+                        .getString("weightAkt", "83.0")?.toDoubleOrNull()
+                    ?: 83.0
+
+                view.findViewById<EditText>(R.id.etCheckInWeight)?.setText(weightToShow.toString())
+
                 if (todayCheckIn != null) {
-                    // 👇 TADY OPRAV ID Z etWeight NA etCheckInWeight
-                    view.findViewById<EditText>(R.id.etCheckInWeight)?.setText(todayCheckIn.weight.toString())
                     view.findViewById<Slider>(R.id.sliderEnergy).value = todayCheckIn.energyLevel.toFloat()
                     view.findViewById<Slider>(R.id.sliderSleep).value = todayCheckIn.sleepQuality.toFloat()
                     view.findViewById<Slider>(R.id.sliderHunger).value = todayCheckIn.hungerLevel.toFloat()
@@ -134,10 +144,6 @@ class DashboardFragment : Fragment() {
         val sleep  = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
 
-        requireContext()
-            .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-            .edit { putString("weightAkt", weightVal.toString()) }
-
         val checkInEntity = CheckInEntity(
             date         = today,
             weight       = weightVal,
@@ -149,12 +155,22 @@ class DashboardFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.Main) {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // 1. Uložíme nejdříve lokálně do Room (blokujeme Main vlákno jen na zlomek vteřiny pro IO)
             withContext(Dispatchers.IO) {
+                // 1. Uloz check-in
                 db.checkInDao().insertCheckIn(checkInEntity)
+
+                // 2. Aktualizuj vahu v UserProfileEntity -> ProfileFragment uvidi spravnou vahu
+                val existingProfile = db.userProfileDao().getProfileSync()
+                val updatedProfile = (existingProfile ?: UserProfileEntity()).copy(weight = weightVal)
+                db.userProfileDao().saveProfile(updatedProfile)
+
+                // 3. Synchronizuj SharedPrefs (MacroCalculator fallback)
+                requireContext()
+                    .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+                    .edit().putString("weightAkt", weightVal.toString()).apply()
             }
 
-            // 2. Refreshneme UI OKAMŽITĚ z lokálních dat v Roomu
+            // 4. Refreshni UI okamzite
             refreshAllData(requireView())
 
             Toast.makeText(

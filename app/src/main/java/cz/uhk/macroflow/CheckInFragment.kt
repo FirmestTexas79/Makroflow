@@ -25,7 +25,18 @@ class CheckInFragment : Fragment() {
 
         val etWeight = view.findViewById<EditText>(R.id.etCheckInWeight)
         val userPrefs = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-        etWeight.setText(userPrefs.getString("weightAkt", "83.0"))
+
+        // Načti dnešní váhu z DB (priorita), fallback na SharedPrefs
+        lifecycleScope.launch(Dispatchers.IO) {
+            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val db = AppDatabase.getDatabase(requireContext())
+            val todayCheckIn = db.checkInDao().getCheckInByDateSync(today)
+            withContext(Dispatchers.Main) {
+                val weightToShow = todayCheckIn?.weight?.toString()
+                    ?: userPrefs.getString("weightAkt", "83.0")
+                etWeight.setText(weightToShow)
+            }
+        }
 
         view.findViewById<MaterialButton>(R.id.btnSaveCheckIn).setOnClickListener {
             val weight = etWeight.text.toString().toDoubleOrNull() ?: 83.0

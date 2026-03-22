@@ -127,12 +127,22 @@ class ProfileFragment : Fragment() {
     private fun loadUserData() {
         lifecycleScope.launch {
             val db = AppDatabase.getDatabase(requireContext())
+
             val profile = withContext(Dispatchers.IO) {
                 db.userProfileDao().getProfileSync()
             }
 
+            // Aktualni vaha = dnesni check-in, nebo nejnovejsi check-in, nebo profil, nebo fallback
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            val currentWeight = withContext(Dispatchers.IO) {
+                db.checkInDao().getCheckInByDateSync(today)?.weight
+                    ?: db.checkInDao().getAllCheckInsSync().firstOrNull()?.weight
+                    ?: profile?.weight
+            }
+
             if (profile != null) {
-                etWeight.setText(profile.weight.toString())
+                // Zobraz aktualni vahu z check-inu (ne zamrznuta hodnota z profilu)
+                etWeight.setText((currentWeight ?: profile.weight).toString())
                 etHeight.setText(profile.height.toString())
                 etAge.setText(profile.age.toString())
                 toggleGender.check(
@@ -142,7 +152,7 @@ class ProfileFragment : Fragment() {
             } else {
                 val prefs = requireContext()
                     .getSharedPreferences("UserPrefs", android.content.Context.MODE_PRIVATE)
-                etWeight.setText(prefs.getString("weightAkt", "83"))
+                etWeight.setText((currentWeight ?: prefs.getString("weightAkt", "83")?.toDoubleOrNull() ?: 83.0).toString())
                 etHeight.setText(prefs.getString("height", "175"))
                 etAge.setText(prefs.getString("age", "22"))
                 val gender = prefs.getString("gender", "male")

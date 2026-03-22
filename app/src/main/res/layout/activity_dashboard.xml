@@ -380,7 +380,7 @@
                     app:boxStrokeColor="@color/brand_primary"
                     app:hintTextColor="@color/brand_primary">
                     <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etWeight"
+                        android:id="@+id/etCheckInWeight"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal"
