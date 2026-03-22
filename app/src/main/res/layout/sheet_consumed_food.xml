@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/brand_cream">
+
+    <!-- Tažný indikátor -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="#30283618" />
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#606C38"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="5dp"
+                android:text="DNES"
+                android:textColor="#FEFAE0"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.12" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="sans-serif-black"
+                android:text="Jídelníček"
+                android:textColor="#283618"
+                android:textSize="28sp"
+                android:lineSpacingMultiplier="0.9" />
+
+        </LinearLayout>
+
+        <!-- Celkové kalorie + makra -->
+        <TextView
+            android:id="@+id/tvSheetTotalKcal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 kcal"
+            android:textColor="#606C38"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:gravity="end" />
+
+    </LinearLayout>
+
+    <!-- Oddělovač -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="20dp"
+        android:background="#15283618" />
+
+    <!-- Hint swipe -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="6dp"
+        android:text="← přejeď pro smazání"
+        android:textColor="#40283618"
+        android:textSize="10sp" />
+
+    <!-- Empty state -->
+    <TextView
+        android:id="@+id/tvSheetEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="32dp"
+        android:gravity="center"
+        android:text="Zatím nic nezalogováno 🍽️"
+        android:textColor="#60283618"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- Seznam jídel -->
+    <LinearLayout
+        android:id="@+id/sheetFoodList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="32dp" />
+
+</LinearLayout>

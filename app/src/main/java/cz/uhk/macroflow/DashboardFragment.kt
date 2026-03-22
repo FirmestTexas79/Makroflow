@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -95,6 +96,13 @@ class DashboardFragment : Fragment() {
             }.start()
         }
 
+        // Pill — seznam jídla (vedle kruhu)
+        view.findViewById<android.widget.TextView>(R.id.btnFoodLog)?.setOnClickListener {
+            val sheet = ConsumedFoodSheet()
+            sheet.onFoodDeleted = { refreshAllData(requireView()) }
+            sheet.show(parentFragmentManager, "ConsumedFoodSheet")
+        }
+
         // Inicializace water pillu
         waterPill = view.findViewById(R.id.waterPillView)
         waterPill.setOnClickListener {
@@ -177,9 +185,10 @@ class DashboardFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.Main) {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // 1. Uložíme nejdříve lokálně do Room (blokujeme Main vlákno jen na zlomek vteřiny pro IO)
-            withContext(Dispatchers.IO) {
+            // 1. Uložíme lokálně + zkontrolujeme achievementy
+            val newAchievements = withContext(Dispatchers.IO) {
                 db.checkInDao().insertCheckIn(checkInEntity)
+                AchievementEngine.checkAll(requireContext())
             }
 
             // 2. Refreshneme UI OKAMŽITĚ z lokálních dat v Roomu
@@ -190,6 +199,15 @@ class DashboardFragment : Fragment() {
                 "Rituál úspěšně uložen! 🏋️‍♂️",
                 Toast.LENGTH_SHORT
             ).show()
+
+            // 3. Notifikace nově odemčených achievementů
+            newAchievements.forEach { ach ->
+                Toast.makeText(
+                    context,
+                    "🏆 Achievement odemčen: ${ach.titleCs}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
 
             // 3. Firebase synchronizaci odsuneme na úplně vedlejší kolej, ať nebrzdí UI
             if (FirebaseRepository.isLoggedIn) {
@@ -261,6 +279,8 @@ class DashboardFragment : Fragment() {
 
         animateProgressCircles(view, status)
     }
+
+
 
     private fun animateProgressCircles(view: View, status: DailyStatus) {
         val pbPT = view.findViewById<ProgressBar>(R.id.progressProtein_Target)

@@ -153,6 +153,26 @@
                 android:scaleX="-1"
                 android:progressDrawable="@drawable/circle_progress_fat_light" />
 
+            <!-- Pill — seznam jídla, vpravo nahoře v kruhu -->
+            <TextView
+                android:id="@+id/btnFoodLog"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#283618"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp"
+                android:text="☰"
+                android:textColor="#FEFAE0"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="4dp" />
+
             <!-- Střed — kalorie -->
             <LinearLayout
                 android:layout_width="wrap_content"

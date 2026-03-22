@@ -177,6 +177,7 @@ class SnackFragment : Fragment() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             db.consumedSnackDao().insertConsumed(consumed)
+            val newAchievements = AchievementEngine.checkAll(requireContext())
             withContext(Dispatchers.Main) {
                 view?.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
                 Toast.makeText(
@@ -184,6 +185,13 @@ class SnackFragment : Fragment() {
                     "${snack.name} přidáno! 🔥  +${calories} kcal",
                     Toast.LENGTH_SHORT
                 ).show()
+                newAchievements.forEach { ach ->
+                    Toast.makeText(
+                        requireContext(),
+                        "🏆 Achievement odemčen: ${ach.titleCs}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }

@@ -13,9 +13,10 @@ import androidx.room.RoomDatabase
         ConsumedSnackEntity::class,
         UserProfileEntity::class,
         BodyMetricsEntity::class,
-        WaterEntity::class
+        WaterEntity::class,
+        AchievementEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userProfileDao(): UserProfileDao
     abstract fun bodyMetricsDao(): BodyMetricsDao
     abstract fun waterDao(): WaterDao
+    abstract fun achievementDao(): AchievementDao
 
     companion object {
         @Volatile

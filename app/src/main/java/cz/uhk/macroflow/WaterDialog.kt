@@ -52,7 +52,6 @@ class WaterDialog : DialogFragment() {
         tvGoalLabel = view.findViewById(R.id.tvWaterGoalLabel)
         btnConfirm  = view.findViewById(R.id.btnConfirmWater)
 
-        // Načti aktuální stav a nastav sklenici
         lifecycleScope.launch {
             val currentMl = withContext(Dispatchers.IO) {
                 db.waterDao().getTotalMlForDateSync(today)
@@ -68,7 +67,6 @@ class WaterDialog : DialogFragment() {
             etAmount.setText("300")
         }
 
-        // Sync editText → sklenice: libovolný ml (1..2000), vizuál se snapuje automaticky
         etAmount.addTextChangedListener { s ->
             val ml = s.toString().toIntOrNull() ?: return@addTextChangedListener
             val clamped = ml.coerceIn(1, glassView.maxSingleDrinkMl)
@@ -82,7 +80,6 @@ class WaterDialog : DialogFragment() {
             }
         }
 
-        // Preset tlačítka
         view.findViewById<MaterialButton>(R.id.btn150ml)?.setOnClickListener {
             glassView.amountMl = 150; etAmount.setText("150")
         }
@@ -93,8 +90,6 @@ class WaterDialog : DialogFragment() {
             glassView.amountMl = 500; etAmount.setText("500")
         }
 
-        // Potvrdit — Vortex → uložení
-        // triggerVortex bere Runnable, ne suspend lambda — proto použijeme post
         btnConfirm.setOnClickListener {
             val ml = glassView.amountMl
             if (ml <= 0) { dismiss(); return@setOnClickListener }
@@ -102,11 +97,27 @@ class WaterDialog : DialogFragment() {
             btnConfirm.isEnabled = false
             glassView.triggerVortex {
                 lifecycleScope.launch(Dispatchers.IO) {
+                    // 1. Ulož vodu
                     db.waterDao().insertWater(
                         WaterEntity(date = today, amountMl = ml)
                     )
+
+                    // 2. Zkontroluj achievementy — po uložení vody
+                    val newAchievements = AchievementEngine.checkAll(requireContext())
+
                     withContext(Dispatchers.Main) {
+                        // 3. Informuj Dashboard o nové vodě
                         onWaterLogged?.invoke(ml)
+
+                        // 4. Zobraz notifikace nově odemčených achievementů
+                        newAchievements.forEach { ach ->
+                            android.widget.Toast.makeText(
+                                requireContext(),
+                                "🏆 Achievement odemčen: ${ach.titleCs}",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+
                         dismiss()
                     }
                 }
