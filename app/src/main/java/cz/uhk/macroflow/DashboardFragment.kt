@@ -50,11 +50,28 @@ class DashboardFragment : Fragment() {
                 .commit()
         }
 
-        // Otevření rituálu
+        // V DashboardFragment.kt -> v onViewCreated() při kliknutí na coachCard
+
         coachCard.setOnClickListener {
-            ritualOverlay.visibility = View.VISIBLE
-            ritualOverlay.alpha = 0f
-            ritualOverlay.animate().alpha(1f).setDuration(300).start()
+            lifecycleScope.launch(Dispatchers.Main) {
+                val db = AppDatabase.getDatabase(requireContext())
+
+                val todayCheckIn = withContext(Dispatchers.IO) {
+                    db.checkInDao().getCheckInByDateSync(today)
+                }
+
+                if (todayCheckIn != null) {
+                    // 👇 TADY OPRAV ID Z etWeight NA etCheckInWeight
+                    view.findViewById<EditText>(R.id.etCheckInWeight)?.setText(todayCheckIn.weight.toString())
+                    view.findViewById<Slider>(R.id.sliderEnergy).value = todayCheckIn.energyLevel.toFloat()
+                    view.findViewById<Slider>(R.id.sliderSleep).value = todayCheckIn.sleepQuality.toFloat()
+                    view.findViewById<Slider>(R.id.sliderHunger).value = todayCheckIn.hungerLevel.toFloat()
+                }
+
+                ritualOverlay.visibility = View.VISIBLE
+                ritualOverlay.alpha = 0f
+                ritualOverlay.animate().alpha(1f).setDuration(300).start()
+            }
         }
 
         // Uložení rituálu
@@ -111,8 +128,8 @@ class DashboardFragment : Fragment() {
     // Uložení check-inu — Room + Firebase
     // ----------------------------------------------------------------
     private fun saveCheckInData(view: View) {
-        val weightVal = view.findViewById<EditText>(R.id.etWeight)
-            .text.toString().toDoubleOrNull() ?: 83.0
+        val weightVal = view.findViewById<EditText>(R.id.etCheckInWeight)?.text.toString()
+            .toDoubleOrNull() ?: 83.0
         val energy = view.findViewById<Slider>(R.id.sliderEnergy).value.toInt()
         val sleep  = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
@@ -129,30 +146,32 @@ class DashboardFragment : Fragment() {
             hungerLevel  = hunger
         )
 
-        lifecycleScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(Dispatchers.Main) {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // 1. Ulož lokálně do Room (počkej, až se to zapíše)
-            db.checkInDao().insertCheckIn(checkInEntity)
-
-            // 2. Nahraj do Firebase (pokud jsi přihlášen)
-            if (FirebaseRepository.isLoggedIn) {
-                try {
-                    FirebaseRepository.uploadCheckIn(checkInEntity)
-                } catch (e: Exception) {
-                    // Tiché selhání
-                }
+            // 1. Uložíme nejdříve lokálně do Room (blokujeme Main vlákno jen na zlomek vteřiny pro IO)
+            withContext(Dispatchers.IO) {
+                db.checkInDao().insertCheckIn(checkInEntity)
             }
 
-            // 3. Teprve TEĎ, když je uloženo, skoč na hlavní vlákno a načti data znovu
-            withContext(Dispatchers.Main) {
-                refreshAllData(view) // Zde předáváme view bezpečně
+            // 2. Refreshneme UI OKAMŽITĚ z lokálních dat v Roomu
+            refreshAllData(requireView())
 
-                Toast.makeText(
-                    context,
-                    if (FirebaseRepository.isLoggedIn) "Rituál uložen a synchronizován ☁️" else "Rituál uložen lokálně",
-                    Toast.LENGTH_SHORT
-                ).show()
+            Toast.makeText(
+                context,
+                "Rituál úspěšně uložen! 🏋️‍♂️",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            // 3. Firebase synchronizaci odsuneme na úplně vedlejší kolej, ať nebrzdí UI
+            if (FirebaseRepository.isLoggedIn) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        FirebaseRepository.uploadCheckIn(checkInEntity)
+                    } catch (e: Exception) {
+                        // Ignorujeme PERMISSION_DENIED z Logcatu
+                    }
+                }
             }
         }
     }

@@ -39,16 +39,30 @@ object MacroFlowEngine {
         val hunger = checkIn.hungerLevel
 
         return when {
-            sleep >= 4 && energy <= 3 && hunger >= 4 ->
-                "Spánek byl top, ale motor je prázdný. Tvých $weight kg potřebuje dnes víc paliva! 🍝"
-            sleep <= 2 && energy >= 4 ->
-                "Jedeš na dluh! Energie tam je, ale tělo $weight kg po špatné noci v šoku. Dneska bez kofeinu odpoledne! ☕🚫"
+            // Extrémní hlad
             hunger >= 5 ->
                 "Pozor na vlčí hlad! Těch $weight kg dneska potřebuje pořádný objem jídla a bílkovin. 🥩"
-            energy <= 2 && sleep <= 2 ->
-                "Krizový režim. Tělo $weight kg dneska potřebuje úplný rest a regeneraci. 🛌"
+
+            // Špatný spánek, ale vysoká energie
+            sleep <= 2 && energy >= 4 ->
+                "Jedeš na dluh! Energie tam je, ale tělo $weight kg po špatné noci v šoku. Dneska bez kofeinu odpoledne! ☕🚫"
+
+            // Skvělý spánek, skvělá energie
             energy >= 4 && sleep >= 4 ->
                 "Ideální konstelace! Tvých $weight kg je připraveno na rekordy. Rozbij to! 🔥"
+
+            // Úplné vyčerpání (hodnoty 1 nebo 2)
+            energy <= 2 && sleep <= 2 ->
+                "Krizový režim. Tělo $weight kg dneska potřebuje úplný rest a regeneraci. 🛌"
+
+            // Únava, ale spánek dobrý (motor bez paliva)
+            sleep >= 4 && energy <= 3 && hunger >= 4 ->
+                "Spánek byl top, ale motor je prázdný. Tvých $weight kg potřebuje dnes víc paliva! 🍝"
+
+            // 🆕 PŘIDANÁ VĚTEV PRO STŘEDNÍ HODNOTY (Aby to hned reagovalo i na výchozí hodnoty)
+            sleep == 3 || energy == 3 ->
+                "Dneska je to takový průměr pro tvých $weight kg. Žádné extrémy, nalož si stabilní jídlo a jdeme na to! 📈"
+
             else -> "Váha $weight kg v normě. Sleduj svůj hlad a drž se plánu!"
         }
     }
