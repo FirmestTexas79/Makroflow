@@ -33,55 +33,69 @@ class AchievementsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         lifecycleScope.launch {
-            val newlyUnlocked = withContext(Dispatchers.IO) {
-                AchievementEngine.checkAll(requireContext())
-            }
+            // 1. Nejdřív načti co je odemčeno (PŘED checkAll)
             val unlockedIds = withContext(Dispatchers.IO) {
                 AppDatabase.getDatabase(requireContext())
                     .achievementDao().getAllUnlocked()
-                    .map { it.id to it.unlockedAt }.toMap()
+                    .also { android.util.Log.d("Achievements", "Loaded ${it.size} unlocked from DB") }
+                    .associate { it.id to it.unlockedAt }
             }
 
-            val total    = AchievementRegistry.all.size
-            val unlocked = unlockedIds.size
+            // 2. Vykresli okamžitě s tím co máme
+            renderUI(view, unlockedIds)
 
-            view.findViewById<TextView>(R.id.tvAchievementCount)?.apply {
-                text = "$unlocked / $total"
-                setTextColor(DARK)
-            }
-            view.findViewById<TextView>(R.id.tvAchievementSub)?.apply {
-                text = when {
-                    unlocked == 0    -> "Zatím žádný achievement — začni hned!"
-                    unlocked < 5     -> "Dobrý start, pokračuj dál 💪"
-                    unlocked < 15    -> "Jdeš správnou cestou 🔥"
-                    unlocked < 30    -> "Výborně, jsi na půl cesty! ⚡"
-                    else             -> "Neuvěřitelné, skoro vše odemčeno! 👑"
-                }
-                setTextColor(android.graphics.Color.argb(160, 40, 54, 24))
-            }
-
-            view.findViewById<ProgressBar>(R.id.pbAchievementTotal)?.apply {
-                max      = total
-                progress = unlocked
-            }
-
-            val container = view.findViewById<LinearLayout>(R.id.achievementContainer)
-            container?.removeAllViews()
-
-            AchievementCategory.entries.forEach { category ->
-                val items = AchievementRegistry.byCategory(category)
-                if (items.isEmpty()) return@forEach
-                addCategoryHeader(container, category)
-                val grid = buildGrid(items, unlockedIds)
-                container?.addView(grid)
+            // 3. checkAll na pozadí — pokud odemkne nové, překresli
+            val newlyUnlocked = withContext(Dispatchers.IO) {
+                AchievementEngine.checkAll(requireContext())
             }
 
             if (newlyUnlocked.isNotEmpty()) {
+                // Načti znovu aktualizovaná data
+                val updatedIds = withContext(Dispatchers.IO) {
+                    AppDatabase.getDatabase(requireContext())
+                        .achievementDao().getAllUnlocked()
+                        .associate { it.id to it.unlockedAt }
+                }
+                renderUI(view, updatedIds)
+
                 AchievementUnlockQueue.enqueue(
-                    requireActivity(),
-                    newlyUnlocked.mapNotNull { AchievementRegistry.findById(it.id) }
+                    requireActivity(), newlyUnlocked
                 )
             }
+        }
+    }
+
+    // ── Render celého UI ─────────────────────────────────────────────
+    private fun renderUI(view: View, unlockedIds: Map<String, Long>) {
+        val total    = AchievementRegistry.all.size
+        val unlocked = unlockedIds.size
+
+        // Count — bílá barva protože je na tmavé kartě
+        view.findViewById<TextView>(R.id.tvAchievementCount)?.apply {
+            text = "$unlocked / $total"
+            setTextColor(0xFFFEFAE0.toInt())  // cream — viditelné na tmavém pozadí
+        }
+        // Sub text — pod nadpisem Achievementy, světlá barva
+        view.findViewById<TextView>(R.id.tvAchievementSub)?.apply {
+            text = when {
+                unlocked == 0  -> "Zatím žádný achievement — začni hned!"
+                unlocked < 5   -> "Dobrý start, pokračuj dál 💪"
+                unlocked < 15  -> "Jdeš správnou cestou 🔥"
+                unlocked < 30  -> "Výborně, jsi na půl cesty! ⚡"
+                else           -> "Neuvěřitelné, skoro vše odemčeno! 👑"
+            }
+            setTextColor(android.graphics.Color.argb(160, 40, 54, 24))
+        }
+        view.findViewById<ProgressBar>(R.id.pbAchievementTotal)?.apply {
+            max = total; progress = unlocked
+        }
+        val container = view.findViewById<LinearLayout>(R.id.achievementContainer)
+        container?.removeAllViews()
+        AchievementCategory.entries.forEach { category ->
+            val items = AchievementRegistry.byCategory(category)
+            if (items.isEmpty()) return@forEach
+            addCategoryHeader(container, category)
+            container?.addView(buildGrid(items, unlockedIds))
         }
     }
 
