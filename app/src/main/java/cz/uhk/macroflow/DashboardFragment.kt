@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -23,6 +24,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.core.content.edit
+import cz.uhk.macroflow.pokemon.PokemonBattleFragment
 
 class DashboardFragment : Fragment() {
 
@@ -45,6 +47,11 @@ class DashboardFragment : Fragment() {
         val coachCard     = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
         val btnSave       = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
+        // ── EASTER EGG — 5s podržení FAB tlačítka spustí Pokémon ───
+        // fabHome = logo uprostřed spodního menu
+        setupEasterEgg(view)
+        // ────────────────────────────────────────────────────────────
+
         // Spuštění trenéra
         view.findViewById<MaterialCardView>(R.id.cardStartTraining).setOnClickListener {
             parentFragmentManager.beginTransaction()
@@ -54,8 +61,6 @@ class DashboardFragment : Fragment() {
                 .commit()
         }
 
-        // V DashboardFragment.kt -> v onViewCreated() při kliknutí na coachCard
-
         coachCard.setOnClickListener {
             lifecycleScope.launch(Dispatchers.Main) {
                 val db = AppDatabase.getDatabase(requireContext())
@@ -64,7 +69,6 @@ class DashboardFragment : Fragment() {
                     db.checkInDao().getCheckInByDateSync(today)
                 }
 
-                // Vždy naplnit pole váhy — z dnešního check-inu, nebo posledního, nebo SharedPrefs
                 val weightToShow = todayCheckIn?.weight
                     ?: withContext(Dispatchers.IO) {
                         db.checkInDao().getAllCheckInsSync().firstOrNull()?.weight
@@ -88,7 +92,6 @@ class DashboardFragment : Fragment() {
             }
         }
 
-        // Uložení rituálu
         btnSave.setOnClickListener {
             saveCheckInData(view)
             ritualOverlay.animate().alpha(0f).setDuration(200).withEndAction {
@@ -96,14 +99,12 @@ class DashboardFragment : Fragment() {
             }.start()
         }
 
-        // Pill — seznam jídla (vedle kruhu)
         view.findViewById<android.widget.TextView>(R.id.btnFoodLog)?.setOnClickListener {
             val sheet = ConsumedFoodSheet()
             sheet.onFoodDeleted = { refreshAllData(requireView()) }
             sheet.show(parentFragmentManager, "ConsumedFoodSheet")
         }
 
-        // Inicializace water pillu
         waterPill = view.findViewById(R.id.waterPillView)
         waterPill.setOnClickListener {
             val dialog = WaterDialog()
@@ -114,8 +115,6 @@ class DashboardFragment : Fragment() {
             dialog.show(parentFragmentManager, "WaterDialog")
         }
 
-        // Zobraz jméno / email přihlášeného uživatele pokud je k dispozici TextView
-        // Pozdrav — přihlášený uživatel nebo výchozí podtitulek
         val greetingTv = view.findViewById<TextView>(R.id.tvUserGreeting)
         FirebaseRepository.currentUser?.let { user ->
             greetingTv?.text = "Ahoj, ${user.displayName?.substringBefore(" ") ?: "sportovče"}! 👋"
@@ -130,9 +129,6 @@ class DashboardFragment : Fragment() {
         view?.let { refreshAllData(it) }
     }
 
-    // ----------------------------------------------------------------
-    // Refresh všech dat na dashboardu
-    // ----------------------------------------------------------------
     private fun refreshAllData(view: View) {
         lifecycleScope.launch(Dispatchers.Main.immediate) {
             val context = context ?: return@launch
@@ -152,17 +148,9 @@ class DashboardFragment : Fragment() {
             updateMacrosUI(view, status)
             updateWaterUI(view, status)
             updateTrainingStatusUI(view, context)
-
-            val displayWeight = checkIn?.weight ?: withContext(Dispatchers.IO) {
-                db.checkInDao().getAllCheckInsSync().firstOrNull()?.weight ?: 83.0
-            }
-            // etWeight odstraněn - váha se zobrazuje jen v overlay rituálu
         }
     }
 
-    // ----------------------------------------------------------------
-    // Uložení check-inu — Room + Firebase
-    // ----------------------------------------------------------------
     private fun saveCheckInData(view: View) {
         val weightVal = view.findViewById<EditText>(R.id.etCheckInWeight)?.text.toString()
             .toDoubleOrNull() ?: 83.0
@@ -185,46 +173,27 @@ class DashboardFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.Main) {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // 1. Uložíme lokálně + zkontrolujeme achievementy
             val newAchievements = withContext(Dispatchers.IO) {
                 db.checkInDao().insertCheckIn(checkInEntity)
                 AchievementEngine.checkAll(requireContext())
             }
 
-            // 2. Refreshneme UI OKAMŽITĚ z lokálních dat v Roomu
             refreshAllData(requireView())
 
-            Toast.makeText(
-                context,
-                "Rituál úspěšně uložen! 🏋️‍♂️",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(context, "Rituál úspěšně uložen! 🏋️‍♂️", Toast.LENGTH_SHORT).show()
 
-            // 3. Notifikace nově odemčených achievementů
             newAchievements.forEach { ach ->
-                Toast.makeText(
-                    context,
-                    "🏆 Achievement odemčen: ${ach.titleCs}",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(context, "🏆 Achievement odemčen: ${ach.titleCs}", Toast.LENGTH_LONG).show()
             }
 
-            // 3. Firebase synchronizaci odsuneme na úplně vedlejší kolej, ať nebrzdí UI
             if (FirebaseRepository.isLoggedIn) {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    try {
-                        FirebaseRepository.uploadCheckIn(checkInEntity)
-                    } catch (e: Exception) {
-                        // Ignorujeme PERMISSION_DENIED z Logcatu
-                    }
+                    try { FirebaseRepository.uploadCheckIn(checkInEntity) } catch (_: Exception) {}
                 }
             }
         }
     }
 
-    // ----------------------------------------------------------------
-    // UI update metody
-    // ----------------------------------------------------------------
     private fun updateCoachUI(advice: String) {
         view?.findViewById<TextView>(R.id.tvCoachMessage)?.text = advice
     }
@@ -238,7 +207,6 @@ class DashboardFragment : Fragment() {
             }
             updateWaterPill(view)
 
-            // Sleduj dehydrataci — 4h+ bez pití
             val lastTs = withContext(Dispatchers.IO) {
                 db.waterDao().getLastDrinkTimestamp(today)
             }
@@ -280,8 +248,6 @@ class DashboardFragment : Fragment() {
         animateProgressCircles(view, status)
     }
 
-
-
     private fun animateProgressCircles(view: View, status: DailyStatus) {
         val pbPT = view.findViewById<ProgressBar>(R.id.progressProtein_Target)
         val pbPE = view.findViewById<ProgressBar>(R.id.progressProtein_Eaten)
@@ -322,5 +288,39 @@ class DashboardFragment : Fragment() {
         ObjectAnimator.ofInt(pbFE, "progress", pbFE.progress, fCurrent).setDuration(800).start()
         ObjectAnimator.ofInt(pbCE, "progress", pbCE.progress, cCurrent).setDuration(1000).start()
         ObjectAnimator.ofInt(pbPE, "progress", pbPE.progress, pCurrent).setDuration(1200).start()
+    }
+
+    // ── Easter egg — 5s podržení FAB spustí Pokémon souboj ──────────
+    private fun setupEasterEgg(view: View) {
+        val fab = activity?.findViewById<View>(R.id.fabHome) ?: return
+        var holdStart = 0L
+        val HOLD_MS = 5000L
+
+        fab.setOnTouchListener { v, event ->
+            when (event.action) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    holdStart = System.currentTimeMillis()
+                    v.postDelayed({
+                        if (holdStart > 0L && System.currentTimeMillis() - holdStart >= HOLD_MS) {
+                            holdStart = 0L
+                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                            parentFragmentManager.beginTransaction()
+                                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
+                                .replace(R.id.nav_host_fragment,
+                                    cz.uhk.macroflow.pokemon.PokemonBattleFragment())
+                                .addToBackStack(null)
+                                .commit()
+                        }
+                    }, HOLD_MS)
+                    false
+                }
+                android.view.MotionEvent.ACTION_UP,
+                android.view.MotionEvent.ACTION_CANCEL -> {
+                    holdStart = 0L
+                    false
+                }
+                else -> false
+            }
+        }
     }
 }

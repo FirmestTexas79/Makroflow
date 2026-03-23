@@ -11,13 +11,11 @@
         android:layout_height="match_parent"
         android:background="#FEFAE0">
 
-        <!-- Fragmenty — celá obrazovka (pod status barem systém odsadí sám) -->
         <FrameLayout
             android:id="@+id/nav_host_fragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <!-- Spodní navigace -->
         <RelativeLayout
             android:id="@+id/bottomNavLayout"
             android:layout_width="match_parent"
@@ -61,9 +59,31 @@
                 app:maxImageSize="32dp"
                 app:strokeColor="#606C38"
                 app:tint="#FEFAE0" />
+
         </RelativeLayout>
 
-        <!-- TopBar — ikona profilu, pravý horní roh, vždy nad vším -->
+        <!--
+            Diglett — spodní okraj Digletta = horní okraj lišty (100dp od spodku)
+            Diglett je 100dp vysoký → marginBottom = 100dp (horní okraj lišty)
+            minus 40dp (aby seděl na liště, ne nad ní) = 60dp
+
+            translationX se nastavuje programově v DiglettWanderer
+            layout_marginStart=0 je výchozí pozice, pohyb přes translationX
+        -->
+        <ImageView
+            android:id="@+id/ivDiglettBottomBar"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentStart="true"
+            android:layout_marginBottom="60dp"
+            android:layout_marginStart="0dp"
+            android:src="@drawable/diglett_bottom"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            android:elevation="50dp"
+            android:contentDescription="Diglett" />
+
         <FrameLayout
             android:id="@+id/topBar"
             android:layout_width="wrap_content"
