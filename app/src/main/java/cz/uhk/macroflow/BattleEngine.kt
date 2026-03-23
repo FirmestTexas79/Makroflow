@@ -61,9 +61,14 @@ object BattleEngine {
     }
 
     // Capture rate — čím méně HP, tím vyšší šance
-    fun calcCaptureResult(enemy: Pokemon): Pair<Boolean, Int> {
+    // PŘIDÁN MULTIPLIER (pro ztížení chycení Gengara)
+    fun calcCaptureResult(enemy: Pokemon, multiplier: Float = 1.0f): Pair<Boolean, Int> {
         val hpFraction = enemy.currentHp.toDouble() / enemy.maxHp.toDouble()
-        val catchRate = ((1.0 - hpFraction) * 220 + 20).toInt().coerceIn(0, 255)
+        val baseCatchRate = ((1.0 - hpFraction) * 220 + 20)
+
+        // Aplikujeme násobič (pro Gengara 0.7f z BattleFactory)
+        val catchRate = (baseCatchRate * multiplier).toInt().coerceIn(0, 255)
+
         val success = Random.nextInt(256) < catchRate
         val wobbles = when {
             success         -> 3
@@ -87,7 +92,7 @@ object BattleEngine {
 
 object BattleFactory {
 
-    // Mew jako hráčův pokémon (místo Pikachu)
+    // Mew jako hráčův pokémon
     fun createMew() = Pokemon(
         name     = "MEW",
         level    = 5,
@@ -96,25 +101,43 @@ object BattleFactory {
         defense  = 10,
         speed    = 15,
         moves    = listOf(
-            Move("BAFIKYBAF",      "NORMAL",  40, 100, 35),
+            Move("BAFIKYBAF",  "NORMAL",  40, 100, 35),
             Move("MEGA PUNCH", "NORMAL",  80,  85, 20),
             Move("GROWL",      "NORMAL",   0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
             Move("TAIL WHIP",  "NORMAL",   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
         )
     )
 
-    // Diglett — SLABŠÍ tahy, žádný DIG (power 100 byl příliš silný)
+    // Diglett — slabší tahy
     fun createDiglett() = Pokemon(
         name     = "DIGLETT",
         level    = 5,
         maxHp    = 20,
-        attack   = 7,   // snížen z 10
-        defense  = 5,   // snížen z 6
-        speed    = 14,  // snížen z 16 — hráč jde první
+        attack   = 7,
+        defense  = 5,
+        speed    = 14,
         moves    = listOf(
-            Move("SCRATCH", "NORMAL", 35, 100, 35),   // power snížen z 40
-            Move("GROWL",   "NORMAL",  0, 100, 40),
-            Move("SAND ATK","GROUND",  0,  85, 15)    // jen stat move, žádný damage
+            Move("SCRATCH",  "NORMAL", 35, 100, 35),
+            Move("GROWL",    "NORMAL",  0, 100, 40),
+            Move("SAND ATK", "GROUND",  0,  85, 15)
         )
     )
+
+    fun createGengar() = Pokemon(
+        name     = "GENGAR",
+        level    = 8,
+        maxHp    = 30,
+        attack   = 16,
+        defense  = 7,
+        speed    = 20,
+        moves    = listOf(
+            Move("SHADOW BALL", "GHOST",  65,  80, 15),
+            Move("LICK",        "GHOST",  30, 100, 30),
+            Move("HYPNOSIS",    "PSYCHIC", 0,  60, 20),
+            Move("CURSE",       "GHOST",   0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
+        )
+    )
+
+    const val GENGAR_SHOP_PRICE = 4
+    const val GENGAR_CATCH_PENALTY = 0.7f
 }

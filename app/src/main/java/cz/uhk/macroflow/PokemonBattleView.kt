@@ -55,10 +55,19 @@ class PokemonBattleView @JvmOverloads constructor(
     private val zones = mutableListOf<Zone>()
 
     init {
-        // ── Načti sprites z drawable PŘED prvním renderem ────────────
         PokemonSprites.init(context)
 
-        gs = BattleState(BattleFactory.createMew(), BattleFactory.createDiglett())
+        // Dynamická kontrola zda je Gengar zakoupen
+        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val isGengarUnlocked = prefs.getBoolean("gengarPurchased", false)
+
+        val enemyPokemon = if (isGengarUnlocked) {
+            BattleFactory.createGengar()
+        } else {
+            BattleFactory.createDiglett()
+        }
+
+        gs = BattleState(BattleFactory.createMew(), enemyPokemon)
         handler.post(cursorTick)
         startIntro()
     }
@@ -75,10 +84,8 @@ class PokemonBattleView @JvmOverloads constructor(
         dstR = RectF((w - sw) / 2f, (h - sh) / 2f, (w + sw) / 2f, (h + sh) / 2f)
     }
 
-    // scale factor: kolik screen px = 1 GB px
     private val scale get() = if (dstR.width() > 0) dstR.width() / GBW.toFloat() else 1f
 
-    // GB souřadnice → screen souřadnice
     private fun gbX(x: Float) = dstR.left + x * scale
     private fun gbY(y: Float) = dstR.top  + y * scale
 
@@ -92,19 +99,38 @@ class PokemonBattleView @JvmOverloads constructor(
         val sc = scale
         if (sc <= 0f) return
 
-        // Diglett: enemy platforma GB (80, 44, 64, 10) → střed x=112, spodek y=54
-        // Cílová výška spritu = 18 GB px → 18*scale screen px
-        val dBmp = PokemonSprites.diglettBmpPublic
-        if (dBmp != null && gs.enemyVisible) {
-            val targetH = 22 * sc          // výška v screen px
-            val targetW = targetH * dBmp.width / dBmp.height
-            val sx = gbX(112f) - targetW / 2f
-            val sy = gbY(54f)  - targetH           // stojí na spodku platformy
-            val dst = android.graphics.RectF(sx, sy, sx + targetW, sy + targetH)
-            canvas.drawBitmap(dBmp, null, dst, sp)
+        // 🎨 Dynamické zobrazení Gengara (webp) nebo Digletta (png)
+        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val isGengarUnlocked = prefs.getBoolean("gengarPurchased", false)
+
+        if (isGengarUnlocked) {
+            // Vykreslení Gengara (WebP)
+            val resId = context.resources.getIdentifier("pokemon_gengar", "drawable", context.packageName)
+            if (resId != 0 && gs.enemyVisible) {
+                val gBmp = BitmapFactory.decodeResource(context.resources, resId)
+                if (gBmp != null) {
+                    val targetH = 34 * sc
+                    val targetW = targetH * gBmp.width / gBmp.height
+                    val sx = gbX(112f) - targetW / 2f
+                    val sy = gbY(54f) - targetH
+                    val dst = RectF(sx, sy, sx + targetW, sy + targetH)
+                    canvas.drawBitmap(gBmp, null, dst, sp)
+                }
+            }
+        } else {
+            // Staré vykreslení Digletta
+            val dBmp = PokemonSprites.diglettBmpPublic
+            if (dBmp != null && gs.enemyVisible) {
+                val targetH = 22 * sc
+                val targetW = targetH * dBmp.width / dBmp.height
+                val sx = gbX(112f) - targetW / 2f
+                val sy = gbY(54f) - targetH
+                val dst = RectF(sx, sy, sx + targetW, sy + targetH)
+                canvas.drawBitmap(dBmp, null, dst, sp)
+            }
         }
 
-        // Mew: player platforma GB (16, 72, 64, 10) → střed x=48, spodek y=82
+        // Mew: player
         val mBmp = PokemonSprites.mewBmpPublic
         if (mBmp != null) {
             val targetH = 36 * sc
@@ -116,9 +142,6 @@ class PokemonBattleView @JvmOverloads constructor(
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // RENDER
-    // ═══════════════════════════════════════════════════════════════
     private fun renderFrame() {
         val c = gbCvs
         fp.color = C_BG; c.drawRect(0f, 0f, 160f, 96f, fp)
@@ -130,8 +153,6 @@ class PokemonBattleView @JvmOverloads constructor(
         drawPlatform(c, 16, 72, 64, 10)
         drawEnemyHUD(c)
         drawPlayerHUD(c)
-
-        // sprity kresleny jako overlay v onDraw
 
         when (ballVisible) {
             1 -> drawSprite(c, PokemonSprites.POKEBALL,
@@ -292,9 +313,6 @@ class PokemonBattleView @JvmOverloads constructor(
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // TOUCH
-    // ═══════════════════════════════════════════════════════════════
     override fun onTouchEvent(e: MotionEvent): Boolean {
         if (e.action != MotionEvent.ACTION_DOWN) return true
         if (busy) return true
@@ -307,9 +325,6 @@ class PokemonBattleView @JvmOverloads constructor(
         return true
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // HERNÍ LOGIKA
-    // ═══════════════════════════════════════════════════════════════
     private fun setText(l1: String, l2: String) {
         gs.textLine1 = l1; gs.textLine2 = l2
         if (gs.phase != BattlePhase.CAUGHT &&
@@ -436,7 +451,13 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private fun startWobble() {
-        val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy)
+        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val isGengar = prefs.getBoolean("gengarPurchased", false)
+
+        // Změna: Odesíláme penaltu 0.7f z BattleFactory
+        val multiplier = if (isGengar) BattleFactory.GENGAR_CATCH_PENALTY else 1.0f
+
+        val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy, multiplier)
         gs.captureSuccess = success; gs.wobbleCount = wobbles; gs.wobbleDone = 0
         gs.phase = BattlePhase.BALL_WOBBLE; doWobble()
     }

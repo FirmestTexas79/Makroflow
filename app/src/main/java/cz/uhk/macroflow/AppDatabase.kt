@@ -16,6 +16,15 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+// Migrace 8 → 9: přidání tabulky coins
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+            "CREATE TABLE IF NOT EXISTS coins (id INTEGER PRIMARY KEY NOT NULL DEFAULT 1, balance INTEGER NOT NULL DEFAULT 0)"
+        )
+    }
+}
+
 @Database(
     entities = [
         SnackEntity::class,
@@ -24,9 +33,10 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         UserProfileEntity::class,
         BodyMetricsEntity::class,
         WaterEntity::class,
-        AchievementEntity::class
+        AchievementEntity::class,
+        CoinEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,6 +48,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun bodyMetricsDao(): BodyMetricsDao
     abstract fun waterDao(): WaterDao
     abstract fun achievementDao(): AchievementDao
+    abstract fun coinDao(): CoinDao
 
     companion object {
         @Volatile
@@ -50,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_7_8)
+                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9)
                     .allowMainThreadQueries()
                     .build()
                     .also { INSTANCE = it }
