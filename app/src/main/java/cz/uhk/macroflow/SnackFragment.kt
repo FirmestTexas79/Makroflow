@@ -271,25 +271,45 @@ class SnackFragment : Fragment() {
             try {
                 val response = URL("https://world.openfoodfacts.org/api/v2/product/$barcode.json").readText()
                 val json     = JSONObject(response)
-                if (json.getInt("status") == 1) {
-                    val nutriments  = json.getJSONObject("product").getJSONObject("nutriments")
-                    val p100        = nutriments.optDouble("proteins_100g", 0.0)
-                    val s100        = nutriments.optDouble("carbohydrates_100g", 0.0)
-                    val t100        = nutriments.optDouble("fat_100g", 0.0)
-                    val productName = json.getJSONObject("product").optString("product_name", "Neznámý produkt")
 
+                if (json.optInt("status") == 1 && json.has("product")) {
+                    val product    = json.getJSONObject("product")
+                    val nutriments = product.optJSONObject("nutriments")
+
+                    // OpenFoodFacts má často lokalizované názvy (např. v češtině)
+                    val productName = product.optString("product_name_cs").ifEmpty {
+                        product.optString("product_name", "Neznámý produkt")
+                    }
+
+                    if (nutriments != null) {
+                        val p100 = nutriments.optDouble("proteins_100g", 0.0)
+                        val s100 = nutriments.optDouble("carbohydrates_100g", 0.0)
+                        val t100 = nutriments.optDouble("fat_100g", 0.0)
+
+                        withContext(Dispatchers.Main) {
+                            baseP = (p100 / 100.0).toFloat()
+                            baseS = (s100 / 100.0).toFloat()
+                            baseT = (t100 / 100.0).toFloat()
+
+                            etName.setText(productName)
+                            etWeight.setText("100")
+                            etP.setText("%.1f".format(p100).replace(",", "."))
+                            etS.setText("%.1f".format(s100).replace(",", "."))
+                            etT.setText("%.1f".format(t100).replace(",", "."))
+                        }
+                    }
+                } else {
                     withContext(Dispatchers.Main) {
-                        baseP = (p100 / 100.0).toFloat()
-                        baseS = (s100 / 100.0).toFloat()
-                        baseT = (t100 / 100.0).toFloat()
-                        etName.setText(productName)
-                        etWeight.setText("100")
-                        etP.setText("%.1f".format(p100).replace(",", "."))
-                        etS.setText("%.1f".format(s100).replace(",", "."))
-                        etT.setText("%.1f".format(t100).replace(",", "."))
+                        Toast.makeText(requireContext(), "Produkt nenalezen v OpenFoodFacts", Toast.LENGTH_SHORT).show()
                     }
                 }
-            } catch (e: Exception) { /* Chyba sítě — tiché selhání */ }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    // Tady uvidíš v Logcatu, v čem přesně byl včera problém!
+                    e.printStackTrace()
+                    Toast.makeText(requireContext(), "Chyba sítě nebo čtení dat", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
