@@ -4,8 +4,18 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
-// Verze zvýšena na 4 kvůli UserProfileEntity a BodyMetricsEntity
+// Migrace 7 → 8: přidání mealContext do consumed_snacks
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+            "ALTER TABLE consumed_snacks ADD COLUMN mealContext TEXT NOT NULL DEFAULT 'NO_TRAINING'"
+        )
+    }
+}
+
 @Database(
     entities = [
         SnackEntity::class,
@@ -16,7 +26,7 @@ import androidx.room.RoomDatabase
         WaterEntity::class,
         AchievementEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,16 +45,15 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .fallbackToDestructiveMigration() // Smaže verzi 4 a vytvoří 5 s novým klíčem
+                    .addMigrations(MIGRATION_7_8)
                     .allowMainThreadQueries()
                     .build()
-                INSTANCE = instance
-                instance
+                    .also { INSTANCE = it }
             }
         }
     }

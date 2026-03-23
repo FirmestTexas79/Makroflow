@@ -17,9 +17,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingHorizontal="18dp"
-        android:paddingVertical="16dp">
+        android:paddingTop="16dp"
+        android:paddingBottom="12dp">
 
-        <!-- Den: zkratka + tečka vedle + celý název pod tím -->
+        <!-- Den: zkratka + tečka + celý název -->
         <LinearLayout
             android:id="@+id/layoutDayLabel"
             android:layout_width="72dp"
@@ -27,10 +28,8 @@
             android:orientation="vertical"
             android:layout_marginStart="4dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintTop_toTopOf="parent">
 
-            <!-- Zkratka + tečka vedle sebe, vertikálně centrované -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -47,7 +46,6 @@
                     android:fontFamily="sans-serif-black"
                     android:letterSpacing="-0.02" />
 
-                <!-- Tečka — zobrazí se jen když je den aktivní -->
                 <View
                     android:id="@+id/viewAccent"
                     android:layout_width="9dp"
@@ -70,7 +68,7 @@
 
         </LinearLayout>
 
-        <!-- Tenká svislá čára — oddělovač -->
+        <!-- Svislá čára -->
         <View
             android:id="@+id/divider"
             android:layout_width="1dp"
@@ -79,9 +77,9 @@
             android:background="#20283618"
             app:layout_constraintStart_toEndOf="@id/layoutDayLabel"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintBottom_toTopOf="@id/tvTrainingTimePill" />
 
-        <!-- Toggle tlačítka -->
+        <!-- Toggle skupina -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggleGroup"
             android:layout_width="0dp"
@@ -92,8 +90,7 @@
             app:checkedButton="@+id/btnRest"
             app:layout_constraintStart_toEndOf="@id/divider"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintTop_toTopOf="parent">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnRest"
@@ -156,6 +153,31 @@
                 app:cornerRadius="12dp" />
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!--
+            Čas tréninku pill — pod toggle skupinou
+            visibility="gone" pro REST/OFF dny (nastavuje PlanFragment)
+            Kliknutím → TimePickerDialog
+        -->
+        <TextView
+            android:id="@+id/tvTrainingTimePill"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginStart="4dp"
+            android:text="🕐 Nastavit čas"
+            android:textColor="#80606C38"
+            android:textSize="11sp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="5dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="#0C606C38"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/toggleGroup"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

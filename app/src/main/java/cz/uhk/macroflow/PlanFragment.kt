@@ -44,9 +44,6 @@ class PlanFragment : Fragment() {
         return view
     }
 
-    // ----------------------------------------------------------------
-    // Aktualizace statistických karet nahoře
-    // ----------------------------------------------------------------
     private fun updateStats(view: View) {
         var push = 0; var pull = 0; var legs = 0; var rest = 0
         daysMap.forEach { (key, _, _) ->
@@ -63,36 +60,31 @@ class PlanFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvStatRestCount)?.text = rest.toString()
     }
 
-    // ----------------------------------------------------------------
-    // Adapter
-    // ----------------------------------------------------------------
     inner class TrainingPlanAdapter : RecyclerView.Adapter<TrainingPlanAdapter.PlanViewHolder>() {
 
         inner class PlanViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val card: MaterialCardView        = view.findViewById(R.id.cardDay)
-            val tvDay: TextView               = view.findViewById(R.id.tvDayName)
-            val tvDayFull: TextView           = view.findViewById(R.id.tvDayFull)
-            val accent: View                  = view.findViewById(R.id.viewAccent)
-            val toggleGroup: MaterialButtonToggleGroup = view.findViewById(R.id.toggleGroup)
+            val card: MaterialCardView                  = view.findViewById(R.id.cardDay)
+            val tvDay: TextView                         = view.findViewById(R.id.tvDayName)
+            val tvDayFull: TextView                     = view.findViewById(R.id.tvDayFull)
+            val accent: View                            = view.findViewById(R.id.viewAccent)
+            val toggleGroup: MaterialButtonToggleGroup  = view.findViewById(R.id.toggleGroup)
+            // Time pill — přidáme programově pokud není v XML
+            val tvTimePill: TextView?                   = view.findViewById(R.id.tvTrainingTimePill)
         }
 
         override fun getItemCount() = daysMap.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlanViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_day, parent, false)
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_day, parent, false)
             return PlanViewHolder(view)
         }
 
         override fun onBindViewHolder(holder: PlanViewHolder, position: Int) {
             val (englishName, resId, shortCz) = daysMap[position]
-
             holder.tvDay.text     = shortCz
             holder.tvDayFull.text = getString(resId)
 
             val savedType = trainingPrefs.getString("type_$englishName", "rest") ?: "rest"
-
-            // Nejdřív smaž listenery, pak nastav check — zabrání smyčce
             holder.toggleGroup.clearOnButtonCheckedListeners()
             when (savedType) {
                 "push" -> holder.toggleGroup.check(R.id.btnPush)
@@ -100,8 +92,13 @@ class PlanFragment : Fragment() {
                 "legs" -> holder.toggleGroup.check(R.id.btnLegs)
                 else   -> holder.toggleGroup.check(R.id.btnRest)
             }
-
             updateCardVisual(holder, savedType)
+
+            // ── Čas tréninku ─────────────────────────────────────────
+            updateTimePill(holder, englishName, savedType)
+            holder.tvTimePill?.setOnClickListener {
+                showTimePicker(englishName, holder)
+            }
 
             holder.toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
                 if (!isChecked) return@addOnButtonCheckedListener
@@ -114,8 +111,48 @@ class PlanFragment : Fragment() {
                 trainingPrefs.edit().putString("type_$englishName", type).apply()
                 holder.itemView.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
                 updateCardVisual(holder, type)
-                // Aktualizuj statistiky — hledej root view fragmentu
+                updateTimePill(holder, englishName, type)
                 view?.let { updateStats(it) }
+            }
+        }
+
+        private fun updateTimePill(holder: PlanViewHolder, dayEnglish: String, type: String) {
+            val pill = holder.tvTimePill ?: return
+            val isTraining = type != "rest"
+
+            if (!isTraining) {
+                pill.visibility = View.GONE
+                return
+            }
+            pill.visibility = View.VISIBLE
+            val savedTime = TrainingTimeManager.getTrainingTime(requireContext(), dayEnglish)
+            if (savedTime != null) {
+                pill.text = "🕐 $savedTime"
+                pill.setTextColor(android.graphics.Color.parseColor("#606C38"))
+                (pill.background as? android.graphics.drawable.GradientDrawable)?.setColor(
+                    android.graphics.Color.parseColor("#15606C38"))
+            } else {
+                pill.text = "🕐 Nastavit čas"
+                pill.setTextColor(android.graphics.Color.parseColor("#80606C38"))
+            }
+        }
+
+        private fun showTimePicker(dayEnglish: String, holder: PlanViewHolder) {
+            val ctx = requireContext()
+            val existing = TrainingTimeManager.getTrainingTime(ctx, dayEnglish)
+            val initH = existing?.split(":")?.getOrNull(0)?.toIntOrNull() ?: 7
+            val initM = existing?.split(":")?.getOrNull(1)?.toIntOrNull() ?: 0
+
+            MakroflowTimePicker.show(
+                parentFragmentManager,
+                initH, initM,
+                "Čas tréninku — ${holder.tvDayFull.text}"
+            ) { hour, minute ->
+                val timeStr = String.format("%02d:%02d", hour, minute)
+                TrainingTimeManager.setTrainingTime(ctx, dayEnglish, timeStr)
+                val currentType = trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest"
+                updateTimePill(holder, dayEnglish, currentType)
+                holder.itemView.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
             }
         }
 
@@ -128,34 +165,23 @@ class PlanFragment : Fragment() {
 
             when (type) {
                 "push" -> {
-                    vh.card.strokeColor = colorPush
-                    vh.card.strokeWidth = 4
-                    vh.accent.backgroundTintList =
-                        android.content.res.ColorStateList.valueOf(colorPush)
-                    vh.accent.visibility = View.VISIBLE
-                    vh.tvDay.setTextColor(colorPush)
+                    vh.card.strokeColor = colorPush; vh.card.strokeWidth = 4
+                    vh.accent.backgroundTintList = android.content.res.ColorStateList.valueOf(colorPush)
+                    vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorPush)
                 }
                 "pull" -> {
-                    vh.card.strokeColor = colorPull
-                    vh.card.strokeWidth = 4
-                    vh.accent.backgroundTintList =
-                        android.content.res.ColorStateList.valueOf(colorPull)
-                    vh.accent.visibility = View.VISIBLE
-                    vh.tvDay.setTextColor(colorPull)
+                    vh.card.strokeColor = colorPull; vh.card.strokeWidth = 4
+                    vh.accent.backgroundTintList = android.content.res.ColorStateList.valueOf(colorPull)
+                    vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorPull)
                 }
                 "legs" -> {
-                    vh.card.strokeColor = colorLegs
-                    vh.card.strokeWidth = 4
-                    vh.accent.backgroundTintList =
-                        android.content.res.ColorStateList.valueOf(colorLegs)
-                    vh.accent.visibility = View.VISIBLE
-                    vh.tvDay.setTextColor(colorLegs)
+                    vh.card.strokeColor = colorLegs; vh.card.strokeWidth = 4
+                    vh.accent.backgroundTintList = android.content.res.ColorStateList.valueOf(colorLegs)
+                    vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorLegs)
                 }
                 else -> {
-                    vh.card.strokeColor = colorRest
-                    vh.card.strokeWidth = 2
-                    vh.accent.visibility = View.GONE
-                    vh.tvDay.setTextColor(colorDark)
+                    vh.card.strokeColor = colorRest; vh.card.strokeWidth = 2
+                    vh.accent.visibility = View.GONE; vh.tvDay.setTextColor(colorDark)
                 }
             }
         }

@@ -126,7 +126,8 @@ class DiglettWanderer(
 
         // 20% šance spontánní otočení
         if (Random.nextFloat() < 0.20f) goingRight = !goingRight
-        diglett.scaleX = if (goingRight) 1f else -1f
+        // diglett_bottom.webp kouká přirozeně doleva → scaleX=-1 = doprava, scaleX=1 = doleva
+        diglett.scaleX = if (goingRight) -1f else 1f
 
         // Náhodný krok: 15–60% velikosti zóny
         val zoneSize = zoneMax - zoneMin
@@ -205,8 +206,8 @@ class DiglettWanderer(
                 currentX    = safeMin + Random.nextFloat() * (safeMax - safeMin)
 
                 // Jdi PRYČ od dig zóny
-                goingRight          = !inLeftZone
-                diglett.scaleX     = if (goingRight) 1f else -1f
+                goingRight      = !inLeftZone
+                diglett.scaleX  = if (goingRight) -1f else 1f
                 applyX(currentX)
 
                 val pause = Random.nextLong(400, 900)

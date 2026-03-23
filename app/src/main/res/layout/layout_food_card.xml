@@ -7,6 +7,29 @@
     android:clipToPadding="false"
     android:gravity="center">
 
+    <!--
+        Kontextový banner — zobrazí se automaticky nad kartou
+        podle aktuálního času vs. čas tréninku.
+        FoodSwipeDialog ho nastaví přes tvFoodContextBanner.
+    -->
+    <TextView
+        android:id="@+id/tvFoodContextBanner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="24dp"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="7dp"
+        android:text=""
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="#283618"
+        android:textColor="#FEFAE0"
+        android:visibility="gone"
+        android:elevation="4dp" />
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/foodCard"
         android:layout_width="300dp"
@@ -15,7 +38,6 @@
         app:cardCornerRadius="40dp"
         app:cardElevation="16dp"
         app:cardBackgroundColor="@color/brand_cream"
-
         android:clipChildren="false"
         android:clipToPadding="false"
         app:cardPreventCornerOverlap="false"
@@ -49,6 +71,28 @@
                 android:textColor="@color/brand_dark"
                 android:gravity="center"
                 app:layout_constraintTop_toBottomOf="@id/ivFoodImage"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!--
+                Štítek kontextu uvnitř karty — malý, pod názvem
+                Ukazuje např. "PRE trénink" nebo "POST okno"
+            -->
+            <TextView
+                android:id="@+id/tvFoodTimingTag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#15606C38"
+                android:textColor="#606C38"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/tvFoodName"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 

@@ -122,6 +122,8 @@ class DashboardFragment : Fragment() {
             greetingTv?.text = "Sleduj svůj den. Každé sousto se počítá."
         }
         greetingTv?.visibility = android.view.View.VISIBLE
+
+        setupWorkoutCard(view)
     }
 
     override fun onResume() {
@@ -148,6 +150,7 @@ class DashboardFragment : Fragment() {
             updateMacrosUI(view, status)
             updateWaterUI(view, status)
             updateTrainingStatusUI(view, context)
+            updateWorkoutCard(view)
         }
     }
 
@@ -228,11 +231,52 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateTrainingStatusUI(view: View, context: Context) {
-        val sdf = SimpleDateFormat("EEEE", Locale.ENGLISH)
-        val dayName = sdf.format(Date())
+        val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
         val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
         val type = prefs.getString("type_$dayName", "rest")?.uppercase() ?: "REST"
         view.findViewById<TextView>(R.id.tvTrainingStatus)?.text = "DNES: $type"
+        updateWorkoutCard(view)
+    }
+
+    // ── Karta "Dnes cvičíš v:" ────────────────────────────────────────
+    private fun setupWorkoutCard(view: View) {
+        val ctx  = context ?: return
+        val card = view.findViewById<MaterialCardView>(R.id.cardTodayWorkout) ?: return
+        val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
+        updateWorkoutCard(view)
+        card.setOnClickListener {
+            val existing = TrainingTimeManager.getTrainingTimeForToday(ctx)
+            val initH = existing?.split(":")?.getOrNull(0)?.toIntOrNull() ?: 7
+            val initM = existing?.split(":")?.getOrNull(1)?.toIntOrNull() ?: 0
+            MakroflowTimePicker.show(parentFragmentManager, initH, initM, "Čas dnešního tréninku") { h, m ->
+                TrainingTimeManager.setTrainingTime(ctx, dayName, String.format("%02d:%02d", h, m))
+                updateWorkoutCard(view)
+                updateTrainingStatusUI(view, ctx)
+                card.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
+            }
+        }
+    }
+
+    private fun updateWorkoutCard(view: View) {
+        val ctx    = context ?: return
+        val tvTime = view.findViewById<TextView>(R.id.tvTodayWorkoutPill) ?: return
+        val tvLabel = (tvTime.parent as? ViewGroup)?.getChildAt(0) as? TextView
+        val timeStr = TrainingTimeManager.getTrainingTimeForToday(ctx)
+        if (timeStr != null) {
+            val h = timeStr.split(":")[0].toIntOrNull() ?: 0
+            val m = timeStr.split(":")[1].toIntOrNull() ?: 0
+            val endH = (h + (m + 75) / 60) % 24
+            val endM = (m + 75) % 60
+            tvTime.text     = timeStr
+            tvTime.textSize = 22f
+            tvTime.setTextColor(android.graphics.Color.parseColor("#DDA15E"))
+            tvLabel?.text   = "%02d:%02d — %02d:%02d".format(h, m, endH, endM)
+        } else {
+            tvTime.text     = "Nastavit čas"
+            tvTime.textSize = 16f
+            tvTime.setTextColor(android.graphics.Color.parseColor("#80DDA15E"))
+            tvLabel?.text   = "Dnes cvičíš v:"
+        }
     }
 
     private fun updateMacrosUI(view: View, status: DailyStatus) {

@@ -429,6 +429,9 @@
                 android:layout_height="72dp"
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
                 app:cardCornerRadius="36dp"
                 app:cardBackgroundColor="#283618"
                 app:cardElevation="0dp"
@@ -451,9 +454,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="—"
+                        android:text="Nastavit čas"
                         android:textColor="#DDA15E"
-                        android:textSize="20sp"
+                        android:textSize="18sp"
                         android:fontFamily="sans-serif-black" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
