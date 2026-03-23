@@ -213,9 +213,12 @@ class DashboardFragment : Fragment() {
             val lastTs = withContext(Dispatchers.IO) {
                 db.waterDao().getLastDrinkTimestamp(today)
             }
-            if (lastTs != null) {
-                val hoursSince = (System.currentTimeMillis() - lastTs) / 3_600_000f
-                if (::waterPill.isInitialized) waterPill.isDehydrated = hoursSince >= 4f
+            if (::waterPill.isInitialized) {
+                val hoursSince = if (lastTs != null)
+                    (System.currentTimeMillis() - lastTs) / 3_600_000f
+                else 999f
+                // Explicitně nastavíme obě větve — při přidání vody se uklidní
+                waterPill.isDehydrated = hoursSince >= 4f
             }
         }
     }
@@ -252,6 +255,8 @@ class DashboardFragment : Fragment() {
                 TrainingTimeManager.setTrainingTime(ctx, dayName, String.format("%02d:%02d", h, m))
                 updateWorkoutCard(view)
                 updateTrainingStatusUI(view, ctx)
+                // Přeplánuj workout notifikace pro nový čas
+                MakroflowNotifications.rescheduleWorkout(ctx)
                 card.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
             }
         }
@@ -348,12 +353,10 @@ class DashboardFragment : Fragment() {
                         if (holdStart > 0L && System.currentTimeMillis() - holdStart >= HOLD_MS) {
                             holdStart = 0L
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                            parentFragmentManager.beginTransaction()
-                                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-                                .replace(R.id.nav_host_fragment,
-                                    cz.uhk.macroflow.pokemon.PokemonBattleFragment())
-                                .addToBackStack(null)
-                                .commit()
+                            if (isAdded) {
+                                (activity as? cz.uhk.macroflow.MainActivity)
+                                    ?.openPokemonBattle()
+                            }
                         }
                     }, HOLD_MS)
                     false

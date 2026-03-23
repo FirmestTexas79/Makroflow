@@ -153,6 +153,8 @@ class PlanFragment : Fragment() {
                 val currentType = trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest"
                 updateTimePill(holder, dayEnglish, currentType)
                 holder.itemView.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
+                // Přeplánuj workout notifikace pro nový čas
+                MakroflowNotifications.rescheduleWorkout(ctx)
             }
         }
 

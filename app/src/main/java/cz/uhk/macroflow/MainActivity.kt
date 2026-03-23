@@ -1,6 +1,7 @@
 package cz.uhk.macroflow
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -27,36 +28,36 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
     private var diglettWanderer: cz.uhk.macroflow.pokemon.DiglettWanderer? = null
-
-    // Diglett easter egg
     private var fabHoldStart = 0L
-    private val FAB_HOLD_MS = 5000L
+    private val FAB_HOLD_MS  = 5000L
+
+    companion object {
+        private const val REQ_NOTIFICATION_PERMISSION = 100
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         hideStatusBar()
 
-        drawerLayout = findViewById(R.id.drawerLayout)
+        drawerLayout   = findViewById(R.id.drawerLayout)
         navigationView = findViewById(R.id.navigationView)
-        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
-        val fabHome   = findViewById<FloatingActionButton>(R.id.fabHome)
-        val btnOpenDrawer = findViewById<ImageButton>(R.id.btnOpenDrawer)
+        val bottomNav      = findViewById<BottomNavigationView>(R.id.bottomNavigation)
+        val fabHome        = findViewById<FloatingActionButton>(R.id.fabHome)
+        val btnOpenDrawer  = findViewById<ImageButton>(R.id.btnOpenDrawer)
 
         bottomNav.itemActiveIndicatorColor = null
 
-        if (savedInstanceState == null) {
-            replaceFragment(DashboardFragment())
-        }
+        if (savedInstanceState == null) replaceFragment(DashboardFragment())
 
-        // Diglett obrázek v bottom baru (pokud byl chycen)
-        // Počkáme na layout aby byly rozměry dostupné
-        val fabHome2 = fabHome  // capture pro lambda
-        window.decorView.post {
-            updateDiglettVisibility()
-        }
+        // ── Notifikace ───────────────────────────────────────────────
+        MakroflowNotifications.createChannels(this)
+        requestNotificationPermissionAndSchedule()
 
-        // ── Back press ──────────────────────────────────────────────
+        // ── Diglett — počkej na layout ───────────────────────────────
+        window.decorView.post { updateDiglettVisibility() }
+
+        // ── Back press ───────────────────────────────────────────────
         onBackPressedDispatcher.addCallback(this) {
             if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
                 drawerLayout.closeDrawer(GravityCompat.END)
@@ -66,12 +67,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ── FAB — normální klik = Dashboard, 5s podržení = Pokémon ─
+        // ── FAB ──────────────────────────────────────────────────────
         fabHome.setOnClickListener {
             replaceFragment(DashboardFragment())
             bottomNav.selectedItemId = R.id.nav_placeholder
         }
-
         fabHome.setOnTouchListener { v, event ->
             when (event.action) {
                 android.view.MotionEvent.ACTION_DOWN -> {
@@ -87,9 +87,7 @@ class MainActivity : AppCompatActivity() {
                     false
                 }
                 android.view.MotionEvent.ACTION_UP,
-                android.view.MotionEvent.ACTION_CANCEL -> {
-                    fabHoldStart = 0L; false
-                }
+                android.view.MotionEvent.ACTION_CANCEL -> { fabHoldStart = 0L; false }
                 else -> false
             }
         }
@@ -104,10 +102,9 @@ class MainActivity : AppCompatActivity() {
             }
             true
         }
-
         btnOpenDrawer.setOnClickListener { openDrawer() }
 
-        // ── Drawer menu ──────────────────────────────────────────────
+        // ── Drawer ───────────────────────────────────────────────────
         navigationView.setNavigationItemSelectedListener { item ->
             drawerLayout.closeDrawer(GravityCompat.END)
             when (item.itemId) {
@@ -145,39 +142,44 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Aktualizuj Digletta po návratu z battle
         updateDiglettVisibility()
     }
 
-    // ── Diglett easter egg ───────────────────────────────────────────
-    private fun openPokemonBattle() {
+    // ── Notifikace ────────────────────────────────────────────────────
+    private fun requestNotificationPermissionAndSchedule() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) {
+                MakroflowNotifications.scheduleAll(this)
+            } else {
+                requestPermissions(
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    REQ_NOTIFICATION_PERMISSION
+                )
+            }
+        } else {
+            MakroflowNotifications.scheduleAll(this)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_NOTIFICATION_PERMISSION) {
+            MakroflowNotifications.scheduleAll(this)
+        }
+    }
+
+    // ── Diglett ───────────────────────────────────────────────────────
+    fun openPokemonBattle() {
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-            .replace(R.id.nav_host_fragment,
-                cz.uhk.macroflow.pokemon.PokemonBattleFragment())
+            .replace(R.id.nav_host_fragment, cz.uhk.macroflow.pokemon.PokemonBattleFragment())
             .addToBackStack(null)
             .commit()
     }
 
-    /**
-     * Zobrazí/skryje Diglett obrázek v bottom baru.
-     *
-     * V activity_main.xml přidej nad </FrameLayout>:
-     *
-     * <ImageView
-     *     android:id="@+id/ivDiglettBottomBar"
-     *     android:layout_width="40dp"
-     *     android:layout_height="40dp"
-     *     android:layout_gravity="bottom|center_horizontal"
-     *     android:layout_marginBottom="72dp"
-     *     android:src="@drawable/diglett_bottom"
-     *     android:scaleType="fitCenter"
-     *     android:visibility="gone"
-     *     android:elevation="8dp"
-     *     android:contentDescription="Diglett" />
-     *
-     * Obrázek diglett_bottom.webp zkopíruj do res/drawable/
-     */
     fun updateDiglettVisibility() {
         val ivDiglett = findViewById<ImageView>(R.id.ivDiglettBottomBar) ?: return
         val fabHome   = findViewById<View>(R.id.fabHome) ?: return
@@ -186,29 +188,18 @@ class MainActivity : AppCompatActivity() {
 
         if (acquired) {
             ivDiglett.visibility = View.VISIBLE
-            // Spusť wanderer pokud ještě neběží
             if (diglettWanderer == null) {
-                diglettWanderer = cz.uhk.macroflow.pokemon.DiglettWanderer(
-                    this, ivDiglett, fabHome
-                )
-                // 3 kliky za 5s = zabití
+                diglettWanderer = cz.uhk.macroflow.pokemon.DiglettWanderer(this, ivDiglett, fabHome)
                 diglettWanderer!!.onKilled = {
                     diglettWanderer?.stop()
                     diglettWanderer = null
                     cz.uhk.macroflow.pokemon.DiglettKilledDialog()
                         .show(supportFragmentManager, "DiglettKilled")
                 }
-                // Klik na Digletta
-                ivDiglett.setOnClickListener {
-                    diglettWanderer?.onDiglettClicked()
-                }
+                ivDiglett.setOnClickListener { diglettWanderer?.onDiglettClicked() }
             }
-            // Spusť až po layoutu (potřebujeme rozměry)
-            if (ivDiglett.width > 0) {
-                diglettWanderer?.start()
-            } else {
-                ivDiglett.post { diglettWanderer?.start() }
-            }
+            if (ivDiglett.width > 0) diglettWanderer?.start()
+            else ivDiglett.post { diglettWanderer?.start() }
         } else {
             ivDiglett.visibility = View.GONE
             diglettWanderer?.stop()
@@ -216,7 +207,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Achievements ─────────────────────────────────────────────────
+    // ── Achievements ──────────────────────────────────────────────────
     fun checkAchievements() {
         lifecycleScope.launch {
             val newlyUnlocked = withContext(Dispatchers.IO) {
@@ -229,9 +220,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun checkAchievementsDelayed(delayMs: Long = 1500L) {
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            checkAchievements()
-        }, delayMs)
+        android.os.Handler(android.os.Looper.getMainLooper())
+            .postDelayed({ checkAchievements() }, delayMs)
     }
 
     fun resetAchievements() {
@@ -246,12 +236,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateDrawerHeader() {
-        val header     = navigationView.getHeaderView(0)
-        val tvName     = header.findViewById<TextView>(R.id.tvDrawerName)
-        val tvEmail    = header.findViewById<TextView>(R.id.tvDrawerEmail)
-        val tvInitials = header.findViewById<TextView>(R.id.tvAvatarInitials)
-        val btnLogin   = header.findViewById<View>(R.id.btnDrawerLogin)
-        val dotOnline  = header.findViewById<View>(R.id.viewOnlineDot)
+        val header      = navigationView.getHeaderView(0)
+        val tvName      = header.findViewById<TextView>(R.id.tvDrawerName)
+        val tvEmail     = header.findViewById<TextView>(R.id.tvDrawerEmail)
+        val tvInitials  = header.findViewById<TextView>(R.id.tvAvatarInitials)
+        val btnLogin    = header.findViewById<View>(R.id.btnDrawerLogin)
+        val dotOnline   = header.findViewById<View>(R.id.viewOnlineDot)
         val signOutItem = navigationView.menu.findItem(R.id.drawerSignOut)
 
         val user = FirebaseRepository.currentUser

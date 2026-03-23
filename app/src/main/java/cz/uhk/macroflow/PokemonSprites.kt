@@ -1,169 +1,95 @@
 package cz.uhk.macroflow.pokemon
 
-import android.graphics.Color
+import android.content.Context
+import android.graphics.*
 
 object PokemonSprites {
 
-    // Decode: string řádky → IntArray barev
-    // Každý znak = 1 pixel, šířka musí být přesně W
-    fun decode(w: Int, raw: String): IntArray {
-        val rows = raw.trimIndent().lines().filter { it.isNotEmpty() }
-        val out = mutableListOf<Int>()
-        for (row in rows) {
-            val r = if (row.length < w) row.padEnd(w, '.') else row.substring(0, w)
-            for (ch in r) out.add(PAL[ch] ?: Color.TRANSPARENT)
+    var DIGLETT_W = 28;  var DIGLETT_H = 28
+    var MEW_W     = 36;  var MEW_H     = 38
+    val POKEBALL_W = 7;  val POKEBALL_H = 7
+
+    private var diglettBmp: Bitmap? = null
+    private var mewBmp:     Bitmap? = null
+    private var initialized = false
+
+    // Veřejný přístup pro overlay (originální rozlišení PNG)
+    val diglettBmpPublic: Bitmap? get() = diglettBmp
+    val mewBmpPublic:     Bitmap? get() = mewBmp
+
+    val DIGLETT:  IntArray get() = IntArray(0)
+    val DIGLETT2: IntArray get() = IntArray(0)
+    val MEW:      IntArray get() = IntArray(0)
+
+    // Cílové rozměry v GB pixelech (plátno 160×144)
+    private const val DIGLETT_TARGET_W = 28
+    private const val DIGLETT_TARGET_H = 28
+    private const val MEW_TARGET_W     = 36
+    private const val MEW_TARGET_H     = 38
+
+    fun init(context: Context) {
+        if (initialized) return
+        initialized = true
+
+        val opts = BitmapFactory.Options().apply {
+            inScaled = false                        // načti v originálním rozlišení
+            inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        return out.toIntArray()
+
+        fun load(name: String): Bitmap? {
+            val id = context.resources.getIdentifier(name, "drawable", context.packageName)
+            return if (id != 0) BitmapFactory.decodeResource(context.resources, id, opts) else null
+        }
+
+        // Bitmapa zůstane v originálním rozlišení — škálujeme až při drawDiglett/drawMew
+        load("pokemon_diglett")?.let {
+            diglettBmp = it
+            DIGLETT_W  = DIGLETT_TARGET_W
+            DIGLETT_H  = DIGLETT_TARGET_H
+        }
+        load("pokemon_mew")?.let {
+            mewBmp = it
+            MEW_W  = MEW_TARGET_W
+            MEW_H  = MEW_TARGET_H
+        }
     }
 
-    // ── Paleta ──────────────────────────────────────────────────────
-    private val PAL = mapOf(
-        '.' to Color.TRANSPARENT,
-        // Mew
-        'K' to 0xFF101010.toInt(), // černá outline
-        'B' to 0xFF5878D0.toInt(), // modrá (oko)
-        'b' to 0xFF98C0F8.toInt(), // světlá modrá (oko highlight)
-        'L' to 0xFFF8B8C0.toInt(), // světle růžová
-        'M' to 0xFFE87090.toInt(), // střední růžová
-        'D' to 0xFFC03050.toInt(), // tmavá růžová/červená
-        // Diglett
-        '1' to 0xFF181010.toInt(), // černá outline
-        '2' to 0xFF7B4218.toInt(), // tmavě hnědá
-        '3' to 0xFFD03030.toInt(), // červená nos
-        '4' to 0xFFD4A060.toInt(), // světlá hnědá (tvář)
-        '5' to 0xFFA86830.toInt(), // střední hnědá
-        '6' to 0xFF786040.toInt(), // tmavší hnědá
-        '7' to 0xFF686858.toInt(), // šedohnědá (tělo v zemi)
-        '8' to 0xFF383028.toInt(), // velmi tmavá (spodek)
-        '9' to 0xFFF0F0F0.toInt(), // bílá (oko highlight)
-        // Pokéball
-        'R' to 0xFFD01818.toInt(), // červená horní polovina
-        'W' to 0xFFF8F8F8.toInt(), // bílá spodní polovina
-        'G' to 0xFF808080.toInt(), // šedá středová linie
-        'g' to 0xFF404040.toInt()  // tmavší šedá
-    )
+    // nearest-neighbor (isFilterBitmap = false) → žádné rozmazání
+    private val bmpPaint = Paint().apply {
+        isAntiAlias    = false
+        isFilterBitmap = false
+        isDither       = false
+    }
 
-    // ════════════════════════════════════════════════════════════════
-    // MEW — 35×37 px (přesně z gridu)
-    // ════════════════════════════════════════════════════════════════
-    val MEW_W = 35
-    val MEW_H = 37
-    val MEW: IntArray by lazy { decode(MEW_W, MEW_RAW) }
+    fun drawDiglett(canvas: Canvas, ox: Int, oy: Int, @Suppress("UNUSED_PARAMETER") paint: Paint) {
+        val bmp = diglettBmp ?: return
+        val m = Matrix()
+        m.setScale(DIGLETT_TARGET_W.toFloat() / bmp.width, DIGLETT_TARGET_H.toFloat() / bmp.height)
+        m.postTranslate(ox.toFloat(), oy.toFloat())
+        canvas.drawBitmap(bmp, m, bmpPaint)
+    }
 
-    private val MEW_RAW = """
-...........................KKKK....
-........................KLLLMMMMK..
-.......................KLLLMMMMMMK.
-..........KK...........KLLLMMMMMK.
-..........KLLK........KLLLLMMMMMK.
-......KKKKKLLK........KLLLLMMMMMK.
-.....KLLLLLLLLK.......KLLLMMMMMK..
-....KLLLLLLLLLLK......KLLLLMMMMK..
-...KKKKLLLLLLLLLK.....KLLLMMMK....
-.KKLLLLLLLLLLLLLLLbK..KLLMMK.....
-KLLLLLLLLLLLLDLLLLLLbK.KLLMK.....
-KMLLLLLLLLLLLLDLLLLLLbKKLLK......
-.KMMMLLLKKKLLLLLLLLLLLLbK........
-.KMMMKBbBKLLLLLLLLLLLMMK.........
-.KMMLK bbbKLLLLLLLLLLLMK.........
-.KMLKbbbKLLLLLLLLLLLMMK..........
-.KMMKDDKLLLLLLLLLLLMMMMbKK.......
-.KMMMMLLLLLLLLLLLLDKKKLLLKK......
-..KKMMLLLDKKKKLLLKKLLLKLLbK......
-....KKDMMMMLMMMKLLLMLbKLMbK......
-.....KLLLLMMMMMKKMMbK.KLMbK......
-.....KKKKLLLLLLLLLLKKKLMMbKK.....
-.....KMLLLLLLLLLLLLLLLLMMbK......
-....KLLLLLLLLLLLLLLLLMMbKMMK.....
-...KLLLLbKLLLLLLLLLLMMbKMKK..KLLbK
-..KMMbKKKDMMMMLLLLLLMKDMMbKK.KLLbK
-..KKK.KMLLLbLLLLLLMMbKMMbKK..KLLbK
-......KLLLLKLLLLLLMMbK........KLLbK
-......KLLLLKLLLLLMbKDMMbK.....KLLbK
-......KLLLLLLLLMbKDMbK.KK.....KLLbK
-.......KLLLLLLbK.KMbK..........KLLbK
-........KMMMMMDMMbK............KLLbK
-.........KKMMMMDbK.............KLLbK
-............KMMbKKK.............KLLLbK
-...............KMMMMbKKKKMMMMK..KLbK.
-................KMMMMMMMMMMMMbKKKK...
-..................KKKKKKKKK..........
-""" // 35 chars wide
+    fun drawMew(canvas: Canvas, ox: Int, oy: Int, @Suppress("UNUSED_PARAMETER") paint: Paint) {
+        val bmp = mewBmp ?: return
+        val m = Matrix()
+        m.setScale(MEW_TARGET_W.toFloat() / bmp.width, MEW_TARGET_H.toFloat() / bmp.height)
+        m.postTranslate(ox.toFloat(), oy.toFloat())
+        canvas.drawBitmap(bmp, m, bmpPaint)
+    }
 
-    // ════════════════════════════════════════════════════════════════
-    // DIGLETT — 15×14 px (přesně z gridu)
-    // ════════════════════════════════════════════════════════════════
-    val DIGLETT_W = 15
-    val DIGLETT_H = 14
-    val DIGLETT: IntArray by lazy { decode(DIGLETT_W, DIGLETT_RAW) }
+    val POKEBALL: IntArray by lazy {
+        val K = Color.BLACK; val R = Color.parseColor("#D01818")
+        val W = Color.parseColor("#F8F8F8"); val T = 0
+        intArrayOf(T,K,K,K,K,K,T, K,R,R,R,R,R,K, K,R,R,R,R,R,K,
+            K,K,K,W,K,K,K, K,W,W,W,W,W,K, K,W,W,W,W,W,K, T,K,K,K,K,K,T)
+    }
 
-    private val DIGLETT_RAW = """
-.....111111....
-....1244442 1..
-...14444444 41.
-..1444499444 41
-..153444444445 1
-..152444444251.
-.11225555552211
-115755555557511
-17766666666 771
-17657766677 671
-.17655555567 1.
-.11866666681 1.
-..11888888811..
-...11111111 1..
-""" // 15 chars wide — pozor: spaces jsou jen pro čitelnost, decode je ignoruje... NE! musíme použít přesné znaky
+    val POKEBALL_CLOSED: IntArray by lazy {
+        val K = Color.BLACK; val D = Color.parseColor("#484848"); val T = 0
+        intArrayOf(T,K,K,K,K,K,T, K,D,D,D,D,D,K, K,D,D,D,D,D,K,
+            K,K,K,D,K,K,K, K,D,D,D,D,D,K, K,D,D,D,D,D,K, T,K,K,K,K,K,T)
+    }
 
-    // ── DIGLETT přepsaný bez mezer ───────────────────────────────
-    // Opravená verze
-    val DIGLETT2: IntArray by lazy { decode(15, """
-.....111111....
-....124444421..
-...1444444441..
-..14444994441..
-..153444444451.
-..152444444251.
-.1122555555221.
-1157555555 7511
-17766666666771.
-17657766677671.
-.1765555556 71.
-.118666666811..
-..118888881 1..
-...111111111...
-""") }
-
-    // ════════════════════════════════════════════════════════════════
-    // POKÉBALL — 7×7 px
-    // ════════════════════════════════════════════════════════════════
-    val POKEBALL_W = 7
-    val POKEBALL_H = 7
-    val POKEBALL: IntArray by lazy { decode(7, """
-.KRRRK.
-KRRRRRk
-KRRRRRk
-KKKgKKK
-KWWWWWk
-KWWWWWk
-.KWWWK.
-""") }
-
-    val POKEBALL_CLOSED: IntArray by lazy { decode(7, """
-.K111K.
-K11111K
-K11111K
-KKKgKKK
-K11111K
-K11111K
-.K111K.
-""") }
-
-    // ════════════════════════════════════════════════════════════════
-    // GB FONT — 5×7 px pro každý znak (A-Z, 0-9, základní interpunkce)
-    // Kreslíme text pixelově přímo na Canvas
-    // ════════════════════════════════════════════════════════════════
-    // Každý znak = 5×7 pole bitů (1=pixel, 0=prázdno)
-    // Uloženo jako List<String> 7 řádků × 5 znaků
     val FONT: Map<Char, Array<String>> = mapOf(
         'A' to arrayOf("01110","10001","10001","11111","10001","10001","10001"),
         'B' to arrayOf("11110","10001","10001","11110","10001","10001","11110"),
@@ -207,19 +133,10 @@ K11111K
         '?' to arrayOf("01110","10001","00001","00110","00100","00000","00100"),
         ' ' to arrayOf("00000","00000","00000","00000","00000","00000","00000"),
         '.' to arrayOf("00000","00000","00000","00000","00000","00100","00100"),
-        '-' to arrayOf("00000","00000","00000","11111","00000","00000","00000"),
-        '\'' to arrayOf("00100","00100","00000","00000","00000","00000","00000")
+        '-' to arrayOf("00000","00000","00000","11111","00000","00000","00000")
     )
 
-    // Vykreslí text GB fontem na Canvas
-    // x,y = pozice v GB pixelech, scale = kolik px = 1 GB pixel
-    fun drawText(
-        canvas: android.graphics.Canvas,
-        text: String,
-        x: Int, y: Int,
-        color: Int,
-        paint: android.graphics.Paint
-    ) {
+    fun drawText(canvas: Canvas, text: String, x: Int, y: Int, color: Int, paint: Paint) {
         paint.color = color
         var cx = x
         for (ch in text.uppercase()) {
@@ -227,15 +144,12 @@ K11111K
             for (row in glyph.indices) {
                 for (col in 0 until 5) {
                     if (glyph[row][col] == '1') {
-                        canvas.drawRect(
-                            (cx + col).toFloat(), (y + row).toFloat(),
-                            (cx + col + 1).toFloat(), (y + row + 1).toFloat(),
-                            paint
-                        )
+                        canvas.drawRect((cx+col).toFloat(),(y+row).toFloat(),
+                            (cx+col+1).toFloat(),(y+row+1).toFloat(),paint)
                     }
                 }
             }
-            cx += 6 // 5px glyph + 1px mezera
+            cx += 6
         }
     }
 }
