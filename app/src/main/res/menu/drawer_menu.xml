@@ -33,6 +33,16 @@
 
     </group>
 
+    <group android:id="@+id/groupDebug">
+
+        <item
+            android:id="@+id/drawerResetAchievements"
+            android:icon="@drawable/ic_delete_confirm"
+            android:title="🗑️ Smazat achievementy"
+            android:checkable="false" />
+
+    </group>
+
     <group android:id="@+id/groupAccount">
 
         <item

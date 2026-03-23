@@ -127,21 +127,21 @@ object AchievementRegistry {
 
         // ══ ROZMANITOST JÍDELNÍČKU ════════════════════════════════════
         AchievementDef("variety_bronze",  AchievementCategory.VARIETY, AchievementTier.BRONZE,
-            "Průzkumník chutí",   "Zaloguj 5 různých jídel",            "🍽️"),
+            "Průzkumník chutí",   "Zaloguj 1 různých jídel",            "🍽️"),
         AchievementDef("variety_silver",  AchievementCategory.VARIETY, AchievementTier.SILVER,
-            "Gurmán",             "Zaloguj 15 různých jídel",            "👨‍🍳"),
+            "Gurmán",             "Zaloguj 10 různých jídel",            "👨‍🍳"),
         AchievementDef("variety_gold",    AchievementCategory.VARIETY, AchievementTier.GOLD,
-            "Gastronomický mistr","Zaloguj 40 různých jídel",           "🌟"),
+            "Gastronomický mistr","Zaloguj 25 různých jídel",           "🌟"),
         AchievementDef("variety_diamond", AchievementCategory.VARIETY, AchievementTier.DIAMOND,
-            "Jídelní encyklopedie","Zaloguj 100 různých jídel",          "📚"),
+            "Jídelní encyklopedie","Zaloguj 50 různých jídel",          "📚"),
 
         // ══ MILNÍKY ══════════════════════════════════════════════════
         AchievementDef("milestone_first", AchievementCategory.MILESTONE, AchievementTier.BRONZE,
             "Vítej v Makroflow!", "Otevři aplikaci poprvé",              "🎉"),
         AchievementDef("milestone_week",  AchievementCategory.MILESTONE, AchievementTier.SILVER,
-            "Týden s Makroflow",  "Používej aplikaci 3 dny",             "📅"),
+            "Týden s Makroflow",  "Používej aplikaci 7 dní",             "📅"),
         AchievementDef("milestone_month", AchievementCategory.MILESTONE, AchievementTier.GOLD,
-            "Měsíc s Makroflow", "Používej aplikaci 10 dní",            "🗓️"),
+            "Měsíc s Makroflow", "Používej aplikaci 30 dní",            "🗓️"),
         AchievementDef("milestone_perfect",AchievementCategory.MILESTONE, AchievementTier.DIAMOND,
             "Perfektní týden",    "7 dní — rituál + makra + voda vše splněno", "💎")
     )

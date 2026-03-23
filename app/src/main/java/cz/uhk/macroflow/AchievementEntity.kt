@@ -10,6 +10,7 @@ data class AchievementEntity(
 
 @Dao
 interface AchievementDao {
+
     @Query("SELECT * FROM achievements")
     fun getAllUnlocked(): List<AchievementEntity>
 
@@ -18,4 +19,7 @@ interface AchievementDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun unlock(achievement: AchievementEntity): Long  // vrátí -1 pokud už existuje
+
+    @Query("DELETE FROM achievements")
+    fun deleteAll()
 }

@@ -13,9 +13,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,14 +31,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         hideStatusBar()
 
-        // Inicializace UI prvků
         drawerLayout = findViewById(R.id.drawerLayout)
         navigationView = findViewById(R.id.navigationView)
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
         val fabHome = findViewById<FloatingActionButton>(R.id.fabHome)
         val btnOpenDrawer = findViewById<ImageButton>(R.id.btnOpenDrawer)
-        val topBar = findViewById<View>(R.id.topBar)
-
 
         bottomNav.itemActiveIndicatorColor = null
 
@@ -58,17 +59,15 @@ class MainActivity : AppCompatActivity() {
 
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_plan -> replaceFragment(PlanFragment())
-                R.id.nav_snack -> replaceFragment(SnackFragment())
+                R.id.nav_plan    -> replaceFragment(PlanFragment())
+                R.id.nav_snack   -> replaceFragment(SnackFragment())
                 R.id.nav_history -> replaceFragment(HistoryFragment())
                 R.id.nav_profile -> replaceFragment(ProfileFragment())
             }
             true
         }
 
-        btnOpenDrawer.setOnClickListener {
-            openDrawer()
-        }
+        btnOpenDrawer.setOnClickListener { openDrawer() }
 
         navigationView.setNavigationItemSelectedListener { item ->
             drawerLayout.closeDrawer(GravityCompat.END)
@@ -78,8 +77,24 @@ class MainActivity : AppCompatActivity() {
                     bottomNav.selectedItemId = R.id.nav_profile
                 }
                 R.id.drawerAchievements -> replaceFragment(AchievementsFragment())
-                R.id.drawerSettings -> replaceFragment(SettingsFragment())
-                R.id.drawerDisclaimer -> replaceFragment(DisclaimerFragment())
+                R.id.drawerSettings     -> replaceFragment(SettingsFragment())
+                R.id.drawerDisclaimer   -> replaceFragment(DisclaimerFragment())
+                R.id.drawerResetAchievements -> {
+                    android.app.AlertDialog.Builder(this)
+                        .setTitle("Smazat achievementy?")
+                        .setMessage("Všechny odemčené achievementy budou smazány. Tuto akci nelze vrátit.")
+                        .setPositiveButton("Smazat") { _, _ ->
+                            resetAchievements()
+                            android.widget.Toast.makeText(
+                                this,
+                                "✓ Achievementy smazány",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        .setNegativeButton("Zrušit", null)
+                        .show()
+                    return@setNavigationItemSelectedListener true
+                }
                 R.id.drawerSignOut -> {
                     if (FirebaseRepository.isLoggedIn) FirebaseRepository.signOut()
                     startActivity(Intent(this, LoginActivity::class.java))
@@ -87,6 +102,52 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             true
+        }
+
+        // ── Achievement check po startu aplikace ─────────────────────
+        // Počkáme 1.5s aby se UI stihlo načíst, pak zkontrolujeme
+        checkAchievementsDelayed()
+    }
+
+    /**
+     * Zkontroluje achievementy na pozadí a zobrazí animaci
+     * pro nově získané. Volej kdekoliv po dokončení důležité
+     * akce (zápis jídla, check-in, ...).
+     */
+    fun checkAchievements() {
+        lifecycleScope.launch {
+            val newlyUnlocked = withContext(Dispatchers.IO) {
+                AchievementEngine.checkAll(this@MainActivity)
+            }
+            if (newlyUnlocked.isNotEmpty()) {
+                AchievementUnlockQueue.enqueue(this@MainActivity, newlyUnlocked)
+            }
+        }
+    }
+
+    /**
+     * Zavolá checkAchievements s krátkým zpožděním —
+     * použij při startu nebo po otevření fragmentu.
+     */
+    fun checkAchievementsDelayed(delayMs: Long = 1500L) {
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            checkAchievements()
+        }, delayMs)
+    }
+
+    // ── DEBUG / TEST: reset všech achievementů ───────────────────────
+    /**
+     * Smaže všechny odemčené achievementy z DB.
+     * Zavolej z SettingsFragment nebo přes App Inspection.
+     *
+     * Příklad použití v SettingsFragment:
+     *   (activity as? MainActivity)?.resetAchievements()
+     */
+    fun resetAchievements() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            AppDatabase.getDatabase(this@MainActivity)
+                .achievementDao()
+                .deleteAll()
         }
     }
 
@@ -96,30 +157,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateDrawerHeader() {
-        val header = navigationView.getHeaderView(0)
-        val tvName = header.findViewById<TextView>(R.id.tvDrawerName)
-        val tvEmail = header.findViewById<TextView>(R.id.tvDrawerEmail)
+        val header    = navigationView.getHeaderView(0)
+        val tvName    = header.findViewById<TextView>(R.id.tvDrawerName)
+        val tvEmail   = header.findViewById<TextView>(R.id.tvDrawerEmail)
         val tvInitials = header.findViewById<TextView>(R.id.tvAvatarInitials)
-        val btnLogin = header.findViewById<View>(R.id.btnDrawerLogin)
+        val btnLogin  = header.findViewById<View>(R.id.btnDrawerLogin)
         val dotOnline = header.findViewById<View>(R.id.viewOnlineDot)
         val signOutItem = navigationView.menu.findItem(R.id.drawerSignOut)
 
         val user = FirebaseRepository.currentUser
         if (user != null) {
             val name = user.displayName ?: "Sportovec"
-            tvName.text = name
-            tvEmail.text = user.email ?: ""
+            tvName.text    = name
+            tvEmail.text   = user.email ?: ""
             tvInitials.text = name.firstOrNull()?.uppercase() ?: "S"
-            btnLogin.visibility = View.GONE
+            btnLogin.visibility  = View.GONE
             dotOnline.visibility = View.VISIBLE
-            signOutItem?.title = "Odhlásit se"
+            signOutItem?.title   = "Odhlásit se"
         } else {
-            tvName.text = "Sportovec"
-            tvEmail.text = "Offline režim"
+            tvName.text    = "Sportovec"
+            tvEmail.text   = "Offline režim"
             tvInitials.text = "?"
-            btnLogin.visibility = View.VISIBLE
+            btnLogin.visibility  = View.VISIBLE
             dotOnline.visibility = View.GONE
-            signOutItem?.title = "Přihlásit se"
+            signOutItem?.title   = "Přihlásit se"
         }
 
         btnLogin.setOnClickListener {
@@ -129,7 +190,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun replaceFragment(fragment: Fragment) {
+    fun replaceFragment(fragment: Fragment) {
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
             .replace(R.id.nav_host_fragment, fragment)

@@ -16,6 +16,15 @@ class AchievementsFragment : Fragment() {
 
     private val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
+    // ── Makroflow paleta ─────────────────────────────────────────────
+    private val CREAM       = 0xFFFEFAE0.toInt()
+    private val DARK        = 0xFF283618.toInt()
+    private val PRIMARY     = 0xFF606C38.toInt()
+    private val ACCENT_WARM = 0xFFDDA15E.toInt()
+    private val ACCENT_DEEP = 0xFFBC6C25.toInt()
+    private val CARD_BG     = 0xFFF5F0DC.toInt()  // o trochu tmavší než cream
+    private val DIVIDER     = 0x25283618          // velmi průhledná tmavá
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? = inflater.inflate(R.layout.fragment_achievements, container, false)
@@ -24,221 +33,281 @@ class AchievementsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         lifecycleScope.launch {
-            // Zkontroluj nové achievementy
             val newlyUnlocked = withContext(Dispatchers.IO) {
                 AchievementEngine.checkAll(requireContext())
             }
-
-            // Načti všechny odemčené
             val unlockedIds = withContext(Dispatchers.IO) {
                 AppDatabase.getDatabase(requireContext())
                     .achievementDao().getAllUnlocked()
                     .map { it.id to it.unlockedAt }.toMap()
             }
 
-            // Celkový počet
-            val totalCount = AchievementRegistry.all.size
-            val unlockedCount = unlockedIds.size
+            val total    = AchievementRegistry.all.size
+            val unlocked = unlockedIds.size
 
-            view.findViewById<TextView>(R.id.tvAchievementCount)?.text =
-                "$unlockedCount / $totalCount"
-            view.findViewById<TextView>(R.id.tvAchievementSub)?.text =
-                when {
-                    unlockedCount == 0 -> "Zatím žádný achievement — začni hned!"
-                    unlockedCount < 5  -> "Dobrý start, pokračuj dál 💪"
-                    unlockedCount < 15 -> "Jdeš správnou cestou 🔥"
-                    unlockedCount < 30 -> "Výborně, jsi na půl cesty! ⚡"
-                    else               -> "Neuvěřitelné, skoro vše odemčeno! 👑"
+            view.findViewById<TextView>(R.id.tvAchievementCount)?.apply {
+                text = "$unlocked / $total"
+                setTextColor(DARK)
+            }
+            view.findViewById<TextView>(R.id.tvAchievementSub)?.apply {
+                text = when {
+                    unlocked == 0    -> "Zatím žádný achievement — začni hned!"
+                    unlocked < 5     -> "Dobrý start, pokračuj dál 💪"
+                    unlocked < 15    -> "Jdeš správnou cestou 🔥"
+                    unlocked < 30    -> "Výborně, jsi na půl cesty! ⚡"
+                    else             -> "Neuvěřitelné, skoro vše odemčeno! 👑"
                 }
+                setTextColor(android.graphics.Color.argb(160, 40, 54, 24))
+            }
 
-            // Progress bar celkový
-            val progress = view.findViewById<ProgressBar>(R.id.pbAchievementTotal)
-            progress?.max = totalCount
-            progress?.progress = unlockedCount
+            view.findViewById<ProgressBar>(R.id.pbAchievementTotal)?.apply {
+                max      = total
+                progress = unlocked
+            }
 
-            // Vykresli kategorie
             val container = view.findViewById<LinearLayout>(R.id.achievementContainer)
             container?.removeAllViews()
 
             AchievementCategory.entries.forEach { category ->
                 val items = AchievementRegistry.byCategory(category)
                 if (items.isEmpty()) return@forEach
-
-                // Oddělovač kategorie
                 addCategoryHeader(container, category)
-
-                // Grid 2×N
-                val grid = GridLayout(requireContext()).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).also { it.setMargins(0, 0, 0, 8) }
-                    columnCount = 2
-                }
-
-                items.forEach { def ->
-                    val unlockedAt = unlockedIds[def.id]
-                    val card = createAchievementCard(def, unlockedAt)
-                    val params = GridLayout.LayoutParams().apply {
-                        width = 0
-                        columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-                        setMargins(8, 8, 8, 8)
-                    }
-                    card.layoutParams = params
-                    grid.addView(card)
-                }
-
+                val grid = buildGrid(items, unlockedIds)
                 container?.addView(grid)
+            }
+
+            if (newlyUnlocked.isNotEmpty()) {
+                AchievementUnlockQueue.enqueue(
+                    requireActivity(),
+                    newlyUnlocked.mapNotNull { AchievementRegistry.findById(it.id) }
+                )
             }
         }
     }
 
-    private fun addCategoryHeader(container: LinearLayout?, category: AchievementCategory) {
+    // ── Nadpis kategorie ─────────────────────────────────────────────
+    private fun addCategoryHeader(container: LinearLayout?, cat: AchievementCategory) {
         val ctx = requireContext()
-        val header = LinearLayout(ctx).apply {
+        val dp  = resources.displayMetrics.density
+
+        val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
+            gravity     = android.view.Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.setMargins(20, 24, 20, 4) }
+            ).also { it.setMargins(
+                (20 * dp).toInt(), (28 * dp).toInt(),
+                (20 * dp).toInt(), (6  * dp).toInt()
+            )}
         }
 
-        // Levá čára
-        val lineLeft = View(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(0, 1).also { it.weight = 1f }
-            setBackgroundColor(android.graphics.Color.parseColor("#20283618"))
+        fun line() = View(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(0, (1 * dp).toInt(), 1f)
+            setBackgroundColor(DIVIDER)
         }
-        // Text
-        val tv = TextView(ctx).apply {
-            text = "${category.emoji} ${category.labelCs.uppercase()}"
-            textSize = 10f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setTextColor(android.graphics.Color.parseColor("#606C38"))
+
+        val label = TextView(ctx).apply {
+            text        = "${cat.emoji}  ${cat.labelCs.uppercase()}"
+            textSize    = 10f
+            typeface    = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(PRIMARY)
             letterSpacing = 0.14f
-            setPadding(24, 0, 24, 0)
-        }
-        // Pravá čára
-        val lineRight = View(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(0, 1).also { it.weight = 1f }
-            setBackgroundColor(android.graphics.Color.parseColor("#20283618"))
+            setPadding((20 * dp).toInt(), 0, (20 * dp).toInt(), 0)
         }
 
-        header.addView(lineLeft)
-        header.addView(tv)
-        header.addView(lineRight)
-        container?.addView(header)
+        row.addView(line())
+        row.addView(label)
+        row.addView(line())
+        container?.addView(row)
     }
 
-    private fun createAchievementCard(def: AchievementDef, unlockedAt: Long?): MaterialCardView {
-        val ctx = requireContext()
+    // ── Grid 2 sloupce ───────────────────────────────────────────────
+    private fun buildGrid(
+        items: List<AchievementDef>,
+        unlockedIds: Map<String, Long>
+    ): android.widget.GridLayout {
+        val dp = resources.displayMetrics.density
+        return android.widget.GridLayout(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.setMargins(0, 0, 0, (4 * dp).toInt()) }
+            columnCount = 2
+            items.forEach { def ->
+                val card   = buildCard(def, unlockedIds[def.id])
+                val params = android.widget.GridLayout.LayoutParams().apply {
+                    width        = 0
+                    columnSpec   = android.widget.GridLayout.spec(
+                        android.widget.GridLayout.UNDEFINED, 1f
+                    )
+                    setMargins(
+                        (10 * dp).toInt(), (8 * dp).toInt(),
+                        (10 * dp).toInt(), (8 * dp).toInt()
+                    )
+                }
+                card.layoutParams = params
+                addView(card)
+            }
+        }
+    }
+
+    // ── Karta achievementu ───────────────────────────────────────────
+    private fun buildCard(def: AchievementDef, unlockedAt: Long?): MaterialCardView {
+        val ctx      = requireContext()
+        val dp       = resources.displayMetrics.density
         val unlocked = unlockedAt != null
 
-        // Barvy dle tier a stavu
-        val tierColor = android.graphics.Color.parseColor(def.tier.color)
-        // Odemčená — sytá barva tieru; zamčená — jemná kremová
-        val bgColor = if (unlocked) when (def.tier) {
-            AchievementTier.BRONZE  -> android.graphics.Color.parseColor("#BC6C25")
-            AchievementTier.SILVER  -> android.graphics.Color.parseColor("#7B8FA1")
-            AchievementTier.GOLD    -> android.graphics.Color.parseColor("#C8860A")
-            AchievementTier.DIAMOND -> android.graphics.Color.parseColor("#2E7D9E")
-        } else android.graphics.Color.parseColor("#F0FEFAE0")
-        val textColor = if (unlocked) android.graphics.Color.parseColor("#FEFAE0")
-        else android.graphics.Color.parseColor("#60283618")
+        // Barva rámečku dle tieru (jen u odemčených)
+        val tierStroke = tierColor(def.tier)
 
         val card = MaterialCardView(ctx).apply {
-            setCardBackgroundColor(bgColor)
-            radius = 56f   // výrazně kulatá jako medaile
-            cardElevation = if (unlocked) 6f else 0f
-            strokeWidth = if (unlocked) 0 else 1
-            strokeColor = android.graphics.Color.parseColor("#20283618")
+            radius          = (18 * dp)
+            cardElevation   = if (unlocked) (3 * dp) else (0f)
+            strokeWidth     = if (unlocked) (2 * dp).toInt() else (1 * dp).toInt()
+            strokeColor     = if (unlocked) tierStroke
+            else android.graphics.Color.argb(40, 40, 54, 24)
+            setCardBackgroundColor(
+                if (unlocked) CREAM else CARD_BG
+            )
         }
 
         val inner = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = android.view.Gravity.CENTER
-            setPadding(16, 20, 16, 16)
+            gravity     = android.view.Gravity.CENTER
+            setPadding(
+                (10 * dp).toInt(), (14 * dp).toInt(),
+                (10 * dp).toInt(), (14 * dp).toInt()
+            )
         }
 
-        // Kulatý placeholder — medaile
-        val medalView = View(ctx).apply {
-            val size = resources.getDimensionPixelSize(android.R.dimen.app_icon_size) * 2
-            layoutParams = LinearLayout.LayoutParams(size, size)
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                if (unlocked) {
-                    // Barevný kruh dle tieru
-                    setColor(adjustAlpha(tierColor, 0.25f))
-                    setStroke(4, tierColor)
-                } else {
-                    setColor(android.graphics.Color.parseColor("#15283618"))
-                    setStroke(2, android.graphics.Color.parseColor("#20283618"))
+        // ── Medaile obrázek ──────────────────────────────────────────
+        val medalSize = (96 * dp).toInt()
+        val frame = FrameLayout(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(medalSize, medalSize).also {
+                it.gravity = android.view.Gravity.CENTER_HORIZONTAL
+            }
+        }
+
+        val img = android.widget.ImageView(ctx).apply {
+            val resId = ctx.resources.getIdentifier(
+                "achievement_${def.id}", "drawable", ctx.packageName
+            )
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            if (resId != 0) {
+                setImageResource(resId)
+                if (!unlocked) {
+                    // Desaturate + ztmav pro zamčené
+                    colorFilter = android.graphics.PorterDuffColorFilter(
+                        android.graphics.Color.argb(180, 200, 195, 180),
+                        android.graphics.PorterDuff.Mode.SRC_ATOP
+                    )
+                    alpha = 0.40f
                 }
             }
         }
-        // Emoji uvnitř plachceholder kruhu
-        val emojiTv = TextView(ctx).apply {
-            text = if (unlocked) def.emoji else "🔒"
-            textSize = 28f
-            gravity = android.view.Gravity.CENTER
+        frame.addView(img)
+
+        // Zámek — jen ikona, bez kruhu
+        if (!unlocked) {
+            frame.addView(TextView(ctx).apply {
+                text      = "🔒"
+                textSize  = 22f
+                gravity   = android.view.Gravity.CENTER
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+            })
+        }
+        inner.addView(frame)
+
+        // ── Tier pill ────────────────────────────────────────────────
+        inner.addView(TextView(ctx).apply {
+            text      = def.tier.labelCs.uppercase()
+            textSize  = 8.5f
+            typeface  = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(if (unlocked) tierStroke else android.graphics.Color.argb(100, 40, 54, 24))
+            gravity   = android.view.Gravity.CENTER
+            letterSpacing = 0.1f
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = -72 }  // překryv s kruhem
-        }
+            ).also {
+                it.topMargin   = (6 * dp).toInt()
+                it.gravity     = android.view.Gravity.CENTER_HORIZONTAL
+            }
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape        = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = 20 * dp
+                setStroke(
+                    (1 * dp).toInt(),
+                    if (unlocked) tierStroke
+                    else android.graphics.Color.argb(60, 40, 54, 24)
+                )
+                setColor(
+                    if (unlocked) adjustAlpha(tierStroke, 0.10f)
+                    else android.graphics.Color.argb(20, 40, 54, 24)
+                )
+            }
+            setPadding(
+                (9 * dp).toInt(), (2 * dp).toInt(),
+                (9 * dp).toInt(), (2 * dp).toInt()
+            )
+        })
 
-        // Název
-        val titleTv = TextView(ctx).apply {
-            text = def.titleCs
-            textSize = 11f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setTextColor(textColor)
-            gravity = android.view.Gravity.CENTER
+        // ── Název ────────────────────────────────────────────────────
+        inner.addView(TextView(ctx).apply {
+            text      = def.titleCs
+            textSize  = 12.5f
+            typeface  = android.graphics.Typeface.create(
+                "sans-serif-medium", android.graphics.Typeface.NORMAL
+            )
+            setTextColor(
+                if (unlocked) DARK
+                else android.graphics.Color.argb(110, 40, 54, 24)
+            )
+            gravity   = android.view.Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = 8 }
-        }
+            ).also { it.topMargin = (5 * dp).toInt() }
+        })
 
-        // Tier badge
-        val tierTv = TextView(ctx).apply {
-            text = def.tier.labelCs.uppercase()
-            textSize = 9f
-            setTextColor(if (unlocked) adjustAlphaColor(textColor, 0.7f) else android.graphics.Color.parseColor("#40283618"))
-            gravity = android.view.Gravity.CENTER
-            letterSpacing = 0.08f
-        }
-
-        // Datum odemčení nebo popis
-        val subTv = TextView(ctx).apply {
-            text = if (unlocked) "✓ ${sdf.format(Date(unlockedAt!!))}"
+        // ── Datum nebo popis ─────────────────────────────────────────
+        inner.addView(TextView(ctx).apply {
+            text = if (unlocked) "✓  ${sdf.format(Date(unlockedAt!!))}"
             else def.descCs
-            textSize = 9f
-            setTextColor(if (unlocked) adjustAlphaColor(textColor, 0.6f)
-            else android.graphics.Color.parseColor("#50283618"))
+            textSize = 10f
+            setTextColor(
+                if (unlocked) adjustAlpha(ACCENT_DEEP, 0.85f)
+                else android.graphics.Color.argb(100, 96, 108, 56)
+            )
             gravity = android.view.Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = 2 }
-        }
+            ).also { it.topMargin = (3 * dp).toInt() }
+        })
 
-        inner.addView(medalView)
-        inner.addView(emojiTv)
-        inner.addView(titleTv)
-        inner.addView(tierTv)
-        inner.addView(subTv)
         card.addView(inner)
-
         return card
     }
 
-    private fun adjustAlpha(color: Int, factor: Float): Int {
-        val a = (android.graphics.Color.alpha(color) * factor).toInt()
-        return (color and 0x00FFFFFF) or (a shl 24)
+    // ── Helpers ──────────────────────────────────────────────────────
+    private fun tierColor(tier: AchievementTier) = when (tier) {
+        AchievementTier.BRONZE  -> ACCENT_DEEP                  // #BC6C25
+        AchievementTier.SILVER  -> android.graphics.Color.parseColor("#8A9BB0")
+        AchievementTier.GOLD    -> ACCENT_WARM                  // #DDA15E
+        AchievementTier.DIAMOND -> android.graphics.Color.parseColor("#4A8FA8")
     }
-    private fun adjustAlphaColor(color: Int, factor: Float): Int {
-        val a = (255 * factor).toInt()
+
+    private fun adjustAlpha(color: Int, factor: Float): Int {
+        val a = (255 * factor).toInt().coerceIn(0, 255)
         return (color and 0x00FFFFFF) or (a shl 24)
     }
 }
