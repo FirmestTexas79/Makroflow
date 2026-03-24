@@ -413,7 +413,7 @@
             android:layout_marginTop="16dp"
             android:orientation="horizontal">
 
-            <cz.uhk.macroflow.WaterPillView
+            <cz.uhk.macroflow.dashboard.WaterPillView
                 android:id="@+id/waterPillView"
                 android:layout_width="0dp"
                 android:layout_height="72dp"

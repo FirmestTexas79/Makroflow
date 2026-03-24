@@ -27,7 +27,7 @@
 
         <!-- LoginActivity je launcher -->
         <activity
-            android:name=".LoginActivity"
+            android:name=".common.LoginActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -37,13 +37,13 @@
         </activity>
 
         <activity
-            android:name=".MainActivity"
+            android:name=".common.MainActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 
         <!-- Přijímač notifikačních alarmů -->
         <receiver
-            android:name=".NotificationReceiver"
+            android:name=".common.NotificationReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="cz.uhk.macroflow.MORNING_RITUAL" />
@@ -57,7 +57,7 @@
 
         <!-- Obnoví alarmy po restartu telefonu -->
         <receiver
-            android:name=".BootReceiver"
+            android:name=".common.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

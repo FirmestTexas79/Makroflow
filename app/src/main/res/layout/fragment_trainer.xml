@@ -67,7 +67,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/topBar" />
 
-    <cz.uhk.macroflow.GraphicOverlay
+    <cz.uhk.macroflow.training.GraphicOverlay
         android:id="@+id/graphicOverlay"
         android:layout_width="0dp"
         android:layout_height="0dp"

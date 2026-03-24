@@ -494,7 +494,7 @@
                     </LinearLayout>
 
                     <!-- Graf symetrie -->
-                    <cz.uhk.macroflow.SymmetryGraphView
+                    <cz.uhk.macroflow.history.SymmetryGraphView
                         android:id="@+id/historySymmetryGraph"
                         android:layout_width="match_parent"
                         android:layout_height="300dp"

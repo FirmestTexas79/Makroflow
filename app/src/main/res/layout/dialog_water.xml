@@ -44,7 +44,7 @@
         android:singleLine="true" />
 
     <!-- Sklenice -->
-    <cz.uhk.macroflow.WaterGlassView
+    <cz.uhk.macroflow.dashboard.WaterGlassView
         android:id="@+id/waterGlassView"
         android:layout_width="match_parent"
         android:layout_height="200dp" />
