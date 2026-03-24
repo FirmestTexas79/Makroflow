@@ -16,15 +16,29 @@ android {
         applicationId = "cz.uhk.macroflow"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // 1. Definuj konfiguraci podpisu
+    signingConfigs {
+        create("release") {
+            // Soubor .jks musí být ve složce 'app' nebo uveď celou cestu
+            storeFile = file("D:\\Makroflow1.0\\Makroflow 1.0")
+            storePassword = "makroflow1234"
+            keyAlias = "makroflow_key"
+            keyPassword = "makroflow1234"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+
+            signingConfig = signingConfigs.getByName("release")
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
