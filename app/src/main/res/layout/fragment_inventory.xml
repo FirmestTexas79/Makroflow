@@ -26,14 +26,14 @@
                 android:paddingBottom="8dp">
 
                 <TextView
-                    android:id="@+id/tvShopLabel"
+                    android:id="@+id/tvInvLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_status_pill"
                     android:backgroundTint="#DDA15E"
                     android:paddingHorizontal="16dp"
                     android:paddingVertical="6dp"
-                    android:text="POKÉ OBCHOD"
+                    android:text="MŮJ INVENTÁŘ"
                     android:textColor="#FEFAE0"
                     android:textSize="11sp"
                     android:textStyle="bold"
@@ -41,64 +41,36 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_status_pill"
-                    android:backgroundTint="#BC6C25"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent">
-
-                    <TextView
-                        android:id="@+id/tvShopCoinBalance"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="100"
-                        android:textColor="#FFFFFF"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:text="🪙"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
                 <TextView
-                    android:id="@+id/tvShopTitle"
+                    android:id="@+id/tvInvTitle"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:fontFamily="sans-serif-black"
-                    android:text="Obchod s\nItemy"
+                    android:text="Kapsa a\nBatoh"
                     android:textColor="#283618"
                     android:textSize="38sp"
                     android:lineSpacingMultiplier="0.92"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tvShopLabel" />
+                    app:layout_constraintTop_toBottomOf="@id/tvInvLabel" />
 
                 <TextView
-                    android:id="@+id/tvShopSubtitle"
+                    android:id="@+id/tvInvSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Kup si bally za ušetřené mince."
+                    android:text="Chycení Pokémoni a herní předměty."
                     android:textColor="#606C38"
                     android:textSize="13sp"
                     android:alpha="0.8"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tvShopTitle" />
+                    app:layout_constraintTop_toBottomOf="@id/tvInvTitle" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tabLayoutShop"
+                android:id="@+id/tabLayoutInventory"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="24dp"
@@ -112,12 +84,12 @@
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Bally" />
+                    android:text="Poké-kapsa" />
 
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Návnady" />
+                    android:text="Batoh (Itemy)" />
             </com.google.android.material.tabs.TabLayout>
 
             <View
@@ -127,7 +99,7 @@
                 android:background="#20283618" />
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvShopItems"
+                android:id="@+id/rvInventory"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"
@@ -137,5 +109,4 @@
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

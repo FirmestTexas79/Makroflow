@@ -1,5 +1,6 @@
 package cz.uhk.macroflow
 
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -19,6 +20,12 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
+import cz.uhk.macroflow.pokemon.InventoryFragment
+import cz.uhk.macroflow.pokemon.PokedexFragment
+import cz.uhk.macroflow.pokemon.PokemonWanderer
+import cz.uhk.macroflow.pokemon.DigTransitionEffect
+import cz.uhk.macroflow.pokemon.SmokeTransitionEffect
+import cz.uhk.macroflow.pokemon.DiglettKilledDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,7 +34,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
-    private var diglettWanderer: cz.uhk.macroflow.pokemon.DiglettWanderer? = null
+    private var pokemonWanderer: PokemonWanderer? = null
     private var fabHoldStart = 0L
     private val FAB_HOLD_MS  = 5000L
 
@@ -50,14 +57,11 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) replaceFragment(DashboardFragment())
 
-        // ── Notifikace ───────────────────────────────────────────────
         MakroflowNotifications.createChannels(this)
         requestNotificationPermissionAndSchedule()
 
-        // ── Diglett — počkej na layout ───────────────────────────────
-        window.decorView.post { updateDiglettVisibility() }
+        window.decorView.post { updatePokemonVisibility() }
 
-        // ── Back press ───────────────────────────────────────────────
         onBackPressedDispatcher.addCallback(this) {
             if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
                 drawerLayout.closeDrawer(GravityCompat.END)
@@ -67,7 +71,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ── FAB ──────────────────────────────────────────────────────
         fabHome.setOnClickListener {
             replaceFragment(DashboardFragment())
             bottomNav.selectedItemId = R.id.nav_placeholder
@@ -92,7 +95,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ── Bottom nav ───────────────────────────────────────────────
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_plan    -> replaceFragment(PlanFragment())
@@ -104,10 +106,13 @@ class MainActivity : AppCompatActivity() {
         }
         btnOpenDrawer.setOnClickListener { openDrawer() }
 
-        // ── Drawer ───────────────────────────────────────────────────
         navigationView.setNavigationItemSelectedListener { item ->
             drawerLayout.closeDrawer(GravityCompat.END)
+
             when (item.itemId) {
+                R.id.nav_pokedex -> replaceFragment(PokedexFragment())
+                R.id.nav_inventory -> replaceFragment(InventoryFragment())
+
                 R.id.drawerProfile -> {
                     replaceFragment(ProfileFragment())
                     bottomNav.selectedItemId = R.id.nav_profile
@@ -142,10 +147,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        updateDiglettVisibility()
+        updatePokemonVisibility()
     }
 
-    // ── Notifikace ────────────────────────────────────────────────────
     private fun requestNotificationPermissionAndSchedule() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
@@ -171,7 +175,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Diglett ───────────────────────────────────────────────────────
     fun openPokemonBattle() {
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
@@ -180,34 +183,55 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    fun updateDiglettVisibility() {
-        val ivDiglett = findViewById<ImageView>(R.id.ivDiglettBottomBar) ?: return
+    fun updatePokemonVisibility() {
+        val ivPokemon = findViewById<ImageView>(R.id.ivDiglettBottomBar) ?: return
         val fabHome   = findViewById<View>(R.id.fabHome) ?: return
-        val acquired  = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-            .getBoolean("diglettAcquired", false)
+        val prefs     = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+
+        val acquired   = prefs.getBoolean("pokemonAcquired", false)
+        val pokemonId = prefs.getString("currentOnBarId", "050") ?: "050"
+        val pokemonName = prefs.getString("currentOnBarName", "DIGLETT") ?: "DIGLETT"
 
         if (acquired) {
-            ivDiglett.visibility = View.VISIBLE
-            if (diglettWanderer == null) {
-                diglettWanderer = cz.uhk.macroflow.pokemon.DiglettWanderer(this, ivDiglett, fabHome)
-                diglettWanderer!!.onKilled = {
-                    diglettWanderer?.stop()
-                    diglettWanderer = null
-                    cz.uhk.macroflow.pokemon.DiglettKilledDialog()
-                        .show(supportFragmentManager, "DiglettKilled")
-                }
-                ivDiglett.setOnClickListener { diglettWanderer?.onDiglettClicked() }
+            ivPokemon.visibility = View.VISIBLE
+
+            val drawableName = when (pokemonName) {
+                "GENGAR" -> "pokemon_gengar"
+                else -> "pokemon_diglett"
             }
-            if (ivDiglett.width > 0) diglettWanderer?.start()
-            else ivDiglett.post { diglettWanderer?.start() }
+            val resId = resources.getIdentifier(drawableName, "drawable", packageName)
+            if (resId != 0) ivPokemon.setImageResource(resId)
+
+            if (pokemonName == "GENGAR") {
+                ivPokemon.scaleX = 0.7f
+                ivPokemon.scaleY = 0.7f
+                val dp = resources.displayMetrics.density
+                ivPokemon.translationY = 8f * dp
+            } else {
+                ivPokemon.translationY = 0f
+            }
+
+            val effect = if (pokemonName == "DIGLETT") DigTransitionEffect() else SmokeTransitionEffect()
+
+            if (pokemonWanderer == null) {
+                pokemonWanderer = PokemonWanderer(this, ivPokemon, pokemonId, effect)
+                pokemonWanderer!!.onKilled = {
+                    pokemonWanderer?.stop()
+                    pokemonWanderer = null
+                    prefs.edit().putBoolean("pokemonAcquired", false).apply()
+                    DiglettKilledDialog().show(supportFragmentManager, "DiglettKilled")
+                }
+                ivPokemon.setOnClickListener { pokemonWanderer?.onSpriteClicked() }
+            }
+            if (ivPokemon.width > 0) pokemonWanderer?.start()
+            else ivPokemon.post { pokemonWanderer?.start() }
         } else {
-            ivDiglett.visibility = View.GONE
-            diglettWanderer?.stop()
-            diglettWanderer = null
+            ivPokemon.visibility = View.GONE
+            pokemonWanderer?.stop()
+            pokemonWanderer = null
         }
     }
 
-    // ── Achievements ──────────────────────────────────────────────────
     fun checkAchievements() {
         lifecycleScope.launch {
             val newlyUnlocked = withContext(Dispatchers.IO) {
@@ -299,6 +323,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        diglettWanderer?.stop()
+        pokemonWanderer?.stop()
     }
 }

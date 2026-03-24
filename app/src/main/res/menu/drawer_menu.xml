@@ -15,6 +15,19 @@
             android:title="Achievements"
             android:checkable="true" />
 
+        <item android:title="MOJE SBÍRKA">
+            <menu>
+                <item
+                    android:id="@+id/nav_pokedex"
+                    android:icon="@drawable/ic_home"
+                    android:title="Pokédex" />
+                <item
+                    android:id="@+id/nav_inventory"
+                    android:icon="@drawable/ic_home"
+                    android:title="Kapsa a Batoh" />
+            </menu>
+        </item>
+
         <item
             android:id="@+id/drawerSettings"
             android:icon="@drawable/ic_save"
@@ -42,6 +55,8 @@
             android:checkable="false" />
 
     </group>
+
+
 
     <group android:id="@+id/groupAccount">
 

@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FEFAE0">
+
+    <!-- Monstera dekorace -->
+    <ImageView
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-50dp"
+        android:layout_marginEnd="-55dp"
+        android:src="@drawable/bg_monstera_leaf_1"
+        android:alpha="0.7"
+        android:rotation="-15"
+        app:tint="#283618" />
+
+    <!-- ══ SCROLLUJÍCÍ GRID — plná výška, paddingTop se nastaví v kódu ══ -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvPokedex"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingHorizontal="14dp"
+        android:paddingBottom="120dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never" />
+
+    <!-- ══ PEVNÁ HORNÍ ČÁST — překrývá grid, elevation zaručuje že je nahoře ══ -->
+    <LinearLayout
+        android:id="@+id/pokedexTopSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="vertical"
+        android:background="#FEFAE0"
+        android:elevation="6dp">
+
+        <!-- HEADER -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="56dp"
+            android:paddingBottom="6dp">
+
+            <TextView
+                android:id="@+id/tvPokedexBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#606C38"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="6dp"
+                android:text="KANTO REGION"
+                android:textColor="#FEFAE0"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.12"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/tvPokedexTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="sans-serif-black"
+                android:text="Pokédex"
+                android:textColor="#283618"
+                android:textSize="38sp"
+                android:lineSpacingMultiplier="0.9"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvPokedexBadge" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Chyť je všechny — tréninkem a disciplínou."
+                android:textColor="#606C38"
+                android:textSize="13sp"
+                android:alpha="0.75"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvPokedexTitle" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- DETAIL KARTA -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="10dp"
+            app:cardCornerRadius="24dp"
+            app:cardBackgroundColor="#283618"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+
+                <!-- Sprite v kruhu -->
+                <FrameLayout
+                    android:layout_width="90dp"
+                    android:layout_height="90dp">
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_status_pill"
+                        android:backgroundTint="#1AFEFAE0" />
+                    <ImageView
+                        android:id="@+id/ivDetailSprite"
+                        android:layout_width="82dp"
+                        android:layout_height="82dp"
+                        android:layout_gravity="center"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_home" />
+                </FrameLayout>
+
+                <!-- Info -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="14dp">
+
+                    <TextView
+                        android:id="@+id/tvDetailNumber"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="#000"
+                        android:textColor="#80FEFAE0"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.08" />
+
+                    <TextView
+                        android:id="@+id/tvDetailName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="sans-serif-black"
+                        android:text=".???"
+                        android:textColor="#FEFAE0"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:id="@+id/tvDetailType"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:background="@drawable/bg_status_pill"
+                        android:backgroundTint="#DDA15E"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"
+                        android:text=".???"
+                        android:textColor="#283618"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
+
+                    <TextView
+                        android:id="@+id/tvDetailMacro"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Tento Pokémon ještě nebyl chycen."
+                        android:textColor="#BDFEFAE0"
+                        android:textSize="11sp"
+                        android:lineSpacingMultiplier="1.3"
+                        android:maxLines="3"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Oddělovač KANTO DEX -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginBottom="8dp">
+            <View android:layout_width="0dp" android:layout_height="1dp"
+                android:layout_weight="1" android:background="#20283618" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp" android:text="KANTO DEX"
+                android:textColor="#606C38" android:textSize="10sp" android:textStyle="bold"
+                android:letterSpacing="0.14" />
+            <View android:layout_width="0dp" android:layout_height="1dp"
+                android:layout_weight="1" android:background="#20283618" />
+        </LinearLayout>
+
+        <!-- Jemný stín dolů — oddělovač od gridu -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:background="@android:color/transparent" />
+
+    </LinearLayout>
+
+</FrameLayout>

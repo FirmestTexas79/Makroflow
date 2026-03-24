@@ -7,6 +7,8 @@ import android.os.Looper
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import cz.uhk.macroflow.AppDatabase
+import cz.uhk.macroflow.CapturedPokemonEntity
 import kotlin.math.*
 import kotlin.random.Random
 
@@ -47,6 +49,9 @@ class PokemonBattleView @JvmOverloads constructor(
     private var pendingAction: (() -> Unit)? = null
     private var ballVisible = 0  // 0=skrytý, 1=letí, 2=chycen
 
+    // DB pro reálné odečítání a ukládání
+    private val db = AppDatabase.getDatabase(context)
+
     private val cursorTick = object : Runnable {
         override fun run() { cursorOn = !cursorOn; invalidate(); handler.postDelayed(this, 480) }
     }
@@ -57,17 +62,18 @@ class PokemonBattleView @JvmOverloads constructor(
     init {
         PokemonSprites.init(context)
 
-        // Dynamická kontrola zda je Gengar zakoupen
-        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val isGengarUnlocked = prefs.getBoolean("gengarPurchased", false)
+        // 🎲 Generování přes náš SpawnManager!
+        val enemyPokemon = SpawnManager.rollWildEncounter(context)
 
-        val enemyPokemon = if (isGengarUnlocked) {
-            BattleFactory.createGengar()
-        } else {
-            BattleFactory.createDiglett()
-        }
+        // 🎒 Načtení reálného počtu Pokéballů z databáze
+        val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
 
-        gs = BattleState(BattleFactory.createMew(), enemyPokemon)
+        gs = BattleState(
+            player = BattleFactory.createMew(),
+            enemy = enemyPokemon,
+            ballCount = currentPokeballs
+        )
+
         handler.post(cursorTick)
         startIntro()
     }
@@ -99,17 +105,18 @@ class PokemonBattleView @JvmOverloads constructor(
         val sc = scale
         if (sc <= 0f) return
 
-        // 🎨 Dynamické zobrazení Gengara (webp) nebo Digletta (png)
-        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val isGengarUnlocked = prefs.getBoolean("gengarPurchased", false)
+        if (gs.enemyVisible) {
+            val drawableName = when (gs.enemy.name) {
+                "GENGAR" -> "pokemon_gengar"
+                "DIGLETT" -> "pokemon_diglett"
+                else -> "pokemon_diglett"
+            }
 
-        if (isGengarUnlocked) {
-            // Vykreslení Gengara (WebP)
-            val resId = context.resources.getIdentifier("pokemon_gengar", "drawable", context.packageName)
-            if (resId != 0 && gs.enemyVisible) {
+            val resId = context.resources.getIdentifier(drawableName, "drawable", context.packageName)
+            if (resId != 0) {
                 val gBmp = BitmapFactory.decodeResource(context.resources, resId)
                 if (gBmp != null) {
-                    val targetH = 34 * sc
+                    val targetH = if (gs.enemy.name == "GENGAR") 34 * sc else 22 * sc
                     val targetW = targetH * gBmp.width / gBmp.height
                     val sx = gbX(112f) - targetW / 2f
                     val sy = gbY(54f) - targetH
@@ -117,27 +124,15 @@ class PokemonBattleView @JvmOverloads constructor(
                     canvas.drawBitmap(gBmp, null, dst, sp)
                 }
             }
-        } else {
-            // Staré vykreslení Digletta
-            val dBmp = PokemonSprites.diglettBmpPublic
-            if (dBmp != null && gs.enemyVisible) {
-                val targetH = 22 * sc
-                val targetW = targetH * dBmp.width / dBmp.height
-                val sx = gbX(112f) - targetW / 2f
-                val sy = gbY(54f) - targetH
-                val dst = RectF(sx, sy, sx + targetW, sy + targetH)
-                canvas.drawBitmap(dBmp, null, dst, sp)
-            }
         }
 
-        // Mew: player
         val mBmp = PokemonSprites.mewBmpPublic
         if (mBmp != null) {
             val targetH = 36 * sc
             val targetW = targetH * mBmp.width / mBmp.height
-            val sx = gbX(48f)  - targetW / 2f
-            val sy = gbY(82f)  - targetH
-            val dst = android.graphics.RectF(sx, sy, sx + targetW, sy + targetH)
+            val sx = gbX(48f) - targetW / 2f
+            val sy = gbY(82f) - targetH
+            val dst = RectF(sx, sy, sx + targetW, sy + targetH)
             canvas.drawBitmap(mBmp, null, dst, sp)
         }
     }
@@ -432,7 +427,12 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun throwBall() {
         if (gs.ballCount <= 0 || gs.enemy.currentHp <= 0) return
-        gs.ballCount--; busy = true; gs.phase = BattlePhase.BALL_THROW
+
+        // 🎒 ODEČTE SE REÁLNÝ POKÉBALL Z DATABÁZE
+        db.userItemDao().consumeItem("poke_ball", 1)
+        gs.ballCount = db.userItemDao().getItemCount("poke_ball") ?: 0
+
+        busy = true; gs.phase = BattlePhase.BALL_THROW
         setText("THREW A", "POKE BALL!")
         val sx = 28f; val sy = 58f; val tx = 100f; val ty = 28f
         ballX = sx; ballY = sy; var t = 0f; ballVisible = 1
@@ -451,11 +451,8 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private fun startWobble() {
-        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val isGengar = prefs.getBoolean("gengarPurchased", false)
-
-        // Změna: Odesíláme penaltu 0.7f z BattleFactory
-        val multiplier = if (isGengar) BattleFactory.GENGAR_CATCH_PENALTY else 1.0f
+        // Multiplier pro Gengara z BattleFactory
+        val multiplier = if (gs.enemy.name == "GENGAR") BattleFactory.GENGAR_CATCH_PENALTY else 1.0f
 
         val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy, multiplier)
         gs.captureSuccess = success; gs.wobbleCount = wobbles; gs.wobbleDone = 0
@@ -471,16 +468,48 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private fun breakFree() {
-        ballVisible = 0; gs.enemyVisible = true; invalidate()
-        setText("${gs.enemy.name}", "BROKE FREE!")
-        gs.phase = BattlePhase.TEXT_WAIT; pendingAction = { busy = false; enemyTurn() }
+        ballVisible = 0
+        gs.enemyVisible = true
+        invalidate()
+
+        // 🎲 1. Šance na útěk z boje (např. 15 % šance, že uteče úplně)
+        val runAwayChance = 0.15f
+
+        if (Random.nextFloat() < runAwayChance) {
+            // 🏃 Pokémon utekl z celého boje!
+            gs.phase = BattlePhase.ESCAPED
+            setText("${gs.enemy.name}", "RAN AWAY!")
+
+            // Po 2 sekundách zavřeme fragment a vrátíme se na mapu/dashboard
+            handler.postDelayed({
+                onCaught?.invoke() // Tento callback v MainActivity pouštíme i při ukončení
+            }, 2000)
+
+        } else {
+            // ⚔️ Pokémon zůstává, boj pokračuje!
+            setText("${gs.enemy.name}", "BROKE FREE!")
+
+            // Nastavíme, že po odkliknutí textu (nebo automaticky) pokračuje tah nepřítele
+            gs.phase = BattlePhase.TEXT_WAIT
+            pendingAction = {
+                busy = false // Odblokujeme UI!
+                enemyTurn()  // Nepřítel zaútočí
+            }
+        }
     }
 
     private fun caught() {
         gs.phase = BattlePhase.CAUGHT; pendingAction = null
         ballVisible = 2; invalidate()
-        context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-            .edit().putBoolean("diglettAcquired", true).apply()
+
+        // 🎒 ULOŽENÍ DO SQL TABULKY "captured_pokemon"
+        val caughtEntity = CapturedPokemonEntity(
+            pokemonId = if (gs.enemy.name == "GENGAR") "094" else "050",
+            name = gs.enemy.name,
+            isShiny = false
+        )
+        db.capturedPokemonDao().insertPokemon(caughtEntity)
+
         setText("GOT ${gs.enemy.name}!", ""); busy = false; invalidate()
         handler.postDelayed({ onCaught?.invoke() }, 2000)
     }

@@ -5,14 +5,9 @@ import android.os.Bundle
 import android.view.*
 import android.widget.*
 import androidx.fragment.app.Fragment
+import cz.uhk.macroflow.MainActivity
 
 class PokemonBattleFragment : Fragment() {
-
-    companion object {
-        fun isDiglettAcquired(context: Context): Boolean =
-            context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                .getBoolean("diglettAcquired", false)
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -44,8 +39,9 @@ class PokemonBattleFragment : Fragment() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
             onCaught = {
-                (requireActivity() as? cz.uhk.macroflow.MainActivity)
-                    ?.updateDiglettVisibility()
+                // ✅ Voláme novou aktualizaci na MainActivity
+                (requireActivity() as? MainActivity)?.updatePokemonVisibility()
+
                 view?.postDelayed({ parentFragmentManager.popBackStack() }, 3000)
             }
         }
