@@ -2,6 +2,7 @@ package cz.uhk.macroflow.common
 
 import android.Manifest
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -23,6 +24,7 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import coil.load // ✅ Přidán import pro načítání z webu
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
@@ -51,8 +53,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
 
-    // ✅ Používáme obecné rozhraní chování místo konkrétní třídy
     private var pokemonBehavior: PokemonBehavior? = null
+
+    // ✅ PŘIDÁNO: Držení stavu pro plynulé načítání z webu a swapování
+    private var lastLoadedId: String = ""
+    private var currentOnBarId: String = ""
 
     private var fabHoldStart = 0L
     private val FAB_HOLD_MS  = 5000L
@@ -202,47 +207,62 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    // ✅ TOVÁRNÍ IMPLEMENTACE UPDATE POZICE A VISIBILITY
+    // ✅ TVRDÝ SWAP + NAČÍTÁNÍ Z WEBU LETS GO PIKACHU/EEVEE
+    // ... uvnitř MainActivity -> updatePokemonVisibility
     fun updatePokemonVisibility() {
         val ivPokemon = findViewById<ImageView>(R.id.ivDiglettBottomBar) ?: return
         val prefs     = getSharedPreferences("GamePrefs", MODE_PRIVATE)
 
         val acquired   = prefs.getBoolean("pokemonAcquired", false)
-        val pokemonId = prefs.getString("currentOnBarId", "050") ?: "050"
-        val pokemonName = prefs.getString("currentOnBarName", "DIGLETT") ?: "DIGLETT"
+        val pId        = prefs.getString("currentOnBarId", "050") ?: "050"
+        val pName      = prefs.getString("currentOnBarName", "DIGLETT") ?: "DIGLETT"
 
-        if (acquired) {
-            ivPokemon.visibility = View.VISIBLE
+        currentOnBarId = pId
 
-            val drawableName = when (pokemonName) {
-                "GENGAR" -> "pokemon_gengar"
-                else -> "pokemon_diglett"
-            }
-            val resId = resources.getIdentifier(drawableName, "drawable", packageName)
-            if (resId != 0) ivPokemon.setImageResource(resId)
-
-            // ✅ Zarovnání na ose Y — Gengar potřebuje posun, Diglett sedí na zemi
-            if (pokemonName == "GENGAR") {
-                val dp = resources.displayMetrics.density
-                ivPokemon.translationY = 8f * dp
-            } else {
-                ivPokemon.translationY = 0f
-            }
-
-            // ✅ Volání WandererFactory pro 151 pokémonů
-            if (pokemonBehavior == null) {
-                pokemonBehavior = WandererFactory.create(this, ivPokemon, pokemonId)
-
-                ivPokemon.setOnClickListener { pokemonBehavior?.onSpriteClicked() }
-            }
-
-            if (ivPokemon.width > 0) pokemonBehavior?.start()
-            else ivPokemon.post { pokemonBehavior?.start() }
-
-        } else {
-            ivPokemon.visibility = View.GONE
+        if (!acquired) {
             pokemonBehavior?.stop()
             pokemonBehavior = null
+            ivPokemon.visibility = View.GONE
+            return
+        }
+
+        // 🔥 PERMANENTNÍ ZVĚTŠENÍ NA LIŠTĚ (Nastavíme natvrdo 52x52 dp)
+        val dp = resources.displayMetrics.density
+        ivPokemon.layoutParams.width = (52 * dp).toInt()
+        ivPokemon.layoutParams.height = (52 * dp).toInt()
+        ivPokemon.requestLayout()
+
+        if (pId != lastLoadedId) {
+            lastLoadedId = pId
+            pokemonBehavior?.stop()
+
+            ivPokemon.visibility = View.GONE
+            ivPokemon.scaleX = 1f
+            ivPokemon.scaleY = 1f
+            ivPokemon.alpha = 1f
+            ivPokemon.rotation = 0f
+
+            val webName = pName.lowercase()
+                .replace(" ", "-")
+                .replace(".", "")
+                .replace("♀", "-f")
+                .replace("♂", "-m")
+
+            val imageUrl = "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
+
+            ivPokemon.load(imageUrl) {
+                listener(onSuccess = { _, _ ->
+                    pokemonBehavior = WandererFactory.create(this@MainActivity, ivPokemon, pId)
+                    ivPokemon.visibility = View.VISIBLE
+                    pokemonBehavior?.start()
+                })
+            }
+
+            ivPokemon.setOnClickListener { pokemonBehavior?.onSpriteClicked() }
+
+        } else {
+            ivPokemon.visibility = View.VISIBLE
+            pokemonBehavior?.start()
         }
     }
 

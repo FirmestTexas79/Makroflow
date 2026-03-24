@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    fx_dirt_particle.xml
+    Hlína pro Diglett dig animaci — náhodně barevné zemité obláčky.
+    Používá se programově v DigTransitionEffect (StandardWanderer.kt):
+    val resId = context.resources.getIdentifier("fx_dirt_particle", "drawable", context.packageName)
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Základní hnědý kruh — tmavší jádro hlíny -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#5C4033" />
+        </shape>
+    </item>
+
+    <!-- Světlejší vnitřní odraz — dodá hloubku -->
+    <item
+        android:left="3dp"
+        android:top="2dp"
+        android:right="6dp"
+        android:bottom="6dp">
+        <shape android:shape="oval">
+            <solid android:color="#8D6E63" />
+        </shape>
+    </item>
+
+</layer-list>

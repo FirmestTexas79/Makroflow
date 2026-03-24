@@ -3,44 +3,56 @@ package cz.uhk.macroflow.pokemon
 import android.content.Context
 import android.widget.ImageView
 
+/**
+ * Konfigurace konkrétního Pokémona na liště.
+ * Přidání nového = jen nový řádek v CONFIGS.
+ */
+private data class WandererConfig(
+    val pokemonId: String,
+    val baseScale: Float,
+    val effectFactory: () -> TransitionEffect
+)
+
 object WandererFactory {
 
-    /**
-     * ✅ Tady budeme mít definovaných všech 151 pokémonů a jejich pohybů!
-     */
+    // ── Centrální konfigurace všech Pokémonů na liště ──────────────────────
+    private val CONFIGS = listOf(
+
+        WandererConfig(
+            pokemonId   = "050",   // Diglett
+            baseScale   = 3.0f,    // je malý sprite, potřebuje zvětšení
+            effectFactory = { DigTransitionEffect() }
+        ),
+
+        WandererConfig(
+            pokemonId   = "094",   // Gengar
+            baseScale   = 1.5f,
+            effectFactory = { SmokeTransitionEffect(purple = true) }
+        )
+
+        // ── Budoucí rozšíření ──────────────────────────────────────────
+        // WandererConfig("066", 1.5f) { SmokeTransitionEffect() },  // Machop
+        // WandererConfig("133", 1.8f) { SmokeTransitionEffect() },  // Eevee
+        // WandererConfig("007", 1.6f) { SmokeTransitionEffect() },  // Squirtle
+    )
+
+    private val configMap by lazy { CONFIGS.associateBy { it.pokemonId } }
+
+    // ── Factory metoda ────────────────────────────────────────────────────
     fun create(context: Context, pokemonView: ImageView, pokemonId: String): PokemonBehavior {
-        return when (pokemonId) {
-
-            "050" -> {
-                // Diglett – chodí po zemi a hrabe se pod zemí (DigTransitionEffect)
-                StandardWanderer(
-                    context, pokemonView, pokemonId,
-                    baseScale = 1.0f,
-                    effect = DigTransitionEffect()
-                )
-            }
-
-            "094" -> {
-                // Gengar – je menší (0.7f) a teleportuje se kouřem (SmokeTransitionEffect)
-                StandardWanderer(
-                    context, pokemonView, pokemonId,
-                    baseScale = 0.7f,
-                    effect = SmokeTransitionEffect()
-                )
-            }
-
-            // Až budeš přidávat další:
-            // "001" -> StandardWanderer(context, pokemonView, pokemonId, baseScale = 1.0f, effect = VineTransitionEffect())
-            // "025" -> StandardWanderer(context, pokemonView, pokemonId, baseScale = 1.0f, effect = ElectricTransitionEffect())
-
-            else -> {
-                // Výchozí chodec pro kohokoliv jiného
-                StandardWanderer(
-                    context, pokemonView, pokemonId,
-                    baseScale = 1.0f,
-                    effect = SmokeTransitionEffect()
-                )
-            }
-        }
+        val cfg = configMap[pokemonId] ?: defaultConfig()
+        return StandardWanderer(
+            context     = context,
+            pokemonView = pokemonView,
+            pokemonId   = pokemonId,
+            baseScale   = cfg.baseScale,
+            effect      = cfg.effectFactory()
+        )
     }
+
+    private fun defaultConfig() = WandererConfig(
+        pokemonId     = "",
+        baseScale     = 1.5f,
+        effectFactory = { SmokeTransitionEffect(purple = false) }
+    )
 }

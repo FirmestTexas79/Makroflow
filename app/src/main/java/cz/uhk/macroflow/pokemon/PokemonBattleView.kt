@@ -48,7 +48,9 @@ class PokemonBattleView @JvmOverloads constructor(
     private var pendingAction: (() -> Unit)? = null
     private var ballVisible = 0  // 0=skrytý, 1=letí, 2=chycen
 
-    // DB pro reálné odečítání a ukládání
+    // Identifikátor aktuálně vybraného ballu pro animaci
+    private var selectedBallId = "poke_ball"
+
     private val db = AppDatabase.getDatabase(context)
 
     private val cursorTick = object : Runnable {
@@ -61,10 +63,7 @@ class PokemonBattleView @JvmOverloads constructor(
     init {
         PokemonSprites.init(context)
 
-        // 🎲 Generování přes náš SpawnManager!
         val enemyPokemon = SpawnManager.rollWildEncounter(context)
-
-        // 🎒 Načtení reálného počtu Pokéballů z databáze
         val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
 
         gs = BattleState(
@@ -72,6 +71,12 @@ class PokemonBattleView @JvmOverloads constructor(
             enemy = enemyPokemon,
             ballCount = currentPokeballs
         )
+
+        // ✅ Zapišeme do Seen tabulky (pro trvalé odemčení v Pokédexu)
+        val seenId = if (enemyPokemon.name == "GENGAR") "094" else "050"
+        Thread {
+            db.seenPokemonDao().markSeen(SeenPokemonEntity(seenId))
+        }.start()
 
         handler.post(cursorTick)
         startIntro()
@@ -271,14 +276,21 @@ class PokemonBattleView @JvmOverloads constructor(
         zones.add(Zone(Rect(tx, ty+32, tx+tw, ty+th)) { if (!busy) showMain() })
     }
 
+    // ✅ OPRAVA: Ukáže oba bally!
     private fun drawItemMenu(c: Canvas) {
         val bx = 2; val by = 97; val bw = 156; val bh = 46; drawUIBox(c, bx, by, bw, bh)
-        PokemonSprites.drawText(c, "POKE BALL  X${gs.ballCount}", bx+4, by+5, C_TEXT, fp)
-        if (gs.ballCount > 0) PokemonSprites.drawText(c, "> THROW", bx+4, by+18, C_TEXT, fp)
-        else                  PokemonSprites.drawText(c, "NO BALLS!", bx+4, by+18, C_TEXT, fp)
-        PokemonSprites.drawText(c, "BACK", bx+bw-28, by+38, C_TEXT, fp)
+
+        // Asynchronní načtení by zasekalo Canvas, takže saháme do paměti DB synchronně
+        val pokeCount = db.userItemDao().getItemCount("poke_ball") ?: 0
+        val greatCount = db.userItemDao().getItemCount("great_ball") ?: 0
+
+        PokemonSprites.drawText(c, "1.POKE BALL X$pokeCount", bx+4, by+5, C_TEXT, fp)
+        PokemonSprites.drawText(c, "2.GREAT BALL X$greatCount", bx+4, by+18, C_TEXT, fp)
+        PokemonSprites.drawText(c, "BACK", bx+bw-28, by+34, C_TEXT, fp)
+
         zones.clear()
-        if (gs.ballCount > 0) zones.add(Zone(Rect(bx, by, bx+bw, by+30))            { if (!busy) throwBall() })
+        zones.add(Zone(Rect(bx, by, bx+bw, by+15)) { if (!busy && pokeCount > 0) throwBall("poke_ball") })
+        zones.add(Zone(Rect(bx, by+16, bx+bw, by+31)) { if (!busy && greatCount > 0) throwBall("great_ball") })
         zones.add(Zone(Rect(bx+bw-32, by+32, bx+bw, by+bh)) { if (!busy) showMain() })
     }
 
@@ -424,17 +436,26 @@ class PokemonBattleView @JvmOverloads constructor(
         }, 1200)
     }
 
-    private fun throwBall() {
-        if (gs.ballCount <= 0 || gs.enemy.currentHp <= 0) return
+    // ✅ OPRAVA: Rychlejší hod na Digletta
+    private fun throwBall(ballType: String) {
+        if (gs.enemy.currentHp <= 0) return
 
-        // 🎒 ODEČTE SE REÁLNÝ POKÉBALL Z DATABÁZE
-        db.userItemDao().consumeItem("poke_ball", 1)
-        gs.ballCount = db.userItemDao().getItemCount("poke_ball") ?: 0
+        selectedBallId = ballType
+        Thread {
+            db.userItemDao().consumeItem(ballType, 1)
+            val newCount = db.userItemDao().getItemCount("poke_ball") ?: 0
+            handler.post { gs.ballCount = newCount }
+        }.start()
 
         busy = true; gs.phase = BattlePhase.BALL_THROW
-        setText("THREW A", "POKE BALL!")
+        val niceName = ballType.uppercase().replace("_", " ")
+        setText("THREW A", "$niceName!")
+
         val sx = 28f; val sy = 58f; val tx = 100f; val ty = 28f
         ballX = sx; ballY = sy; var t = 0f; ballVisible = 1
+
+        val speedStep = if (gs.enemy.name == "DIGLETT") 0.055f else 0.035f
+
         fun fly() {
             if (t >= 1f) {
                 gs.enemyVisible = false; ballX = 100f; ballY = 36f; invalidate()
@@ -443,17 +464,20 @@ class PokemonBattleView @JvmOverloads constructor(
             }
             ballX = sx + (tx - sx) * t
             ballY = sy + (ty - sy) * t + (-sin(t * PI.toFloat()) * 26f)
-            t += 0.035f; invalidate()
+            t += speedStep
+            invalidate()
             handler.postDelayed({ fly() }, 20)
         }
         fly()
     }
 
     private fun startWobble() {
-        // Multiplier pro Gengara z BattleFactory
         val multiplier = if (gs.enemy.name == "GENGAR") BattleFactory.GENGAR_CATCH_PENALTY else 1.0f
 
-        val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy, multiplier)
+        // Pokud házíme Great Ball, dáme mu bonus (multiplier zvětšíme)
+        val ballMultiplier = if (selectedBallId == "great_ball") multiplier * 1.5f else multiplier
+
+        val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy, ballMultiplier)
         gs.captureSuccess = success; gs.wobbleCount = wobbles; gs.wobbleDone = 0
         gs.phase = BattlePhase.BALL_WOBBLE; doWobble()
     }
@@ -471,43 +495,41 @@ class PokemonBattleView @JvmOverloads constructor(
         gs.enemyVisible = true
         invalidate()
 
-        // 🎲 1. Šance na útěk z boje (např. 15 % šance, že uteče úplně)
         val runAwayChance = 0.15f
 
         if (Random.nextFloat() < runAwayChance) {
-            // 🏃 Pokémon utekl z celého boje!
             gs.phase = BattlePhase.ESCAPED
             setText("${gs.enemy.name}", "RAN AWAY!")
-
-            // Po 2 sekundách zavřeme fragment a vrátíme se na mapu/dashboard
             handler.postDelayed({
-                onCaught?.invoke() // Tento callback v MainActivity pouštíme i při ukončení
+                onCaught?.invoke()
             }, 2000)
 
         } else {
-            // ⚔️ Pokémon zůstává, boj pokračuje!
             setText("${gs.enemy.name}", "BROKE FREE!")
-
-            // Nastavíme, že po odkliknutí textu (nebo automaticky) pokračuje tah nepřítele
             gs.phase = BattlePhase.TEXT_WAIT
             pendingAction = {
-                busy = false // Odblokujeme UI!
-                enemyTurn()  // Nepřítel zaútočí
+                busy = false
+                enemyTurn()
             }
         }
     }
 
+    // ✅ OPRAVA: Gengar dostane ID 094!
     private fun caught() {
         gs.phase = BattlePhase.CAUGHT; pendingAction = null
         ballVisible = 2; invalidate()
 
-        // 🎒 ULOŽENÍ DO SQL TABULKY "captured_pokemon"
+        val pId = if (gs.enemy.name == "GENGAR") "094" else "050"
+
         val caughtEntity = CapturedPokemonEntity(
-            pokemonId = if (gs.enemy.name == "GENGAR") "094" else "050",
+            pokemonId = pId,
             name = gs.enemy.name,
             isShiny = false
         )
-        db.capturedPokemonDao().insertPokemon(caughtEntity)
+
+        Thread {
+            db.capturedPokemonDao().insertPokemon(caughtEntity)
+        }.start()
 
         setText("GOT ${gs.enemy.name}!", ""); busy = false; invalidate()
         handler.postDelayed({ onCaught?.invoke() }, 2000)

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    fx_dirt_dark.xml
+    Tmavší varianta hlíny pro Diglett efekt.
+    Střídají se s fx_dirt_particle.xml pro přirozenější efekt.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#3E2723" />
+        </shape>
+    </item>
+
+    <item
+        android:left="2dp"
+        android:top="2dp"
+        android:right="5dp"
+        android:bottom="5dp">
+        <shape android:shape="oval">
+            <solid android:color="#5C4033" />
+        </shape>
+    </item>
+
+</layer-list>

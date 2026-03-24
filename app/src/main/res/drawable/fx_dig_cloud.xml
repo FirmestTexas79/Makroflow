@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    fx_dig_cloud.xml
+    Velký obláček prachu při vynořování Digletta ze země.
+    Používá se jako pozadí View s GradientDrawable animací v DigTransitionEffect.
+    Barvy: zemité hnědé s poloprůhledností pro efekt prašného obláčku.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+
+    <!-- Poloprůhledná zemitá hnědá -->
+    <solid android:color="#AA6D4C41" />
+
+    <!-- Jemný gradient od středu — světlejší střed, tmavší okraj -->
+    <gradient
+        android:type="radial"
+        android:gradientRadius="50%"
+        android:startColor="#CC8D6E63"
+        android:endColor="#555C4033"
+        android:centerX="0.4"
+        android:centerY="0.35" />
+
+</shape>

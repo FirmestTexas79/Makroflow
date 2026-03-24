@@ -15,19 +15,18 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
-import coil.load // ✅ TENTO IMPORT JE KLÍČOVÝ PRO STAŽENÍ Z WEBU!
+import coil.load
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// Upravená datová třída pro webové URL adresy
 data class ShopProduct(
     val id: String,
     val name: String,
     val desc: String,
     val price: Int,
     val quantityToGive: Int,
-    val imageUrl: String // ✅ Místo lokálního resource ID dáváme URL adresu
+    val imageUrl: String
 )
 
 class PokemonShopFragment : Fragment() {
@@ -37,9 +36,8 @@ class PokemonShopFragment : Fragment() {
     private lateinit var tvBalance: TextView
     private lateinit var db: AppDatabase
 
-    private var currentTab = 0 // 0 = Bally, 1 = Návnady
+    private var currentTab = 0
 
-    // 🌐 DEFINICE ZBOŽÍ S REÁLNÝMI REKLAMNÍMI OBRÁZKY Z POKÉDB
     private val ballProducts = listOf(
         ShopProduct(
             "poke_ball",
@@ -63,14 +61,14 @@ class PokemonShopFragment : Fragment() {
             "Spooky Plate",
             "Zvedne spawn Gengara v noci.",
             150, 1,
-            "https://img.pokemondb.net/sprites/items/spooky-plate.png" // 👻 Gengar lure
+            "https://img.pokemondb.net/sprites/items/spooky-plate.png"
         ),
         ShopProduct(
             "lure_protein",
             "Black Belt",
             "Zaručí spawn Machampa po tréninku.",
             100, 1,
-            "https://img.pokemondb.net/sprites/items/black-belt.png" // 🥋 Machamp lure
+            "https://img.pokemondb.net/sprites/items/black-belt.png"
         )
     )
 
@@ -117,7 +115,6 @@ class PokemonShopFragment : Fragment() {
         rvShop.adapter = ShopAdapter(products)
     }
 
-    // --- 🛒 ADAPTÉR PRO OBCHOD ---
     private inner class ShopAdapter(private val products: List<ShopProduct>) :
         RecyclerView.Adapter<ShopAdapter.VH>() {
 
@@ -139,10 +136,9 @@ class PokemonShopFragment : Fragment() {
             holder.tvDesc.text = product.desc
             holder.btnBuy.text = "KOUPIT ZA ${product.price} 🪙"
 
-            // ✅ COIL NAČTENÍ OBRÁZKU Z INTERNETU
             holder.ivIcon.load(product.imageUrl) {
-                placeholder(R.drawable.ic_home) // Než se stáhne, ukaž domeček
-                error(R.drawable.ic_home)       // Kdyby to spadlo, ukaž domeček
+                placeholder(R.drawable.ic_home)
+                error(R.drawable.ic_home)
             }
 
             holder.btnBuy.setOnClickListener {

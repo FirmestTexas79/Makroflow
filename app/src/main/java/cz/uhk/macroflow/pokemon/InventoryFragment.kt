@@ -27,7 +27,7 @@ class InventoryFragment : Fragment() {
     private lateinit var tabLayout: TabLayout
     private lateinit var db: AppDatabase
 
-    private var currentTab = 0 // 0 = Pokémoni, 1 = Itemy
+    private var currentTab = 0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -72,7 +72,6 @@ class InventoryFragment : Fragment() {
         }
     }
 
-    // --- 🦁 1. ADAPTÉR PRO POKÉ-KAPSU (Pokémoni) ---
     private inner class PokemonAdapter(private val list: List<CapturedPokemonEntity>) :
         RecyclerView.Adapter<PokemonAdapter.VH>() {
 
@@ -94,15 +93,25 @@ class InventoryFragment : Fragment() {
             val item = list[position]
             holder.tvName.text = item.name
 
-            val drawableName = when (item.name) {
-                "GENGAR" -> "pokemon_gengar"
-                "DIGLETT" -> "pokemon_diglett"
-                else -> "pokemon_diglett"
-            }
-            val resId = resources.getIdentifier(drawableName, "drawable", requireContext().packageName)
-            if (resId != 0) holder.ivSprite.setImageResource(resId)
+            val webName = item.name.lowercase()
+                .replace(" ", "-")
+                .replace(".", "")
+                .replace("♀", "-f")
+                .replace("♂", "-m")
 
-            // 🔒 Přepínání ikony zámku
+            val imageUrl = "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
+
+
+            val dp = holder.itemView.context.resources.displayMetrics.density
+            holder.ivSprite.layoutParams.width = (88 * dp).toInt()
+            holder.ivSprite.layoutParams.height = (88 * dp).toInt()
+            holder.ivSprite.requestLayout()
+
+            holder.ivSprite.load(imageUrl) {
+                placeholder(R.drawable.ic_home)
+                error(R.drawable.ic_home)
+            }
+
             val lockIcon = if (item.isLocked) android.R.drawable.ic_lock_lock else android.R.drawable.ic_lock_idle_lock
             holder.btnLock.setImageResource(lockIcon)
 
@@ -114,7 +123,6 @@ class InventoryFragment : Fragment() {
                 }
             }
 
-            // 📍 Vypustit na lištu (Jakéhokoliv Pokémona!)
             holder.btnPinToBar.setOnClickListener {
                 requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                     .edit()
@@ -127,7 +135,6 @@ class InventoryFragment : Fragment() {
                 android.widget.Toast.makeText(requireContext(), "📌 ${item.name} vypuštěn na lištu!", android.widget.Toast.LENGTH_SHORT).show()
             }
 
-            // 📥 Schovat do inventáře (Skrýt z lišty)
             holder.btnUnpinFromBar.setOnClickListener {
                 requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                     .edit()
@@ -138,7 +145,6 @@ class InventoryFragment : Fragment() {
                 android.widget.Toast.makeText(requireContext(), "📥 Pokémon schován do kapsy.", android.widget.Toast.LENGTH_SHORT).show()
             }
 
-            // 🗑️ Smazat (pokud není zamčený!)
             holder.btnDeletePokemon.setOnClickListener {
                 if (item.isLocked) {
                     android.widget.Toast.makeText(requireContext(), "Odemkni pokémona před smazáním! 🔒", android.widget.Toast.LENGTH_SHORT).show()
@@ -155,7 +161,6 @@ class InventoryFragment : Fragment() {
         override fun getItemCount() = list.size
     }
 
-    // --- 🎒 2. ADAPTÉR PRO BATOH (Předměty) ---
     private inner class ItemAdapter(private val list: List<UserItemEntity>) :
         RecyclerView.Adapter<ItemAdapter.VH>() {
 
@@ -175,19 +180,23 @@ class InventoryFragment : Fragment() {
             holder.tvName.text = when(item.itemId) {
                 "poke_ball" -> "Poké Ball (${item.quantity}x)"
                 "great_ball" -> "Great Ball (${item.quantity}x)"
-                "lure_lamp" -> "Ghost Plate / Lampa (${item.quantity}x)"
+                "lure_lamp" -> "Spooky Plate (${item.quantity}x)"
                 else -> "${item.itemId} (${item.quantity}x)"
             }
 
+            // ✅ Obrázky pro bally a herní itemy v batohu
             val imageUrl = when(item.itemId) {
                 "poke_ball" -> "https://img.pokemondb.net/sprites/items/poke-ball.png"
                 "great_ball" -> "https://img.pokemondb.net/sprites/items/great-ball.png"
-                "lure_lamp" -> "https://img.pokemondb.net/sprites/items/spell-tag.png"
+                "lure_lamp" -> "https://img.pokemondb.net/sprites/items/spooky-plate.png"
                 else -> ""
             }
 
             if (imageUrl.isNotEmpty()) {
-                holder.ivSprite.load(imageUrl)
+                holder.ivSprite.load(imageUrl) {
+                    placeholder(R.drawable.ic_home)
+                    error(R.drawable.ic_home)
+                }
             } else {
                 holder.ivSprite.setImageResource(R.drawable.ic_home)
             }
@@ -217,11 +226,14 @@ class InventoryFragment : Fragment() {
                 }
             }
 
+            // Skrytí tlačítek (pro smazání a zámek), která se u herních itemů nepoužívají
             holder.itemView.findViewById<View>(R.id.btnLock)?.visibility = View.GONE
-            holder.itemView.findViewById<View>(R.id.separator)?.visibility = View.GONE
             holder.itemView.findViewById<View>(R.id.btnPinToBar)?.visibility = View.GONE
             holder.itemView.findViewById<View>(R.id.btnUnpinFromBar)?.visibility = View.GONE
             holder.itemView.findViewById<View>(R.id.btnDeletePokemon)?.visibility = View.GONE
+
+            val separator = holder.itemView.findViewById<View>(R.id.separator)
+            if (separator != null) separator.visibility = View.GONE
         }
 
         override fun getItemCount() = list.size

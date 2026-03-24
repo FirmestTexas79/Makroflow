@@ -32,6 +32,7 @@ class PokedexFragment : Fragment() {
     private lateinit var tvDetailMacro: TextView
 
     private var isFirstLoad = true
+    private lateinit var pokedexAdapter: PokedexAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -51,17 +52,9 @@ class PokedexFragment : Fragment() {
         rvPokedex = view.findViewById(R.id.rvPokedex)
         rvPokedex.layoutManager = GridLayoutManager(requireContext(), 3)
 
-        // Nastav paddingTop na RecyclerView podle výšky pevné horní části
-        topSection = view.findViewById(R.id.pokedexTopSection)
-        topSection.post {
-            val topHeight = topSection.height
-            rvPokedex.setPadding(
-                rvPokedex.paddingLeft,
-                topHeight,
-                rvPokedex.paddingRight,
-                rvPokedex.paddingBottom
-            )
-        }
+        pokedexAdapter = PokedexAdapter(emptyList(), emptyList())
+        rvPokedex.adapter = pokedexAdapter
+
 
         loadPokedex()
     }
@@ -72,21 +65,6 @@ class PokedexFragment : Fragment() {
 
         lifecycleScope.launch(Dispatchers.Main) {
 
-            // ── Oprava Diglettu při prvním načtení ─────────────────
-            withContext(Dispatchers.IO) {
-                val diglett = db.pokedexEntryDao().getEntry("050")
-                if (diglett != null &&
-                    (diglett.macroDesc.contains("POOP Emoji") ||
-                            diglett.macroDesc.contains("Zdravá strava") ||
-                            diglett.macroDesc.startsWith("Zdravá"))) {
-                    val fixed = diglett.copy(
-                        type = "ZEMĚ / VLÁKNINA",
-                        macroDesc = "Král ranního vyprazdňování! Tento podzemní tvor symbolizuje zdravou peristaltiku střev. Pokud tvůj trůnní rituál vázne, přidej rozpustnou vlákninu a dostatek vody."
-                    )
-                    db.pokedexEntryDao().insertAll(listOf(fixed))
-                }
-            }
-
             val caughtNames = withContext(Dispatchers.IO) {
                 db.capturedPokemonDao().getAllCaught().map { it.name.uppercase() }
             }
@@ -95,7 +73,7 @@ class PokedexFragment : Fragment() {
                 db.pokedexEntryDao().getAllEntries()
             }
 
-            rvPokedex.adapter = PokedexAdapter(kantoList, caughtNames)
+            pokedexAdapter.updateData(kantoList, caughtNames)
 
             if (kantoList.isNotEmpty()) {
                 val isCaught = caughtNames.contains(kantoList[0].displayName.uppercase())
@@ -115,7 +93,9 @@ class PokedexFragment : Fragment() {
             "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
         }
 
-        val imageUrl = "https://img.pokemondb.net/sprites/home/normal/${pokemon.webName}.png"
+        // ✅ OPRAVENO: Tady byl starý link /home/. Nyní tahá FireRed LeafGreen jako mřížka.
+        val imageUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
+
         ivDetailSprite.load(imageUrl) {
             placeholder(R.drawable.ic_home)
             error(R.drawable.ic_home)
@@ -132,14 +112,20 @@ class PokedexFragment : Fragment() {
     }
 
     private inner class PokedexAdapter(
-        private val list: List<PokedexEntryEntity>,
-        private val caughtNames: List<String>
+        private var list: List<PokedexEntryEntity>,
+        private var caughtNames: List<String>
     ) : RecyclerView.Adapter<PokedexAdapter.VH>() {
 
+        fun updateData(newList: List<PokedexEntryEntity>, newCaughtNames: List<String>) {
+            this.list = newList
+            this.caughtNames = newCaughtNames
+            notifyDataSetChanged()
+        }
+
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val ivSprite:  ImageView = v.findViewById(R.id.ivPokedexSprite)
-            val tvName:    TextView  = v.findViewById(R.id.tvPokedexName)
-            val tvNumber:  TextView  = v.findViewById(R.id.tvPokedexNumber)
+            val ivSprite: ImageView = v.findViewById(R.id.ivPokedexSprite)
+            val tvName: TextView = v.findViewById(R.id.tvPokedexName)
+            val tvNumber: TextView = v.findViewById(R.id.tvPokedexNumber)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -155,7 +141,7 @@ class PokedexFragment : Fragment() {
             holder.tvName.text   = if (isCaught) pokemon.displayName else "???"
             holder.tvNumber.text = "#${pokemon.pokedexId}"
 
-            val imageUrl = "https://img.pokemondb.net/sprites/home/normal/${pokemon.webName}.png"
+            val imageUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
             holder.ivSprite.load(imageUrl) {
                 placeholder(R.drawable.ic_home)
                 error(R.drawable.ic_home)
