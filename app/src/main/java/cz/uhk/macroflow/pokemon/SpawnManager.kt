@@ -1,58 +1,93 @@
 package cz.uhk.macroflow.pokemon
 
-// Definice rarity
-enum class Rarity(val weight: Int) {
-    COMMON(70),    // 70 % šance
-    RARE(25),      // 25 % šance
-    EPIC(4),       // 4 % šance
-    LEGENDARY(1)   // 1 % šance
+import android.content.Context
+
+enum class Rarity(val weight: Int, val label: String) {
+    COMMON   (60, "Common"),
+    RARE     (28, "Rare"),
+    EPIC     ( 9, "Epic"),
+    LEGENDARY( 2, "Legendary"),
+    MYTHIC   ( 1, "Mythic")
 }
 
-// Struktura pro zápis do Registru
-data class WildPokemonSpawn(
+interface SpawnCondition {
+    fun isMet(context: Context): Boolean
+}
+
+object AlwaysCondition : SpawnCondition {
+    override fun isMet(context: Context): Boolean = true
+}
+
+object NightCondition : SpawnCondition {
+    override fun isMet(context: Context): Boolean {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        return hour >= 19 || hour < 5
+    }
+}
+
+class MinStreakCondition(private val requiredStreak: Int) : SpawnCondition {
+    override fun isMet(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val currentStreak = prefs.getInt("currentStreak", 0)
+        return currentStreak >= requiredStreak
+    }
+}
+
+data class SpawnPool(
     val id: String,
     val name: String,
     val rarity: Rarity,
-    val createPokemon: () -> Pokemon // Lambda funkce, která vytvoří instanci z BattleFactory
+    val conditions: List<SpawnCondition>,
+    val createPokemon: () -> Pokemon
 )
 
 object SpawnManager {
 
-    // 1. CENTRÁLNÍ REGISTR VŠECH DIVOKÝCH POKÉMONŮ
-    private val wildRegistry = listOf(
-        WildPokemonSpawn("050", "DIGLETT", Rarity.COMMON) { BattleFactory.createDiglett() },
-        WildPokemonSpawn("094", "GENGAR", Rarity.EPIC) { BattleFactory.createGengar() }
-        // Sem v budoucnu jednoduše připíšeš:
-        // WildPokemonSpawn("066", "MACHOP", Rarity.RARE) { BattleFactory.createMachop() }
+    private val POOL: List<SpawnPool> = listOf(
+
+        SpawnPool("050", "DIGLETT",   Rarity.COMMON, listOf(AlwaysCondition))        { BattleFactory.createDiglett() },
+        SpawnPool("025", "PIKACHU",   Rarity.COMMON, listOf(AlwaysCondition))        { BattleFactory.createPikachu() },
+        SpawnPool("133", "EEVEE",     Rarity.COMMON, listOf(AlwaysCondition))        { BattleFactory.createEevee() },
+
+        SpawnPool("001", "BULBASAUR", Rarity.RARE, listOf(AlwaysCondition))        { BattleFactory.createBulbasaur() },
+        SpawnPool("007", "SQUIRTLE",  Rarity.RARE, listOf(AlwaysCondition))        { BattleFactory.createSquirtle() },
+        SpawnPool("004", "CHARMANDER",Rarity.RARE, listOf(AlwaysCondition))        { BattleFactory.createCharmander() },
+        SpawnPool("092", "GASTLY",    Rarity.RARE, listOf(NightCondition))         { BattleFactory.createGastly() },
+
+        SpawnPool("093", "HAUNTER",   Rarity.EPIC, listOf(NightCondition))         { BattleFactory.createHaunter() },
+        SpawnPool("094", "GENGAR",    Rarity.EPIC, listOf(NightCondition))         { BattleFactory.createGengar() },
+        SpawnPool("143", "SNORLAX",   Rarity.EPIC, listOf(MinStreakCondition(7)))   { BattleFactory.createSnorlax() },
+
+        SpawnPool("006", "CHARIZARD", Rarity.LEGENDARY, listOf(MinStreakCondition(30)))  { BattleFactory.createCharizard() },
+        SpawnPool("150", "MEWTWO",    Rarity.LEGENDARY, listOf(MinStreakCondition(60)))  { BattleFactory.createMewtwo() },
+
+        SpawnPool("151", "MEW",       Rarity.MYTHIC, listOf(MinStreakCondition(100))) { BattleFactory.createWildMew() }
     )
 
-    // 2. LOGIKA VÝBĚRU (Vylosování podle vah)
-    // Potřebujeme kontext pro SharedPreferences, upravíme hlavičku metody:
-    fun rollWildEncounter(context: android.content.Context): Pokemon {
-        val prefs = context.getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE)
-        val isGhostPlateActive = prefs.getBoolean("ghostPlateActive", false)
+    fun getActivePool(context: Context): List<SpawnPool> =
+        POOL.filter { spawn -> spawn.conditions.all { it.isMet(context) } }
 
-        // 👻 PŘEDNOSTNÍ GENERATOR PŘEDMĚTU GHOST PLATE
-        if (isGhostPlateActive) {
-            // Okamžitě předmět deaktivujeme, aby se spotřeboval na 1 boj
+    fun rollWildEncounter(context: Context): Pokemon {
+        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+
+        if (prefs.getBoolean("ghostPlateActive", false)) {
             prefs.edit().putBoolean("ghostPlateActive", false).apply()
-
-            val gengarSpawn = wildRegistry.find { it.name == "GENGAR" }
-            if (gengarSpawn != null) {
-                return gengarSpawn.createPokemon()
-            }
+            return BattleFactory.createGengar()
         }
 
-        // 🎲 KLASICKÝ NÁHODNÝ GENERÁTOR (Tvůj stávající kód)
-        val totalWeight = wildRegistry.sumOf { it.rarity.weight }
-        var randomNum = kotlin.random.Random.nextInt(totalWeight)
+        val active = getActivePool(context)
+        if (active.isEmpty()) return BattleFactory.createDiglett()
 
-        for (spawn in wildRegistry) {
-            randomNum -= spawn.rarity.weight
-            if (randomNum < 0) {
-                return spawn.createPokemon()
-            }
+        val totalWeight = active.sumOf { it.rarity.weight }
+        var roll = kotlin.random.Random.nextInt(totalWeight)
+        for (spawn in active) {
+            roll -= spawn.rarity.weight
+            if (roll < 0) return spawn.createPokemon()
         }
         return BattleFactory.createDiglett()
     }
+
+    fun findById(id: String): SpawnPool? = POOL.find { it.id == id }
+
+    val allEntries: List<SpawnPool> get() = POOL
 }

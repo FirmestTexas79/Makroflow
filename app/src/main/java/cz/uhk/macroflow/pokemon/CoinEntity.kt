@@ -124,3 +124,23 @@ interface PokedexEntryDao {
     @Query("SELECT COUNT(*) FROM pokedex_entries")
     fun getCount(): Int
 }
+
+// --- 📖 TRVALÝ ZÁZNAM POKÉDEXU (Jednou chycen, navždy objeven) ---
+@Entity(tableName = "pokedex_status")
+data class PokedexStatusEntity(
+    @PrimaryKey val pokemonId: String, // "050", "094"
+    val unlocked: Boolean = true,
+    val unlockedDate: Long = System.currentTimeMillis()
+)
+
+@Dao
+interface PokedexStatusDao {
+    @Query("SELECT pokemonId FROM pokedex_status")
+    fun getUnlockedIds(): List<String>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM pokedex_status WHERE pokemonId = :pokemonId)")
+    fun isUnlocked(pokemonId: String): Boolean
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun unlockPokemon(entity: PokedexStatusEntity)
+}

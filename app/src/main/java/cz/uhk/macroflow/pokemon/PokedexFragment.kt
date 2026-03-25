@@ -1,5 +1,6 @@
 package cz.uhk.macroflow.pokemon
 
+import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.os.Bundle
@@ -23,7 +24,6 @@ class PokedexFragment : Fragment() {
 
     private lateinit var rvPokedex: RecyclerView
     private lateinit var db: AppDatabase
-    private lateinit var topSection: android.widget.LinearLayout
 
     private lateinit var ivDetailSprite: ImageView
     private lateinit var tvDetailNumber: TextView
@@ -45,16 +45,15 @@ class PokedexFragment : Fragment() {
 
         ivDetailSprite = view.findViewById(R.id.ivDetailSprite)
         tvDetailNumber = view.findViewById(R.id.tvDetailNumber)
-        tvDetailName   = view.findViewById(R.id.tvDetailName)
-        tvDetailType   = view.findViewById(R.id.tvDetailType)
-        tvDetailMacro  = view.findViewById(R.id.tvDetailMacro)
+        tvDetailName = view.findViewById(R.id.tvDetailName)
+        tvDetailType = view.findViewById(R.id.tvDetailType)
+        tvDetailMacro = view.findViewById(R.id.tvDetailMacro)
 
         rvPokedex = view.findViewById(R.id.rvPokedex)
         rvPokedex.layoutManager = GridLayoutManager(requireContext(), 3)
 
-        pokedexAdapter = PokedexAdapter(emptyList(), emptyList())
+        pokedexAdapter = PokedexAdapter(emptyList(), emptyList(), emptyList())
         rvPokedex.adapter = pokedexAdapter
-
 
         loadPokedex()
     }
@@ -64,44 +63,59 @@ class PokedexFragment : Fragment() {
         isFirstLoad = false
 
         lifecycleScope.launch(Dispatchers.Main) {
+            val invIds = withContext(Dispatchers.IO) {
+                db.capturedPokemonDao().getAllCaught().map { it.pokemonId }
+            }
 
-            val caughtNames = withContext(Dispatchers.IO) {
-                db.capturedPokemonDao().getAllCaught().map { it.name.uppercase() }
+            val unlockedIds = withContext(Dispatchers.IO) {
+                db.pokedexStatusDao().getUnlockedIds()
             }
 
             val kantoList = withContext(Dispatchers.IO) {
                 db.pokedexEntryDao().getAllEntries()
             }
 
-            pokedexAdapter.updateData(kantoList, caughtNames)
+            pokedexAdapter.updateData(kantoList, unlockedIds, invIds)
 
             if (kantoList.isNotEmpty()) {
-                val isCaught = caughtNames.contains(kantoList[0].displayName.uppercase())
-                showDetail(kantoList[0], isCaught)
+                val isUnlocked = unlockedIds.contains(kantoList[0].pokedexId)
+                val isInInv = invIds.contains(kantoList[0].pokedexId)
+                showDetail(kantoList[0], isUnlocked, isInInv)
             }
         }
     }
 
-    private fun showDetail(pokemon: PokedexEntryEntity, isCaught: Boolean) {
+    private fun showDetail(
+        pokemon: PokedexEntryEntity,
+        isUnlocked: Boolean,
+        isInInventory: Boolean
+    ) {
         tvDetailNumber.text = "#${pokemon.pokedexId}"
-        tvDetailName.text   = if (isCaught) pokemon.displayName else "???"
-        tvDetailType.text   = if (isCaught) pokemon.type.uppercase() else "???"
+        tvDetailName.text = if (isUnlocked) pokemon.displayName else "???"
+        tvDetailType.text = if (isUnlocked) pokemon.type.uppercase() else "???"
 
-        tvDetailMacro.text = if (isCaught) {
-            pokemon.macroDesc
+        if (isInInventory) {
+            tvDetailType.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#BC6C25"))
+            tvDetailType.text = "${pokemon.type.uppercase()} • V INVENTÁŘI"
         } else {
-            "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
+            tvDetailType.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#DDA15E"))
         }
 
-        // ✅ OPRAVENO: Tady byl starý link /home/. Nyní tahá FireRed LeafGreen jako mřížka.
-        val imageUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
+        tvDetailMacro.text =
+            if (isUnlocked) pokemon.macroDesc else "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
+
+        // ✅ PIXELOVÉ SPRITY DO POKEDEXU Z FIRERED-LEAFGREEN
+        val imageUrl =
+            "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
 
         ivDetailSprite.load(imageUrl) {
             placeholder(R.drawable.ic_home)
             error(R.drawable.ic_home)
         }
 
-        if (!isCaught) {
+        if (!isUnlocked) {
             val matrix = ColorMatrix().apply { setSaturation(0f) }
             ivDetailSprite.colorFilter = ColorMatrixColorFilter(matrix)
             ivDetailSprite.alpha = 0.3f
@@ -113,12 +127,18 @@ class PokedexFragment : Fragment() {
 
     private inner class PokedexAdapter(
         private var list: List<PokedexEntryEntity>,
-        private var caughtNames: List<String>
+        private var unlockedIds: List<String>,
+        private var invIds: List<String>
     ) : RecyclerView.Adapter<PokedexAdapter.VH>() {
 
-        fun updateData(newList: List<PokedexEntryEntity>, newCaughtNames: List<String>) {
+        fun updateData(
+            newList: List<PokedexEntryEntity>,
+            newUnlocked: List<String>,
+            newInv: List<String>
+        ) {
             this.list = newList
-            this.caughtNames = newCaughtNames
+            this.unlockedIds = newUnlocked
+            this.invIds = newInv
             notifyDataSetChanged()
         }
 
@@ -126,6 +146,10 @@ class PokedexFragment : Fragment() {
             val ivSprite: ImageView = v.findViewById(R.id.ivPokedexSprite)
             val tvName: TextView = v.findViewById(R.id.tvPokedexName)
             val tvNumber: TextView = v.findViewById(R.id.tvPokedexNumber)
+
+            // 🛡️ NAJDEME KOŘENOVÝ CARDVIEW BEZ NUTNOSTI ZNÁT JEHO PŘESNÉ XML ID!
+            val cardView: com.google.android.material.card.MaterialCardView =
+                v as com.google.android.material.card.MaterialCardView
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -135,19 +159,27 @@ class PokedexFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
-            val pokemon  = list[position]
-            val isCaught = caughtNames.contains(pokemon.displayName.uppercase())
+            val pokemon = list[position]
+            val isUnlocked = unlockedIds.contains(pokemon.pokedexId)
+            val isInInventory = invIds.contains(pokemon.pokedexId)
 
-            holder.tvName.text   = if (isCaught) pokemon.displayName else "???"
+            holder.tvName.text = if (isUnlocked) pokemon.displayName else "???"
             holder.tvNumber.text = "#${pokemon.pokedexId}"
 
-            val imageUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
-            holder.ivSprite.load(imageUrl) {
-                placeholder(R.drawable.ic_home)
-                error(R.drawable.ic_home)
+            // 🌟 ZLATÝ RÁMEČEK (Když ho máš v kapse)
+            if (isInInventory) {
+                holder.cardView.strokeWidth =
+                    (2 * holder.itemView.context.resources.displayMetrics.density).toInt()
+                holder.cardView.strokeColor = Color.parseColor("#BC6C25") // Tvoje hnědá barva
+            } else {
+                holder.cardView.strokeWidth = 0
             }
 
-            if (!isCaught) {
+            val imageUrl =
+                "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
+            holder.ivSprite.load(imageUrl)
+
+            if (!isUnlocked) {
                 val matrix = ColorMatrix().apply { setSaturation(0f) }
                 holder.ivSprite.colorFilter = ColorMatrixColorFilter(matrix)
                 holder.ivSprite.alpha = 0.4f
@@ -157,7 +189,7 @@ class PokedexFragment : Fragment() {
             }
 
             holder.itemView.setOnClickListener {
-                showDetail(pokemon, isCaught)
+                showDetail(pokemon, isUnlocked, isInInventory)
             }
         }
 

@@ -7,6 +7,8 @@ import android.os.Looper
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import coil.ImageLoader
+import coil.request.ImageRequest
 import cz.uhk.macroflow.data.AppDatabase
 import kotlin.math.*
 import kotlin.random.Random
@@ -37,6 +39,7 @@ class PokemonBattleView @JvmOverloads constructor(
     private val gbCvs = Canvas(gbBmp)
     private val fp    = Paint().apply { style = Paint.Style.FILL; isAntiAlias = false }
     private val sp    = Paint().apply { isAntiAlias = false; isFilterBitmap = false }
+    private val spSmooth = Paint().apply { isAntiAlias = true; isFilterBitmap = true }
     private val srcR  = Rect(0, 0, GBW, GBH)
     private var dstR  = RectF()
 
@@ -46,10 +49,12 @@ class PokemonBattleView @JvmOverloads constructor(
     private var flashOn = false; private var cursorOn = true
     private var busy = false
     private var pendingAction: (() -> Unit)? = null
-    private var ballVisible = 0  // 0=skrytý, 1=letí, 2=chycen
-
-    // Identifikátor aktuálně vybraného ballu pro animaci
+    private var ballVisible = 0
     private var selectedBallId = "poke_ball"
+
+    private var enemyBitmap: Bitmap? = null
+    private var playerBitmap: Bitmap? = null
+    private var introStarted = false
 
     private val db = AppDatabase.getDatabase(context)
 
@@ -60,26 +65,55 @@ class PokemonBattleView @JvmOverloads constructor(
     private data class Zone(val r: Rect, val fn: () -> Unit)
     private val zones = mutableListOf<Zone>()
 
+    private fun spriteUrl(webName: String) =
+        "https://img.pokemondb.net/sprites/firered-leafgreen/normal/$webName.png"
+
     init {
         PokemonSprites.init(context)
 
-        val enemyPokemon = SpawnManager.rollWildEncounter(context)
-        val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
+        val enemyPokemon      = SpawnManager.rollWildEncounter(context)
+        val currentPokeballs  = db.userItemDao().getItemCount("poke_ball") ?: 0
 
         gs = BattleState(
-            player = BattleFactory.createMew(),
-            enemy = enemyPokemon,
+            player    = BattleFactory.createMew(),
+            enemy     = enemyPokemon,
             ballCount = currentPokeballs
         )
 
-        // ✅ Zapišeme do Seen tabulky (pro trvalé odemčení v Pokédexu)
-        val seenId = if (enemyPokemon.name == "GENGAR") "094" else "050"
-        Thread {
-            db.seenPokemonDao().markSeen(SeenPokemonEntity(seenId))
-        }.start()
-
+        Thread { db.seenPokemonDao().markSeen(SeenPokemonEntity(BattleFactory.pokedexId(enemyPokemon))) }.start()
         handler.post(cursorTick)
-        startIntro()
+
+        loadSprite(spriteUrl(BattleFactory.webName(enemyPokemon)), isPlayer = false)
+        loadSprite(spriteUrl("mew"), isPlayer = true)
+    }
+
+    private fun loadSprite(url: String, isPlayer: Boolean) {
+        val loader  = ImageLoader(context)
+        val request = ImageRequest.Builder(context)
+            .data(url)
+            .allowHardware(false)
+            .target(
+                onSuccess = { drawable ->
+                    val bmp = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                    if (bmp != null) {
+                        if (isPlayer) playerBitmap = bmp else enemyBitmap = bmp
+                    }
+                    maybeStartIntro()
+                },
+                onError = { maybeStartIntro() }
+            )
+            .build()
+        loader.enqueue(request)
+    }
+
+    private fun maybeStartIntro() {
+        handler.post {
+            if (!introStarted) {
+                introStarted = true
+                startIntro()
+            }
+            invalidate()
+        }
     }
 
     override fun onMeasure(wms: Int, hms: Int) {
@@ -95,7 +129,6 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private val scale get() = if (dstR.width() > 0) dstR.width() / GBW.toFloat() else 1f
-
     private fun gbX(x: Float) = dstR.left + x * scale
     private fun gbY(y: Float) = dstR.top  + y * scale
 
@@ -110,35 +143,42 @@ class PokemonBattleView @JvmOverloads constructor(
         if (sc <= 0f) return
 
         if (gs.enemyVisible) {
-            val drawableName = when (gs.enemy.name) {
-                "GENGAR" -> "pokemon_gengar"
-                "DIGLETT" -> "pokemon_diglett"
-                else -> "pokemon_diglett"
-            }
-
-            val resId = context.resources.getIdentifier(drawableName, "drawable", context.packageName)
-            if (resId != 0) {
-                val gBmp = BitmapFactory.decodeResource(context.resources, resId)
-                if (gBmp != null) {
-                    val targetH = if (gs.enemy.name == "GENGAR") 34 * sc else 22 * sc
-                    val targetW = targetH * gBmp.width / gBmp.height
-                    val sx = gbX(112f) - targetW / 2f
-                    val sy = gbY(54f) - targetH
-                    val dst = RectF(sx, sy, sx + targetW, sy + targetH)
-                    canvas.drawBitmap(gBmp, null, dst, sp)
-                }
+            enemyBitmap?.let { bmp ->
+                val targetH = enemySpriteHeight() * sc
+                val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
+                val sx = gbX(112f) - targetW / 2f
+                val sy = gbY(54f)  - targetH
+                canvas.drawBitmap(bmp, null, RectF(sx, sy, sx + targetW, sy + targetH), spSmooth)
             }
         }
 
-        val mBmp = PokemonSprites.mewBmpPublic
-        if (mBmp != null) {
-            val targetH = 36 * sc
-            val targetW = targetH * mBmp.width / mBmp.height
-            val sx = gbX(48f) - targetW / 2f
+        playerBitmap?.let { bmp ->
+            val targetH = 36f * sc
+            val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
+            val cx = gbX(48f)
             val sy = gbY(82f) - targetH
-            val dst = RectF(sx, sy, sx + targetW, sy + targetH)
-            canvas.drawBitmap(mBmp, null, dst, sp)
+            canvas.save()
+            canvas.scale(-1f, 1f, cx, 0f)
+            canvas.drawBitmap(bmp, null, RectF(cx - targetW / 2f, sy, cx + targetW / 2f, sy + targetH), spSmooth)
+            canvas.restore()
         }
+    }
+
+    private fun enemySpriteHeight(): Float = when (gs.enemy.name) {
+        "SNORLAX"    -> 42f
+        "CHARIZARD"  -> 40f
+        "MEWTWO"     -> 38f
+        "MEW"        -> 36f
+        "GENGAR"     -> 34f
+        "HAUNTER"    -> 32f
+        "GASTLY"     -> 28f
+        "BULBASAUR"  -> 28f
+        "SQUIRTLE"   -> 26f
+        "CHARMANDER" -> 28f
+        "PIKACHU"    -> 24f
+        "EEVEE"      -> 24f
+        "DIGLETT"    -> 22f
+        else         -> 28f
     }
 
     private fun renderFrame() {
@@ -147,12 +187,10 @@ class PokemonBattleView @JvmOverloads constructor(
         fp.color = C_STRIPE
         for (y in 0 until 56 step 6)
             c.drawRect(0f, (y + 4).toFloat(), 160f, (y + 6).toFloat(), fp)
-
         drawPlatform(c, 80, 44, 64, 10)
         drawPlatform(c, 16, 72, 64, 10)
         drawEnemyHUD(c)
         drawPlayerHUD(c)
-
         when (ballVisible) {
             1 -> drawSprite(c, PokemonSprites.POKEBALL,
                 PokemonSprites.POKEBALL_W, PokemonSprites.POKEBALL_H,
@@ -161,13 +199,8 @@ class PokemonBattleView @JvmOverloads constructor(
                 PokemonSprites.POKEBALL_W, PokemonSprites.POKEBALL_H,
                 ballX.toInt(), ballY.toInt())
         }
-
         drawBottomUI(c)
-
-        if (flashOn) {
-            fp.color = 0xBBFFFFFF.toInt()
-            c.drawRect(0f, 0f, 160f, 144f, fp)
-        }
+        if (flashOn) { fp.color = 0xBBFFFFFF.toInt(); c.drawRect(0f, 0f, 160f, 144f, fp) }
     }
 
     private fun drawPlatform(c: Canvas, x: Int, y: Int, w: Int, h: Int) {
@@ -178,7 +211,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun drawEnemyHUD(c: Canvas) {
         val x = 1; val y = 1; val w = 76; val h = 28; drawUIBox(c, x, y, w, h)
-        PokemonSprites.drawText(c, gs.enemy.name, x+3, y+3, C_TEXT, fp)
+        PokemonSprites.drawText(c, gs.enemy.name.take(8), x+3, y+3, C_TEXT, fp)
         PokemonSprites.drawText(c, ":L${gs.enemy.level}", x+48, y+3, C_TEXT, fp)
         PokemonSprites.drawText(c, "HP", x+3, y+13, C_TEXT, fp)
         drawHPBar(c, x+16, y+13, 54, 5, gs.enemy.currentHp, gs.enemy.maxHp)
@@ -250,10 +283,10 @@ class PokemonBattleView @JvmOverloads constructor(
         c.drawRect((bx+40).toFloat(), (by+2).toFloat(), (bx+41).toFloat(), (by+bh-2).toFloat(), fp)
         c.drawRect((bx+2).toFloat(), (by+22).toFloat(), (bx+bw-2).toFloat(), (by+23).toFloat(), fp)
         zones.clear()
-        zones.add(Zone(Rect(bx, by, bx+40, by+22))          { if (!busy) startFight() })
-        zones.add(Zone(Rect(bx+40, by, bx+bw, by+22))       { if (!busy) showPkmn() })
-        zones.add(Zone(Rect(bx, by+22, bx+40, by+bh))       { if (!busy) startItem() })
-        zones.add(Zone(Rect(bx+40, by+22, bx+bw, by+bh))    { if (!busy) doRun() })
+        zones.add(Zone(Rect(bx,    by,    bx+40, by+22)) { if (!busy) startFight() })
+        zones.add(Zone(Rect(bx+40, by,    bx+bw, by+22)) { if (!busy) showPkmn()  })
+        zones.add(Zone(Rect(bx,    by+22, bx+40, by+bh)) { if (!busy) startItem() })
+        zones.add(Zone(Rect(bx+40, by+22, bx+bw, by+bh)) { if (!busy) doRun()    })
     }
 
     private fun drawFightMenu(c: Canvas) {
@@ -270,26 +303,21 @@ class PokemonBattleView @JvmOverloads constructor(
         PokemonSprites.drawText(c, "BACK", tx+3, ty+38, C_TEXT, fp)
         zones.clear()
         gs.player.moves.forEachIndexed { i, _ ->
-            val zy = by + i*11
+            val zy = by + i * 11
             zones.add(Zone(Rect(bx, zy, bx+bw, zy+11)) { if (!busy) playerMove(i) })
         }
         zones.add(Zone(Rect(tx, ty+32, tx+tw, ty+th)) { if (!busy) showMain() })
     }
 
-    // ✅ OPRAVA: Ukáže oba bally!
     private fun drawItemMenu(c: Canvas) {
         val bx = 2; val by = 97; val bw = 156; val bh = 46; drawUIBox(c, bx, by, bw, bh)
-
-        // Asynchronní načtení by zasekalo Canvas, takže saháme do paměti DB synchronně
-        val pokeCount = db.userItemDao().getItemCount("poke_ball") ?: 0
+        val pokeCount  = db.userItemDao().getItemCount("poke_ball")  ?: 0
         val greatCount = db.userItemDao().getItemCount("great_ball") ?: 0
-
-        PokemonSprites.drawText(c, "1.POKE BALL X$pokeCount", bx+4, by+5, C_TEXT, fp)
+        PokemonSprites.drawText(c, "1.POKE BALL X$pokeCount",  bx+4, by+5,  C_TEXT, fp)
         PokemonSprites.drawText(c, "2.GREAT BALL X$greatCount", bx+4, by+18, C_TEXT, fp)
         PokemonSprites.drawText(c, "BACK", bx+bw-28, by+34, C_TEXT, fp)
-
         zones.clear()
-        zones.add(Zone(Rect(bx, by, bx+bw, by+15)) { if (!busy && pokeCount > 0) throwBall("poke_ball") })
+        zones.add(Zone(Rect(bx, by,    bx+bw, by+15)) { if (!busy && pokeCount  > 0) throwBall("poke_ball")  })
         zones.add(Zone(Rect(bx, by+16, bx+bw, by+31)) { if (!busy && greatCount > 0) throwBall("great_ball") })
         zones.add(Zone(Rect(bx+bw-32, by+32, bx+bw, by+bh)) { if (!busy) showMain() })
     }
@@ -308,50 +336,61 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun drawSprite(c: Canvas, px: IntArray, w: Int, h: Int, ox: Int, oy: Int) {
         if (px.isEmpty()) return
-        val total = minOf(px.size, w * h)
-        for (i in 0 until total) {
-            val color = px[i]
-            if (color == Color.TRANSPARENT || color == 0) continue
+        for (i in 0 until minOf(px.size, w * h)) {
+            val color = px[i]; if (color == Color.TRANSPARENT || color == 0) continue
             fp.color = color
             val col = i % w; val row = i / w
-            c.drawRect((ox+col).toFloat(), (oy+row).toFloat(),
-                (ox+col+1).toFloat(), (oy+row+1).toFloat(), fp)
+            c.drawRect((ox+col).toFloat(), (oy+row).toFloat(), (ox+col+1).toFloat(), (oy+row+1).toFloat(), fp)
         }
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
         if (e.action != MotionEvent.ACTION_DOWN) return true
+
+        if (gs.phase == BattlePhase.CAUGHT || gs.phase == BattlePhase.ESCAPED) {
+            onCaught?.invoke()
+            return true
+        }
+
+        if (gs.phase == BattlePhase.TEXT_WAIT) {
+            advText()
+            return true
+        }
+
         if (busy) return true
-        if (gs.phase == BattlePhase.TEXT_WAIT) { advText(); return true }
+
         val sx = GBW.toFloat() / dstR.width()
         val sy = GBH.toFloat() / dstR.height()
         val gx = ((e.x - dstR.left) * sx).toInt()
         val gy = ((e.y - dstR.top)  * sy).toInt()
+
         zones.forEach { z -> if (z.r.contains(gx, gy)) { z.fn(); return true } }
         return true
     }
 
     private fun setText(l1: String, l2: String) {
         gs.textLine1 = l1; gs.textLine2 = l2
-        if (gs.phase != BattlePhase.CAUGHT &&
-            gs.phase != BattlePhase.ESCAPED &&
-            gs.phase != BattlePhase.ENEMY_FAINTED &&
-            gs.phase != BattlePhase.PLAYER_FAINTED)
+        if (gs.phase != BattlePhase.CAUGHT && gs.phase != BattlePhase.ESCAPED &&
+            gs.phase != BattlePhase.ENEMY_FAINTED && gs.phase != BattlePhase.PLAYER_FAINTED) {
             gs.phase = BattlePhase.TEXT_WAIT
+        }
         invalidate()
     }
 
     private fun startIntro()  { setText("WILD ${gs.enemy.name}", "APPEARED!") }
     private fun showMain()    { busy = false; gs.phase = BattlePhase.MAIN_MENU; zones.clear(); invalidate() }
     private fun startFight()  { if (gs.player.moves.all { it.pp <= 0 }) { setText("NO PP LEFT!",""); return }; gs.phase = BattlePhase.FIGHT_MENU; invalidate() }
-    private fun showPkmn()    { setText("ONLY ${gs.player.name}", "IN YOUR PARTY!") }
+    private fun showPkmn()    { setText("ONLY ${gs.player.name}", "IN PARTY!") }
     private fun startItem()   { gs.phase = BattlePhase.ITEM_MENU; zones.clear(); invalidate() }
 
     private fun doRun() {
+        busy = true
         if (BattleEngine.tryEscape(gs.player.speed, gs.enemy.speed)) {
-            gs.phase = BattlePhase.ESCAPED; setText("GOT AWAY", "SAFELY!")
+            gs.phase = BattlePhase.ESCAPED
+            setText("GOT AWAY", "SAFELY!")
         } else {
-            setText("CANT ESCAPE!", ""); scheduleAfterText { enemyTurn() }
+            setText("CANT ESCAPE!", "")
+            scheduleAfterText { enemyTurn() }
         }
         invalidate()
     }
@@ -372,8 +411,12 @@ class PokemonBattleView @JvmOverloads constructor(
                     handler.postDelayed({
                         if (gs.enemy.currentHp <= 0) {
                             gs.enemyVisible = false; gs.phase = BattlePhase.ENEMY_FAINTED
-                            setText("${gs.enemy.name}", "FAINTED!"); busy = false; invalidate()
-                        } else { setText("IT DEALT", "$dmg DAMAGE!"); scheduleAfterText { enemyTurn() } }
+                            setText("${gs.enemy.name}", "FAINTED!")
+                            pendingAction = { onCaught?.invoke() }
+                        } else {
+                            setText("IT DEALT", "$dmg DAMAGE!")
+                            scheduleAfterText { enemyTurn() }
+                        }
                     }, 400)
                 }
             } else {
@@ -392,21 +435,29 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private fun advText() {
-        val action = pendingAction; pendingAction = null
+        val action = pendingAction
+        pendingAction = null
+
         when (gs.phase) {
-            BattlePhase.ESCAPED, BattlePhase.ENEMY_FAINTED,
-            BattlePhase.PLAYER_FAINTED, BattlePhase.CAUGHT -> {}
-            BattlePhase.TEXT_WAIT -> {
-                if (action != null) action()
-                else if (!busy && gs.player.currentHp > 0 && gs.enemy.currentHp > 0) enemyTurn()
-                else showMain()
+            BattlePhase.ESCAPED, BattlePhase.CAUGHT,
+            BattlePhase.ENEMY_FAINTED, BattlePhase.PLAYER_FAINTED -> {
+                onCaught?.invoke()
             }
-            else -> showMain()
+            BattlePhase.TEXT_WAIT -> {
+                if (action != null) action() else showMain()
+            }
+            else -> {
+                if (action != null) action() else showMain()
+            }
         }
     }
 
     private fun enemyTurn() {
-        if (gs.enemy.currentHp <= 0 || gs.player.currentHp <= 0) { showMain(); return }
+        if (gs.enemy.currentHp <= 0 || gs.player.currentHp <= 0) {
+            busy = false
+            showMain()
+            return
+        }
         busy = true
         val mv = BattleEngine.enemyChooseMove(gs.enemy); mv.pp = maxOf(0, mv.pp - 1)
         setText("${gs.enemy.name}", "USED ${mv.name}!"); invalidate()
@@ -420,74 +471,91 @@ class PokemonBattleView @JvmOverloads constructor(
                     handler.postDelayed({
                         if (gs.player.currentHp <= 0) {
                             gs.phase = BattlePhase.PLAYER_FAINTED
-                            setText("${gs.player.name}", "FAINTED!"); busy = false; invalidate()
+                            setText("${gs.player.name}", "FAINTED!")
+                            pendingAction = { onCaught?.invoke() }
                         } else {
                             setText("IT DEALT", "$dmg DAMAGE!")
-                            busy = false; gs.phase = BattlePhase.TEXT_WAIT
-                            pendingAction = { showMain() }; invalidate()
+                            busy = false
+                            gs.phase = BattlePhase.TEXT_WAIT
+                            pendingAction = { showMain() }
+                            invalidate()
                         }
                     }, 400)
                 }
             } else {
                 setText("${gs.player.name}", "STAT FELL!")
-                busy = false; gs.phase = BattlePhase.TEXT_WAIT
-                pendingAction = { showMain() }; invalidate()
+                busy = false
+                gs.phase = BattlePhase.TEXT_WAIT
+                pendingAction = { showMain() }
+                invalidate()
             }
         }, 1200)
     }
 
-    // ✅ OPRAVA: Rychlejší hod na Digletta
     private fun throwBall(ballType: String) {
         if (gs.enemy.currentHp <= 0) return
-
         selectedBallId = ballType
+        busy = true
+        gs.phase = BattlePhase.BALL_THROW
+
         Thread {
             db.userItemDao().consumeItem(ballType, 1)
             val newCount = db.userItemDao().getItemCount("poke_ball") ?: 0
             handler.post { gs.ballCount = newCount }
         }.start()
 
-        busy = true; gs.phase = BattlePhase.BALL_THROW
-        val niceName = ballType.uppercase().replace("_", " ")
-        setText("THREW A", "$niceName!")
+        setText("THREW A", "${ballType.uppercase().replace("_", " ")}!")
 
         val sx = 28f; val sy = 58f; val tx = 100f; val ty = 28f
         ballX = sx; ballY = sy; var t = 0f; ballVisible = 1
 
-        val speedStep = if (gs.enemy.name == "DIGLETT") 0.055f else 0.035f
+        val speedStep = when (gs.enemy.name) {
+            "DIGLETT", "PIKACHU", "EEVEE" -> 0.055f
+            "MEWTWO", "MEW"               -> 0.025f
+            "CHARIZARD", "SNORLAX"        -> 0.030f
+            else                          -> 0.040f
+        }
 
         fun fly() {
             if (t >= 1f) {
                 gs.enemyVisible = false; ballX = 100f; ballY = 36f; invalidate()
-                handler.postDelayed({ ballY = 46f; invalidate(); handler.postDelayed({ startWobble() }, 300) }, 350)
+                handler.postDelayed({
+                    ballY = 46f; invalidate()
+                    handler.postDelayed({ startWobbleBall() }, 300)
+                }, 350)
                 return
             }
             ballX = sx + (tx - sx) * t
             ballY = sy + (ty - sy) * t + (-sin(t * PI.toFloat()) * 26f)
-            t += speedStep
-            invalidate()
+            t += speedStep; invalidate()
             handler.postDelayed({ fly() }, 20)
         }
         fly()
     }
 
-    private fun startWobble() {
-        val multiplier = if (gs.enemy.name == "GENGAR") BattleFactory.GENGAR_CATCH_PENALTY else 1.0f
-
-        // Pokud házíme Great Ball, dáme mu bonus (multiplier zvětšíme)
-        val ballMultiplier = if (selectedBallId == "great_ball") multiplier * 1.5f else multiplier
-
-        val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy, ballMultiplier)
+    private fun startWobbleBall() {
+        val baseMultiplier  = BattleFactory.catchMultiplier(gs.enemy)
+        val ballBonus       = if (selectedBallId == "great_ball") 1.5f else 1.0f
+        val finalMultiplier = baseMultiplier * ballBonus
+        val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy, finalMultiplier)
         gs.captureSuccess = success; gs.wobbleCount = wobbles; gs.wobbleDone = 0
-        gs.phase = BattlePhase.BALL_WOBBLE; doWobble()
+        gs.phase = BattlePhase.BALL_WOBBLE
+        doWobble()
     }
 
     private fun doWobble() {
         if (gs.wobbleDone >= gs.wobbleCount) {
-            handler.postDelayed({ if (gs.captureSuccess) caught() else breakFree() }, 600); return
+            handler.postDelayed({ if (gs.captureSuccess) caught() else breakFree() }, 600)
+            return
         }
-        gs.wobbleDone++; setText("...", ""); invalidate()
-        handler.postDelayed({ setText("",""); invalidate(); handler.postDelayed({ doWobble() }, 500) }, 700)
+        gs.wobbleDone++
+        setText("...", "")
+        invalidate()
+        handler.postDelayed({
+            setText("", "")
+            invalidate()
+            handler.postDelayed({ doWobble() }, 500)
+        }, 700)
     }
 
     private fun breakFree() {
@@ -495,44 +563,41 @@ class PokemonBattleView @JvmOverloads constructor(
         gs.enemyVisible = true
         invalidate()
 
-        val runAwayChance = 0.15f
+        val runAwayChance = when (gs.enemy.name) {
+            "MEWTWO", "MEW"                -> 0.40f
+            "CHARIZARD"                    -> 0.25f
+            "SNORLAX", "HAUNTER", "GENGAR" -> 0.15f
+            else                           -> 0.08f
+        }
 
         if (Random.nextFloat() < runAwayChance) {
             gs.phase = BattlePhase.ESCAPED
             setText("${gs.enemy.name}", "RAN AWAY!")
-            handler.postDelayed({
-                onCaught?.invoke()
-            }, 2000)
-
+            pendingAction = { onCaught?.invoke() }
         } else {
             setText("${gs.enemy.name}", "BROKE FREE!")
             gs.phase = BattlePhase.TEXT_WAIT
-            pendingAction = {
-                busy = false
-                enemyTurn()
-            }
+            pendingAction = { busy = false; showMain() }
         }
     }
 
-    // ✅ OPRAVA: Gengar dostane ID 094!
     private fun caught() {
-        gs.phase = BattlePhase.CAUGHT; pendingAction = null
-        ballVisible = 2; invalidate()
+        gs.phase = BattlePhase.CAUGHT
+        ballVisible = 2
+        invalidate()
 
-        val pId = if (gs.enemy.name == "GENGAR") "094" else "050"
-
-        val caughtEntity = CapturedPokemonEntity(
-            pokemonId = pId,
-            name = gs.enemy.name,
-            isShiny = false
-        )
+        val pId    = BattleFactory.pokedexId(gs.enemy)
+        val entity = CapturedPokemonEntity(pokemonId = pId, name = gs.enemy.name)
 
         Thread {
-            db.capturedPokemonDao().insertPokemon(caughtEntity)
+            db.capturedPokemonDao().insertPokemon(entity)
+            db.pokedexStatusDao().unlockPokemon(PokedexStatusEntity(pId))
         }.start()
 
-        setText("GOT ${gs.enemy.name}!", ""); busy = false; invalidate()
-        handler.postDelayed({ onCaught?.invoke() }, 2000)
+        setText("GOT ${gs.enemy.name.take(8)}!", "")
+        pendingAction = { onCaught?.invoke() }
+        busy = false
+        invalidate()
     }
 
     private fun doFlash(after: () -> Unit) {

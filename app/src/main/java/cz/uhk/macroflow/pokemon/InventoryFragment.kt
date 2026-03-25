@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
@@ -184,7 +185,6 @@ class InventoryFragment : Fragment() {
                 else -> "${item.itemId} (${item.quantity}x)"
             }
 
-            // ✅ Obrázky pro bally a herní itemy v batohu
             val imageUrl = when(item.itemId) {
                 "poke_ball" -> "https://img.pokemondb.net/sprites/items/poke-ball.png"
                 "great_ball" -> "https://img.pokemondb.net/sprites/items/great-ball.png"
@@ -193,21 +193,17 @@ class InventoryFragment : Fragment() {
             }
 
             if (imageUrl.isNotEmpty()) {
-                holder.ivSprite.load(imageUrl) {
-                    placeholder(R.drawable.ic_home)
-                    error(R.drawable.ic_home)
-                }
-            } else {
-                holder.ivSprite.setImageResource(R.drawable.ic_home)
+                holder.ivSprite.load(imageUrl)
             }
 
+            // ✅ KLIKNUTÍ: Aktivace Spooky Plate (Ghost)
             holder.itemView.setOnClickListener {
                 if (item.itemId == "lure_lamp" && item.quantity > 0) {
                     val prefs = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                     val isAlreadyActive = prefs.getBoolean("ghostPlateActive", false)
 
                     if (isAlreadyActive) {
-                        android.widget.Toast.makeText(requireContext(), "Ghost Plate už máš aktivní!", android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Duchovní deska už je aktivní!", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
 
@@ -218,22 +214,19 @@ class InventoryFragment : Fragment() {
                             prefs.edit().putBoolean("ghostPlateActive", true).apply()
 
                             withContext(Dispatchers.Main) {
-                                android.widget.Toast.makeText(requireContext(), "👻 Ghost Plate aktivován! Příští Pokémon bude Gengar.", android.widget.Toast.LENGTH_SHORT).show()
-                                loadData()
+                                Toast.makeText(requireContext(), "👻 Ghost Plate aktivován! Příští setkání v souboji bude Gengar.", Toast.LENGTH_SHORT).show()
+                                loadData() // Refresh batohu
                             }
                         }
                     }
                 }
             }
 
-            // Skrytí tlačítek (pro smazání a zámek), která se u herních itemů nepoužívají
             holder.itemView.findViewById<View>(R.id.btnLock)?.visibility = View.GONE
             holder.itemView.findViewById<View>(R.id.btnPinToBar)?.visibility = View.GONE
             holder.itemView.findViewById<View>(R.id.btnUnpinFromBar)?.visibility = View.GONE
             holder.itemView.findViewById<View>(R.id.btnDeletePokemon)?.visibility = View.GONE
-
-            val separator = holder.itemView.findViewById<View>(R.id.separator)
-            if (separator != null) separator.visibility = View.GONE
+            holder.itemView.findViewById<View>(R.id.separator)?.visibility = View.GONE
         }
 
         override fun getItemCount() = list.size

@@ -16,8 +16,10 @@ import cz.uhk.macroflow.pokemon.PokedexEntryDao
 import cz.uhk.macroflow.pokemon.PokedexEntryEntity
 import cz.uhk.macroflow.pokemon.UserItemDao
 import cz.uhk.macroflow.pokemon.UserItemEntity
-import cz.uhk.macroflow.pokemon.SeenPokemonDao // ✅ Přidán import pro nové DAO
-import cz.uhk.macroflow.pokemon.SeenPokemonEntity // ✅ Přidán import pro novou entitu
+import cz.uhk.macroflow.pokemon.SeenPokemonDao
+import cz.uhk.macroflow.pokemon.SeenPokemonEntity
+import cz.uhk.macroflow.pokemon.PokedexStatusDao    // ✅ Opravený import
+import cz.uhk.macroflow.pokemon.PokedexStatusEntity // ✅ Opravený import
 
 val MIGRATION_7_8 = object : Migration(7, 8) {
     override fun migrate(database: SupportSQLiteDatabase) {
@@ -57,9 +59,10 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
         CapturedPokemonEntity::class,
         UserItemEntity::class,
         PokedexEntryEntity::class,
-        SeenPokemonEntity::class // ✅ Přidána tabulka pro viděné Pokémony
+        SeenPokemonEntity::class,
+        PokedexStatusEntity::class // ✅ Tabulka pro navždy odemčené pokémony
     ],
-    version = 12, // ✅ Zvýšeno na verzi 12
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -75,7 +78,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun capturedPokemonDao(): CapturedPokemonDao
     abstract fun userItemDao(): UserItemDao
     abstract fun pokedexEntryDao(): PokedexEntryDao
-    abstract fun seenPokemonDao(): SeenPokemonDao // ✅ Zpřístupněné DAO rozhraní
+    abstract fun seenPokemonDao(): SeenPokemonDao
+    abstract fun pokedexStatusDao(): PokedexStatusDao // ✅ Zpřístupněné DAO
 
     companion object {
         @Volatile
@@ -89,7 +93,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "macroflow_database"
                 )
                     .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
-                    .fallbackToDestructiveMigration() // ✅ Smaže starou DB a vytvoří novou v12 (předchází pádům při vývoji)
+                    .fallbackToDestructiveMigration()
                     .allowMainThreadQueries()
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -97,7 +101,6 @@ abstract class AppDatabase : RoomDatabase() {
 
                             db.execSQL("INSERT INTO coins (id, balance) VALUES (1, 100)")
 
-                            // 🎒 Inicializace batohu o Great bally
                             db.execSQL("INSERT INTO user_items (itemId, quantity) VALUES ('poke_ball', 5)")
                             db.execSQL("INSERT INTO user_items (itemId, quantity) VALUES ('great_ball', 3)")
 
@@ -150,7 +153,7 @@ abstract class AppDatabase : RoomDatabase() {
             Triple("Raichu", "ELEKTRO / VÝBOJ", "Centrální nervová soustava (CNS) dostává zabrat. Maximálky na mrtvý tah vyžadují pořádný výboj."),
             Triple("Sandshrew", "ZEMĚ / STABILITA", "Pevný postoj u dřepů je základ. Zapusť nohy do země."),
             Triple("Sandslash", "ZEMĚ / SVALOVÁ DEFINICE", "Vyrýsovaný jako ostny na zádech. Odvodnění před soutěží zvládnuté na jedničku."),
-            Triple("Nidoran♀", "JED / BALANC", "Rovnováha mezi silovým tréninkem a regenerací pro něžné pohlaví."),
+            Triple("Nidoran♀", "JED / BALANC", "Rovnováha mezi silovým tréninkem a regenerací pro něžné pohfaví."),
             Triple("Nidorina", "JED / SÍLA", "Ženská síla v plné kráse. Progres se v aplikaci zapisuje sám."),
             Triple("Nidoqueen", "JED / ŠAMPIONKA", "Královna fitness centra. Estetika spojená s funkční silou."),
             Triple("Nidoran♂", "JED / EGO-LIFTING", "Pozor na příliš velké váhy na úkor techniky! Ego nech v šatně."),
@@ -171,9 +174,7 @@ abstract class AppDatabase : RoomDatabase() {
             Triple("Parasect", "HMYZ / ADAPTOGENY", "Medicinální houby (Cordyceps, Reishi) pro lepší zvládání stresu a imunitu."),
             Triple("Venonat", "HMYZ / FOCUS", "Maximální soustředění na každé jedno opakování. Tunelové vidění."),
             Triple("Venomoth", "HMYZ / PLYNULOST", "Plynulý pohyb v plném rozsahu (ROM). Žádné trhané poloviční opakování."),
-
             Triple("Diglett", "ZEMĚ / VLÁKNINA", "Král ranního vyprazdňování! Tento podzemní tvor symbolizuje zdravou peristaltiku střev. Pokud tvůj trůnní rituál vázne, přidej rozpustnou vlákninu a dostatek vody."),
-
             Triple("Dugtrio", "ZEMĚ / SUPLEMENTY", "Svatá trojice: Protein, Kreatin, Omega-3. Tři pilíře úspěšné suplementace."),
             Triple("Meowth", "NORMÁLNÍ / CHEAT MEAL", "Zlaťáky na utrácení za cheat mealy. Jednou za čas si dej pizzu a zapiš ji jako radost."),
             Triple("Persian", "NORMÁLNÍ / LEAN BULK", "Čisté svaly bez zbytečného tuku. Kočičí mrštnost a vyrýsovanost."),
@@ -234,7 +235,7 @@ abstract class AppDatabase : RoomDatabase() {
             Triple("Lickitung", "NORMÁLNÍ / CHUŤOVÉ BUŇKY", "Když tě honí mlsná. Zkus proteinový pudink místo čokolády."),
             Triple("Koffing", "JED / ŠPATNÉ DÝCHÁNÍ", "Nezadržuj dech při zvedání činky (Valsalvův manévr má svá pravidla)."),
             Triple("Weezing", "JED / PLICNÍ KAPACITA", "Zlepšuj své VO2 max pro lepší kyslíkovou kapacitu."),
-            Triple("Rhyhorn", "ZEMĚ / HRUBÁ SÍLA", "Probourat se přes stagnaci. Někdy to chce jen zvednout těžší váhu."),
+            Triple("Rehyhorn", "ZEMĚ / HRUBÁ SÍLA", "Probourat se přes stagnaci. Někdy to chce jen zvednout těžší váhu."),
             Triple("Rhydon", "ZEMĚ / PEVNÉ ŠLACHY", "Šlachy z ocele. Trpělivost při budování síly přináší ovoce."),
             Triple("Chansey", "NORMÁLNÍ / ZDRAVÍ NA PRVNÍM MÍSTĚ", "Zdravotní krevní testy a prevence. Zdravé tělo podává nejlepší výkony."),
             Triple("Tangela", "TRÁVA / KOMPLEXNÍ SACHARIDY", "Zamotané klubko špaget? Dej si celozrnné těstoviny pro stabilní energii."),
