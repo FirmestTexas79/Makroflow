@@ -1,7 +1,12 @@
 package cz.uhk.macroflow.pokemon
 
 import android.content.Context
+import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.dashboard.MacroCalculator
+import java.text.SimpleDateFormat
+import java.util.*
 
+// --- 📊 DEFINICE RARITY ---
 enum class Rarity(val weight: Int, val label: String) {
     COMMON   (60, "Common"),
     RARE     (28, "Rare"),
@@ -10,29 +15,51 @@ enum class Rarity(val weight: Int, val label: String) {
     MYTHIC   ( 1, "Mythic")
 }
 
+// --- 🛠️ ROZHRANÍ PRO PODMÍNKY ---
 interface SpawnCondition {
     fun isMet(context: Context): Boolean
 }
 
-object AlwaysCondition : SpawnCondition {
-    override fun isMet(context: Context): Boolean = true
-}
-
-object NightCondition : SpawnCondition {
-    override fun isMet(context: Context): Boolean {
-        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-        return hour >= 19 || hour < 5
+// --- 📋 REGISTR KROKŮ A PODMÍNEK (Jednoduché přidávání) ---
+object Conditions {
+    val ALWAYS = object : SpawnCondition {
+        override fun isMet(context: Context): Boolean = true
     }
-}
 
-class MinStreakCondition(private val requiredStreak: Int) : SpawnCondition {
-    override fun isMet(context: Context): Boolean {
-        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val currentStreak = prefs.getInt("currentStreak", 0)
-        return currentStreak >= requiredStreak
+    val NIGHT_ONLY = object : SpawnCondition {
+        override fun isMet(context: Context): Boolean {
+            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            return hour !in 5..18
+        }
     }
+
+    val WATER_GOAL_REACHED = object : SpawnCondition {
+        override fun isMet(context: Context): Boolean {
+            val db = AppDatabase.getDatabase(context)
+            val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+            val target = MacroCalculator.calculate(context)
+            val targetMl = (target.water * 1000).toInt()
+            val currentMl = db.waterDao().getTotalMlForDateSync(todayStr)
+
+            return currentMl >= targetMl
+        }
+    }
+
+    class MinCheckInCount(private val requiredDays: Int) : SpawnCondition {
+        override fun isMet(context: Context): Boolean {
+            val db = AppDatabase.getDatabase(context)
+            val totalCheckIns = db.checkInDao().getAllCheckInsSync().size
+            return totalCheckIns >= requiredDays
+        }
+    }
+
+    // 💡 Sem můžeš v budoucnu jednoduše přidávat:
+    // val CALORIE_GOAL_MET = object : SpawnCondition { ... }
+    // val PROTEIN_GOAL_MET = object : SpawnCondition { ... }
 }
 
+// --- 📦 DATOVÁ TŘÍDA PRO POOL ---
 data class SpawnPool(
     val id: String,
     val name: String,
@@ -41,27 +68,33 @@ data class SpawnPool(
     val createPokemon: () -> Pokemon
 )
 
+// --- 🧠 CENTRÁLNÍ MOZEK SPAWNOVÁNÍ ---
 object SpawnManager {
 
+    // 📜 Tady budeš mít časem všech 151 Pokémonů. Přidat nového znamená jen přidat JEDEN řádek!
     private val POOL: List<SpawnPool> = listOf(
+        // ID, Jméno, Rarita, Seznam podmínek, Tovární funkce
+        SpawnPool("050", "DIGLETT",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createDiglett() },
+        SpawnPool("025", "PIKACHU",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createPikachu() },
+        SpawnPool("133", "EEVEE",     Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createEevee() },
 
-        SpawnPool("050", "DIGLETT",   Rarity.COMMON, listOf(AlwaysCondition))        { BattleFactory.createDiglett() },
-        SpawnPool("025", "PIKACHU",   Rarity.COMMON, listOf(AlwaysCondition))        { BattleFactory.createPikachu() },
-        SpawnPool("133", "EEVEE",     Rarity.COMMON, listOf(AlwaysCondition))        { BattleFactory.createEevee() },
+        SpawnPool("001", "BULBASAUR", Rarity.RARE,   listOf(Conditions.ALWAYS)) { BattleFactory.createBulbasaur() },
+        SpawnPool("004", "CHARMANDER",Rarity.RARE,   listOf(Conditions.ALWAYS)) { BattleFactory.createCharmander() },
+        SpawnPool("092", "GASTLY",    Rarity.RARE,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createGastly() },
 
-        SpawnPool("001", "BULBASAUR", Rarity.RARE, listOf(AlwaysCondition))        { BattleFactory.createBulbasaur() },
-        SpawnPool("007", "SQUIRTLE",  Rarity.RARE, listOf(AlwaysCondition))        { BattleFactory.createSquirtle() },
-        SpawnPool("004", "CHARMANDER",Rarity.RARE, listOf(AlwaysCondition))        { BattleFactory.createCharmander() },
-        SpawnPool("092", "GASTLY",    Rarity.RARE, listOf(NightCondition))         { BattleFactory.createGastly() },
+        // 🌊 Squirtle se odemkne jen při splnění vody v Dashboardu!
+        SpawnPool("007", "SQUIRTLE",  Rarity.RARE,   listOf(Conditions.WATER_GOAL_REACHED)) { BattleFactory.createSquirtle() },
 
-        SpawnPool("093", "HAUNTER",   Rarity.EPIC, listOf(NightCondition))         { BattleFactory.createHaunter() },
-        SpawnPool("094", "GENGAR",    Rarity.EPIC, listOf(NightCondition))         { BattleFactory.createGengar() },
-        SpawnPool("143", "SNORLAX",   Rarity.EPIC, listOf(MinStreakCondition(7)))   { BattleFactory.createSnorlax() },
+        SpawnPool("093", "HAUNTER",   Rarity.EPIC,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createHaunter() },
+        SpawnPool("094", "GENGAR",    Rarity.EPIC,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createGengar() },
 
-        SpawnPool("006", "CHARIZARD", Rarity.LEGENDARY, listOf(MinStreakCondition(30)))  { BattleFactory.createCharizard() },
-        SpawnPool("150", "MEWTWO",    Rarity.LEGENDARY, listOf(MinStreakCondition(60)))  { BattleFactory.createMewtwo() },
+        // 💤 Snorlax se odemkne až po 7 splněných ranních check-inech
+        SpawnPool("143", "SNORLAX",   Rarity.EPIC,   listOf(Conditions.MinCheckInCount(7))) { BattleFactory.createSnorlax() },
 
-        SpawnPool("151", "MEW",       Rarity.MYTHIC, listOf(MinStreakCondition(100))) { BattleFactory.createWildMew() }
+        SpawnPool("006", "CHARIZARD", Rarity.LEGENDARY, listOf(Conditions.MinCheckInCount(14))) { BattleFactory.createCharizard() },
+        SpawnPool("150", "MEWTWO",    Rarity.LEGENDARY, listOf(Conditions.MinCheckInCount(30))) { BattleFactory.createMewtwo() },
+
+        SpawnPool("151", "MEW",       Rarity.MYTHIC, listOf(Conditions.MinCheckInCount(50))) { BattleFactory.createWildMew() }
     )
 
     fun getActivePool(context: Context): List<SpawnPool> =
@@ -80,6 +113,7 @@ object SpawnManager {
 
         val totalWeight = active.sumOf { it.rarity.weight }
         var roll = kotlin.random.Random.nextInt(totalWeight)
+
         for (spawn in active) {
             roll -= spawn.rarity.weight
             if (roll < 0) return spawn.createPokemon()

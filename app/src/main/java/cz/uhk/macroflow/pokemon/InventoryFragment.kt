@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -27,62 +28,59 @@ class InventoryFragment : Fragment() {
     private lateinit var rvInventory: RecyclerView
     private lateinit var tabLayout: TabLayout
     private lateinit var db: AppDatabase
-
     private var currentTab = 0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_inventory, container, false)
-    }
+    ): View? = inflater.inflate(R.layout.fragment_inventory, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         db = AppDatabase.getDatabase(requireContext())
         rvInventory = view.findViewById(R.id.rvInventory)
-        tabLayout = view.findViewById(R.id.tabLayoutInventory)
-
+        tabLayout   = view.findViewById(R.id.tabLayoutInventory)
         rvInventory.layoutManager = GridLayoutManager(requireContext(), 2)
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                currentTab = tab?.position ?: 0
-                loadData()
-            }
+            override fun onTabSelected(tab: TabLayout.Tab?) { currentTab = tab?.position ?: 0; loadData() }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
-
         loadData()
     }
 
     private fun loadData() {
         lifecycleScope.launch {
             if (currentTab == 0) {
-                val list = withContext(Dispatchers.IO) {
-                    db.capturedPokemonDao().getAllCaught()
+                val list = withContext(Dispatchers.IO) { db.capturedPokemonDao().getAllCaught() }
+                // Načti XP pro každého pokémona
+                val xpMap = withContext(Dispatchers.IO) {
+                    list.associate { it.pokemonId to (db.pokemonXpDao().getXp(it.pokemonId)?.totalXp ?: 0) }
                 }
-                rvInventory.adapter = PokemonAdapter(list)
+                rvInventory.adapter = PokemonAdapter(list, xpMap)
             } else {
-                val list = withContext(Dispatchers.IO) {
-                    db.userItemDao().getAllItems()
-                }
+                val list = withContext(Dispatchers.IO) { db.userItemDao().getAllItems() }
                 rvInventory.adapter = ItemAdapter(list)
             }
         }
     }
 
-    private inner class PokemonAdapter(private val list: List<CapturedPokemonEntity>) :
-        RecyclerView.Adapter<PokemonAdapter.VH>() {
+    // ── 🐉 Pokémon adapter s XP/Level (Jen pro aktivního na liště) ──
+
+    private inner class PokemonAdapter(
+        private val list: List<CapturedPokemonEntity>,
+        private val xpMap: Map<String, Int>
+    ) : RecyclerView.Adapter<PokemonAdapter.VH>() {
 
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val ivSprite: ImageView = v.findViewById(R.id.ivPokemonSprite)
-            val tvName: TextView = v.findViewById(R.id.tvPokemonName)
-            val btnLock: ImageButton = v.findViewById(R.id.btnLock)
-            val btnPinToBar: ImageButton = v.findViewById(R.id.btnPinToBar)
-            val btnUnpinFromBar: ImageButton = v.findViewById(R.id.btnUnpinFromBar)
-            val btnDeletePokemon: ImageButton = v.findViewById(R.id.btnDeletePokemon)
+            val ivSprite: ImageView     = v.findViewById(R.id.ivPokemonSprite)
+            val tvName: TextView        = v.findViewById(R.id.tvPokemonName)
+            val tvLevel: TextView       = v.findViewById(R.id.tvPokemonLevel)
+            val pbXp: ProgressBar       = v.findViewById(R.id.pbPokemonXp)
+            val btnLock: ImageButton    = v.findViewById(R.id.btnLock)
+            val btnPin: ImageButton     = v.findViewById(R.id.btnPinToBar)
+            val btnUnpin: ImageButton   = v.findViewById(R.id.btnUnpinFromBar)
+            val btnDelete: ImageButton  = v.findViewById(R.id.btnDeletePokemon)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -92,25 +90,35 @@ class InventoryFragment : Fragment() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = list[position]
+            val prefs = holder.itemView.context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+
+            // 🔍 Zjistíme, jestli je tento pokémon aktuálně na liště
+            val activeOnBarId = prefs.getString("currentOnBarId", "") ?: ""
+            val isAcquired = prefs.getBoolean("pokemonAcquired", false)
+            val isActiveOnBar = isAcquired && (item.pokemonId == activeOnBarId)
+
+            val xp = xpMap[item.pokemonId] ?: 0
+            val level = PokemonLevelCalc.levelFromXp(xp)
+            val prog = PokemonLevelCalc.progressToNextLevel(xp)
+
             holder.tvName.text = item.name
 
+            // 📈 Zobrazíme level a XP bar POUZE pokud je aktivní na liště
+            if (isActiveOnBar) {
+                holder.tvLevel.visibility = View.VISIBLE
+                holder.pbXp.visibility = View.VISIBLE
+                holder.tvLevel.text = "Lv.$level"
+                holder.pbXp.progress = (prog * 100).toInt()
+            } else {
+                holder.tvLevel.visibility = View.GONE
+                holder.pbXp.visibility = View.GONE
+            }
+
             val webName = item.name.lowercase()
-                .replace(" ", "-")
-                .replace(".", "")
-                .replace("♀", "-f")
-                .replace("♂", "-m")
-
-            val imageUrl = "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
-
-
-            val dp = holder.itemView.context.resources.displayMetrics.density
-            holder.ivSprite.layoutParams.width = (88 * dp).toInt()
-            holder.ivSprite.layoutParams.height = (88 * dp).toInt()
-            holder.ivSprite.requestLayout()
-
-            holder.ivSprite.load(imageUrl) {
-                placeholder(R.drawable.ic_home)
-                error(R.drawable.ic_home)
+                .replace(" ", "-").replace(".", "")
+                .replace("♀", "-f").replace("♂", "-m")
+            holder.ivSprite.load("https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png") {
+                placeholder(R.drawable.ic_home); error(R.drawable.ic_home)
             }
 
             val lockIcon = if (item.isLocked) android.R.drawable.ic_lock_lock else android.R.drawable.ic_lock_idle_lock
@@ -118,43 +126,39 @@ class InventoryFragment : Fragment() {
 
             holder.btnLock.setOnClickListener {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val updated = item.copy(isLocked = !item.isLocked)
-                    db.capturedPokemonDao().updatePokemon(updated)
+                    db.capturedPokemonDao().updatePokemon(item.copy(isLocked = !item.isLocked))
                     withContext(Dispatchers.Main) { loadData() }
                 }
             }
 
-            holder.btnPinToBar.setOnClickListener {
-                requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                    .edit()
+            holder.btnPin.setOnClickListener {
+                requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                     .putBoolean("pokemonAcquired", true)
                     .putString("currentOnBarId", item.pokemonId)
                     .putString("currentOnBarName", item.name.uppercase())
                     .apply()
-
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
-                android.widget.Toast.makeText(requireContext(), "📌 ${item.name} vypuštěn na lištu!", android.widget.Toast.LENGTH_SHORT).show()
+                loadData() // 🔄 Přenačteme data pro aktualizaci zobrazení XP baru
+                Toast.makeText(requireContext(), "📌 ${item.name} vypuštěn na lištu!", Toast.LENGTH_SHORT).show()
             }
 
-            holder.btnUnpinFromBar.setOnClickListener {
-                requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                    .edit()
-                    .putBoolean("pokemonAcquired", false)
-                    .apply()
-
+            holder.btnUnpin.setOnClickListener {
+                requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
+                    .putBoolean("pokemonAcquired", false).apply()
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
-                android.widget.Toast.makeText(requireContext(), "📥 Pokémon schován do kapsy.", android.widget.Toast.LENGTH_SHORT).show()
+                loadData() // 🔄 Přenačteme data pro schování XP baru
+                Toast.makeText(requireContext(), "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
             }
 
-            holder.btnDeletePokemon.setOnClickListener {
+            holder.btnDelete.setOnClickListener {
                 if (item.isLocked) {
-                    android.widget.Toast.makeText(requireContext(), "Odemkni pokémona před smazáním! 🔒", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Odemkni pokémona před smazáním! 🔒", Toast.LENGTH_SHORT).show()
                 } else {
                     lifecycleScope.launch(Dispatchers.IO) {
                         db.capturedPokemonDao().deletePokemon(item)
                         withContext(Dispatchers.Main) { loadData() }
                     }
-                    android.widget.Toast.makeText(requireContext(), "🗑️ Pokémon smazán.", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "🗑️ Pokémon smazán.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -162,12 +166,14 @@ class InventoryFragment : Fragment() {
         override fun getItemCount() = list.size
     }
 
+    // ── 🎒 Item adapter (Pro herní předměty bez XP a Levelu) ──
+
     private inner class ItemAdapter(private val list: List<UserItemEntity>) :
         RecyclerView.Adapter<ItemAdapter.VH>() {
 
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
             val ivSprite: ImageView = v.findViewById(R.id.ivPokemonSprite)
-            val tvName: TextView = v.findViewById(R.id.tvPokemonName)
+            val tvName: TextView    = v.findViewById(R.id.tvPokemonName)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -177,56 +183,46 @@ class InventoryFragment : Fragment() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = list[position]
-
-            holder.tvName.text = when(item.itemId) {
-                "poke_ball" -> "Poké Ball (${item.quantity}x)"
+            holder.tvName.text = when (item.itemId) {
+                "poke_ball"  -> "Poké Ball (${item.quantity}x)"
                 "great_ball" -> "Great Ball (${item.quantity}x)"
-                "lure_lamp" -> "Spooky Plate (${item.quantity}x)"
-                else -> "${item.itemId} (${item.quantity}x)"
+                "lure_lamp"  -> "Spooky Plate (${item.quantity}x)"
+                else         -> "${item.itemId} (${item.quantity}x)"
             }
-
-            val imageUrl = when(item.itemId) {
-                "poke_ball" -> "https://img.pokemondb.net/sprites/items/poke-ball.png"
+            val imageUrl = when (item.itemId) {
+                "poke_ball"  -> "https://img.pokemondb.net/sprites/items/poke-ball.png"
                 "great_ball" -> "https://img.pokemondb.net/sprites/items/great-ball.png"
-                "lure_lamp" -> "https://img.pokemondb.net/sprites/items/spooky-plate.png"
-                else -> ""
+                "lure_lamp"  -> "https://img.pokemondb.net/sprites/items/spooky-plate.png"
+                else         -> ""
             }
+            if (imageUrl.isNotEmpty()) holder.ivSprite.load(imageUrl)
 
-            if (imageUrl.isNotEmpty()) {
-                holder.ivSprite.load(imageUrl)
-            }
-
-            // ✅ KLIKNUTÍ: Aktivace Spooky Plate (Ghost)
             holder.itemView.setOnClickListener {
                 if (item.itemId == "lure_lamp" && item.quantity > 0) {
                     val prefs = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                    val isAlreadyActive = prefs.getBoolean("ghostPlateActive", false)
-
-                    if (isAlreadyActive) {
+                    if (prefs.getBoolean("ghostPlateActive", false)) {
                         Toast.makeText(requireContext(), "Duchovní deska už je aktivní!", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
-
                     lifecycleScope.launch(Dispatchers.IO) {
-                        val success = db.userItemDao().consumeItem("lure_lamp", 1)
-
-                        if (success) {
+                        if (db.userItemDao().consumeItem("lure_lamp", 1)) {
                             prefs.edit().putBoolean("ghostPlateActive", true).apply()
-
                             withContext(Dispatchers.Main) {
-                                Toast.makeText(requireContext(), "👻 Ghost Plate aktivován! Příští setkání v souboji bude Gengar.", Toast.LENGTH_SHORT).show()
-                                loadData() // Refresh batohu
+                                Toast.makeText(requireContext(), "👻 Ghost Plate aktivován! Příští setkání bude Gengar.", Toast.LENGTH_SHORT).show()
+                                loadData()
                             }
                         }
                     }
                 }
             }
 
-            holder.itemView.findViewById<View>(R.id.btnLock)?.visibility = View.GONE
-            holder.itemView.findViewById<View>(R.id.btnPinToBar)?.visibility = View.GONE
-            holder.itemView.findViewById<View>(R.id.btnUnpinFromBar)?.visibility = View.GONE
-            holder.itemView.findViewById<View>(R.id.btnDeletePokemon)?.visibility = View.GONE
-            holder.itemView.findViewById<View>(R.id.separator)?.visibility = View.GONE
+            // 🚫 Skryjeme akční tlačítka pro Mazání, Piny a Locky
+            listOf(R.id.btnLock, R.id.btnPinToBar, R.id.btnUnpinFromBar, R.id.btnDeletePokemon, R.id.separator)
+                .forEach { id -> holder.itemView.findViewById<View>(id)?.visibility = View.GONE }
+
+            // 🚫 Skryjeme Level a progress bar pro předměty
+            holder.itemView.findViewById<View>(R.id.tvPokemonLevel)?.visibility = View.GONE
+            holder.itemView.findViewById<View>(R.id.pbPokemonXp)?.visibility = View.GONE
         }
 
         override fun getItemCount() = list.size

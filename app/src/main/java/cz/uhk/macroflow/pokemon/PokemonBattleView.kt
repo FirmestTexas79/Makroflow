@@ -347,16 +347,20 @@ class PokemonBattleView @JvmOverloads constructor(
     override fun onTouchEvent(e: MotionEvent): Boolean {
         if (e.action != MotionEvent.ACTION_DOWN) return true
 
-        if (gs.phase == BattlePhase.CAUGHT || gs.phase == BattlePhase.ESCAPED) {
+        // Pokud jsme ve finálním stavu, dotyk okamžitě ukončuje souboj
+        if (gs.phase == BattlePhase.CAUGHT || gs.phase == BattlePhase.ESCAPED ||
+            gs.phase == BattlePhase.ENEMY_FAINTED || gs.phase == BattlePhase.PLAYER_FAINTED) {
             onCaught?.invoke()
             return true
         }
 
-        if (gs.phase == BattlePhase.TEXT_WAIT) {
+        // Pokud se čeká na text a nejsme uprostřed animace (busy)
+        if (gs.phase == BattlePhase.TEXT_WAIT && !busy) {
             advText()
             return true
         }
 
+        // Pokud probíhá animace nebo výpočet, ignoruj klikání úplně
         if (busy) return true
 
         val sx = GBW.toFloat() / dstR.width()
@@ -570,14 +574,18 @@ class PokemonBattleView @JvmOverloads constructor(
             else                           -> 0.08f
         }
 
+        busy = false // Uvolníme pro zobrazení textu a klikání
+
         if (Random.nextFloat() < runAwayChance) {
             gs.phase = BattlePhase.ESCAPED
             setText("${gs.enemy.name}", "RAN AWAY!")
+            // ✅ Nastavíme akci pro kliknutí, která nás vyhodí ze souboje
             pendingAction = { onCaught?.invoke() }
         } else {
             setText("${gs.enemy.name}", "BROKE FREE!")
             gs.phase = BattlePhase.TEXT_WAIT
-            pendingAction = { busy = false; showMain() }
+            // Vrátíme se do hlavního menu
+            pendingAction = { showMain() }
         }
     }
 
@@ -586,18 +594,20 @@ class PokemonBattleView @JvmOverloads constructor(
         ballVisible = 2
         invalidate()
 
-        val pId    = BattleFactory.pokedexId(gs.enemy)
+        val pId = BattleFactory.pokedexId(gs.enemy)
         val entity = CapturedPokemonEntity(pokemonId = pId, name = gs.enemy.name)
 
         Thread {
             db.capturedPokemonDao().insertPokemon(entity)
             db.pokedexStatusDao().unlockPokemon(PokedexStatusEntity(pId))
-        }.start()
 
-        setText("GOT ${gs.enemy.name.take(8)}!", "")
-        pendingAction = { onCaught?.invoke() }
-        busy = false
-        invalidate()
+            // ✅ Bezpečné zavolání na hlavním vlákně po uložení
+            handler.post {
+                setText("GOT ${gs.enemy.name.take(8)}!", "")
+                busy = false // Uvolníme zámek pro kliknutí
+                pendingAction = { onCaught?.invoke() }
+            }
+        }.start()
     }
 
     private fun doFlash(after: () -> Unit) {

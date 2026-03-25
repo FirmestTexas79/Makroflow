@@ -45,9 +45,9 @@ class PokedexFragment : Fragment() {
 
         ivDetailSprite = view.findViewById(R.id.ivDetailSprite)
         tvDetailNumber = view.findViewById(R.id.tvDetailNumber)
-        tvDetailName = view.findViewById(R.id.tvDetailName)
-        tvDetailType = view.findViewById(R.id.tvDetailType)
-        tvDetailMacro = view.findViewById(R.id.tvDetailMacro)
+        tvDetailName   = view.findViewById(R.id.tvDetailName)
+        tvDetailType   = view.findViewById(R.id.tvDetailType)
+        tvDetailMacro  = view.findViewById(R.id.tvDetailMacro)
 
         rvPokedex = view.findViewById(R.id.rvPokedex)
         rvPokedex.layoutManager = GridLayoutManager(requireContext(), 3)
@@ -71,8 +71,25 @@ class PokedexFragment : Fragment() {
                 db.pokedexStatusDao().getUnlockedIds()
             }
 
+            // ✅ OPRAVENO: Místo tahání prázdné DB bereme seznam ze SpawnManageru!
             val kantoList = withContext(Dispatchers.IO) {
-                db.pokedexEntryDao().getAllEntries()
+                // Vytáhneme z DB popisy
+                val dbEntries = db.pokedexEntryDao().getAllEntries()
+
+                if (dbEntries.isEmpty()) {
+                    // Záložní generování, pokud inicializace selhala
+                    SpawnManager.allEntries.map { spawn ->
+                        PokedexEntryEntity(
+                            pokedexId = spawn.id,
+                            webName = spawn.name.lowercase(),
+                            displayName = spawn.name,
+                            type = spawn.rarity.label,
+                            macroDesc = "Tento Pokémon čeká na tvůj trénink."
+                        )
+                    }
+                } else {
+                    dbEntries
+                }
             }
 
             pokedexAdapter.updateData(kantoList, unlockedIds, invIds)
@@ -85,30 +102,21 @@ class PokedexFragment : Fragment() {
         }
     }
 
-    private fun showDetail(
-        pokemon: PokedexEntryEntity,
-        isUnlocked: Boolean,
-        isInInventory: Boolean
-    ) {
+    private fun showDetail(pokemon: PokedexEntryEntity, isUnlocked: Boolean, isInInventory: Boolean) {
         tvDetailNumber.text = "#${pokemon.pokedexId}"
-        tvDetailName.text = if (isUnlocked) pokemon.displayName else "???"
-        tvDetailType.text = if (isUnlocked) pokemon.type.uppercase() else "???"
+        tvDetailName.text   = if (isUnlocked) pokemon.displayName else "???"
+        tvDetailType.text   = if (isUnlocked) pokemon.type.uppercase() else "???"
 
         if (isInInventory) {
-            tvDetailType.backgroundTintList =
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#BC6C25"))
+            tvDetailType.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#BC6C25"))
             tvDetailType.text = "${pokemon.type.uppercase()} • V INVENTÁŘI"
         } else {
-            tvDetailType.backgroundTintList =
-                android.content.res.ColorStateList.valueOf(Color.parseColor("#DDA15E"))
+            tvDetailType.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#DDA15E"))
         }
 
-        tvDetailMacro.text =
-            if (isUnlocked) pokemon.macroDesc else "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
+        tvDetailMacro.text = if (isUnlocked) pokemon.macroDesc else "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
 
-        // ✅ PIXELOVÉ SPRITY DO POKEDEXU Z FIRERED-LEAFGREEN
-        val imageUrl =
-            "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
+        val imageUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
 
         ivDetailSprite.load(imageUrl) {
             placeholder(R.drawable.ic_home)
@@ -131,11 +139,7 @@ class PokedexFragment : Fragment() {
         private var invIds: List<String>
     ) : RecyclerView.Adapter<PokedexAdapter.VH>() {
 
-        fun updateData(
-            newList: List<PokedexEntryEntity>,
-            newUnlocked: List<String>,
-            newInv: List<String>
-        ) {
+        fun updateData(newList: List<PokedexEntryEntity>, newUnlocked: List<String>, newInv: List<String>) {
             this.list = newList
             this.unlockedIds = newUnlocked
             this.invIds = newInv
@@ -146,15 +150,11 @@ class PokedexFragment : Fragment() {
             val ivSprite: ImageView = v.findViewById(R.id.ivPokedexSprite)
             val tvName: TextView = v.findViewById(R.id.tvPokedexName)
             val tvNumber: TextView = v.findViewById(R.id.tvPokedexNumber)
-
-            // 🛡️ NAJDEME KOŘENOVÝ CARDVIEW BEZ NUTNOSTI ZNÁT JEHO PŘESNÉ XML ID!
-            val cardView: com.google.android.material.card.MaterialCardView =
-                v as com.google.android.material.card.MaterialCardView
+            val cardView: com.google.android.material.card.MaterialCardView = v as com.google.android.material.card.MaterialCardView
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val v = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_pokedex_entry, parent, false)
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_pokedex_entry, parent, false)
             return VH(v)
         }
 
@@ -163,21 +163,26 @@ class PokedexFragment : Fragment() {
             val isUnlocked = unlockedIds.contains(pokemon.pokedexId)
             val isInInventory = invIds.contains(pokemon.pokedexId)
 
-            holder.tvName.text = if (isUnlocked) pokemon.displayName else "???"
+            holder.tvName.text   = if (isUnlocked) pokemon.displayName else "???"
             holder.tvNumber.text = "#${pokemon.pokedexId}"
 
-            // 🌟 ZLATÝ RÁMEČEK (Když ho máš v kapse)
             if (isInInventory) {
-                holder.cardView.strokeWidth =
-                    (2 * holder.itemView.context.resources.displayMetrics.density).toInt()
-                holder.cardView.strokeColor = Color.parseColor("#BC6C25") // Tvoje hnědá barva
+                holder.cardView.strokeWidth = (2 * holder.itemView.context.resources.displayMetrics.density).toInt()
+                holder.cardView.strokeColor = Color.parseColor("#BC6C25")
             } else {
                 holder.cardView.strokeWidth = 0
             }
 
-            val imageUrl =
-                "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
-            holder.ivSprite.load(imageUrl)
+            val imageUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
+            holder.ivSprite.load(imageUrl) {
+                crossfade(true)
+                crossfade(150) // Plynulé 150ms prolnutí uvolní UI thread
+                placeholder(R.drawable.ic_home) // Záložní obrázek, než se načte
+                error(R.drawable.ic_home) // Chybový obrázek
+                memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                allowRgb565(true) // Menší paměťová náročnost bitmapy
+            }
 
             if (!isUnlocked) {
                 val matrix = ColorMatrix().apply { setSaturation(0f) }

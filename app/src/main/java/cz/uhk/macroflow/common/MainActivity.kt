@@ -24,7 +24,7 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import coil.load // Přidán import pro načítání z webu
+import coil.load
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
@@ -42,6 +42,8 @@ import cz.uhk.macroflow.pokemon.InventoryFragment
 import cz.uhk.macroflow.pokemon.PokedexFragment
 import cz.uhk.macroflow.pokemon.PokemonBattleFragment
 import cz.uhk.macroflow.pokemon.PokemonBehavior
+import cz.uhk.macroflow.pokemon.PokemonXpEngine
+import cz.uhk.macroflow.pokemon.PokemonLevelCalc
 import cz.uhk.macroflow.pokemon.WandererFactory
 import cz.uhk.macroflow.training.PlanFragment
 import kotlinx.coroutines.Dispatchers
@@ -54,8 +56,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navigationView: NavigationView
 
     private var pokemonBehavior: PokemonBehavior? = null
-
-    // ✅ PŘIDÁNO: Držení stavu pro plynulé načítání z webu a swapování
     private var lastLoadedId: String = ""
     private var currentOnBarId: String = ""
 
@@ -73,9 +73,9 @@ class MainActivity : AppCompatActivity() {
 
         drawerLayout   = findViewById(R.id.drawerLayout)
         navigationView = findViewById(R.id.navigationView)
-        val bottomNav      = findViewById<BottomNavigationView>(R.id.bottomNavigation)
-        val fabHome        = findViewById<FloatingActionButton>(R.id.fabHome)
-        val btnOpenDrawer  = findViewById<ImageButton>(R.id.btnOpenDrawer)
+        val bottomNav     = findViewById<BottomNavigationView>(R.id.bottomNavigation)
+        val fabHome       = findViewById<FloatingActionButton>(R.id.fabHome)
+        val btnOpenDrawer = findViewById<ImageButton>(R.id.btnOpenDrawer)
 
         bottomNav.itemActiveIndicatorColor = null
 
@@ -132,15 +132,10 @@ class MainActivity : AppCompatActivity() {
 
         navigationView.setNavigationItemSelectedListener { item ->
             drawerLayout.closeDrawer(GravityCompat.END)
-
             when (item.itemId) {
-                R.id.nav_pokedex -> replaceFragment(PokedexFragment())
-                R.id.nav_inventory -> replaceFragment(InventoryFragment())
-
-                R.id.drawerProfile -> {
-                    replaceFragment(ProfileFragment())
-                    bottomNav.selectedItemId = R.id.nav_profile
-                }
+                R.id.nav_pokedex    -> replaceFragment(PokedexFragment())
+                R.id.nav_inventory  -> replaceFragment(InventoryFragment())
+                R.id.drawerProfile  -> { replaceFragment(ProfileFragment()); bottomNav.selectedItemId = R.id.nav_profile }
                 R.id.drawerAchievements -> replaceFragment(AchievementsFragment())
                 R.id.drawerSettings     -> replaceFragment(SettingsFragment())
                 R.id.drawerDisclaimer   -> replaceFragment(DisclaimerFragment())
@@ -150,11 +145,9 @@ class MainActivity : AppCompatActivity() {
                         .setMessage("Všechny odemčené achievementy budou smazány. Tuto akci nelze vrátit.")
                         .setPositiveButton("Smazat") { _, _ ->
                             resetAchievements()
-                            Toast.makeText(this, "✓ Achievementy smazány",
-                                Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "✓ Achievementy smazány", Toast.LENGTH_SHORT).show()
                         }
-                        .setNegativeButton("Zrušit", null)
-                        .show()
+                        .setNegativeButton("Zrušit", null).show()
                     return@setNavigationItemSelectedListener true
                 }
                 R.id.drawerSignOut -> {
@@ -172,32 +165,48 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updatePokemonVisibility()
+        // XP za otevření aplikace + kontrola denních cílů
+        awardDailyXp()
     }
 
-    private fun requestNotificationPermissionAndSchedule() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                == PackageManager.PERMISSION_GRANTED) {
-                MakroflowNotifications.scheduleAll(this)
-            } else {
-                requestPermissions(
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    REQ_NOTIFICATION_PERMISSION
-                )
+    // ── XP ────────────────────────────────────────────────────────────
+
+    private fun awardDailyXp() {
+        lifecycleScope.launch {
+            val awarded = withContext(Dispatchers.IO) {
+                PokemonXpEngine.checkAndAwardDailyXp(this@MainActivity)
             }
-        } else {
-            MakroflowNotifications.scheduleAll(this)
+            if (awarded > 0) {
+                // Zkontroluj level-up
+                val (totalXp, newLevel) = withContext(Dispatchers.IO) {
+                    PokemonXpEngine.getActiveXpInfo(this@MainActivity) ?: return@withContext null
+                } ?: return@launch
+
+                val prefs       = getSharedPreferences("PokemonXpPrefs", MODE_PRIVATE)
+                val pId         = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+                    .getString("currentOnBarId", null) ?: return@launch
+                val lastLevelKey = "last_known_level_$pId"
+                val lastLevel    = prefs.getInt(lastLevelKey, 1)
+
+                if (newLevel > lastLevel) {
+                    prefs.edit().putInt(lastLevelKey, newLevel).apply()
+                    showLevelUpToast(pId, newLevel)
+                }
+            }
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_NOTIFICATION_PERMISSION) {
-            MakroflowNotifications.scheduleAll(this)
-        }
+    private fun showLevelUpToast(pokemonId: String, newLevel: Int) {
+        val name = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+            .getString("currentOnBarName", "Pokémon") ?: "Pokémon"
+        Toast.makeText(
+            this,
+            "🎉 $name dosáhl Level $newLevel!",
+            Toast.LENGTH_LONG
+        ).show()
     }
+
+    // ── Pokémon na liště ──────────────────────────────────────────────
 
     fun openPokemonBattle() {
         supportFragmentManager.beginTransaction()
@@ -207,15 +216,13 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    // ✅ TVRDÝ SWAP + NAČÍTÁNÍ Z WEBU LETS GO PIKACHU/EEVEE
-    // ... uvnitř MainActivity -> updatePokemonVisibility
     fun updatePokemonVisibility() {
         val ivPokemon = findViewById<ImageView>(R.id.ivDiglettBottomBar) ?: return
         val prefs     = getSharedPreferences("GamePrefs", MODE_PRIVATE)
 
-        val acquired   = prefs.getBoolean("pokemonAcquired", false)
-        val pId        = prefs.getString("currentOnBarId", "050") ?: "050"
-        val pName      = prefs.getString("currentOnBarName", "DIGLETT") ?: "DIGLETT"
+        val acquired = prefs.getBoolean("pokemonAcquired", false)
+        val pId      = prefs.getString("currentOnBarId", "050") ?: "050"
+        val pName    = prefs.getString("currentOnBarName", "DIGLETT") ?: "DIGLETT"
 
         currentOnBarId = pId
 
@@ -226,38 +233,36 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // 🔥 PERMANENTNÍ ZVĚTŠENÍ NA LIŠTĚ (Nastavíme natvrdo 52x52 dp)
         val dp = resources.displayMetrics.density
-        ivPokemon.layoutParams.width = (52 * dp).toInt()
+        ivPokemon.layoutParams.width  = (52 * dp).toInt()
         ivPokemon.layoutParams.height = (52 * dp).toInt()
         ivPokemon.requestLayout()
 
         if (pId != lastLoadedId) {
             lastLoadedId = pId
             pokemonBehavior?.stop()
+            pokemonBehavior = null
 
             ivPokemon.visibility = View.GONE
-            ivPokemon.scaleX = 1f
-            ivPokemon.scaleY = 1f
-            ivPokemon.alpha = 1f
-            ivPokemon.rotation = 0f
+            ivPokemon.scaleX = 1f; ivPokemon.scaleY = 1f
+            ivPokemon.alpha  = 1f; ivPokemon.rotation = 0f
 
-            val webName = pName.lowercase()
-                .replace(" ", "-")
-                .replace(".", "")
-                .replace("♀", "-f")
-                .replace("♂", "-m")
-
+            val webName  = pName.lowercase()
+                .replace(" ", "-").replace(".", "")
+                .replace("♀", "-f").replace("♂", "-m")
             val imageUrl = "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
 
             ivPokemon.load(imageUrl) {
                 listener(onSuccess = { _, _ ->
-                    pokemonBehavior = WandererFactory.create(this@MainActivity, ivPokemon, pId)
+                    val wanderer = WandererFactory.create(this@MainActivity, ivPokemon, pId)
+                    // Kill callback již nepotřebujeme — pokémon se kliknutím nezabíjí
+                    pokemonBehavior = wanderer
                     ivPokemon.visibility = View.VISIBLE
                     pokemonBehavior?.start()
                 })
             }
 
+            // Kliknutí spustí tap reakci (ne kill)
             ivPokemon.setOnClickListener { pokemonBehavior?.onSpriteClicked() }
 
         } else {
@@ -265,6 +270,8 @@ class MainActivity : AppCompatActivity() {
             pokemonBehavior?.start()
         }
     }
+
+    // ── Achievements ──────────────────────────────────────────────────
 
     fun checkAchievements() {
         lifecycleScope.launch {
@@ -278,13 +285,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun checkAchievementsDelayed(delayMs: Long = 1500L) {
-        Handler(Looper.getMainLooper())
-            .postDelayed({ checkAchievements() }, delayMs)
+        Handler(Looper.getMainLooper()).postDelayed({ checkAchievements() }, delayMs)
     }
 
     fun resetAchievements() {
         lifecycleScope.launch(Dispatchers.IO) {
-            AppDatabase.Companion.getDatabase(this@MainActivity).achievementDao().deleteAll()
+            AppDatabase.getDatabase(this@MainActivity).achievementDao().deleteAll()
         }
     }
 
@@ -294,12 +300,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateDrawerHeader() {
-        val header      = navigationView.getHeaderView(0)
-        val tvName      = header.findViewById<TextView>(R.id.tvDrawerName)
-        val tvEmail     = header.findViewById<TextView>(R.id.tvDrawerEmail)
-        val tvInitials  = header.findViewById<TextView>(R.id.tvAvatarInitials)
-        val btnLogin    = header.findViewById<View>(R.id.btnDrawerLogin)
-        val dotOnline   = header.findViewById<View>(R.id.viewOnlineDot)
+        val header     = navigationView.getHeaderView(0)
+        val tvName     = header.findViewById<TextView>(R.id.tvDrawerName)
+        val tvEmail    = header.findViewById<TextView>(R.id.tvDrawerEmail)
+        val tvInitials = header.findViewById<TextView>(R.id.tvAvatarInitials)
+        val btnLogin   = header.findViewById<View>(R.id.btnDrawerLogin)
+        val dotOnline  = header.findViewById<View>(R.id.viewOnlineDot)
         val signOutItem = navigationView.menu.findItem(R.id.drawerSignOut)
 
         val user = FirebaseRepository.currentUser
@@ -342,10 +348,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_FULLSCREEN
-                            or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                     )
         }
     }
@@ -353,6 +357,24 @@ class MainActivity : AppCompatActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideStatusBar()
+    }
+
+    private fun requestNotificationPermissionAndSchedule() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) {
+                MakroflowNotifications.scheduleAll(this)
+            } else {
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIFICATION_PERMISSION)
+            }
+        } else {
+            MakroflowNotifications.scheduleAll(this)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_NOTIFICATION_PERMISSION) MakroflowNotifications.scheduleAll(this)
     }
 
     override fun onDestroy() {
