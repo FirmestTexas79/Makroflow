@@ -5,6 +5,8 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -12,6 +14,7 @@ import android.os.Looper
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.ImageButton
@@ -38,17 +41,20 @@ import cz.uhk.macroflow.achievements.AchievementsFragment
 import cz.uhk.macroflow.dashboard.DashboardFragment
 import cz.uhk.macroflow.history.HistoryFragment
 import cz.uhk.macroflow.nutrition.SnackFragment
+import cz.uhk.macroflow.pokemon.EvolutionDialog
 import cz.uhk.macroflow.pokemon.InventoryFragment
 import cz.uhk.macroflow.pokemon.PokedexFragment
 import cz.uhk.macroflow.pokemon.PokemonBattleFragment
 import cz.uhk.macroflow.pokemon.PokemonBehavior
 import cz.uhk.macroflow.pokemon.PokemonXpEngine
-import cz.uhk.macroflow.pokemon.PokemonLevelCalc
+import cz.uhk.macroflow.pokemon.BattleFactory
+import cz.uhk.macroflow.pokemon.Move
 import cz.uhk.macroflow.pokemon.WandererFactory
 import cz.uhk.macroflow.training.PlanFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.random.Random
 
 class MainActivity : AppCompatActivity() {
 
@@ -64,6 +70,21 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val REQ_NOTIFICATION_PERMISSION = 100
+    }
+
+    // ── 🔮 Handler pro částice z Ghost Plate ───────────────────────────
+    private val particleHandler = Handler(Looper.getMainLooper())
+    private val particleRunnable = object : Runnable {
+        override fun run() {
+            val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+            val ghostActive = prefs.getBoolean("spookyPlateActive", false)
+            val cursedActive = prefs.getBoolean("cursedPlateActive", false) // ✅ Nová kontrola pro Cursed Plate
+
+            if (ghostActive || cursedActive) {
+                spawnItemParticle(cursedActive) // ✅ Pošleme informaci, zda jde o Cursed
+            }
+            particleHandler.postDelayed(this, 300)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -160,16 +181,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         checkAchievementsDelayed()
+
+        // 🌟 Spuštění generátoru kouře pro Ghost Plate
+        particleHandler.post(particleRunnable)
     }
 
     override fun onResume() {
         super.onResume()
         updatePokemonVisibility()
-        // XP za otevření aplikace + kontrola denních cílů
         awardDailyXp()
     }
 
-    // ── XP ────────────────────────────────────────────────────────────
+    // ── XP & Univerzální Evoluční Engine ──────────────────────────────
 
     private fun awardDailyXp() {
         lifecycleScope.launch {
@@ -177,7 +200,6 @@ class MainActivity : AppCompatActivity() {
                 PokemonXpEngine.checkAndAwardDailyXp(this@MainActivity)
             }
             if (awarded > 0) {
-                // Zkontroluj level-up
                 val (totalXp, newLevel) = withContext(Dispatchers.IO) {
                     PokemonXpEngine.getActiveXpInfo(this@MainActivity) ?: return@withContext null
                 } ?: return@launch
@@ -190,10 +212,45 @@ class MainActivity : AppCompatActivity() {
 
                 if (newLevel > lastLevel) {
                     prefs.edit().putInt(lastLevelKey, newLevel).apply()
-                    showLevelUpToast(pId, newLevel)
+
+                    val db = AppDatabase.getDatabase(this@MainActivity)
+                    val entry = withContext(Dispatchers.IO) { db.pokedexEntryDao().getEntry(pId) }
+
+                    // ✅ UNIVERZÁLNÍ KONTROLA: Načte evoluční data libovolného Pokémona ze statické DB tabulky
+                    if (entry != null && entry.evolveLevel > 0 && newLevel >= entry.evolveLevel) {
+                        val list = withContext(Dispatchers.IO) { db.capturedPokemonDao().getAllCaught() }
+                        val activeInInv = list.find { it.pokemonId == pId }
+
+                        if (activeInInv != null) {
+                            // Načteme nový útok příslušné vývojové fáze z továrny na základě ID
+                            val nextMove = getEvolutionMove(entry.evolveToId)
+
+                            val dialog = EvolutionDialog(
+                                context = this@MainActivity,
+                                capturedPokemonId = activeInInv.id,
+                                oldId = pId,
+                                newId = entry.evolveToId,
+                                newMoveToLearn = nextMove
+                            ) {
+                                updatePokemonVisibility() // Refreshne lištu až po úspěšné evoluci
+                            }
+                            dialog.show()
+                        }
+                    } else {
+                        // Obyčejný level bez evoluce
+                        showLevelUpToast(pId, newLevel)
+                    }
                 }
             }
         }
+    }
+
+    // Pomocná metoda pro získání nového útoku na základě cílového ID evoluce
+    private fun getEvolutionMove(targetId: String): Move? = when (targetId) {
+        "011" -> BattleFactory.attackHarden() // Metapod
+        "012" -> BattleFactory.attackGust()   // Butterfree
+        // 💡 Zde se bude jen jednoduše v budoucnu doplňovat: např. "002" -> BattleFactory.attackVineWhip() atd.
+        else  -> null
     }
 
     private fun showLevelUpToast(pokemonId: String, newLevel: Int) {
@@ -255,14 +312,12 @@ class MainActivity : AppCompatActivity() {
             ivPokemon.load(imageUrl) {
                 listener(onSuccess = { _, _ ->
                     val wanderer = WandererFactory.create(this@MainActivity, ivPokemon, pId)
-                    // Kill callback již nepotřebujeme — pokémon se kliknutím nezabíjí
                     pokemonBehavior = wanderer
                     ivPokemon.visibility = View.VISIBLE
                     pokemonBehavior?.start()
                 })
             }
 
-            // Kliknutí spustí tap reakci (ne kill)
             ivPokemon.setOnClickListener { pokemonBehavior?.onSpriteClicked() }
 
         } else {
@@ -271,7 +326,75 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Achievements ──────────────────────────────────────────────────
+    // ── 💨 Částicový generátor pro Spooky / Cursed Plate ───────────────────
+    private fun spawnItemParticle(isCursed: Boolean) {
+        val fab = findViewById<FloatingActionButton>(R.id.fabHome) ?: return
+        val parent = fab.parent as? ViewGroup ?: return
+
+        val dp = resources.displayMetrics.density
+        val size = (12 * dp).toInt()
+
+        // 🎨 Rozlišení barev podle toho, jaká deska je aktivní
+        val colorStr = if (isCursed) {
+            if (Random.nextBoolean()) "#4A148C" else "#212121" // Temně fialová/černá pro Cursed
+        } else {
+            if (Random.nextBoolean()) "#9167AB" else "#703F8F" // Klasická fialová pro Spooky
+        }
+
+        val particle = View(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor(colorStr))
+            }
+            layoutParams = ViewGroup.LayoutParams(size, size)
+            x = fab.x + fab.width / 2f - size / 2f
+            y = fab.y + fab.height / 2f - size / 2f
+            alpha = 0.8f
+        }
+
+        parent.addView(particle)
+
+        particle.animate()
+            .translationYBy(-100f * dp)
+            .translationXBy((Random.nextFloat() - 0.5f) * 40f * dp)
+            .alpha(0f)
+            .scaleX(2f)
+            .scaleY(2f)
+            .setDuration(1200)
+            .withEndAction { parent.removeView(particle) }
+            .start()
+    }
+
+    // ── 🔄 Navigace a Spodní UI prvky ───────────────────────────────────
+
+    fun replaceFragment(fragment: Fragment) {
+        supportFragmentManager.beginTransaction()
+            .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
+            .replace(R.id.nav_host_fragment, fragment)
+            .commit()
+    }
+
+    private fun hideStatusBar() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.let {
+                it.hide(WindowInsets.Type.statusBars())
+                it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    )
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideStatusBar()
+    }
+
+    // ── 🏆 Achievements & Ostatní ──────────────────────────────────────────
 
     fun checkAchievements() {
         lifecycleScope.launch {
@@ -332,33 +455,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun replaceFragment(fragment: Fragment) {
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-            .replace(R.id.nav_host_fragment, fragment)
-            .commit()
-    }
-
-    private fun hideStatusBar() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.insetsController?.let {
-                it.hide(WindowInsets.Type.statusBars())
-                it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    )
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideStatusBar()
-    }
-
     private fun requestNotificationPermissionAndSchedule() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
@@ -380,5 +476,6 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         pokemonBehavior?.stop()
+        particleHandler.removeCallbacks(particleRunnable)
     }
 }

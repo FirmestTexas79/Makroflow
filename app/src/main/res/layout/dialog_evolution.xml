@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardBackgroundColor="#121212"
+    app:cardCornerRadius="12dp"
+    app:strokeWidth="3dp"
+    app:strokeColor="#FFFFFF"
+    android:layout_margin="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:background="#1E1E1E">
+
+            <ImageView
+                android:id="@+id/ivEvoSprite"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center" android:scaleType="fitCenter"
+                android:src="@drawable/ic_home" />
+
+            <ImageView
+                android:id="@+id/ivEvoSilhouette"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center" android:scaleType="fitCenter"
+                android:alpha="0"
+                android:visibility="invisible"
+                android:src="@drawable/ic_home" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#262626"
+            android:layout_marginTop="12dp"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/tvEvoText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:text="Co se to děje?..."
+                android:textColor="#FFFFFF"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/llMoveSelection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                android:id="@+id/tvNewMovePrompt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:text="Vyber útok, který chceš zapomenout:"
+                android:textColor="#DDA15E"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:id="@+id/llCurrentMoves"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnCancelLearning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Učit se nový útok nechci"
+                android:backgroundTint="#BC6C25"
+                android:textColor="#FFFFFF"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -112,4 +112,12 @@ object PokemonXpEngine {
         val level       = PokemonLevelCalc.levelFromXp(xpEntity.totalXp)
         return Pair(xpEntity.totalXp, level)
     }
+
+    // Vrátíme speciální vlajku, pokud je pokémon připraven k evoluci
+    fun checkEvolutions(context: Context, pokemonId: String, currentLevel: Int): Boolean {
+        val db = AppDatabase.getDatabase(context)
+        val entry = db.pokedexEntryDao().getEntry(pokemonId) ?: return false
+
+        return entry.evolveLevel > 0 && currentLevel >= entry.evolveLevel
+    }
 }

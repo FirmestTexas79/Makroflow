@@ -151,6 +151,17 @@
                         android:maxLines="3"
                         android:ellipsize="end" />
 
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTestEvo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Test Evoluce"
+                        android:visibility="gone"
+                        android:textColor="#283618"
+                        app:backgroundTint="#DDA15E"
+                        app:cornerRadius="12dp" />
+
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

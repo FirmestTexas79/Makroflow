@@ -74,6 +74,8 @@ object SpawnManager {
     // 📜 Tady budeš mít časem všech 151 Pokémonů. Přidat nového znamená jen přidat JEDEN řádek!
     private val POOL: List<SpawnPool> = listOf(
         // ID, Jméno, Rarita, Seznam podmínek, Tovární funkce
+        SpawnPool("010", "CATERPIE",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createCaterpie() },
+
         SpawnPool("050", "DIGLETT",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createDiglett() },
         SpawnPool("025", "PIKACHU",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createPikachu() },
         SpawnPool("133", "EEVEE",     Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createEevee() },

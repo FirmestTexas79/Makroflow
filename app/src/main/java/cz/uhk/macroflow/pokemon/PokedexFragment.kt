@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -30,6 +31,7 @@ class PokedexFragment : Fragment() {
     private lateinit var tvDetailName: TextView
     private lateinit var tvDetailType: TextView
     private lateinit var tvDetailMacro: TextView
+    private lateinit var btnTestEvo: Button // ✅ Přidáno
 
     private var isFirstLoad = true
     private lateinit var pokedexAdapter: PokedexAdapter
@@ -48,11 +50,12 @@ class PokedexFragment : Fragment() {
         tvDetailName   = view.findViewById(R.id.tvDetailName)
         tvDetailType   = view.findViewById(R.id.tvDetailType)
         tvDetailMacro  = view.findViewById(R.id.tvDetailMacro)
+        btnTestEvo     = view.findViewById(R.id.btnTestEvo) // ✅ Propojeno
 
         rvPokedex = view.findViewById(R.id.rvPokedex)
         rvPokedex.layoutManager = GridLayoutManager(requireContext(), 3)
 
-        pokedexAdapter = PokedexAdapter(emptyList(), emptyList(), emptyList())
+        pokedexAdapter = PokedexAdapter(emptyList(), emptyList(), emptyList(), emptyMap())
         rvPokedex.adapter = pokedexAdapter
 
         loadPokedex()
@@ -68,23 +71,29 @@ class PokedexFragment : Fragment() {
             }
 
             val unlockedIds = withContext(Dispatchers.IO) {
-                db.pokedexStatusDao().getUnlockedIds()
+                // Spojíme ID z tabulky statusu s ID pokémonů, které reálně máme v batohu
+                val statusIds = db.pokedexStatusDao().getUnlockedIds()
+                val caughtIds = db.capturedPokemonDao().getAllCaught().map { it.pokemonId }
+                (statusIds + caughtIds).distinct() // Spojí seznamy a odstraní duplicity
             }
 
-            // ✅ OPRAVENO: Místo tahání prázdné DB bereme seznam ze SpawnManageru!
-            val kantoList = withContext(Dispatchers.IO) {
-                // Vytáhneme z DB popisy
-                val dbEntries = db.pokedexEntryDao().getAllEntries()
+            val catchStats = withContext(Dispatchers.IO) {
+                db.capturedPokemonDao().getAllCaught()
+                    .groupBy { it.pokemonId }
+                    .mapValues { it.value.size }
+            }
 
+            val kantoList = withContext(Dispatchers.IO) {
+                val dbEntries = db.pokedexEntryDao().getAllEntries()
                 if (dbEntries.isEmpty()) {
-                    // Záložní generování, pokud inicializace selhala
                     SpawnManager.allEntries.map { spawn ->
                         PokedexEntryEntity(
                             pokedexId = spawn.id,
                             webName = spawn.name.lowercase(),
                             displayName = spawn.name,
                             type = spawn.rarity.label,
-                            macroDesc = "Tento Pokémon čeká na tvůj trénink."
+                            macroDesc = "Tento Pokémon čeká na tvůj trénink.",
+                            unlockedHint = getFallbackHint(spawn.id)
                         )
                     }
                 } else {
@@ -92,29 +101,47 @@ class PokedexFragment : Fragment() {
                 }
             }
 
-            pokedexAdapter.updateData(kantoList, unlockedIds, invIds)
+            pokedexAdapter.updateData(kantoList, unlockedIds, invIds, catchStats)
 
             if (kantoList.isNotEmpty()) {
                 val isUnlocked = unlockedIds.contains(kantoList[0].pokedexId)
                 val isInInv = invIds.contains(kantoList[0].pokedexId)
-                showDetail(kantoList[0], isUnlocked, isInInv)
+                val count = catchStats[kantoList[0].pokedexId] ?: 0
+                showDetail(kantoList[0], isUnlocked, isInInv, count)
             }
         }
     }
 
-    private fun showDetail(pokemon: PokedexEntryEntity, isUnlocked: Boolean, isInInventory: Boolean) {
+    private fun getFallbackHint(id: String): String = when (id) {
+        "010" -> "Hledej v trávě u Dashboardu. Caterpie je nenápadná, ale s poctivým zapisováním Maker ji jistě objevíš!"
+        "007" -> "Cítíš sucho v krku? Vodní Pokémoni se k tvému Dashboardu nepřiblíží, dokud pořádně nehydratuješ a nesplníš dnešní cíl vody!"
+        "092", "093", "094" -> "Někteří Pokémoni nesnáší slunce. Zkusil jsi někdy večerní trénink? Říká se, že po 19:00 můžeš narazit na staré duchy."
+        "143" -> "Tento Pokémon tvrdě spí. Probudit ho dokáže jen poctivá ranní rutina. Zkus zapsat svůj spánek a váhu 7 dní v kuse!"
+        "006" -> "Žhnoucí plameny Charizarda spatří jen opravdoví dříči. Pokračuj v konzistentním zapisování tréninků a budování návyků aspoň 14 dní."
+        "150", "151" -> "Tajemná psychická energie pulzuje kdesi v nedohlednu. Získá ji jen ten, kdo se stane mistrem dlouhodobé disciplíny v MakroFlow."
+        else -> "Zapiš trénink, udržuj disciplínu a vyraz ho hledat!"
+    }
+
+    private fun showDetail(pokemon: PokedexEntryEntity, isUnlocked: Boolean, isInInventory: Boolean, catchCount: Int) {
         tvDetailNumber.text = "#${pokemon.pokedexId}"
         tvDetailName.text   = if (isUnlocked) pokemon.displayName else "???"
         tvDetailType.text   = if (isUnlocked) pokemon.type.uppercase() else "???"
 
         if (isInInventory) {
-            tvDetailType.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#BC6C25"))
-            tvDetailType.text = "${pokemon.type.uppercase()} • V INVENTÁŘI"
+            tvDetailType.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#BC6C25"))
+            tvDetailType.text = "${pokemon.type.uppercase()} • V INVENTÁŘI ($catchCount ×)"
         } else {
-            tvDetailType.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#DDA15E"))
+            tvDetailType.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#DDA15E"))
+            if (isUnlocked) {
+                tvDetailType.text = "${pokemon.type.uppercase()} • ($catchCount ×)"
+            }
         }
 
-        tvDetailMacro.text = if (isUnlocked) pokemon.macroDesc else "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
+        tvDetailMacro.text = if (isUnlocked) {
+            pokemon.macroDesc
+        } else {
+            if (pokemon.unlockedHint.isNotEmpty()) pokemon.unlockedHint else "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
+        }
 
         val imageUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
 
@@ -124,25 +151,57 @@ class PokedexFragment : Fragment() {
         }
 
         if (!isUnlocked) {
-            val matrix = ColorMatrix().apply { setSaturation(0f) }
-            ivDetailSprite.colorFilter = ColorMatrixColorFilter(matrix)
+            val matrix = android.graphics.ColorMatrix().apply { setSaturation(0f) }
+            ivDetailSprite.colorFilter = android.graphics.ColorMatrixColorFilter(matrix)
             ivDetailSprite.alpha = 0.3f
         } else {
             ivDetailSprite.clearColorFilter()
             ivDetailSprite.alpha = 1.0f
+        }
+
+        // ✅ LOGIKA TLAČÍTKA TEST EVOLUCE V DETAILU
+        if (isInInventory && pokemon.pokedexId == "010") {
+            btnTestEvo.visibility = View.VISIBLE
+            btnTestEvo.setOnClickListener {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val lastCaught = db.capturedPokemonDao().getAllCaught().find { it.pokemonId == "010" }
+
+                    withContext(Dispatchers.Main) {
+                        if (lastCaught != null) {
+                            val testEvoDialog = EvolutionDialog(
+                                context = requireContext(),
+                                capturedPokemonId = lastCaught.id,
+                                oldId = "010",
+                                newId = "011",
+                                newMoveToLearn = Move("Harden", "Normal", 0, 100, 30, 30, StatEffect.LOWER_ENEMY_DEF),
+                                onComplete = {
+                                    btnTestEvo.visibility = View.GONE
+                                    isFirstLoad = true // vynutíme nový load refresh dat
+                                    loadPokedex()
+                                }
+                            )
+                            testEvoDialog.show()
+                        }
+                    }
+                }
+            }
+        } else {
+            btnTestEvo.visibility = View.GONE
         }
     }
 
     private inner class PokedexAdapter(
         private var list: List<PokedexEntryEntity>,
         private var unlockedIds: List<String>,
-        private var invIds: List<String>
+        private var invIds: List<String>,
+        private var catchStats: Map<String, Int>
     ) : RecyclerView.Adapter<PokedexAdapter.VH>() {
 
-        fun updateData(newList: List<PokedexEntryEntity>, newUnlocked: List<String>, newInv: List<String>) {
+        fun updateData(newList: List<PokedexEntryEntity>, newUnlocked: List<String>, newInv: List<String>, newStats: Map<String, Int>) {
             this.list = newList
             this.unlockedIds = newUnlocked
             this.invIds = newInv
+            this.catchStats = newStats
             notifyDataSetChanged()
         }
 
@@ -176,12 +235,12 @@ class PokedexFragment : Fragment() {
             val imageUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
             holder.ivSprite.load(imageUrl) {
                 crossfade(true)
-                crossfade(150) // Plynulé 150ms prolnutí uvolní UI thread
-                placeholder(R.drawable.ic_home) // Záložní obrázek, než se načte
-                error(R.drawable.ic_home) // Chybový obrázek
+                crossfade(150)
+                placeholder(R.drawable.ic_home)
+                error(R.drawable.ic_home)
                 memoryCachePolicy(coil.request.CachePolicy.ENABLED)
                 diskCachePolicy(coil.request.CachePolicy.ENABLED)
-                allowRgb565(true) // Menší paměťová náročnost bitmapy
+                allowRgb565(true)
             }
 
             if (!isUnlocked) {
@@ -194,7 +253,8 @@ class PokedexFragment : Fragment() {
             }
 
             holder.itemView.setOnClickListener {
-                showDetail(pokemon, isUnlocked, isInInventory)
+                val count = catchStats[pokemon.pokedexId] ?: 0
+                showDetail(pokemon, isUnlocked, isInInventory, count)
             }
         }
 

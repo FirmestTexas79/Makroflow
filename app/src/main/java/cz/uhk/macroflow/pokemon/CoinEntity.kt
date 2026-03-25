@@ -36,11 +36,15 @@ interface CoinDao {
 @Entity(tableName = "captured_pokemon")
 data class CapturedPokemonEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val pokemonId: String,          // např. "094" pro Gengara
-    val name: String,
+    var pokemonId: String,          // Přidáno 'var', aby se dalo ID přepsat z "010" na "011"
+    var name: String,              // Přidáno 'var'
     val isShiny: Boolean = false,
-    val isLocked: Boolean = false, // Manuální zámek proti smazání 🔒
-    val caughtDate: Long = System.currentTimeMillis()
+    val isLocked: Boolean = false,
+    val caughtDate: Long = System.currentTimeMillis(),
+
+    // ✅ NOVÉ: Ukládání aktuálních útoků pokémona (oddělené čárkou, např: "Tackle,String Shot,Harden")
+    var moveListStr: String = "",
+    var level: Int = 1 // ✅ NOVÉ: Uložíme reálný level, na kterém byl chycen
 )
 
 @Dao
@@ -100,14 +104,19 @@ interface UserItemDao {
     }
 }
 
-// --- 📖 STATICKÁ ENCYKLOPEDIE (Nutriční informace do Pokédexu) ---
+// --- 📖 STATICKÁ ENCYKLOPEDIE (Pokédex tabulka) ---
 @Entity(tableName = "pokedex_entries")
 data class PokedexEntryEntity(
-    @PrimaryKey val pokedexId: String, // "001", "002"
-    val webName: String,               // "bulbasaur"
-    val displayName: String,           // "Bulbasaur"
-    val type: String,                  // "GRASS / POISON"
-    val macroDesc: String              // "Vyvážená volba plná vlákniny a sacharidů pro svaly."
+    @PrimaryKey val pokedexId: String,
+    val webName: String,
+    val displayName: String,
+    val type: String,
+    val macroDesc: String,
+    val unlockedHint: String,
+
+    // ✅ NOVÉ: Evoluční pravidla pro statický Pokédex
+    val evolveLevel: Int = 0,          // Na jakém lvl se vyvíjí (0 = nevyvíjí se)
+    val evolveToId: String = ""        // Na jaké Pokedex ID se vyvíjí (např. "011")
 )
 
 @Dao

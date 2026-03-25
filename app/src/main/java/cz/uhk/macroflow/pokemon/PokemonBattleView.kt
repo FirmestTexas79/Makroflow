@@ -71,20 +71,39 @@ class PokemonBattleView @JvmOverloads constructor(
     init {
         PokemonSprites.init(context)
 
-        val enemyPokemon      = SpawnManager.rollWildEncounter(context)
-        val currentPokeballs  = db.userItemDao().getItemCount("poke_ball") ?: 0
+        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val activeId = prefs.getString("currentOnBarId", "050") ?: "050"
 
-        gs = BattleState(
-            player    = BattleFactory.createMew(),
-            enemy     = enemyPokemon,
-            ballCount = currentPokeballs
-        )
+        Thread {
+            val xpEntity = db.pokemonXpDao().getXp(activeId)
+            val playerLevel = if (xpEntity != null) PokemonLevelCalc.levelFromXp(xpEntity.totalXp) else 5
 
-        Thread { db.seenPokemonDao().markSeen(SeenPokemonEntity(BattleFactory.pokedexId(enemyPokemon))) }.start()
-        handler.post(cursorTick)
+            // ✅ OPRAVA: Použijeme tvou metodu createPlayerPokemon, která už v sobě má evoluce a statistiky!
+            val playerWithStats = createPlayerPokemon(activeId, playerLevel)
 
-        loadSprite(spriteUrl(BattleFactory.webName(enemyPokemon)), isPlayer = false)
-        loadSprite(spriteUrl("mew"), isPlayer = true)
+            val baseEnemy = SpawnManager.rollWildEncounter(context)
+            val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
+            val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
+            val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
+
+            db.seenPokemonDao().markSeen(SeenPokemonEntity(BattleFactory.pokedexId(enemyWithStats)))
+
+            handler.post {
+                gs = BattleState(
+                    player    = playerWithStats,
+                    enemy     = enemyWithStats,
+                    ballCount = currentPokeballs
+                )
+
+                handler.post(cursorTick)
+
+                // ✅ OPRAVA: Prohodíme flagy načítání správně (Nepřítel zepředu, Hráč zezadu)
+                loadSprite(spriteUrl(BattleFactory.webName(enemyWithStats)), isPlayer = false) // Divoký
+                loadSprite(spriteUrl(BattleFactory.webName(playerWithStats)), isPlayer = true)  // Ty zezadu
+
+                invalidate()
+            }
+        }.start()
     }
 
     private fun loadSprite(url: String, isPlayer: Boolean) {
@@ -133,6 +152,13 @@ class PokemonBattleView @JvmOverloads constructor(
     private fun gbY(y: Float) = dstR.top  + y * scale
 
     override fun onDraw(canvas: Canvas) {
+        // ✅ Pokud ještě vlákno nenačetlo data z DB do 'gs', přeskočíme kreslení a nespadneme!
+        if (!::gs.isInitialized) {
+            // Volitelně sem můžeš hodit černé pozadí, ať to nebliká bíle
+            canvas.drawColor(C_BG)
+            return
+        }
+
         renderFrame()
         canvas.drawBitmap(gbBmp, srcR, dstR, sp)
         drawSpritesOverlay(canvas)
@@ -165,6 +191,9 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private fun enemySpriteHeight(): Float = when (gs.enemy.name) {
+        "CATERPIE"   -> 24f
+        "METAPOD"    -> 24f
+        "BUTTERFREE" -> 32f
         "SNORLAX"    -> 42f
         "CHARIZARD"  -> 40f
         "MEWTWO"     -> 38f
@@ -211,7 +240,10 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun drawEnemyHUD(c: Canvas) {
         val x = 1; val y = 1; val w = 76; val h = 28; drawUIBox(c, x, y, w, h)
-        PokemonSprites.drawText(c, gs.enemy.name.take(8), x+3, y+3, C_TEXT, fp)
+
+        val enemyName = gs.enemy.name.take(7)
+        PokemonSprites.drawText(c, enemyName, x+3, y+3, C_TEXT, fp)
+
         PokemonSprites.drawText(c, ":L${gs.enemy.level}", x+48, y+3, C_TEXT, fp)
         PokemonSprites.drawText(c, "HP", x+3, y+13, C_TEXT, fp)
         drawHPBar(c, x+16, y+13, 54, 5, gs.enemy.currentHp, gs.enemy.maxHp)
@@ -219,7 +251,11 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun drawPlayerHUD(c: Canvas) {
         val x = 84; val y = 58; val w = 75; val h = 36; drawUIBox(c, x, y, w, h)
-        PokemonSprites.drawText(c, gs.player.name, x+3, y+3, C_TEXT, fp)
+
+        // ✅ Zkrátíme jméno na 7 znaků i u tvého panelu
+        val playerName = gs.player.name.take(7)
+        PokemonSprites.drawText(c, playerName, x+3, y+3, C_TEXT, fp)
+
         PokemonSprites.drawText(c, ":L${gs.player.level}", x+42, y+3, C_TEXT, fp)
         PokemonSprites.drawText(c, "HP", x+3, y+13, C_TEXT, fp)
         drawHPBar(c, x+16, y+13, 54, 5, gs.player.currentHp, gs.player.maxHp)
@@ -347,20 +383,17 @@ class PokemonBattleView @JvmOverloads constructor(
     override fun onTouchEvent(e: MotionEvent): Boolean {
         if (e.action != MotionEvent.ACTION_DOWN) return true
 
-        // Pokud jsme ve finálním stavu, dotyk okamžitě ukončuje souboj
         if (gs.phase == BattlePhase.CAUGHT || gs.phase == BattlePhase.ESCAPED ||
             gs.phase == BattlePhase.ENEMY_FAINTED || gs.phase == BattlePhase.PLAYER_FAINTED) {
             onCaught?.invoke()
             return true
         }
 
-        // Pokud se čeká na text a nejsme uprostřed animace (busy)
         if (gs.phase == BattlePhase.TEXT_WAIT && !busy) {
             advText()
             return true
         }
 
-        // Pokud probíhá animace nebo výpočet, ignoruj klikání úplně
         if (busy) return true
 
         val sx = GBW.toFloat() / dstR.width()
@@ -432,6 +465,30 @@ class PokemonBattleView @JvmOverloads constructor(
                 doFlash { setText("ENEMY STAT", "FELL!"); scheduleAfterText { enemyTurn() } }
             }
         }, 1200)
+    }
+
+    // ✅ TATO METODA TI CHYBĚLA A VYŘEŠÍ ČERVENOU CHYBU ZE SCREENSHOTU!
+    private fun createPlayerPokemon(id: String, level: Int): Pokemon {
+        val base = when (id) {
+            "010" -> BattleFactory.createCaterpie()
+            "011" -> BattleFactory.createMetapod()
+            "012" -> BattleFactory.createButterfree()
+            "050" -> BattleFactory.createDiglett()
+            "025" -> BattleFactory.createPikachu()
+            "133" -> BattleFactory.createEevee()
+            "001" -> BattleFactory.createBulbasaur()
+            "007" -> BattleFactory.createSquirtle()
+            "004" -> BattleFactory.createCharmander()
+            "092" -> BattleFactory.createGastly()
+            "093" -> BattleFactory.createHaunter()
+            "094" -> BattleFactory.createGengar()
+            "143" -> BattleFactory.createSnorlax()
+            "006" -> BattleFactory.createCharizard()
+            "150" -> BattleFactory.createMewtwo()
+            else -> BattleFactory.createCaterpie() // ✅ Změněno z Mew na Caterpie jako bezpečný fallback!
+        }
+
+        return BattleEngine.initializeStatsForLevel(base, level)
     }
 
     private fun scheduleAfterText(action: () -> Unit) {
@@ -514,10 +571,10 @@ class PokemonBattleView @JvmOverloads constructor(
         ballX = sx; ballY = sy; var t = 0f; ballVisible = 1
 
         val speedStep = when (gs.enemy.name) {
-            "DIGLETT", "PIKACHU", "EEVEE" -> 0.055f
-            "MEWTWO", "MEW"               -> 0.025f
-            "CHARIZARD", "SNORLAX"        -> 0.030f
-            else                          -> 0.040f
+            "DIGLETT", "PIKACHU", "EEVEE", "CATERPIE" -> 0.055f
+            "MEWTWO", "MEW"                           -> 0.025f
+            "CHARIZARD", "SNORLAX"                    -> 0.030f
+            else                                      -> 0.040f
         }
 
         fun fly() {
@@ -574,17 +631,15 @@ class PokemonBattleView @JvmOverloads constructor(
             else                           -> 0.08f
         }
 
-        busy = false // Uvolníme pro zobrazení textu a klikání
+        busy = false
 
         if (Random.nextFloat() < runAwayChance) {
             gs.phase = BattlePhase.ESCAPED
             setText("${gs.enemy.name}", "RAN AWAY!")
-            // ✅ Nastavíme akci pro kliknutí, která nás vyhodí ze souboje
             pendingAction = { onCaught?.invoke() }
         } else {
             setText("${gs.enemy.name}", "BROKE FREE!")
             gs.phase = BattlePhase.TEXT_WAIT
-            // Vrátíme se do hlavního menu
             pendingAction = { showMain() }
         }
     }
@@ -595,16 +650,37 @@ class PokemonBattleView @JvmOverloads constructor(
         invalidate()
 
         val pId = BattleFactory.pokedexId(gs.enemy)
-        val entity = CapturedPokemonEntity(pokemonId = pId, name = gs.enemy.name)
+
+        // ✅ Uložíme do inventáře Pokémona včetně reálného bojového levelu!
+        val entity = CapturedPokemonEntity(
+            pokemonId = pId,
+            name = gs.enemy.name,
+            level = gs.enemy.level // 👈 Zde předáváme RPG úroveň
+        )
 
         Thread {
             db.capturedPokemonDao().insertPokemon(entity)
             db.pokedexStatusDao().unlockPokemon(PokedexStatusEntity(pId))
 
-            // ✅ Bezpečné zavolání na hlavním vlákně po uložení
+            val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+            val isAcquired = prefs.getBoolean("pokemonAcquired", false)
+            val activeOnBarId = prefs.getString("currentOnBarId", null)
+
+            if (isAcquired && activeOnBarId != null) {
+                val xpReward = when (SpawnManager.allEntries.find { it.id == pId }?.rarity) {
+                    Rarity.COMMON -> 20
+                    Rarity.RARE -> 50
+                    Rarity.EPIC -> 100
+                    Rarity.LEGENDARY -> 250
+                    Rarity.MYTHIC -> 250
+                    else -> 20
+                }
+                db.pokemonXpDao().addXp(activeOnBarId, xpReward)
+            }
+
             handler.post {
-                setText("GOT ${gs.enemy.name.take(8)}!", "")
-                busy = false // Uvolníme zámek pro kliknutí
+                setText("CAUGHT ${gs.enemy.name.take(7)}!", "")
+                busy = false
                 pendingAction = { onCaught?.invoke() }
             }
         }.start()

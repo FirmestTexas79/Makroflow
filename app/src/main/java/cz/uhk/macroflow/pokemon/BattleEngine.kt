@@ -52,6 +52,24 @@ data class BattleState(
 
 object BattleEngine {
 
+    fun initializeStatsForLevel(basePokemon: Pokemon, targetLevel: Int): Pokemon {
+        val statMultiplier = 1.0f + (targetLevel - 1) * 0.10f
+
+        val newMaxHp = (basePokemon.maxHp * statMultiplier).toInt()
+        val newAttack = (basePokemon.attack * statMultiplier).toInt()
+        val newDefense = (basePokemon.defense * statMultiplier).toInt()
+        val newSpeed = (basePokemon.speed * statMultiplier).toInt()
+
+        return basePokemon.copy(
+            level = targetLevel,
+            maxHp = newMaxHp,
+            currentHp = newMaxHp,
+            attack = newAttack,
+            defense = newDefense,
+            speed = newSpeed
+        )
+    }
+
     fun calcDamage(level: Int, power: Int, atk: Int, def: Int): Int {
         if (power == 0) return 0
         val base = ((2.0 * level / 5.0 + 2.0) * power * (atk.toDouble() / def.toDouble()) / 50.0 + 2.0)
@@ -86,6 +104,29 @@ object BattleEngine {
 }
 
 object BattleFactory {
+
+    fun attackTackle()     = Move("TACKLE",      "NORMAL",  40, 100, 35)
+    fun attackStringShot() = Move("STRING SHOT", "BUG",      0,  95, 40, statEffect = StatEffect.LOWER_ENEMY_DEF)
+    fun attackHarden()     = Move("HARDEN",      "NORMAL",   0, 100, 30) // Učí se na lvl 3
+    fun attackGust()       = Move("GUST",        "FLYING",  40, 100, 35) // Učí se na lvl 5
+
+    // --- 🐛 CATERPIE SHABLONY S PARAMETREM LEVEL ---
+
+    // level: Int = 1 udává, že pokud parametr nezadáš, vezme se level 1
+    fun createCaterpie(level: Int = 1) = Pokemon(
+        name = "CATERPIE", level = level, maxHp = 22, attack = 6, defense = 7, speed = 9,
+        moves = mutableListOf(attackTackle(), attackStringShot())
+    )
+
+    fun createMetapod(level: Int = 3) = Pokemon(
+        name = "METAPOD", level = level, maxHp = 28, attack = 5, defense = 15, speed = 6,
+        moves = mutableListOf(attackTackle(), attackHarden())
+    )
+
+    fun createButterfree(level: Int = 5) = Pokemon(
+        name = "BUTTERFREE", level = level, maxHp = 35, attack = 12, defense = 10, speed = 16,
+        moves = mutableListOf(attackGust(), attackHarden())
+    )
 
     // ── HRÁČŮV POKÉMON ────────────────────────────────────────────────
     fun createMew() = Pokemon(
@@ -256,7 +297,12 @@ object BattleFactory {
     }
 
     /** Vrátí pokédex ID pro daného nepřítele */
+    /** Vrátí pokédex ID pro daného nepřítele */
     fun pokedexId(pokemon: Pokemon): String = when (pokemon.name) {
+        "CATERPIE"  -> "010" // ✅ Doplněno
+        "METAPOD"   -> "011" // ✅ Doplněno
+        "BUTTERFREE"-> "012" // ✅ Doplněno
+
         "DIGLETT"   -> "050"
         "PIKACHU"   -> "025"
         "EEVEE"     -> "133"
@@ -275,6 +321,11 @@ object BattleFactory {
 
     /** Vrátí webName pro načítání sprite z pokemondb.net */
     fun webName(pokemon: Pokemon): String = when (pokemon.name) {
+        // ✅ TOTO TI ZDE CHYBĚLO A ROZBÍJELO TO CATERPIE!
+        "CATERPIE"   -> "caterpie"
+        "METAPOD"    -> "metapod"
+        "BUTTERFREE" -> "butterfree"
+
         "DIGLETT"   -> "diglett"
         "PIKACHU"   -> "pikachu"
         "EEVEE"     -> "eevee"

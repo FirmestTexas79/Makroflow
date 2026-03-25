@@ -107,6 +107,196 @@ class DigTransitionEffect : TransitionEffect {
 }
 
 // ─────────────────────────────────────────────
+// CATERPIE + EVOLUTIONS BEHAVIOR (NEW)
+// ─────────────────────────────────────────────
+
+class CaterpieWanderer(
+    private val context: Context,
+    private val spriteView: ImageView,
+    private val baseScale: Float
+) : PokemonBehavior {
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var running = false
+
+    override fun start() {
+        if (running) return
+        running = true
+        ObjectAnimator.ofFloat(spriteView, View.TRANSLATION_X, -20f, 20f).apply {
+            duration = 4000
+            interpolator = AccelerateDecelerateInterpolator()
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+            start()
+        }
+    }
+
+    override fun stop() {
+        running = false
+        handler.removeCallbacksAndMessages(null)
+    }
+
+    override fun onSpriteClicked() {
+        spriteView.animate().scaleX(baseScale * -1.35f).scaleY(baseScale * 1.35f).setDuration(80)
+            .withEndAction { spriteView.animate().scaleX(baseScale * -1f).scaleY(baseScale).setDuration(130).start() }.start()
+    }
+}
+
+class MetapodWanderer(
+    private val context: Context,
+    private val spriteView: ImageView,
+    private val baseScale: Float
+) : PokemonBehavior {
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var running = false
+
+    private val hardenRunnable = object : Runnable {
+        override fun run() {
+            if (running) {
+                performHardenAnimation()
+                handler.postDelayed(this, 7500)
+            }
+        }
+    }
+
+    override fun start() {
+        if (running) return
+        running = true
+        handler.post(hardenRunnable)
+    }
+
+    override fun stop() {
+        running = false
+        handler.removeCallbacksAndMessages(null)
+    }
+
+    private fun performHardenAnimation() {
+        val parent = spriteView.parent as? ViewGroup ?: return
+        val dp = context.resources.displayMetrics.density
+
+        val shine = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                colors = intArrayOf(Color.TRANSPARENT, Color.WHITE, Color.TRANSPARENT)
+                orientation = GradientDrawable.Orientation.LEFT_RIGHT
+            }
+            layoutParams = ViewGroup.LayoutParams((16 * dp).toInt(), spriteView.height)
+            rotation = 35f
+            x = spriteView.x - spriteView.width
+            y = spriteView.y
+            alpha = 0f
+        }
+        parent.addView(shine)
+
+        val pulse = AnimatorSet().apply {
+            playTogether(
+                ObjectAnimator.ofFloat(spriteView, View.SCALE_X, baseScale, baseScale * 1.15f, baseScale),
+                ObjectAnimator.ofFloat(spriteView, View.SCALE_Y, baseScale, baseScale * 1.15f, baseScale)
+            )
+            duration = 1000
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+
+        val shineAnim = AnimatorSet().apply {
+            playTogether(
+                ObjectAnimator.ofFloat(shine, View.ALPHA, 0f, 0.8f, 0f),
+                ObjectAnimator.ofFloat(shine, View.X, spriteView.x - spriteView.width, spriteView.x + spriteView.width * 1.5f)
+            )
+            duration = 900
+        }
+
+        AnimatorSet().apply {
+            playTogether(pulse, shineAnim)
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    parent.removeView(shine)
+                }
+            })
+            start()
+        }
+    }
+
+    override fun onSpriteClicked() {
+        performHardenAnimation()
+    }
+}
+
+class ButterfreeWanderer(
+    private val context: Context,
+    private val spriteView: ImageView,
+    private val baseScale: Float
+) : PokemonBehavior {
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var running = false
+
+    private val sporesRunnable = object : Runnable {
+        override fun run() {
+            if (running) {
+                spawnSporeParticle()
+                handler.postDelayed(this, 180 + Random.nextLong(150))
+            }
+        }
+    }
+
+    override fun start() {
+        if (running) return
+        running = true
+
+        val flyX = ObjectAnimator.ofFloat(spriteView, View.TRANSLATION_X, -30f, 30f).apply {
+            duration = 2800
+            interpolator = CycleInterpolator(1f)
+            repeatCount = ObjectAnimator.INFINITE
+        }
+        val flyY = ObjectAnimator.ofFloat(spriteView, View.TRANSLATION_Y, -25f, 15f).apply {
+            duration = 1400
+            interpolator = CycleInterpolator(1f)
+            repeatCount = ObjectAnimator.INFINITE
+        }
+
+        AnimatorSet().apply { playTogether(flyX, flyY); start() }
+        handler.post(sporesRunnable)
+    }
+
+    override fun stop() {
+        running = false
+        handler.removeCallbacksAndMessages(null)
+    }
+
+    private fun spawnSporeParticle() {
+        val parent = spriteView.parent as? ViewGroup ?: return
+        val dp = context.resources.displayMetrics.density
+        val size = (6 * dp).toInt()
+
+        val spore = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(if (Random.nextBoolean()) Color.parseColor("#E090F0") else Color.parseColor("#C878D0"))
+            }
+            layoutParams = ViewGroup.LayoutParams(size, size)
+            x = spriteView.x + spriteView.width / 2f + (Random.nextFloat() - 0.5f) * spriteView.width
+            y = spriteView.y + spriteView.height * 0.8f
+            alpha = 0.85f
+        }
+        parent.addView(spore)
+
+        spore.animate()
+            .translationYBy(60f * dp)
+            .translationXBy((Random.nextFloat() - 0.5f) * 20f * dp)
+            .alpha(0f)
+            .setDuration(1200)
+            .withEndAction { parent.removeView(spore) }
+            .start()
+    }
+
+    override fun onSpriteClicked() {
+        spriteView.animate().scaleX(baseScale * 1.25f).scaleY(baseScale * 1.25f).setDuration(100)
+            .withEndAction { spriteView.animate().scaleX(baseScale).scaleY(baseScale).setDuration(150).start() }.start()
+    }
+}
+
+// ─────────────────────────────────────────────
 // HLAVNÍ WANDERER TŘÍDA
 // ─────────────────────────────────────────────
 
@@ -118,7 +308,7 @@ class StandardWanderer(
     private val effect: TransitionEffect = SmokeTransitionEffect(false)
 ) : PokemonBehavior {
 
-    var onKilled: (() -> Unit)? = null   // ponecháno pro zpětnou kompatibilitu
+    var onKilled: (() -> Unit)? = null
 
     private val db      = AppDatabase.getDatabase(context)
     private val dp      = context.resources.displayMetrics.density
@@ -131,16 +321,12 @@ class StandardWanderer(
     private var idleAnim:   Animator? = null
     private var facingRight = true
 
-    // Letecké pokémony — pohybují se vysoko, sinusový pohyb
     private val isFlying   get() = pokemonId in listOf("006", "150", "151")
-    // Snorlax nikam nejde — jen leží a spí
     private val isSleeping get() = pokemonId == "143"
 
     private val CENTER_START = 0.38f
     private val CENTER_END   = 0.62f
     private val viewW get()  = pokemonView.width.toFloat().takeIf { it > 10f } ?: (48f * dp)
-
-    // ── Public API ────────────────────────────────────────────────────
 
     override fun start() {
         if (running) return
@@ -154,7 +340,6 @@ class StandardWanderer(
                 startIdleAnimation()
                 if (!isFlying && !isSleeping) startWobble()
                 if (!isSleeping) scheduleStep(Random.nextLong(1000, 2500))
-                // Snorlax: žádný scheduleStep — jen sedí a chrká
             }
         }
     }
@@ -167,10 +352,6 @@ class StandardWanderer(
         handler.removeCallbacksAndMessages(null)
     }
 
-    /**
-     * Kliknutí na pokémona — již NEZABÍJÍ, jen přehraje reakci.
-     * Kill byl odstraněn — pokémona lze odstranit pouze přes Inventář.
-     */
     override fun onSpriteClicked() {
         if (!running) return
         when (pokemonId) {
@@ -181,8 +362,6 @@ class StandardWanderer(
             else  -> defaultTapReaction()
         }
     }
-
-    // ── Tap reakce ────────────────────────────────────────────────────
 
     private fun defaultTapReaction() {
         pokemonView.animate().scaleX(baseScale * (if (facingRight) -1.35f else 1.35f))
@@ -195,7 +374,6 @@ class StandardWanderer(
     }
 
     private fun snorlaxPoke() {
-        // Zakřupe ale neotvírá oči — jemný wiggle
         ObjectAnimator.ofFloat(pokemonView, "rotation", 0f, -6f, 6f, -4f, 4f, 0f).apply {
             duration = 650; interpolator = LinearInterpolator(); start()
         }
@@ -213,7 +391,6 @@ class StandardWanderer(
     }
 
     private fun ghostTapReaction() {
-        // Duch problikne a na chvíli se zprůhlední
         AnimatorSet().apply {
             playTogether(
                 ObjectAnimator.ofFloat(pokemonView, "alpha", 1f, 0.1f, 0.8f, 0.2f, 1f),
@@ -225,8 +402,6 @@ class StandardWanderer(
         }
     }
 
-    // ── Pozice Y ──────────────────────────────────────────────────────
-
     private fun baseTranslationY(): Float = when {
         isFlying   -> -(pokemonView.height.toFloat() * 0.85f)
         isSleeping -> -2f * dp
@@ -234,13 +409,9 @@ class StandardWanderer(
         else       -> -12f * dp
     }
 
-    // ── Facing ────────────────────────────────────────────────────────
-
     private fun applyFacing(right: Boolean) {
         pokemonView.scaleX = baseScale * (if (right) -1f else 1f)
     }
-
-    // ── Idle animace ──────────────────────────────────────────────────
 
     private fun startIdleAnimation() {
         idleAnim?.cancel()
@@ -255,7 +426,6 @@ class StandardWanderer(
         }
     }
 
-    // 😴 Snorlax — leží, dýchá, chrká bublinky — NIKAM NEJDE
     private fun startSnorlaxIdle(): Animator {
         val breatheX = ObjectAnimator.ofFloat(pokemonView, "scaleX", -baseScale, -baseScale * 1.07f, -baseScale).apply {
             duration = 2300; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART
@@ -297,7 +467,6 @@ class StandardWanderer(
         handler.postDelayed({ spawnSnorlaxBubbles() }, Random.nextLong(1600, 3200))
     }
 
-    // ✨ Mew — levitace + duhová bublina
     private fun startMewIdle(): Animator {
         val levitate = ObjectAnimator.ofFloat(pokemonView, "translationY",
             targetTranslationY - 11f * dp, targetTranslationY + 11f * dp).apply {
@@ -368,7 +537,6 @@ class StandardWanderer(
         }
     }
 
-    // 🔮 Mewtwo — plynulá levitace
     private fun startMewtwoIdle(): Animator =
         ObjectAnimator.ofFloat(pokemonView, "translationY",
             targetTranslationY - 13f * dp, targetTranslationY + 13f * dp).apply {
@@ -376,7 +544,6 @@ class StandardWanderer(
             interpolator = AccelerateDecelerateInterpolator(); start()
         }
 
-    // 👻 Haunter — levitace nahoru-dolů
     private fun startHaunterIdle(): Animator =
         ObjectAnimator.ofFloat(pokemonView, "translationY",
             targetTranslationY - 15f * dp, targetTranslationY + 8f * dp).apply {
@@ -384,7 +551,6 @@ class StandardWanderer(
             interpolator = AccelerateDecelerateInterpolator(); start()
         }
 
-    // 💨 Gastly — pulzování scale + alpha
     private fun startGastlyIdle(): Animator {
         val sX = ObjectAnimator.ofFloat(pokemonView, "scaleX", -baseScale, -baseScale * 1.16f, -baseScale).apply {
             duration = 1800; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART
@@ -398,7 +564,6 @@ class StandardWanderer(
         return AnimatorSet().apply { playTogether(sX, sY, al); start() }
     }
 
-    // 🔥 Charizard — sinusový letový pohyb
     private fun startCharizardIdle(): Animator {
         var t = 0f
         return ValueAnimator.ofFloat(0f, 1f).apply {
@@ -413,14 +578,11 @@ class StandardWanderer(
         }
     }
 
-    // Default — jemné kývání
     private fun startDefaultIdle(): Animator =
         ObjectAnimator.ofFloat(pokemonView, "rotation", -3f, 3f).apply {
             duration = 1800; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.REVERSE
             interpolator = AccelerateDecelerateInterpolator(); start()
         }
-
-    // ── Wobble ────────────────────────────────────────────────────────
 
     private fun startWobble() {
         wobbleAnim?.cancel()
@@ -435,8 +597,6 @@ class StandardWanderer(
         wobbleAnim?.cancel()
         pokemonView.animate().rotation(0f).setDuration(150).start()
     }
-
-    // ── Plánování kroků ───────────────────────────────────────────────
 
     private fun scheduleStep(delay: Long) {
         if (isSleeping) return
@@ -491,8 +651,6 @@ class StandardWanderer(
             }
         }
     }
-
-    // ── Crossing animace ──────────────────────────────────────────────
 
     private fun playCrossingAnimation(fromX: Float, toX: Float) {
         when (pokemonId) {
@@ -802,6 +960,7 @@ class StandardWanderer(
         }
         facingRight = toX > fromX; applyFacing(facingRight); tick()
     }
+
 
     private fun defaultCrossing(fromX: Float, toX: Float) {
         effect.playDisappear(pokemonView, baseScale) {
