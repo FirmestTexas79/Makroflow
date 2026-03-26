@@ -19,7 +19,7 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
 val MIGRATION_8_14 = object : Migration(8, 14) {
     override fun migrate(database: SupportSQLiteDatabase) {
         database.execSQL("CREATE TABLE IF NOT EXISTS coins (id INTEGER PRIMARY KEY NOT NULL DEFAULT 1, balance INTEGER NOT NULL DEFAULT 0)")
-        database.execSQL("CREATE TABLE IF NOT EXISTS captured_pokemon (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, pokemonId TEXT NOT NULL, name TEXT NOT NULL, isShiny INTEGER NOT NULL DEFAULT 0, isLocked INTEGER NOT NULL DEFAULT 0, caughtDate INTEGER NOT NULL, moveListStr TEXT NOT NULL DEFAULT '')")
+        database.execSQL("CREATE TABLE IF NOT EXISTS captured_pokemon (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, pokemonId TEXT NOT NULL, name TEXT NOT NULL, isShiny INTEGER NOT NULL DEFAULT 0, isLocked INTEGER NOT NULL DEFAULT 0, caughtDate INTEGER NOT NULL, moveListStr TEXT NOT NULL DEFAULT '', level INTEGER NOT NULL DEFAULT 1)")
         database.execSQL("CREATE TABLE IF NOT EXISTS user_items (itemId TEXT PRIMARY KEY NOT NULL, quantity INTEGER NOT NULL DEFAULT 0)")
         database.execSQL("CREATE TABLE IF NOT EXISTS pokedex_entries (pokedexId TEXT PRIMARY KEY NOT NULL, webName TEXT NOT NULL, displayName TEXT NOT NULL, type TEXT NOT NULL, macroDesc TEXT NOT NULL, unlockedHint TEXT NOT NULL DEFAULT '', evolveLevel INTEGER NOT NULL DEFAULT 0, evolveToId TEXT NOT NULL DEFAULT '')")
         database.execSQL("CREATE TABLE IF NOT EXISTS pokedex_status (pokemonId TEXT PRIMARY KEY NOT NULL, unlocked INTEGER NOT NULL DEFAULT 1, unlockedDate INTEGER NOT NULL)")
@@ -45,7 +45,7 @@ val MIGRATION_8_14 = object : Migration(8, 14) {
         SeenPokemonEntity::class,
         PokemonXpEntity::class
     ],
-    version = 14, // 👈 Zvednuto na 14
+    version = 14, // 👈 Vráceno zpět na 14
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -95,7 +95,6 @@ abstract class AppDatabase : RoomDatabase() {
                                 val desc = triple.third
                                 val hint = getHintForPokemon(idStr)
 
-                                // ✅ RPG VĚTEV EVOLUCÍ
                                 val evolveLvl = when(idStr) { "010" -> 3; "011" -> 5; else -> 0 }
                                 val evolveTo  = when(idStr) { "010" -> "011"; "011" -> "012"; else -> "" }
 
@@ -159,7 +158,7 @@ abstract class AppDatabase : RoomDatabase() {
             Triple("Nidorino", "JED / DRIVE", "Tlak na pilu. Každý trénink tě posouvá blíž k cíli."),
             Triple("Nidoking", "JED / ALFA", "Monstrózní síla a dominance na legpressu. Král těžkých vah."),
             Triple("Clefairy", "VÍLA / SPÁNEK", "Hluboký spánek a cirkadiánní rytmus. Svaly nerostou ve fitku, ale v posteli!"),
-            Triple("Clefable", "VÍLA / REGENERACE", "Noční obnova buněk. Kasein před spaním dodá tělu potřebné aminokyseliny."),
+            Triple("Clefable", "VÍLA / REGENERACE", "Noční obnova buněk. Kasein před spaním dodá tělu potřebné aminokyselins."),
             Triple("Vulpix", "OHEŇ / TERMOGENNÍ JÍDLO", "Pálivé papričky a zázvor. Přírodní podpora spalování tuků."),
             Triple("Ninetales", "OHEŇ / ESTETIKA", "Dokonalá symetrie těla a elegance pohybu. Flexibilita i svaly."),
             Triple("Jigglypuff", "NORMÁLNÍ / DECH", "Brániční dýchání u těžkých dřepů. Nafoukni se a zpevni core."),
@@ -190,13 +189,13 @@ abstract class AppDatabase : RoomDatabase() {
             Triple("Kadabra", "PSYCHICKÝ / SOUSTŘEDĚNÍ", "Lžička v ruce? Použij ji k míchání vloček s proteinem, ne k ohýbání myslí."),
             Triple("Alakazam", "PSYCHICKÝ / BIOMECHANIKA", "IQ 5000 ve fitku! Chápeš biomechaniku těla a pákové poměry u cviků."),
             Triple("Machop", "BOJOVÝ / ZAČÁTEČNÍK", "Nováček ve fitku. Správná technika je teď důležitější než váha na čince."),
-            Triple("Machoke", "BOJOVÝ / STŘEDNĚ POKROČILÝ", "Pás si utáhni, váhy jdou nahoru. Tady začíná pořádná dřina."),
+            Triple("Machoke", "BOJOVÝ / STREČINK", "Pás si utáhni, váhy jdou nahoru. Tady začíná pořádná dřina."),
             Triple("Machamp", "BOJOVÝ / KULTURISTA", "Čtyři ruce by se hodily na zvedání všech těch kotoučů. Vrchol naturální kulturistiky."),
             Triple("Bellsprout", "TRÁVA / ŠTÍHLÁ LINIE", "Ektomorfní somatotyp. Těžko nabírá svaly, potřebuje kalorický nadbytek."),
             Triple("Weepinbell", "TRÁVA / KYSELÉ PH", "Pozor na překyselení žaludku po těžkých předtréninkovkách."),
             Triple("Victreebel", "TRÁVA / ABSORPCE", "Trávicí enzymy v akci! Vstřebej z jídla maximum živin."),
             Triple("Tentacool", "VODA / ELEKTROLYTY", "Sodík a chlór ztracené potem. Doplň ionťák po těžkém kardiu."),
-            Triple("Tentacruel", "VODA / HYDROSTATICKÝ TLAK", "Svalová pumpa, která trhá kůži. Napumpuj paže k prasknutí."),
+            Triple("Tentacruel", "VODA / HYDRO-PUMPA", "Svalová pumpa, která trhá kůži. Napumpuj paže k prasknutí."),
             Triple("Geodude", "KAMENNÝ / ZÁKLADNÍ SÍLA", "Tvrdý jako skála. Základní trojboj: Dřep, Bench, Mrtvola."),
             Triple("Graveler", "KAMENNÝ / ŽELEZNÁ HUSTOTA", "Zahušťování svalových vláken těžkými vahami o nízkém počtu opakování."),
             Triple("Golem", "KAMENNÝ / ABSOLUTNÍ SÍLA", "Nezastavitelný kolos. Hustota svalů, kterou nepropíchneš prstem."),

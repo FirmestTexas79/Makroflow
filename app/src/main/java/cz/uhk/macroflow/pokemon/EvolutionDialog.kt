@@ -10,15 +10,19 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
 import coil.load
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.data.AppDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class EvolutionDialog(
     context: Context,
@@ -58,17 +62,26 @@ class EvolutionDialog(
     }
 
     private fun loadData() {
-        Thread {
+        // ✅ Bezpečné načtení dat pomocí lifecycleScope a Dispatchers.IO
+        (context as? MainActivity)?.lifecycleScope?.launch(Dispatchers.IO) {
             val list = db.capturedPokemonDao().getAllCaught()
-            activePokemon = list.find { it.id == capturedPokemonId } ?: return@Thread
-
+            val pokemonInDb = list.find { it.id == capturedPokemonId }
             val oldEntry = db.pokedexEntryDao().getEntry(oldId)
             val newEntry = db.pokedexEntryDao().getEntry(newId)
 
-            window?.decorView?.post {
-                startEvolutionAnimation(oldEntry, newEntry)
+            if (pokemonInDb != null) {
+                activePokemon = pokemonInDb
+                withContext(Dispatchers.Main) {
+                    startEvolutionAnimation(oldEntry, newEntry)
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    tvEvoText.text = "❌ Chyba: Pokémon v databázi nenalezen."
+                    dismiss()
+                    onComplete()
+                }
             }
-        }.start()
+        }
     }
 
     private fun startEvolutionAnimation(oldEntry: PokedexEntryEntity?, newEntry: PokedexEntryEntity?) {
@@ -79,26 +92,20 @@ class EvolutionDialog(
 
         val oldSpriteUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${oldEntry?.webName}.png"
 
-        // ✅ Oprava: Načteme normální obrázek
         ivEvoSprite.load(oldSpriteUrl)
 
-        // ✅ Oprava: Pro siluetu načteme stejný obrázek, ale obarvíme ho nativním filtrem Androidu na bílo
         ivEvoSilhouette.load(oldSpriteUrl) {
             listener(onSuccess = { _, _ ->
-                // Jakmile se načte, obarvíme ho nativně na bílo přes PorterDuff
-                ivEvoSilhouette.colorFilter =
-                    PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+                ivEvoSilhouette.colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
             })
         }
 
         ivEvoSilhouette.visibility = View.VISIBLE
 
-        // Problikávání (Game Boy styl!)
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 3000
             addUpdateListener { anim ->
                 val p = anim.animatedFraction
-                // Sinusoida, která se s rostoucím časem zrychluje
                 val sin = Math.sin(p * Math.PI * 30 * p)
                 if (sin > 0) {
                     ivEvoSprite.alpha = 1f
@@ -112,7 +119,6 @@ class EvolutionDialog(
 
         animator.addListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
-                // Končíme s Metapodem
                 ivEvoSprite.alpha = 1f
                 ivEvoSilhouette.visibility = View.GONE
                 ivEvoSprite.load("https://img.pokemondb.net/sprites/firered-leafgreen/normal/${newEntry?.webName}.png")
@@ -120,27 +126,28 @@ class EvolutionDialog(
                 tvEvoText.text = "Gratulace! Tvoje $oldName se vyvinula v $newName!"
 
                 // Zápis evoluce do DB
-                Thread {
+                (context as? MainActivity)?.lifecycleScope?.launch(Dispatchers.IO) {
                     activePokemon.pokemonId = newId
                     activePokemon.name = newName.uppercase()
                     db.capturedPokemonDao().updatePokemon(activePokemon)
 
-                    // Obnovíme si preferences parťáka pro MainActivity lištu
                     val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                     prefs.edit()
                         .putString("currentOnBarId", newId)
                         .putString("currentOnBarName", newName.uppercase())
                         .apply()
 
-                    window?.decorView?.post {
+                    withContext(Dispatchers.Main) {
                         if (newMoveToLearn != null) {
                             showMoveLearning(newMoveToLearn)
                         } else {
-                            dismiss()
-                            onComplete()
+                            window?.decorView?.postDelayed({
+                                dismiss()
+                                onComplete()
+                            }, 2000)
                         }
                     }
-                }.start()
+                }
             }
         })
 
@@ -148,43 +155,75 @@ class EvolutionDialog(
     }
 
     private fun showMoveLearning(newMove: Move) {
+        val currentMoves = activePokemon.moveListStr.split(",")
+            .filter { it.isNotEmpty() }
+            .toMutableList()
+
         llMoveSelection.visibility = View.VISIBLE
-        tvNewMovePrompt.text = "Metapod se chce naučit ${newMove.name}! Vyber útok, který má zapomenout:"
 
-        // Útoky bereme z BattleFactory pro Caterpie
-        val baseCaterpie = BattleFactory.createCaterpie()
-        val currentMoves = baseCaterpie.moves
+        // ✅ OPRAVA: Pokud má pokémon < 4 útoky, nic se nezapomíná! Učí se to automaticky.
+        if (currentMoves.size < 4) {
+            currentMoves.add(newMove.name)
+            activePokemon.moveListStr = currentMoves.joinToString(",")
 
-        llCurrentMoves.removeAllViews()
+            saveMoveQuietly(activePokemon)
 
-        currentMoves.forEachIndexed { index, move ->
-            val btn = Button(context).apply {
-                text = "${move.name} (${move.type})"
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#424242"))
-                setTextColor(Color.WHITE)
-                setOnClickListener {
-                    confirmForgetMove(index, move, newMove)
-                }
+            tvNewMovePrompt.text = "✅ ${activePokemon.name} se automaticky naučil ${newMove.name}!"
+            llCurrentMoves.removeAllViews()
+
+            btnCancelLearning.text = "Pokračovat"
+            btnCancelLearning.setOnClickListener {
+                dismiss()
+                onComplete()
             }
-            llCurrentMoves.addView(btn)
-        }
+        } else {
+            // ❌ Má už 4 útoky -> standardní výběr k zapomnění
+            tvNewMovePrompt.text = "${activePokemon.name} se chce naučit ${newMove.name}! Vyber útok k zapomnění:"
+            llCurrentMoves.removeAllViews()
 
-        btnCancelLearning.setOnClickListener {
-            dismiss()
-            onComplete()
+            currentMoves.forEachIndexed { index, moveName ->
+                val btn = Button(context).apply {
+                    text = moveName
+                    backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#424242"))
+                    setTextColor(Color.WHITE)
+                    setOnClickListener {
+                        confirmForgetMove(index, moveName, newMove, currentMoves)
+                    }
+                }
+                llCurrentMoves.addView(btn)
+            }
+
+            btnCancelLearning.setOnClickListener {
+                dismiss()
+                onComplete()
+            }
         }
     }
 
-    private fun confirmForgetMove(indexToForget: Int, moveOld: Move, moveNew: Move) {
-        tvEvoText.text = "Opravdu chceš zapomenout útok ${moveOld.name} a naučit se ${moveNew.name}?"
+    private fun confirmForgetMove(indexToForget: Int, moveNameOld: String, moveNew: Move, currentMoves: List<String>) {
+        tvNewMovePrompt.text = "Opravdu chceš zapomenout útok $moveNameOld a naučit se ${moveNew.name}?"
 
         llCurrentMoves.removeAllViews()
 
         val btnYes = Button(context).apply {
-            text = "ANO, zapomenout ${moveOld.name}"
+            text = "ANO, zapomenout $moveNameOld"
             backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#DDA15E"))
             setOnClickListener {
-                saveNewMove(indexToForget, moveNew)
+                val updatedMoves = currentMoves.toMutableList()
+                if (indexToForget < updatedMoves.size) {
+                    updatedMoves[indexToForget] = moveNew.name
+                }
+                activePokemon.moveListStr = updatedMoves.joinToString(",")
+
+                saveMoveQuietly(activePokemon)
+
+                tvNewMovePrompt.text = "Útok úspěšně zapomenut! ${activePokemon.name} se naučil ${moveNew.name}!"
+                llCurrentMoves.removeAllViews()
+
+                window?.decorView?.postDelayed({
+                    dismiss()
+                    onComplete()
+                }, 2000)
             }
         }
 
@@ -200,31 +239,9 @@ class EvolutionDialog(
         llCurrentMoves.addView(btnNo)
     }
 
-    private fun saveNewMove(indexToReplace: Int, moveNew: Move) {
-        Thread {
-            // Přepíšeme seznam útoků. Abychom to teď udělali bezpečně pro tvůj engine,
-            // zapíšeme si to jako String oddělený čárkou u pokémona v DB.
-            val baseCaterpie = BattleFactory.createCaterpie()
-            val moves = baseCaterpie.moves.toMutableList()
-
-            if (indexToReplace < moves.size) {
-                moves[indexToReplace] = moveNew
-            }
-
-            val movesString = moves.joinToString(",") { it.name }
-            activePokemon.moveListStr = movesString
-
-            db.capturedPokemonDao().updatePokemon(activePokemon)
-
-            window?.decorView?.post {
-                tvEvoText.text = "Útok úspěšně zapomenut! Metapod se naučil ${moveNew.name}!"
-                llMoveSelection.visibility = View.GONE
-
-                window?.decorView?.postDelayed({
-                    dismiss()
-                    onComplete()
-                }, 2000)
-            }
-        }.start()
+    private fun saveMoveQuietly(pokemon: CapturedPokemonEntity) {
+        (context as? MainActivity)?.lifecycleScope?.launch(Dispatchers.IO) {
+            db.capturedPokemonDao().updatePokemon(pokemon)
+        }
     }
 }

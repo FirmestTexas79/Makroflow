@@ -1,6 +1,7 @@
 package cz.uhk.macroflow.common
 
 import android.app.AlertDialog
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -17,6 +18,8 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.pokemon.CapturedPokemonEntity
+import cz.uhk.macroflow.pokemon.SpawnManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,23 +37,70 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        db = AppDatabase.Companion.getDatabase(requireContext())
+        db = AppDatabase.getDatabase(requireContext())
 
         val btnCheatPokeballs = view.findViewById<MaterialButton>(R.id.btnCheatPokeballs)
         val btnCheatGreatballs = view.findViewById<MaterialButton>(R.id.btnCheatGreatballs)
         val btnCheatCoins = view.findViewById<MaterialButton>(R.id.btnCheatCoins)
+        val btnEditPokedex = view.findViewById<MaterialButton>(R.id.btnEditPokedex)
+
+        // Prvky pro generování Pokémonů (Cheat kapsa)
+        val etCheatId = view.findViewById<EditText>(R.id.etCheatPokemonId)
+        val btnCheatAddPokemon = view.findViewById<MaterialButton>(R.id.btnCheatAddPokemon)
 
 
+        // 🧪 1. Přidání libovolného Pokémona do kapsy zadáním ID (např. 025)
+        btnCheatAddPokemon?.setOnClickListener {
+            val typedId = etCheatId?.text?.toString()?.trim() ?: ""
+            if (typedId.length != 3) {
+                Toast.makeText(requireContext(), "Zadej validní 3-místné ID (např. 001)!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                // 1. Zkusíme najít v Pokédexu (v databázi)
+                var pokedexEntry = db.pokedexEntryDao().getEntry(typedId)
+                var pokemonName = pokedexEntry?.displayName
+
+                // 🔍 ZÁCHRANNÁ BRZDA: Pokud v DB není, vytáhneme jméno ze SpawnManageru!
+                if (pokemonName == null) {
+                    val spawnEntry = SpawnManager.findById(typedId)
+                    if (spawnEntry != null) {
+                        pokemonName = spawnEntry.name
+                    }
+                }
+
+                if (pokemonName != null) {
+                    val newCapture = CapturedPokemonEntity(
+                        pokemonId = typedId,
+                        name = pokemonName.uppercase(),
+                        isShiny = false,
+                        isLocked = false,
+                        caughtDate = System.currentTimeMillis()
+                    )
+                    db.capturedPokemonDao().insertPokemon(newCapture)
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "✅ $pokemonName přidán do Poké-kapsy!", Toast.LENGTH_SHORT).show()
+                        etCheatId?.text?.clear()
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(requireContext(), "❌ Pokémon s ID $typedId nebyl v DB ani v Poolu nalezen!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
 
 
-        // Najdi v layoutu (nebo si přidej tlačítko v XML) a svaž ho s dialogem:
-        view.findViewById<MaterialButton>(R.id.btnEditPokedex)?.setOnClickListener {
+        // 📝 2. Otevření vlastního dialogu pro editaci textů v Pokédexu
+        btnEditPokedex?.setOnClickListener {
             showPokedexEditorDialog()
         }
 
 
-        // 🛠️ Cheat na 5 Poké Ballů
-        btnCheatPokeballs.setOnClickListener {
+        // 🛠️ 3. Cheat na 5 Poké Ballů
+        btnCheatPokeballs?.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
                 db.userItemDao().addItem("poke_ball", 5)
                 withContext(Dispatchers.Main) {
@@ -59,8 +109,9 @@ class SettingsFragment : Fragment() {
             }
         }
 
-        // 🛠️ Cheat na 5 Great Ballů
-        btnCheatGreatballs.setOnClickListener {
+
+        // 🛠️ 4. Cheat na 5 Great Ballů
+        btnCheatGreatballs?.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
                 db.userItemDao().addItem("great_ball", 5)
                 withContext(Dispatchers.Main) {
@@ -69,8 +120,9 @@ class SettingsFragment : Fragment() {
             }
         }
 
-        // 🛠️ Cheat na 100 Coinů
-        btnCheatCoins.setOnClickListener {
+
+        // 🛠️ 5. Cheat na 100 Coinů
+        btnCheatCoins?.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
                 db.coinDao().addCoins(100)
                 withContext(Dispatchers.Main) {
@@ -78,21 +130,15 @@ class SettingsFragment : Fragment() {
                 }
             }
         }
-
-        // Vlož toto na konec onViewCreated (pod tvoje stávající cheaty):
-        val btnEditPokedex = view.findViewById<MaterialButton>(R.id.btnEditPokedex)
-
-        btnEditPokedex?.setOnClickListener {
-            showPokedexEditorDialog()
-        }
     }
+
     private fun showPokedexEditorDialog() {
         val ctx = requireContext()
 
-        // Hlavní kontejner dialogu
         val layout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#FEFAE0")) // Makroflow barva
+            setPadding(48, 32, 48, 32)
+            setBackgroundColor(Color.parseColor("#FEFAE0"))
         }
 
         val tvTitle = TextView(ctx).apply {
@@ -103,9 +149,8 @@ class SettingsFragment : Fragment() {
             setPadding(0, 0, 0, 16)
         }
 
-        // Vstupy
-        val etId = EditText(ctx).apply { hint = "ID Pokémona (např. 050 nebo 094)" }
-        val etType = EditText(ctx).apply { hint = "Nový typ (např. ZEMĚ / FEKÁL)" }
+        val etId = EditText(ctx).apply { hint = "ID Pokémona (např. 050)" }
+        val etType = EditText(ctx).apply { hint = "Nový typ (např. ZEMĚ / VLÁKNINA)" }
         val etDesc = EditText(ctx).apply {
             hint = "Nový nutriční popisek..."
             minLines = 3
@@ -117,7 +162,6 @@ class SettingsFragment : Fragment() {
         layout.addView(etType)
         layout.addView(etDesc)
 
-        // Sestavení Dialogu
         AlertDialog.Builder(ctx)
             .setView(layout)
             .setPositiveButton("💾 Uložit do SQL") { _, _ ->
@@ -135,14 +179,12 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
-    // Pomocná funkce pro reálný zápis do Roomu na pozadí
     private fun saveNewPokedexData(pokedexId: String, newType: String, newDesc: String) {
         lifecycleScope.launch(Dispatchers.IO) {
             val dao = db.pokedexEntryDao()
             val existingEntry = dao.getEntry(pokedexId)
 
             if (existingEntry != null) {
-                // Pokémon existuje, přepíšeme ho s novými daty
                 val updated = existingEntry.copy(type = newType, macroDesc = newDesc)
                 dao.insertAll(listOf(updated))
 

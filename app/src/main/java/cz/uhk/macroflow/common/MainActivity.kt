@@ -49,11 +49,13 @@ import cz.uhk.macroflow.pokemon.PokemonBehavior
 import cz.uhk.macroflow.pokemon.PokemonXpEngine
 import cz.uhk.macroflow.pokemon.BattleFactory
 import cz.uhk.macroflow.pokemon.Move
+import cz.uhk.macroflow.pokemon.PokemonLevelCalc
 import cz.uhk.macroflow.pokemon.WandererFactory
 import cz.uhk.macroflow.training.PlanFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 import kotlin.random.Random
 
 class MainActivity : AppCompatActivity() {
@@ -72,20 +74,9 @@ class MainActivity : AppCompatActivity() {
         private const val REQ_NOTIFICATION_PERMISSION = 100
     }
 
-    // ── 🔮 Handler pro částice z Ghost Plate ───────────────────────────
-    private val particleHandler = Handler(Looper.getMainLooper())
-    private val particleRunnable = object : Runnable {
-        override fun run() {
-            val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-            val ghostActive = prefs.getBoolean("spookyPlateActive", false)
-            val cursedActive = prefs.getBoolean("cursedPlateActive", false) // ✅ Nová kontrola pro Cursed Plate
-
-            if (ghostActive || cursedActive) {
-                spawnItemParticle(cursedActive) // ✅ Pošleme informaci, zda jde o Cursed
-            }
-            particleHandler.postDelayed(this, 300)
-        }
-    }
+    // ✅ Plynulá kouřová aura Spooky / Ghost Plate
+    private val lureSmokeHandler = Handler(Looper.getMainLooper())
+    private var isLureActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -182,74 +173,72 @@ class MainActivity : AppCompatActivity() {
 
         checkAchievementsDelayed()
 
-        // 🌟 Spuštění generátoru kouře pro Ghost Plate
-        particleHandler.post(particleRunnable)
+        // ✅ Spuštění kouře při spuštění obrazovky
+        runItemSpawner()
     }
 
     override fun onResume() {
         super.onResume()
         updatePokemonVisibility()
         awardDailyXp()
+
+        // ✅ Kontrola stavu desky po návratu z jiného menu
+        runItemSpawner()
     }
 
     // ── XP & Univerzální Evoluční Engine ──────────────────────────────
 
     private fun awardDailyXp() {
-        lifecycleScope.launch {
-            val awarded = withContext(Dispatchers.IO) {
-                PokemonXpEngine.checkAndAwardDailyXp(this@MainActivity)
-            }
-            if (awarded > 0) {
-                val (totalXp, newLevel) = withContext(Dispatchers.IO) {
-                    PokemonXpEngine.getActiveXpInfo(this@MainActivity) ?: return@withContext null
-                } ?: return@launch
+        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1) // 🔑 Čteme unikátní ID instance
+        if (activeCapturedId == -1) return
 
-                val prefs       = getSharedPreferences("PokemonXpPrefs", MODE_PRIVATE)
-                val pId         = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-                    .getString("currentOnBarId", null) ?: return@launch
-                val lastLevelKey = "last_known_level_$pId"
-                val lastLevel    = prefs.getInt(lastLevelKey, 1)
+        val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+        val lastDay = prefs.getInt("lastXpDay_$activeCapturedId", -1)
 
-                if (newLevel > lastLevel) {
-                    prefs.edit().putInt(lastLevelKey, newLevel).apply()
+        if (today != lastDay) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                val db = AppDatabase.getDatabase(this@MainActivity)
+                val pokemon = db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
 
-                    val db = AppDatabase.getDatabase(this@MainActivity)
-                    val entry = withContext(Dispatchers.IO) { db.pokedexEntryDao().getEntry(pId) }
+                if (pokemon != null) {
+                    pokemon.xp += 20 // Přidáme XP
 
-                    // ✅ UNIVERZÁLNÍ KONTROLA: Načte evoluční data libovolného Pokémona ze statické DB tabulky
-                    if (entry != null && entry.evolveLevel > 0 && newLevel >= entry.evolveLevel) {
-                        val list = withContext(Dispatchers.IO) { db.capturedPokemonDao().getAllCaught() }
-                        val activeInInv = list.find { it.pokemonId == pId }
+                    // Výpočet nového levelu (RPG matematika)
+                    val newLevel = PokemonLevelCalc.levelFromXp(pokemon.xp)
+                    val oldLevel = pokemon.level
+                    pokemon.level = newLevel
 
-                        if (activeInInv != null) {
-                            // Načteme nový útok příslušné vývojové fáze z továrny na základě ID
+                    db.capturedPokemonDao().updatePokemon(pokemon)
+                    prefs.edit().putInt("lastXpDay_$activeCapturedId", today).apply()
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "🎉 ${pokemon.name} získal 20 XP!", Toast.LENGTH_SHORT).show()
+
+                        // Zkontrolujeme evoluci
+                        val entry = withContext(Dispatchers.IO) { db.pokedexEntryDao().getEntry(pokemon.pokemonId) }
+                        if (entry != null && entry.evolveLevel > 0 && newLevel >= entry.evolveLevel && newLevel > oldLevel) {
                             val nextMove = getEvolutionMove(entry.evolveToId)
-
                             val dialog = EvolutionDialog(
                                 context = this@MainActivity,
-                                capturedPokemonId = activeInInv.id,
-                                oldId = pId,
+                                capturedPokemonId = pokemon.id,
+                                oldId = pokemon.pokemonId,
                                 newId = entry.evolveToId,
                                 newMoveToLearn = nextMove
                             ) {
-                                updatePokemonVisibility() // Refreshne lištu až po úspěšné evoluci
+                                updatePokemonVisibility()
                             }
                             dialog.show()
                         }
-                    } else {
-                        // Obyčejný level bez evoluce
-                        showLevelUpToast(pId, newLevel)
                     }
                 }
             }
         }
     }
 
-    // Pomocná metoda pro získání nového útoku na základě cílového ID evoluce
     private fun getEvolutionMove(targetId: String): Move? = when (targetId) {
-        "011" -> BattleFactory.attackHarden() // Metapod
-        "012" -> BattleFactory.attackGust()   // Butterfree
-        // 💡 Zde se bude jen jednoduše v budoucnu doplňovat: např. "002" -> BattleFactory.attackVineWhip() atd.
+        "011" -> BattleFactory.attackHarden()
+        "012" -> BattleFactory.attackGust()
         else  -> null
     }
 
@@ -266,6 +255,9 @@ class MainActivity : AppCompatActivity() {
     // ── Pokémon na liště ──────────────────────────────────────────────
 
     fun openPokemonBattle() {
+        // ✅ Automaticky vypne kouř z desky před tím, než se načte bojová scéna!
+        stopLureSmoke()
+
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
             .replace(R.id.nav_host_fragment, PokemonBattleFragment())
@@ -326,68 +318,47 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── 💨 Částicový generátor pro Lure (Spooky/Cursed Plate) ──────────────
 
-    // ✅ NOVÉ: Ukládáme si odkaz na Handler, abychom mohli kouř vypnout
-    private val lureSmokeHandler = Handler(Looper.getMainLooper())
-    private var isLureActive = false
+    // ── 💨 Částicový generátor pro Lure (Ghost / Spooky Plate) ──────────
 
-    // Přepsaná metoda pro cyklické generování kouře
-    private fun runItemSpawner() {
+    fun runItemSpawner() {
         val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-        val spookyUsed = prefs.getBoolean("spooky_plate_used", false)
-        val cursedUsed = prefs.getBoolean("cursed_plate_used", false)
+        val ghostActive = prefs.getBoolean("ghostPlateActive", false)
 
-        val isActiveNow = spookyUsed || cursedUsed
-
-        if (isActiveNow) {
-            // ✅ Pokud je Lure aktivní a kouř neběží, zapneme ho plynule
+        if (ghostActive) {
             if (!isLureActive) {
                 isLureActive = true
                 lureSmokeHandler.post(lureSmokeRunnable)
             }
         } else {
-            // ✅ Pokud Lure skončil, vypneme kouř
-            isLureActive = false
-            lureSmokeHandler.removeCallbacks(lureSmokeRunnable)
+            stopLureSmoke()
         }
     }
 
-    // ✅ NOVÉ: Cyklus, který plynule generuje kouřová kolečka každých 150-250ms
     private val lureSmokeRunnable = object : Runnable {
         override fun run() {
             if (!isLureActive) return
 
-            // Zkontrolujeme, zda Lure stále trvá v prefs
             val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-            val isCursed = prefs.getBoolean("cursed_plate_used", false)
-            val isSpooky = prefs.getBoolean("spooky_plate_used", false)
+            val ghostActive = prefs.getBoolean("ghostPlateActive", false)
 
-            if (isCursed || isSpooky) {
-                spawnItemParticle(isCursed) // Vygeneruje jedno kouřové kolečko
-                val nextDelay = Random.nextLong(150, 250) // Náhodné zpoždění pro plynulost
-                lureSmokeHandler.postDelayed(this, nextDelay)
+            if (ghostActive) {
+                spawnItemParticle()
+                lureSmokeHandler.postDelayed(this, Random.nextLong(250, 450))
             } else {
-                isLureActive = false
+                stopLureSmoke()
             }
         }
     }
 
-    // ✅ PŘEPSANÁ: Generuje kouřový kruh, který se plynule zvětší a zmizí kolem tlačítka
-    private fun spawnItemParticle(isCursed: Boolean) {
+    private fun spawnItemParticle() {
         val fab = findViewById<FloatingActionButton>(R.id.fabHome) ?: return
-        // ✅ Změna: Částice dáváme do nového celoobrazovkového kontejneru
         val overlayContainer = findViewById<ViewGroup>(R.id.smokeOverlayContainer) ?: return
 
         val dp = resources.displayMetrics.density
-        // Kolečka zvětšíme, ať udělají pořádnou mlhu
         val size = (Random.nextInt(50, 80) * dp).toInt()
 
-        val colorStr = if (isCursed) {
-            if (Random.nextBoolean()) "#CC4A148C" else "#CC000000" // Cursed (Temná/Černá)
-        } else {
-            if (Random.nextBoolean()) "#CC9167AB" else "#CC703F8F" // Spooky (Fialová)
-        }
+        val colorStr = if (Random.nextBoolean()) "#CC9167AB" else "#CC703F8F"
 
         val particle = View(this).apply {
             background = GradientDrawable().apply {
@@ -396,7 +367,6 @@ class MainActivity : AppCompatActivity() {
             }
             layoutParams = ViewGroup.LayoutParams(size, size)
 
-            // ✅ Výpočet pozice FAB tlačítka v rámci celé obrazovky
             val location = IntArray(2)
             fab.getLocationInWindow(location)
 
@@ -415,11 +385,10 @@ class MainActivity : AppCompatActivity() {
 
         overlayContainer.addView(particle)
 
-        // ✅ Animace kouřového kolečka: rozplynutí do stran a nahoru
         particle.animate()
             .scaleX(1.4f)
             .scaleY(1.4f)
-            .translationYBy(-100f * dp) // Letí vysoko nad lištu!
+            .translationYBy(-100f * dp)
             .alpha(0.5f)
             .setDuration(1000)
             .withEndAction {
@@ -427,13 +396,21 @@ class MainActivity : AppCompatActivity() {
                     .alpha(0f)
                     .scaleX(1.8f)
                     .scaleY(1.8f)
-                    .translationYBy(-50f * dp)
+                    .translationYBy(-40f * dp)
                     .setDuration(1000)
                     .withEndAction { overlayContainer.removeView(particle) }
                     .start()
             }
             .start()
     }
+
+    fun stopLureSmoke() {
+        isLureActive = false
+        lureSmokeHandler.removeCallbacks(lureSmokeRunnable)
+        val overlayContainer = findViewById<ViewGroup>(R.id.smokeOverlayContainer)
+        overlayContainer?.removeAllViews()
+    }
+
 
     // ── 🔄 Navigace a Spodní UI prvky ───────────────────────────────────
 
@@ -546,6 +523,6 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         pokemonBehavior?.stop()
-        particleHandler.removeCallbacks(particleRunnable)
+        stopLureSmoke()
     }
 }

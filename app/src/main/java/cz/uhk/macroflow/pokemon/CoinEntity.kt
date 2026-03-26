@@ -36,15 +36,14 @@ interface CoinDao {
 @Entity(tableName = "captured_pokemon")
 data class CapturedPokemonEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    var pokemonId: String,          // Přidáno 'var', aby se dalo ID přepsat z "010" na "011"
-    var name: String,              // Přidáno 'var'
+    var pokemonId: String,
+    var name: String,
     val isShiny: Boolean = false,
-    val isLocked: Boolean = false,
+    var isLocked: Boolean = false, // Změněno na var pro úpravu v adapteru
     val caughtDate: Long = System.currentTimeMillis(),
-
-    // ✅ NOVÉ: Ukládání aktuálních útoků pokémona (oddělené čárkou, např: "Tackle,String Shot,Harden")
     var moveListStr: String = "",
-    var level: Int = 1 // ✅ NOVÉ: Uložíme reálný level, na kterém byl chycen
+    var level: Int = 1,
+    var xp: Int = 0 // ✅ PŘIDÁNO: Každý Pokémon si drží své vlastní XP!
 )
 
 @Dao
