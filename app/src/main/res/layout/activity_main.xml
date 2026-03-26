@@ -85,6 +85,14 @@
             android:contentDescription="Diglett" />
 
         <FrameLayout
+            android:id="@+id/smokeOverlayContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:elevation="20dp" />
+
+        <FrameLayout
             android:id="@+id/topBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

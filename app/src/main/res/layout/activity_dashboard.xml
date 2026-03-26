@@ -532,6 +532,8 @@
 
     </LinearLayout>
 
+
+
     <!-- ══ RANNÍ RITUÁL OVERLAY ══ -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardRitualOverlay"

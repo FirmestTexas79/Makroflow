@@ -326,19 +326,67 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── 💨 Částicový generátor pro Spooky / Cursed Plate ───────────────────
+    // ── 💨 Částicový generátor pro Lure (Spooky/Cursed Plate) ──────────────
+
+    // ✅ NOVÉ: Ukládáme si odkaz na Handler, abychom mohli kouř vypnout
+    private val lureSmokeHandler = Handler(Looper.getMainLooper())
+    private var isLureActive = false
+
+    // Přepsaná metoda pro cyklické generování kouře
+    private fun runItemSpawner() {
+        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+        val spookyUsed = prefs.getBoolean("spooky_plate_used", false)
+        val cursedUsed = prefs.getBoolean("cursed_plate_used", false)
+
+        val isActiveNow = spookyUsed || cursedUsed
+
+        if (isActiveNow) {
+            // ✅ Pokud je Lure aktivní a kouř neběží, zapneme ho plynule
+            if (!isLureActive) {
+                isLureActive = true
+                lureSmokeHandler.post(lureSmokeRunnable)
+            }
+        } else {
+            // ✅ Pokud Lure skončil, vypneme kouř
+            isLureActive = false
+            lureSmokeHandler.removeCallbacks(lureSmokeRunnable)
+        }
+    }
+
+    // ✅ NOVÉ: Cyklus, který plynule generuje kouřová kolečka každých 150-250ms
+    private val lureSmokeRunnable = object : Runnable {
+        override fun run() {
+            if (!isLureActive) return
+
+            // Zkontrolujeme, zda Lure stále trvá v prefs
+            val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+            val isCursed = prefs.getBoolean("cursed_plate_used", false)
+            val isSpooky = prefs.getBoolean("spooky_plate_used", false)
+
+            if (isCursed || isSpooky) {
+                spawnItemParticle(isCursed) // Vygeneruje jedno kouřové kolečko
+                val nextDelay = Random.nextLong(150, 250) // Náhodné zpoždění pro plynulost
+                lureSmokeHandler.postDelayed(this, nextDelay)
+            } else {
+                isLureActive = false
+            }
+        }
+    }
+
+    // ✅ PŘEPSANÁ: Generuje kouřový kruh, který se plynule zvětší a zmizí kolem tlačítka
     private fun spawnItemParticle(isCursed: Boolean) {
         val fab = findViewById<FloatingActionButton>(R.id.fabHome) ?: return
-        val parent = fab.parent as? ViewGroup ?: return
+        // ✅ Změna: Částice dáváme do nového celoobrazovkového kontejneru
+        val overlayContainer = findViewById<ViewGroup>(R.id.smokeOverlayContainer) ?: return
 
         val dp = resources.displayMetrics.density
-        val size = (12 * dp).toInt()
+        // Kolečka zvětšíme, ať udělají pořádnou mlhu
+        val size = (Random.nextInt(50, 80) * dp).toInt()
 
-        // 🎨 Rozlišení barev podle toho, jaká deska je aktivní
         val colorStr = if (isCursed) {
-            if (Random.nextBoolean()) "#4A148C" else "#212121" // Temně fialová/černá pro Cursed
+            if (Random.nextBoolean()) "#CC4A148C" else "#CC000000" // Cursed (Temná/Černá)
         } else {
-            if (Random.nextBoolean()) "#9167AB" else "#703F8F" // Klasická fialová pro Spooky
+            if (Random.nextBoolean()) "#CC9167AB" else "#CC703F8F" // Spooky (Fialová)
         }
 
         val particle = View(this).apply {
@@ -347,21 +395,43 @@ class MainActivity : AppCompatActivity() {
                 setColor(Color.parseColor(colorStr))
             }
             layoutParams = ViewGroup.LayoutParams(size, size)
-            x = fab.x + fab.width / 2f - size / 2f
-            y = fab.y + fab.height / 2f - size / 2f
-            alpha = 0.8f
+
+            // ✅ Výpočet pozice FAB tlačítka v rámci celé obrazovky
+            val location = IntArray(2)
+            fab.getLocationInWindow(location)
+
+            x = location[0] + (fab.width / 2f) - (size / 2f)
+            y = location[1] + (fab.height / 2f) - (size / 2f)
+
+            alpha = 0f
+
+            isClickable = false
+            isFocusable = false
+            isEnabled = false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
         }
 
-        parent.addView(particle)
+        overlayContainer.addView(particle)
 
+        // ✅ Animace kouřového kolečka: rozplynutí do stran a nahoru
         particle.animate()
-            .translationYBy(-100f * dp)
-            .translationXBy((Random.nextFloat() - 0.5f) * 40f * dp)
-            .alpha(0f)
-            .scaleX(2f)
-            .scaleY(2f)
-            .setDuration(1200)
-            .withEndAction { parent.removeView(particle) }
+            .scaleX(1.4f)
+            .scaleY(1.4f)
+            .translationYBy(-100f * dp) // Letí vysoko nad lištu!
+            .alpha(0.5f)
+            .setDuration(1000)
+            .withEndAction {
+                particle.animate()
+                    .alpha(0f)
+                    .scaleX(1.8f)
+                    .scaleY(1.8f)
+                    .translationYBy(-50f * dp)
+                    .setDuration(1000)
+                    .withEndAction { overlayContainer.removeView(particle) }
+                    .start()
+            }
             .start()
     }
 
