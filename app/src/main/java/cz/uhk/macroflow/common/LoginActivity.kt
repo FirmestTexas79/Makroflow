@@ -1,13 +1,14 @@
 package cz.uhk.macroflow.common
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.core.view.WindowCompat // 👈 Ujisti se, že máš tento import
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -34,9 +35,18 @@ class LoginActivity : AppCompatActivity() {
 
         auth = FirebaseAuth.getInstance()
 
-        // Pokud je uživatel už přihlášen, přejdi rovnou do aplikace
+        // ✅ OPRAVA: Pokud je uživatel už přihlášen, zkusíme stáhnout data ze serveru a až pak jdeme dál
         if (auth.currentUser != null) {
-            goToMain()
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    FirebaseRepository.syncCloudDataToLocal(applicationContext)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                withContext(Dispatchers.Main) {
+                    goToMain()
+                }
+            }
             return
         }
 
@@ -44,7 +54,6 @@ class LoginActivity : AppCompatActivity() {
             startGoogleSignIn()
         }
 
-        // Tlačítko "Pokračovat bez účtu"
         findViewById<View>(R.id.btnContinueOffline).setOnClickListener {
             goToMain()
         }
@@ -52,7 +61,6 @@ class LoginActivity : AppCompatActivity() {
 
     private fun startGoogleSignIn() {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            // Tento web client ID najdeš ve firebase console nebo google-services.json
             .requestIdToken("324719841390-sibsmtkcjfknjilqtq2hgi8cdtql35d8.apps.googleusercontent.com")
             .requestEmail()
             .build()
@@ -81,19 +89,24 @@ class LoginActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     try {
                         withContext(Dispatchers.IO) {
-                            val isNewUser = task.result?.additionalUserInfo?.isNewUser ?: false
-                            if (isNewUser) {
-                                FirebaseRepository.syncLocalDataToCloud(applicationContext)
-                            } else {
+                            // ✅ OPRAVA: Zjišťujeme, jestli máme v cloudu VŮBEC nějaký profil. Pokud ne, až tehdy je to nový uživatel.
+                            val cloudProfileExists = FirebaseRepository.downloadProfile() != null
+
+                            if (cloudProfileExists) {
+                                // Máme data na serveru, stáhneme je do nově nainstalovaného telefonu
                                 FirebaseRepository.syncCloudDataToLocal(applicationContext)
+                            } else {
+                                // Na serveru nic není, nahrajeme tam lokální výchozí data z telefonu
+                                FirebaseRepository.syncLocalDataToCloud(applicationContext)
                             }
                         }
                     } catch (e: Exception) {
-                        // I když sync selže, uživatele chceme pustit do aplikace
+                        e.printStackTrace()
                     }
-                    // Přesunuto mimo try-catch nebo hned za něj
                     goToMain()
                 }
+            } else {
+                Toast.makeText(this, "Přihlášení selhalo: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }

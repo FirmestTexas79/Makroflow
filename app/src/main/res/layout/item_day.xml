@@ -16,19 +16,21 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="18dp"
+        android:paddingHorizontal="14dp"
         android:paddingTop="16dp"
         android:paddingBottom="12dp">
 
-        <!-- Den: zkratka + tečka + celý název -->
         <LinearLayout
             android:id="@+id/layoutDayLabel"
-            android:layout_width="72dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_marginStart="4dp"
+            app:layout_constraintHorizontal_weight="0.25"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="@id/toggleGroup"
+            app:layout_constraintBottom_toBottomOf="@id/toggleGroup"
+            app:layout_constraintEnd_toStartOf="@id/divider">
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -68,18 +70,16 @@
 
         </LinearLayout>
 
-        <!-- Svislá čára -->
         <View
             android:id="@+id/divider"
             android:layout_width="1dp"
             android:layout_height="36dp"
-            android:layout_marginStart="8dp"
             android:background="#20283618"
             app:layout_constraintStart_toEndOf="@id/layoutDayLabel"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/tvTrainingTimePill" />
+            app:layout_constraintEnd_toStartOf="@id/toggleGroup"
+            app:layout_constraintTop_toTopOf="@id/toggleGroup"
+            app:layout_constraintBottom_toBottomOf="@id/toggleGroup" />
 
-        <!-- Toggle skupina -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggleGroup"
             android:layout_width="0dp"
@@ -88,6 +88,7 @@
             app:selectionRequired="true"
             app:singleSelection="true"
             app:checkedButton="@+id/btnRest"
+            app:layout_constraintHorizontal_weight="0.75"
             app:layout_constraintStart_toEndOf="@id/divider"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -101,11 +102,15 @@
                 android:text="OFF"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.04"
+                android:letterSpacing="0.02"
                 android:textColor="#BC6C25"
                 app:strokeColor="#20BC6C25"
                 app:rippleColor="#1ABC6C25"
-                app:cornerRadius="12dp" />
+                app:cornerRadius="12dp"
+                android:maxLines="1"
+                app:autoSizeTextType="uniform"
+                app:autoSizeMinTextSize="8sp"
+                app:autoSizeMaxTextSize="10sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPush"
@@ -116,11 +121,15 @@
                 android:text="PUSH"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.04"
+                android:letterSpacing="0.02"
                 android:textColor="#606C38"
                 app:strokeColor="#20606C38"
                 app:rippleColor="#1A606C38"
-                app:cornerRadius="12dp" />
+                app:cornerRadius="12dp"
+                android:maxLines="1"
+                app:autoSizeTextType="uniform"
+                app:autoSizeMinTextSize="8sp"
+                app:autoSizeMaxTextSize="10sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPull"
@@ -131,11 +140,15 @@
                 android:text="PULL"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.04"
+                android:letterSpacing="0.02"
                 android:textColor="#283618"
                 app:strokeColor="#20283618"
                 app:rippleColor="#1A283618"
-                app:cornerRadius="12dp" />
+                app:cornerRadius="12dp"
+                android:maxLines="1"
+                app:autoSizeTextType="uniform"
+                app:autoSizeMinTextSize="8sp"
+                app:autoSizeMaxTextSize="10sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnLegs"
@@ -146,24 +159,23 @@
                 android:text="LEGS"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.04"
+                android:letterSpacing="0.02"
                 android:textColor="#283618"
                 app:strokeColor="#20283618"
                 app:rippleColor="#1A283618"
-                app:cornerRadius="12dp" />
+                app:cornerRadius="12dp"
+                android:maxLines="1"
+                app:autoSizeTextType="uniform"
+                app:autoSizeMinTextSize="8sp"
+                app:autoSizeMaxTextSize="10sp" />
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!--
-            Čas tréninku pill — pod toggle skupinou
-            visibility="gone" pro REST/OFF dny (nastavuje PlanFragment)
-            Kliknutím → TimePickerDialog
-        -->
         <TextView
             android:id="@+id/tvTrainingTimePill"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
             android:layout_marginStart="4dp"
             android:text="🕐 Nastavit čas"
             android:textColor="#80606C38"

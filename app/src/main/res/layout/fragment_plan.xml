@@ -17,7 +17,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- HEADER -->
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -69,7 +68,6 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- STATISTICKÉ KARTY — všechny 4 viditelné, rovnoměrně -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -216,7 +214,6 @@
 
             </LinearLayout>
 
-            <!-- ODDĚLOVAČ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -250,7 +247,6 @@
 
             </LinearLayout>
 
-            <!-- DNY TÝDNE -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvTrainingPlan"
                 android:layout_width="match_parent"
@@ -258,7 +254,6 @@
                 android:nestedScrollingEnabled="false"
                 android:overScrollMode="never" />
 
-            <!-- TIP KARTA -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
