@@ -31,10 +31,10 @@ object MacroCalculator {
         val legacyPrefs = context.getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
 
         val weight = profile?.weight
-            ?: legacyPrefs.getString("weightAkt", "83")?.toDoubleOrNull()
+            ?: legacyPrefs.getString("weightAkt", "83.0")?.toDoubleOrNull()
             ?: 83.0
         val height = profile?.height
-            ?: legacyPrefs.getString("height", "175")?.toDoubleOrNull()
+            ?: legacyPrefs.getString("height", "175.0")?.toDoubleOrNull()
             ?: 175.0
         val age = profile?.age
             ?: legacyPrefs.getString("age", "22")?.toIntOrNull()
@@ -77,7 +77,16 @@ object MacroCalculator {
 
         val waterTotal = (weight * 0.04) + (if (trainingType.contains("legs")) 0.5 else 0.2)
 
-        return MacroResult(totalCalories, protein, carbs, fat, waterTotal, trainingType.uppercase())
+        // ✅ Vráceno s korektním weight parametrem
+        return MacroResult(
+            calories = totalCalories,
+            protein = protein,
+            carbs = carbs,
+            fat = fat,
+            water = waterTotal,
+            trainingType = trainingType.uppercase(),
+            weight = weight
+        )
     }
 }
 
@@ -87,5 +96,6 @@ data class MacroResult(
     val carbs: Double,
     val fat: Double,
     val water: Double,
-    val trainingType: String
+    val trainingType: String,
+    val weight: Double // 👈 ✅ Nové: Váha pro přepočet kroků
 )

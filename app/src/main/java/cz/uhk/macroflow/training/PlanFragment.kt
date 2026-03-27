@@ -9,6 +9,7 @@ import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -82,13 +83,37 @@ class PlanFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val tvTotalSteps = view.findViewById<TextView>(R.id.tvTotalStepsCount)
+        val tvStepsStatus = view.findViewById<TextView>(R.id.tvStepsGoalStatus)
+        val tvEmoji = view.findViewById<TextView>(R.id.tvStepsEmoji)
+        val llStepsCounter = view.findViewById<LinearLayout>(R.id.llStepsCounter)
+
         val db = AppDatabase.getDatabase(requireContext())
 
-        // 👣 ✅ Živý poslech Flow napojený POUZE na existenci Pohledu (View)
-        // Vyčistí se, jakmile odejdeš, nevznikají duplicity v pozadí
         viewLifecycleOwner.lifecycleScope.launch {
+            // 1. Nejprve bezpečně získáme nastavený cíl z profilu (zůstane stabilní po dobu zobrazení fragmentu)
+            val profile = withContext(Dispatchers.IO) {
+                db.userProfileDao().getProfileSync()
+            }
+            val stepGoal = profile?.stepGoal ?: 6000 // Fallback na 6000 pokud není nastaveno
+
+            // 2. Odebíráme živý Flow kroků z databáze
             db.stepsDao().getTotalStepsAllTimeFlow().collect { allTimeSteps ->
-                tvTotalSteps?.text = (allTimeSteps ?: 0).toString()
+                val stepsToday = allTimeSteps ?: 0
+                val remaining = (stepGoal - stepsToday).coerceAtLeast(0)
+
+                // UI přepis: Zlomek "aktuální / cíl"
+                tvTotalSteps?.text = "$stepsToday / $stepGoal"
+
+                if (remaining > 0) {
+                    tvStepsStatus?.text = "ZBYVÁ $remaining"
+                    tvEmoji?.text = "👟"
+                    tvStepsStatus?.setTextColor(Color.parseColor("#606C38")) // Standardní zelená
+                } else {
+                    tvStepsStatus?.text = "CÍL SPLNĚN!"
+                    tvEmoji?.text = "🎉"
+                    tvStepsStatus?.setTextColor(Color.parseColor("#BC6C25")) // Akcentní barva při úspěchu
+                    llStepsCounter?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#20BC6C25"))
+                }
             }
         }
     }

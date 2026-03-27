@@ -14,13 +14,13 @@ import androidx.room.PrimaryKey
  */
 @Entity(tableName = "consumed_snacks")
 data class ConsumedSnackEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey val timestamp: Long = System.currentTimeMillis(), // 👈 ✅ NOVÝ UNIKÁTNÍ KLÍČ
     val date: String,           // yyyy-MM-dd
-    val time: String,           // HH:mm — čas záznamu
+    val time: String,           // HH:mm
     val name: String,
     val p: Float,
     val s: Float,
     val t: Float,
     val calories: Int,
-    val mealContext: String = "NO_TRAINING"  // TrainingTimeManager.MealContext.name()
+    val mealContext: String = "NO_TRAINING"
 )

@@ -21,6 +21,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.slider.Slider
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.common.LoginActivity
@@ -49,6 +50,10 @@ class ProfileFragment : Fragment() {
     private lateinit var iconsCenter: List<ImageView>
     private lateinit var partsCircle: List<ImageView>
 
+    // 👣 ✅ Nově přidané reference na UI prvky slideru
+    private lateinit var sliderStepGoal: Slider
+    private lateinit var tvStepGoalValue: TextView
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
@@ -60,6 +65,14 @@ class ProfileFragment : Fragment() {
         toggleGender = view.findViewById(R.id.toggleGender)
         tvDesc = view.findViewById(R.id.tvLifestyleDesc)
         circleContainer = view.findViewById(R.id.circleLifestyle)
+
+        // 👣 ✅ Inicializace posuvníku a sledování změn (živý text v UI)
+        sliderStepGoal = view.findViewById(R.id.sliderStepGoal)
+        tvStepGoalValue = view.findViewById(R.id.tvStepGoalValue)
+
+        sliderStepGoal.addOnChangeListener { _, value, _ ->
+            tvStepGoalValue.text = "${value.toInt()} kroků"
+        }
 
         iconsCenter = listOf(
             view.findViewById(R.id.iconCenterLow),
@@ -105,11 +118,7 @@ class ProfileFragment : Fragment() {
         return view
     }
 
-    // ----------------------------------------------------------------
-    // ÚČET — zobrazení emailu + odhlášení
-    // ----------------------------------------------------------------
     private fun setupAccountSection(view: View) {
-        // Views jsou uvnitř cardAccountInfo, musíme je najít správně
         val tvEmail    = view.findViewById<TextView>(R.id.tvUserEmail)
         val btnSignOut = view.findViewById<MaterialButton>(R.id.btnSignOut)
 
@@ -142,13 +151,12 @@ class ProfileFragment : Fragment() {
     // ----------------------------------------------------------------
     private fun loadUserData() {
         lifecycleScope.launch {
-            val db = AppDatabase.Companion.getDatabase(requireContext())
+            val db = AppDatabase.getDatabase(requireContext())
 
             val profile = withContext(Dispatchers.IO) {
                 db.userProfileDao().getProfileSync()
             }
 
-            // Aktualni vaha = dnesni check-in, nebo nejnovejsi check-in, nebo profil, nebo fallback
             val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             val currentWeight = withContext(Dispatchers.IO) {
                 db.checkInDao().getCheckInByDateSync(today)?.weight
@@ -157,7 +165,6 @@ class ProfileFragment : Fragment() {
             }
 
             if (profile != null) {
-                // Zobraz aktualni vahu z check-inu (ne zamrznuta hodnota z profilu)
                 etWeight.setText((currentWeight ?: profile.weight).toString())
                 etHeight.setText(profile.height.toString())
                 etAge.setText(profile.age.toString())
@@ -165,6 +172,10 @@ class ProfileFragment : Fragment() {
                     if (profile.gender == "male") R.id.btnMale else R.id.btnFemale
                 )
                 selectedMultiplier = profile.activityMultiplier
+
+                // 👣 ✅ Načtení hodnoty kroků z DB do slideru
+                sliderStepGoal.value = profile.stepGoal.toFloat()
+                tvStepGoalValue.text = "${profile.stepGoal} kroků"
             } else {
                 val prefs = requireContext()
                     .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
@@ -189,6 +200,7 @@ class ProfileFragment : Fragment() {
         val weight = etWeight.text.toString().toDoubleOrNull()
         val height = etHeight.text.toString().toDoubleOrNull()
         val age    = etAge.text.toString().toIntOrNull()
+        val stepGoal = sliderStepGoal.value.toInt() // 👣 ✅ Vytažení dat z posuvníku
 
         if (weight == null || height == null || age == null) {
             Toast.makeText(context, "Doplň prosím všechny údaje", Toast.LENGTH_SHORT).show()
@@ -203,11 +215,12 @@ class ProfileFragment : Fragment() {
             height = height,
             age = age,
             gender = gender,
-            activityMultiplier = selectedMultiplier
+            activityMultiplier = selectedMultiplier,
+            stepGoal = stepGoal // 👣 ✅ Skutečné uložení do databázového modelu
         )
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val db = AppDatabase.Companion.getDatabase(requireContext())
+            val db = AppDatabase.getDatabase(requireContext())
 
             // 1. Ulož lokálně do Room
             db.userProfileDao().saveProfile(profileEntity)
@@ -222,7 +235,7 @@ class ProfileFragment : Fragment() {
                 try {
                     FirebaseRepository.uploadProfile(profileEntity)
                 } catch (e: Exception) {
-                    // Tiché selhání — data jsou uložena lokálně, sync proběhne příště
+                    e.printStackTrace()
                 }
             }
 
@@ -240,9 +253,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // ----------------------------------------------------------------
-    // Bottom sheet — tělesné míry (+ Firebase upload)
-    // ----------------------------------------------------------------
     private fun showMetricsBottomSheet() {
         val dialog    = BottomSheetDialog(requireContext())
         val sheetView = layoutInflater.inflate(R.layout.layout_metrics_sheet, null)
@@ -265,26 +275,18 @@ class ProfileFragment : Fragment() {
             btnNext.alpha = if (btnNext.isEnabled) 1.0f else 0.3f
 
             lifecycleScope.launch {
-                val db = AppDatabase.Companion.getDatabase(requireContext())
+                val db = AppDatabase.getDatabase(requireContext())
                 val metrics = withContext(Dispatchers.IO) {
                     db.bodyMetricsDao().getByDateSync(dateKey)
                 }
-                sheetView.findViewById<EditText>(R.id.etNeck)
-                    .setText(if (metrics?.neck != null && metrics.neck > 0) metrics.neck.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etChest)
-                    .setText(if (metrics?.chest != null && metrics.chest > 0) metrics.chest.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etBicep)
-                    .setText(if (metrics?.bicep != null && metrics.bicep > 0) metrics.bicep.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etForearm)
-                    .setText(if (metrics?.forearm != null && metrics.forearm > 0) metrics.forearm.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etWaist)
-                    .setText(if (metrics?.waist != null && metrics.waist > 0) metrics.waist.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etAbdomen)
-                    .setText(if (metrics?.abdomen != null && metrics.abdomen > 0) metrics.abdomen.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etThigh)
-                    .setText(if (metrics?.thigh != null && metrics.thigh > 0) metrics.thigh.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etCalf)
-                    .setText(if (metrics?.calf != null && metrics.calf > 0) metrics.calf.toString() else "")
+                sheetView.findViewById<EditText>(R.id.etNeck).setText(if (metrics?.neck != null && metrics.neck > 0) metrics.neck.toString() else "")
+                sheetView.findViewById<EditText>(R.id.etChest).setText(if (metrics?.chest != null && metrics.chest > 0) metrics.chest.toString() else "")
+                sheetView.findViewById<EditText>(R.id.etBicep).setText(if (metrics?.bicep != null && metrics.bicep > 0) metrics.bicep.toString() else "")
+                sheetView.findViewById<EditText>(R.id.etForearm).setText(if (metrics?.forearm != null && metrics.forearm > 0) metrics.forearm.toString() else "")
+                sheetView.findViewById<EditText>(R.id.etWaist).setText(if (metrics?.waist != null && metrics.waist > 0) metrics.waist.toString() else "")
+                sheetView.findViewById<EditText>(R.id.etAbdomen).setText(if (metrics?.abdomen != null && metrics.abdomen > 0) metrics.abdomen.toString() else "")
+                sheetView.findViewById<EditText>(R.id.etThigh).setText(if (metrics?.thigh != null && metrics.thigh > 0) metrics.thigh.toString() else "")
+                sheetView.findViewById<EditText>(R.id.etCalf).setText(if (metrics?.calf != null && metrics.calf > 0) metrics.calf.toString() else "")
             }
         }
 
@@ -300,59 +302,37 @@ class ProfileFragment : Fragment() {
 
             val metricsEntity = BodyMetricsEntity(
                 date = dateKey,
-                neck = sheetView.findViewById<EditText>(R.id.etNeck).text.toString().toFloatOrNull()
-                    ?: 0f,
-                chest = sheetView.findViewById<EditText>(R.id.etChest).text.toString()
-                    .toFloatOrNull() ?: 0f,
-                bicep = sheetView.findViewById<EditText>(R.id.etBicep).text.toString()
-                    .toFloatOrNull() ?: 0f,
-                forearm = sheetView.findViewById<EditText>(R.id.etForearm).text.toString()
-                    .toFloatOrNull() ?: 0f,
-                waist = sheetView.findViewById<EditText>(R.id.etWaist).text.toString()
-                    .toFloatOrNull() ?: 0f,
-                abdomen = sheetView.findViewById<EditText>(R.id.etAbdomen).text.toString()
-                    .toFloatOrNull() ?: 0f,
-                thigh = sheetView.findViewById<EditText>(R.id.etThigh).text.toString()
-                    .toFloatOrNull() ?: 0f,
-                calf = sheetView.findViewById<EditText>(R.id.etCalf).text.toString().toFloatOrNull()
-                    ?: 0f
+                neck = sheetView.findViewById<EditText>(R.id.etNeck).text.toString().toFloatOrNull() ?: 0f,
+                chest = sheetView.findViewById<EditText>(R.id.etChest).text.toString().toFloatOrNull() ?: 0f,
+                bicep = sheetView.findViewById<EditText>(R.id.etBicep).text.toString().toFloatOrNull() ?: 0f,
+                forearm = sheetView.findViewById<EditText>(R.id.etForearm).text.toString().toFloatOrNull() ?: 0f,
+                waist = sheetView.findViewById<EditText>(R.id.etWaist).text.toString().toFloatOrNull() ?: 0f,
+                abdomen = sheetView.findViewById<EditText>(R.id.etAbdomen).text.toString().toFloatOrNull() ?: 0f,
+                thigh = sheetView.findViewById<EditText>(R.id.etThigh).text.toString().toFloatOrNull() ?: 0f,
+                calf = sheetView.findViewById<EditText>(R.id.etCalf).text.toString().toFloatOrNull() ?: 0f
             )
 
             lifecycleScope.launch(Dispatchers.IO) {
-                val db = AppDatabase.Companion.getDatabase(requireContext())
-
-                // 1. Ulož lokálně
+                val db = AppDatabase.getDatabase(requireContext())
                 db.bodyMetricsDao().save(metricsEntity)
 
-                // 2. Nahraj do Firebase
                 if (FirebaseRepository.isLoggedIn) {
                     try {
                         FirebaseRepository.uploadBodyMetrics(metricsEntity)
                     } catch (e: Exception) {
-                        // Tiché selhání
+                        e.printStackTrace()
                     }
                 }
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        context,
-                        if (FirebaseRepository.isLoggedIn)
-                            "Uloženo a synchronizováno ☁️"
-                        else
-                            "Uloženo lokálně",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(context, "Uloženo!", Toast.LENGTH_SHORT).show()
                     dialog.dismiss()
                 }
             }
         }
-
         dialog.show()
     }
 
-    // ----------------------------------------------------------------
-    // UI helpers — lifestyle kruh
-    // ----------------------------------------------------------------
     private fun selectMode(multiplier: Float, description: String) {
         selectedMultiplier = multiplier
         updateCircleVisuals(multiplier)
@@ -373,8 +353,7 @@ class ProfileFragment : Fragment() {
     private fun updateCircleVisuals(m: Float) {
         listOf(1.2f, 1.4f, 1.6f).forEachIndexed { index, value ->
             val selected = value == m
-            partsCircle[index].animate()
-                .alpha(if (selected) 1.0f else 0.2f).setDuration(300).start()
+            partsCircle[index].animate().alpha(if (selected) 1.0f else 0.2f).setDuration(300).start()
             iconsCenter[index].animate()
                 .alpha(if (selected) 1.0f else 0.0f)
                 .scaleX(if (selected) 1.1f else 0.8f)
@@ -385,8 +364,7 @@ class ProfileFragment : Fragment() {
 
     private fun shrinkCircle() {
         isExpanded = false
-        circleContainer.animate()
-            .scaleX(1.0f).scaleY(1.0f).translationY(0f).setDuration(300).start()
+        circleContainer.animate().scaleX(1.0f).scaleY(1.0f).translationY(0f).setDuration(300).start()
         tvDesc.animate().alpha(0f).translationY(0f).setDuration(300)
             .withEndAction { tvDesc.visibility = View.INVISIBLE }.start()
     }

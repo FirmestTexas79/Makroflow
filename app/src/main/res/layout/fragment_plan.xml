@@ -55,6 +55,7 @@
                     app:layout_constraintTop_toTopOf="@+id/tvTitle">
 
                     <TextView
+                        android:id="@+id/tvStepsEmoji"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="👟"
@@ -70,16 +71,17 @@
                             android:id="@+id/tvTotalStepsCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0"
+                            android:text="0 / 6000"
                             android:textColor="@color/brand_dark"
-                            android:textSize="15sp"
+                            android:textSize="14sp"
                             android:fontFamily="sans-serif-black"
                             android:lineSpacingMultiplier="0.9" />
 
                         <TextView
+                            android:id="@+id/tvStepsGoalStatus"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="CELKEM"
+                            android:text="ZBYVÁ 6000"
                             android:textColor="@color/brand_primary"
                             android:textSize="8sp"
                             android:textStyle="bold"

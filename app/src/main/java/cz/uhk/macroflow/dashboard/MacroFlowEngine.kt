@@ -7,29 +7,55 @@ import cz.uhk.macroflow.data.ConsumedSnackEntity
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 object MacroFlowEngine {
 
-    // Výpočet denního stavu
+    // Výpočet denního stavu obohacený o kroky
     fun calculateDailyStatus(context: Context, consumedList: List<ConsumedSnackEntity>): DailyStatus {
         val target = MacroCalculator.calculate(context)
+        val db = AppDatabase.getDatabase(context)
+
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        // 👟 ✅ Načteme dnešní kroky synchronně pro zachování plynulosti výpočtu
+        val stepsEntity = runBlocking { db.stepsDao().getStepsForDateSync(todayStr) }
+        val stepsCount = stepsEntity?.count ?: 0
+
+        // 👟 ✅ Spočítáme spálené kalorie z kroků (přičteme k cíli)
+        val weight = target.weight // weight jsme si vytáhli do MacroResultu níže
+        val burnedFromSteps = calculateCaloriesFromSteps(stepsCount, weight)
+
+        val finalTargetCalories = target.calories + burnedFromSteps
+        // Navýšíme sacharidy z nachozených kroků (1g sacharidů = 4 kcal)
+        val finalTargetCarbs = target.carbs + (burnedFromSteps / 4.0)
+
         val eatenP = consumedList.sumOf { it.p.toDouble() }
         val eatenS = consumedList.sumOf { it.s.toDouble() }
         val eatenT = consumedList.sumOf { it.t.toDouble() }
         val eatenCal = consumedList.sumOf { it.calories.toDouble() }
 
         return DailyStatus(
-            caloriesLeft = target.calories - eatenCal,
+            caloriesLeft = finalTargetCalories - eatenCal,
             proteinLeft = target.protein - eatenP,
-            carbsLeft = target.carbs - eatenS,
+            carbsLeft = finalTargetCarbs - eatenS, // sacharidy se dynamicky posouvají s kroky!
             fatLeft = target.fat - eatenT,
-            target = target,
+            target = target.copy(calories = finalTargetCalories, carbs = finalTargetCarbs),
             eatenP = eatenP,
             eatenS = eatenS,
             eatenT = eatenT,
-            eatenCal = eatenCal
+            eatenCal = eatenCal,
+            stepsCount = stepsCount,
+            stepsCalories = burnedFromSteps
         )
+    }
+
+    // 🧠 ✅ Výpočet kalorií z kroků podle váhy (MET metoda pro chůzi)
+    private fun calculateCaloriesFromSteps(steps: Int, weight: Double): Double {
+        if (steps <= 0) return 0.0
+        // Konstanta pro běžnou chůzi: cca 0.00057 kcal na krok na 1 kg tělesné hmotnosti
+        return steps * weight * 0.00057
     }
 
     // Logika trenéra
@@ -40,8 +66,13 @@ object MacroFlowEngine {
         val sleep = checkIn.sleepQuality
         val energy = checkIn.energyLevel
         val hunger = checkIn.hungerLevel
+        val steps = status.stepsCount
 
         return when {
+            // Extrémní výdej kroků bez jídla
+            steps >= 12000 && status.caloriesLeft > 1000 ->
+                "Dneska jsi pořádná mašina ($steps kroků)! Tvých $weight kg potřebuje dotankovat sacharidy, nebo padneš únavou. Dej si pořádnou porci! 🏃‍♂️🍝"
+
             // Extrémní hlad
             hunger >= 5 ->
                 "Pozor na vlčí hlad! Těch $weight kg dneska potřebuje pořádný objem jídla a bílkovin. 🥩"
@@ -62,7 +93,7 @@ object MacroFlowEngine {
             sleep >= 4 && energy <= 3 && hunger >= 4 ->
                 "Spánek byl top, ale motor je prázdný. Tvých $weight kg potřebuje dnes víc paliva! 🍝"
 
-            // 🆕 PŘIDANÁ VĚTEV PRO STŘEDNÍ HODNOTY (Aby to hned reagovalo i na výchozí hodnoty)
+            // Střední hodnoty
             sleep == 3 || energy == 3 ->
                 "Dneska je to takový průměr pro tvých $weight kg. Žádné extrémy, nalož si stabilní jídlo a jdeme na to! 📈"
 
@@ -70,7 +101,6 @@ object MacroFlowEngine {
         }
     }
 
-    // V MacroFlowEngine.kt
     suspend fun logSwipedFood(
         context: Context,
         name: String,
@@ -78,7 +108,7 @@ object MacroFlowEngine {
         s: Double,
         t: Double,
         cal: Double,
-        mealContext: String = "NO_TRAINING" // Přidán parametr s výchozí hodnotou
+        mealContext: String = "NO_TRAINING"
     ) {
         withContext(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(context)
@@ -93,11 +123,10 @@ object MacroFlowEngine {
                 s = s.toFloat(),
                 t = t.toFloat(),
                 calories = cal.toInt(),
-                mealContext = mealContext // 👈 Tady ho bezpečně propíšeme!
+                mealContext = mealContext
             )
             db.consumedSnackDao().insertConsumed(snack)
 
-            // ☁️ CLOUD ZÁPIS:
             if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) {
                 try {
                     cz.uhk.macroflow.data.FirebaseRepository.uploadConsumedSnack(snack)
@@ -106,7 +135,6 @@ object MacroFlowEngine {
                 }
             }
 
-            // 🦖 REAL-TIME XP (Když sní jídlo, dostane XP ihned bez restartu!):
             withContext(Dispatchers.Main) {
                 (context as? cz.uhk.macroflow.common.MainActivity)?.addXpToActivePokemonRealTime(
                     cz.uhk.macroflow.pokemon.XpRewards.LOGGED_FOOD
@@ -116,7 +144,7 @@ object MacroFlowEngine {
     }
 }
 
-
+// 📦 ✅ Přidány vlastnosti do DailyStatus třídy
 data class DailyStatus(
     val caloriesLeft: Double,
     val proteinLeft: Double,
@@ -126,5 +154,7 @@ data class DailyStatus(
     val eatenP: Double,
     val eatenS: Double,
     val eatenT: Double,
-    val eatenCal: Double
+    val eatenCal: Double,
+    val stepsCount: Int = 0,
+    val stepsCalories: Double = 0.0
 )

@@ -31,7 +31,8 @@ object FirebaseRepository {
             "height" to profile.height,
             "age" to profile.age,
             "gender" to profile.gender,
-            "activityMultiplier" to profile.activityMultiplier
+            "activityMultiplier" to profile.activityMultiplier,
+            "stepGoal" to profile.stepGoal
         )
         userDoc().collection("data").document("profile")
             .set(data, SetOptions.merge()).await()
@@ -46,7 +47,8 @@ object FirebaseRepository {
             height = snap.getDouble("height") ?: 175.0,
             age = (snap.getLong("age") ?: 22L).toInt(),
             gender = snap.getString("gender") ?: "male",
-            activityMultiplier = (snap.getDouble("activityMultiplier") ?: 1.2).toFloat()
+            activityMultiplier = (snap.getDouble("activityMultiplier") ?: 1.2).toFloat(),
+            stepGoal = (snap.getLong("stepGoal") ?: 6000L).toInt()
         )
     }
 
@@ -194,20 +196,21 @@ object FirebaseRepository {
             "s" to consumed.s,
             "t" to consumed.t,
             "calories" to consumed.calories,
-            "mealContext" to consumed.mealContext
+            "mealContext" to consumed.mealContext,
+            "timestamp" to consumed.timestamp
         )
-        userDoc().collection("consumed_history").document(consumed.id.toString())
+        userDoc().collection("consumed_history").document(consumed.timestamp.toString())
             .set(data, SetOptions.merge()).await()
     }
 
-    suspend fun downloadConsumedByDate(date: String): List<ConsumedSnackEntity> {
-        val snaps = userDoc().collection("consumed_history")
-            .whereEqualTo("date", date).get().await()
+    // 📂 ✅ NOVÉ: Stáhne kompletně celou historii snězených jídel pro trenéra (všechny dny)
+    suspend fun downloadAllConsumedHistory(): List<ConsumedSnackEntity> {
+        val snaps = userDoc().collection("consumed_history").get().await()
 
         return snaps.documents.mapNotNull { doc ->
             ConsumedSnackEntity(
-                id = doc.id.toIntOrNull() ?: 0,
-                date = doc.getString("date") ?: date,
+                timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis(),
+                date = doc.getString("date") ?: "",
                 time = doc.getString("time") ?: "",
                 name = doc.getString("name") ?: "",
                 p = (doc.getDouble("p") ?: 0.0).toFloat(),
@@ -217,6 +220,10 @@ object FirebaseRepository {
                 mealContext = doc.getString("mealContext") ?: "NO_TRAINING"
             )
         }
+    }
+
+    suspend fun deleteConsumedSnack(timestamp: Long) {
+        userDoc().collection("consumed_history").document(timestamp.toString()).delete().await()
     }
 
     // ========== 🦖 INVENTÁŘ (Zlatý rámeček v kapse) ==========
@@ -233,7 +240,6 @@ object FirebaseRepository {
             "xp" to pokemon.xp
         )
 
-        // ✅ Každá instance má své unikátní časové ID - nikdy se nepřepíše
         userDoc().collection("captured_pokemon").document(pokemon.caughtDate.toString())
             .set(data, SetOptions.merge()).await()
     }
@@ -362,7 +368,6 @@ object FirebaseRepository {
         val data = mapOf(
             "count" to steps.count
         )
-        // Každý den má svůj unikátní dokument ("2026-03-27")
         userDoc().collection("steps").document(steps.date)
             .set(data, SetOptions.merge()).await()
     }
@@ -381,8 +386,6 @@ object FirebaseRepository {
 
     suspend fun syncLocalDataToCloud(context: Context) {
         val localDb = AppDatabase.getDatabase(context)
-
-        // ✅ Tady si vytvoříme dnešní datum pro kroky
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
         localDb.userProfileDao().getProfileSync()?.let { uploadProfile(it) }
@@ -396,6 +399,8 @@ object FirebaseRepository {
         localDb.bodyMetricsDao().getAllSync().forEach { uploadBodyMetrics(it) }
 
         localDb.snackDao().getAllSnacks().first().forEach { uploadCustomSnack(it) }
+
+        // 🍕 ✅ Celá historie se odešle na server pro trenérské PDF přehledy
         localDb.consumedSnackDao().getAllConsumedSync().forEach { uploadConsumedSnack(it) }
 
         localDb.waterDao().getAllWaterSync().forEach { uploadWater(it) }
@@ -403,14 +408,11 @@ object FirebaseRepository {
         localDb.coinDao().getBalance()?.let { uploadCoins(it) }
         localDb.userItemDao().getAllItems().forEach { uploadUserItem(it) }
 
-        // ✅ Teď už proměnná today existuje a kompilace projde hladce!
         localDb.stepsDao().getStepsForDateSync(today)?.let { uploadSteps(it) }
 
-        // 🦖 1. Zlatý rámeček v kapse
         val localCaught = localDb.capturedPokemonDao().getAllCaught()
         localCaught.forEach { uploadCapturedPokemon(it) }
 
-        // 📖 2. Trvale barevný Pokédex
         val localStatusIds = localDb.pokedexStatusDao().getUnlockedIds()
         val localCaughtIds = localCaught.map { it.pokemonId }
         val allUnlockedIds = (localStatusIds + localCaughtIds).distinct()
@@ -445,15 +447,15 @@ object FirebaseRepository {
         downloadAllBodyMetrics().forEach { localDb.bodyMetricsDao().save(it) }
         downloadAllCustomSnacks().forEach { localDb.snackDao().insertSnack(it) }
 
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        downloadConsumedByDate(today).forEach { localDb.consumedSnackDao().insertConsumed(it) }
+        // 🍕 🔥 OPRAVA ZDE: Smaže duplikáty a čistě stáhne kompletní historii snězených jídel z Cloudu
+        localDb.consumedSnackDao().deleteAllConsumedLocally()
+        downloadAllConsumedHistory().forEach { localDb.consumedSnackDao().insertConsumed(it) }
 
         downloadAllWater().forEach { localDb.waterDao().insertWater(it) }
 
         localDb.coinDao().setBalance(downloadCoins())
         downloadAllUserItems().forEach { localDb.userItemDao().insertOrUpdateItem(it) }
 
-        // 🔥 OPRAVA ZDE: Než Room stáhne duplikáty, smaže ty lokální a stáhne je čisté z Cloudu!
         localDb.capturedPokemonDao().deleteAllCapturedLocally()
         downloadAllCapturedPokemon().forEach { localDb.capturedPokemonDao().insertPokemon(it) }
 

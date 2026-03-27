@@ -5,8 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "water_log")
 data class WaterEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val date: String,           // "yyyy-MM-dd"
-    val amountMl: Int,          // ml přidané v tomto záznamu
-    val timestamp: Long = System.currentTimeMillis()
+    @PrimaryKey val timestamp: Long = System.currentTimeMillis(), // 👈 ✅ Čas jako primární klíč
+    val date: String,
+    val amountMl: Int
 )

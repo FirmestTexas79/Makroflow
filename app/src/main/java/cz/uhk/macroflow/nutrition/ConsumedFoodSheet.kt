@@ -236,12 +236,25 @@ class ConsumedFoodSheet : BottomSheetDialogFragment() {
             .setDuration(280)
             .withEndAction {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    db.consumedSnackDao().deleteConsumedById(consumed.id)
+                    // 1. 🏠 Smažeme lokálně z Room databáze
+                    db.consumedSnackDao().deleteConsumedByTimestamp(consumed.timestamp)
+
+                    // 2. ☁️ ✅ NOVÉ: Smažeme z cloudu Firebase!
+                    if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) {
+                        try {
+                            cz.uhk.macroflow.data.FirebaseRepository.deleteConsumedSnack(consumed.timestamp)
+                        } catch (e: Exception) {
+                            android.util.Log.e("FIREBASE_DELETE", "Nepovedlo se smazat z cloudu: ${e.message}")
+                        }
+                    }
+
                     withContext(Dispatchers.Main) {
                         container.removeView(card)
                         onFoodDeleted?.invoke()
-                        // Přepočítej celkový součet
+
+                        // Přepočítej celkový součet v UI listu
                         loadAndDisplay(rootView)
+
                         Toast.makeText(
                             requireContext(),
                             "${consumed.name} odebráno",

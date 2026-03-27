@@ -4,36 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import cz.uhk.macroflow.achievements.AchievementDao
 import cz.uhk.macroflow.achievements.AchievementEntity
 import cz.uhk.macroflow.pokemon.*
-
-val MIGRATION_7_8 = object : Migration(7, 8) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE consumed_snacks ADD COLUMN mealContext TEXT NOT NULL DEFAULT 'NO_TRAINING'")
-    }
-}
-
-val MIGRATION_8_14 = object : Migration(8, 14) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("CREATE TABLE IF NOT EXISTS coins (id INTEGER PRIMARY KEY NOT NULL DEFAULT 1, balance INTEGER NOT NULL DEFAULT 0)")
-        database.execSQL("CREATE TABLE IF NOT EXISTS captured_pokemon (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, pokemonId TEXT NOT NULL, name TEXT NOT NULL, isShiny INTEGER NOT NULL DEFAULT 0, isLocked INTEGER NOT NULL DEFAULT 0, caughtDate INTEGER NOT NULL, moveListStr TEXT NOT NULL DEFAULT '', level INTEGER NOT NULL DEFAULT 1)")
-        database.execSQL("CREATE TABLE IF NOT EXISTS user_items (itemId TEXT PRIMARY KEY NOT NULL, quantity INTEGER NOT NULL DEFAULT 0)")
-        database.execSQL("CREATE TABLE IF NOT EXISTS pokedex_entries (pokedexId TEXT PRIMARY KEY NOT NULL, webName TEXT NOT NULL, displayName TEXT NOT NULL, type TEXT NOT NULL, macroDesc TEXT NOT NULL, unlockedHint TEXT NOT NULL DEFAULT '', evolveLevel INTEGER NOT NULL DEFAULT 0, evolveToId TEXT NOT NULL DEFAULT '')")
-        database.execSQL("CREATE TABLE IF NOT EXISTS pokedex_status (pokemonId TEXT PRIMARY KEY NOT NULL, unlocked INTEGER NOT NULL DEFAULT 1, unlockedDate INTEGER NOT NULL)")
-        database.execSQL("CREATE TABLE IF NOT EXISTS seen_pokemon (pokemonId TEXT PRIMARY KEY NOT NULL, seenAt INTEGER NOT NULL)")
-        database.execSQL("CREATE TABLE IF NOT EXISTS pokemon_xp (pokemonId TEXT PRIMARY KEY NOT NULL, totalXp INTEGER NOT NULL DEFAULT 0, lastDailyRewardDate TEXT NOT NULL DEFAULT '')")
-    }
-}
-
-// 👣 ✅ NOVÁ MIGRACE PRO KROKY (Verze 14 -> 15)
-val MIGRATION_14_15 = object : Migration(14, 15) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("CREATE TABLE IF NOT EXISTS steps (date TEXT PRIMARY KEY NOT NULL, count INTEGER NOT NULL DEFAULT 0)")
-    }
-}
 
 @Database(
     entities = [
@@ -51,9 +25,9 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
         PokedexStatusEntity::class,
         SeenPokemonEntity::class,
         PokemonXpEntity::class,
-        StepsEntity::class // 👈 ✅ Přidána nová entita pro kroky
+        StepsEntity::class
     ],
-    version = 15, // 👈 ✅ Zvednuto na verzi 15 kvůli krokům
+    version = 17, // ✅ Verze 17 zohledňuje všechny aktuální Kotlin modely
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -72,7 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pokedexStatusDao(): PokedexStatusDao
     abstract fun seenPokemonDao(): SeenPokemonDao
     abstract fun pokemonXpDao(): PokemonXpDao
-    abstract fun stepsDao(): StepsDao // 👈 ✅ Přidáno rozhraní pro DAO kroků
+    abstract fun stepsDao(): StepsDao
 
     companion object {
         @Volatile
@@ -85,7 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_7_8, MIGRATION_8_14, MIGRATION_14_15) // 👈 ✅ Přidána nová migrace
+                    // ✅ Odstranili jsme pole .addMigrations(). fallbackToDestructiveMigration zařídí zbytek bezpečně!
                     .fallbackToDestructiveMigration()
                     .allowMainThreadQueries()
                     .addCallback(object : Callback() {
@@ -105,7 +79,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 val hint = getHintForPokemon(idStr)
 
                                 val evolveLvl = when(idStr) { "010" -> 3; "011" -> 5; else -> 0 }
-                                val evolveTo  = when(idStr) { "010" -> "011"; "011" -> "012"; else -> "" }
+                                val evolveTo = when(idStr) { "010" -> "011"; "011" -> "012"; else -> "" }
 
                                 db.execSQL(
                                     "INSERT INTO pokedex_entries (pokedexId, webName, displayName, type, macroDesc, unlockedHint, evolveLevel, evolveToId) " +
@@ -183,7 +157,7 @@ abstract class AppDatabase : RoomDatabase() {
             Triple("Venomoth", "HMYZ / PLYNULOST", "Plynulý pohyb v plném rozsahu (ROM). Žádné trhané poloviční opakování."),
             Triple("Diglett", "ZEMĚ / VLÁKNINA", "Král ranního vyprazdňování! Tento podzemní tvor symbolizuje zdravou peristaltiku střev. Pokud tvůj trůnní rituál vázne, přidej rozpustnou vlákninu a dostatek vody."),
             Triple("Dugtrio", "ZEMĚ / SUPLEMENTY", "Svatá trojice: Protein, Kreatin, Omega-3. Tři pilíře úspěšné suplementace."),
-            Triple("Meowth", "NORMÁLNÍ / CHEAT MEAL", "Zlaťáky na utrácení za cheat mealy. Jednou za čas si dej pizzu a zapiš ji jako radost."),
+            Triple("Meowth", "NORMÁLNÍ / CHEAT MEAL", "Zlaťáky na utrácení za cheat mealy. Jedonce za čas si dej pizzu a zapiš ji jako radost."),
             Triple("Persian", "NORMÁLNÍ / LEAN BULK", "Čisté svaly bez zbytečného tuku. Kočičí mrštnost a vyrýsovanost."),
             Triple("Psyduck", "VODA / SVALOVÁ KŘEČ", "Bolí tě hlava a chytají tě křeče? Chybí ti hořčík a draslík ve stravě."),
             Triple("Golduck", "VODA / FLOW STATUS", "Stav absolutního soustředění. Jsi ve zóně, kde čas ve fitku neexistuje."),
@@ -270,7 +244,7 @@ abstract class AppDatabase : RoomDatabase() {
             Triple("Flareon", "OHEŇ / SPALOVÁNÍ TUKŮ", "Zvýšená tělesná teplota pálí kalorie i v klidovém stavu."),
             Triple("Porygon", "NORMÁLNÍ / MATEMATIKA MAKER", "Čistá data a výpočty. Kalorie dovnitř vs. kalorie ven."),
             Triple("Omanyte", "VODA / STARÁ ŠKOLA", "Old-school tréninkové metody z dob Arnolda. Základní těžké váhy."),
-            Triple("Omastar", "VODA / TVRDÁ KONSTRUKCE", "Klouby obalené vápníkem a vazivo zocelené léty tréninku."),
+            Triple("Omastar", "VODA / TVRDÁ KONSTRUKCE", "Krunýř tě ochrání před svalovou horečkou. Ledová vana po těžkém legdayi dělá divy."),
             Triple("Kabuto", "ZEMĚ / HISTORIE FORMY", "Podívej se na své staré fotky. Srovnej progres v čase."),
             Triple("Kabutops", "ZEMĚ / FUNKČNÍ TRÉNINK", "Atletická postava stvořená pro pohyb, rychlost a sílu."),
             Triple("Aerodactyl", "LÉTACÍ / EXPLOSIVNÍ START", "Vyběhni schody s lehkostí. Rychlostní vytrvalost."),
