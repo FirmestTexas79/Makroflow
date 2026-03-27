@@ -65,7 +65,6 @@
                     android:alpha="0.8"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvTitle" />
-
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <LinearLayout
@@ -78,140 +77,63 @@
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardStatPush"
                     android:layout_width="0dp"
-                    android:layout_height="80dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     app:cardCornerRadius="18dp"
                     app:cardBackgroundColor="#283618"
                     app:cardElevation="0dp">
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:gravity="center"
-                        android:padding="8dp">
-                        <TextView
-                            android:id="@+id/tvStatPushCount"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textColor="#DDA15E"
-                            android:textSize="26sp"
-                            android:fontFamily="sans-serif-black" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="PUSH"
-                            android:textColor="#FEFAE0"
-                            android:textSize="9sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.1" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
+                        <TextView android:id="@+id/tvStatPushCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#DDA15E" android:textSize="26sp" android:fontFamily="sans-serif-black" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PUSH" android:textColor="#FEFAE0" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardStatPull"
                     android:layout_width="0dp"
-                    android:layout_height="80dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     app:cardCornerRadius="18dp"
                     app:cardBackgroundColor="#606C38"
                     app:cardElevation="0dp">
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:gravity="center"
-                        android:padding="8dp">
-                        <TextView
-                            android:id="@+id/tvStatPullCount"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textColor="#FEFAE0"
-                            android:textSize="26sp"
-                            android:fontFamily="sans-serif-black" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="PULL"
-                            android:textColor="#FEFAE0"
-                            android:textSize="9sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.1" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
+                        <TextView android:id="@+id/tvStatPullCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#FEFAE0" android:textSize="26sp" android:fontFamily="sans-serif-black" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PULL" android:textColor="#FEFAE0" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardStatLegs"
                     android:layout_width="0dp"
-                    android:layout_height="80dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     app:cardCornerRadius="18dp"
                     app:cardBackgroundColor="#BC6C25"
                     app:cardElevation="0dp">
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:gravity="center"
-                        android:padding="8dp">
-                        <TextView
-                            android:id="@+id/tvStatLegsCount"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textColor="#FEFAE0"
-                            android:textSize="26sp"
-                            android:fontFamily="sans-serif-black" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="LEGS"
-                            android:textColor="#FEFAE0"
-                            android:textSize="9sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.1" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
+                        <TextView android:id="@+id/tvStatLegsCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#FEFAE0" android:textSize="26sp" android:fontFamily="sans-serif-black" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LEGS" android:textColor="#FEFAE0" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardStatRest"
                     android:layout_width="0dp"
-                    android:layout_height="80dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     app:cardCornerRadius="18dp"
                     app:cardBackgroundColor="#FEFAE0"
                     app:cardElevation="0dp"
                     app:strokeColor="#30283618"
                     app:strokeWidth="1.5dp">
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:gravity="center"
-                        android:padding="8dp">
-                        <TextView
-                            android:id="@+id/tvStatRestCount"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textColor="#283618"
-                            android:textSize="26sp"
-                            android:fontFamily="sans-serif-black" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="REST"
-                            android:textColor="#606C38"
-                            android:textSize="9sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.1" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
+                        <TextView android:id="@+id/tvStatRestCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#283618" android:textSize="26sp" android:fontFamily="sans-serif-black" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="REST" android:textColor="#606C38" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-
             </LinearLayout>
 
             <LinearLayout
@@ -222,29 +144,9 @@
                 android:layout_marginHorizontal="24dp"
                 android:layout_marginTop="28dp"
                 android:layout_marginBottom="12dp">
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1"
-                    android:background="#20283618" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="12dp"
-                    android:text="NASTAV KAŽDÝ DEN"
-                    android:textColor="#606C38"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.14" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1"
-                    android:background="#20283618" />
-
+                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#20283618" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginHorizontal="12dp" android:text="NASTAV KAŽDÝ DEN" android:textColor="#606C38" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.14" />
+                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#20283618" />
             </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView
@@ -270,61 +172,14 @@
                     android:padding="18dp"
                     android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="36dp"
-                        android:layout_height="wrap_content"
-                        android:text="💡"
-                        android:textSize="22sp"
-                        android:gravity="center" />
+                    <TextView android:layout_width="36dp" android:layout_height="wrap_content" android:text="💡" android:textSize="22sp" android:gravity="center" />
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="12dp"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Makra se přizpůsobí každému dni"
-                            android:textColor="#DDA15E"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
-                            android:text="🏋️PUSH  +300 kcal · standardní bílkoviny"
-                            android:textColor="#FEFAE0"
-                            android:textSize="12sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
-                            android:text="💪 PULL  +350 kcal · vyšší bílkoviny"
-                            android:textColor="#FEFAE0"
-                            android:textSize="12sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:text="🦵 LEGS  +600 kcal · více bílkovin · více vody"
-                            android:textColor="#FEFAE0"
-                            android:textSize="12sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
-                            android:text="😴 OFF    základní TDEE · žádné bonusy"
-                            android:textColor="#FEFAE0"
-                            android:textSize="12sp"
-                            android:alpha="0.8" />
-
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="12dp" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Makra se přizpůsobí každému dni" android:textColor="#DDA15E" android:textSize="13sp" android:textStyle="bold" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="🏋️ PUSH  +300 kcal · standardní bílkoviny" android:textColor="#FEFAE0" android:textSize="12sp" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="💪 PULL  +350 kcal · vyšší bílkoviny" android:textColor="#FEFAE0" android:textSize="12sp" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="🦵 LEGS  +600 kcal · více bílkovin · více vody" android:textColor="#FEFAE0" android:textSize="12sp" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="😴 OFF    základní TDEE · žádné bonusy" android:textColor="#FEFAE0" android:textSize="12sp" android:alpha="0.8" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

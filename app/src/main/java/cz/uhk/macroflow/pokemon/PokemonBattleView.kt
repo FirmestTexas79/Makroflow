@@ -335,7 +335,7 @@ class PokemonBattleView @JvmOverloads constructor(
         }
         val tx = 108; val ty = 97; val tw = 50; val th = 46; drawUIBox(c, tx, ty, tw, th)
         PokemonSprites.drawText(c, "TYPE/", tx+3, ty+5, C_TEXT, fp)
-        PokemonSprites.drawText(c, gs.player.moves[0].type.take(7), tx+3, ty+15, C_TEXT, fp)
+        PokemonSprites.drawText(c, gs.player.moves[0].type.name.take(7), tx+3, ty+15, C_TEXT, fp)
         PokemonSprites.drawText(c, "BACK", tx+3, ty+38, C_TEXT, fp)
         zones.clear()
         gs.player.moves.forEachIndexed { i, _ ->
@@ -442,7 +442,13 @@ class PokemonBattleView @JvmOverloads constructor(
                 setText("${gs.player.name}", "MISSED!"); scheduleAfterText { enemyTurn() }; return@postDelayed
             }
             if (mv.power > 0) {
-                val dmg = BattleEngine.calcDamage(gs.player.level, mv.power, gs.player.attack, gs.enemy.defense)
+
+                // ✅ OPRAVA: Pro zjednodušení vezmeme typ nepřítele podle jeho prvního útoku v seznamu
+                val enemyType = gs.enemy.moves.firstOrNull()?.type ?: PokemonType.NORMAL
+
+                // Přidali jsme typy do výpočtu damage!
+                val dmg = BattleEngine.calcDamage(gs.player.level, mv.power, gs.player.attack, gs.enemy.defense, mv.type, enemyType)
+
                 doFlash {
                     gs.enemy.currentHp = maxOf(0, gs.enemy.currentHp - dmg); invalidate()
                     handler.postDelayed({
@@ -526,7 +532,13 @@ class PokemonBattleView @JvmOverloads constructor(
             if (mv.power > 0) {
                 val atkE = (gs.enemy.attack   * gs.enemyAtkMod).toInt()
                 val defE = (gs.player.defense * gs.enemyDefMod).toInt()
-                val dmg  = BattleEngine.calcDamage(gs.enemy.level, mv.power, atkE, defE)
+
+                // ✅ OPRAVA: Pro zjednodušení vezmeme typ hráče podle jeho prvního útoku v seznamu
+                val playerType = gs.player.moves.firstOrNull()?.type ?: PokemonType.NORMAL
+
+                // Přidali jsme typy do výpočtu damage!
+                val dmg  = BattleEngine.calcDamage(gs.enemy.level, mv.power, atkE, defE, mv.type, playerType)
+
                 doFlash {
                     gs.player.currentHp = maxOf(0, gs.player.currentHp - dmg); invalidate()
                     handler.postDelayed({

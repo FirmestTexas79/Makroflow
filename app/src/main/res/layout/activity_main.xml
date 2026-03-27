@@ -37,12 +37,13 @@
                     android:layout_gravity="bottom"
                     android:background="@android:color/transparent"
                     app:elevation="0dp"
-                    app:itemIconSize="28dp"
-                    app:itemPaddingTop="10dp"
+                    app:itemIconSize="26dp"
                     app:itemIconTint="#FEFAE0"
                     app:itemTextColor="#FEFAE0"
-                    app:labelVisibilityMode="labeled"
+                    app:itemPaddingTop="12dp"
+                    app:labelVisibilityMode="selected"
                     app:menu="@menu/bottom_menu" />
+
             </LinearLayout>
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -59,38 +60,28 @@
                 app:maxImageSize="32dp"
                 app:strokeColor="#606C38"
                 app:tint="#FEFAE0" />
-
         </RelativeLayout>
 
-        <!--
-            Diglett — spodní okraj Digletta = horní okraj lišty (100dp od spodku)
-            Diglett je 100dp vysoký → marginBottom = 100dp (horní okraj lišty)
-            minus 40dp (aby seděl na liště, ne nad ní) = 60dp
-
-            translationX se nastavuje programově v DiglettWanderer
-            layout_marginStart=0 je výchozí pozice, pohyb přes translationX
-        -->
         <ImageView
             android:id="@+id/ivDiglettBottomBar"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:layout_alignParentBottom="true"
             android:layout_alignParentStart="true"
             android:layout_marginBottom="60dp"
-            android:layout_marginStart="0dp"
-            android:src="@drawable/diglett_bottom"
+            android:layout_marginStart="16dp"
             android:scaleType="fitCenter"
             android:visibility="gone"
-            android:elevation="50dp"
+            android:elevation="15dp"
             android:contentDescription="Diglett" />
 
         <FrameLayout
             android:id="@+id/smokeOverlayContainer"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            android:elevation="20dp" />
+            android:clickable="false"
+            android:focusable="false"
+            android:elevation="10dp" />
 
         <FrameLayout
             android:id="@+id/topBar"
@@ -110,9 +101,7 @@
                 android:src="@drawable/ic_drawer_user"
                 android:contentDescription="Menu"
                 android:padding="10dp" />
-
         </FrameLayout>
-
     </RelativeLayout>
 
     <com.google.android.material.navigation.NavigationView
@@ -121,12 +110,7 @@
         android:layout_height="match_parent"
         android:layout_gravity="end"
         android:fitsSystemWindows="true"
-        android:background="@color/brand_cream"
+        android:background="#FEFAE0"
         app:headerLayout="@layout/drawer_header"
-        app:menu="@menu/drawer_menu"
-        app:itemTextColor="@color/brand_dark"
-        app:itemIconTint="@color/brand_primary"
-        app:itemTextAppearance="@style/DrawerItemText"
-        app:itemBackground="@drawable/drawer_item_background" />
-
+        app:menu="@menu/drawer_menu" />
 </androidx.drawerlayout.widget.DrawerLayout>

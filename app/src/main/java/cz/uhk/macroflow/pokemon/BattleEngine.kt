@@ -4,16 +4,20 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.random.Random
 
+enum class PokemonType {
+    NORMAL, FIRE, WATER, GRASS, ELECTRIC, BUG, FLYING, GHOST, GROUND, PSYCHIC
+}
+
+// Uprav Move, aby využíval PokemonType místo String
 data class Move(
     val name: String,
-    val type: String,
+    val type: PokemonType, // 👈 Změna ze String na PokemonType
     val power: Int,
     val accuracy: Int,
     val maxPp: Int,
     var pp: Int = maxPp,
     val statEffect: StatEffect? = null
 )
-
 enum class StatEffect { LOWER_ENEMY_ATK, LOWER_ENEMY_DEF }
 
 data class Pokemon(
@@ -70,11 +74,50 @@ object BattleEngine {
         )
     }
 
-    fun calcDamage(level: Int, power: Int, atk: Int, def: Int): Int {
+    // Vrací 2.0f (Supereffektivní), 1.0f (Normální), 0.5f (Málo efektivní) nebo 0.0f (Žádný efekt)
+    fun getTypeEffectiveness(moveType: PokemonType, defenderType: PokemonType): Float {
+        return when (moveType) {
+            PokemonType.FIRE -> when (defenderType) {
+                PokemonType.GRASS, PokemonType.BUG -> 2.0f
+                PokemonType.WATER, PokemonType.FIRE -> 0.5f
+                else -> 1.0f
+            }
+            PokemonType.WATER -> when (defenderType) {
+                PokemonType.FIRE, PokemonType.GROUND -> 2.0f
+                PokemonType.WATER, PokemonType.GRASS -> 0.5f
+                else -> 1.0f
+            }
+            PokemonType.GRASS -> when (defenderType) {
+                PokemonType.WATER, PokemonType.GROUND -> 2.0f
+                PokemonType.FIRE, PokemonType.GRASS, PokemonType.FLYING, PokemonType.BUG -> 0.5f
+                else -> 1.0f
+            }
+            PokemonType.ELECTRIC -> when (defenderType) {
+                PokemonType.WATER, PokemonType.FLYING -> 2.0f
+                PokemonType.GRASS, PokemonType.ELECTRIC -> 0.5f
+                PokemonType.GROUND -> 0.0f // Zemní typy jsou imunní!
+                else -> 1.0f
+            }
+            PokemonType.NORMAL -> when (defenderType) {
+                PokemonType.GHOST -> 0.0f // Duchové jsou imunní vůči normálním útokům!
+                else -> 1.0f
+            }
+            // Sem můžeš postupně dopisovat další kombinace (GHOST vs PSYCHIC atd.)
+            else -> 1.0f
+        }
+    }
+
+    // Upravený výpočet damage o násobič typu
+    fun calcDamage(level: Int, power: Int, atk: Int, def: Int, moveType: PokemonType, defenderType: PokemonType): Int {
         if (power == 0) return 0
+
         val base = ((2.0 * level / 5.0 + 2.0) * power * (atk.toDouble() / def.toDouble()) / 50.0 + 2.0)
         val rng = 0.85 + Random.nextDouble() * 0.15
-        return max(1, floor(base * rng).toInt())
+
+        // Získáme násobič podle slabosti/odolnosti
+        val typeMultiplier = getTypeEffectiveness(moveType, defenderType)
+
+        return max(1, floor(base * rng * typeMultiplier).toInt())
     }
 
     /** multiplier < 1.0 = těžší chytit (Gengar 0.7), Great Ball > 1.0 */
@@ -105,14 +148,12 @@ object BattleEngine {
 
 object BattleFactory {
 
-    fun attackTackle()     = Move("TACKLE",      "NORMAL",  40, 100, 35)
-    fun attackStringShot() = Move("STRING SHOT", "BUG",      0,  95, 40, statEffect = StatEffect.LOWER_ENEMY_DEF)
-    fun attackHarden()     = Move("HARDEN",      "NORMAL",   0, 100, 30) // Učí se na lvl 3
-    fun attackGust()       = Move("GUST",        "FLYING",  40, 100, 35) // Učí se na lvl 5
+    fun attackTackle()     = Move("TACKLE",      PokemonType.NORMAL,  40, 100, 35)
+    fun attackStringShot() = Move("STRING SHOT", PokemonType.BUG,      0,  95, 40, statEffect = StatEffect.LOWER_ENEMY_DEF)
+    fun attackHarden()     = Move("HARDEN",      PokemonType.NORMAL,   0, 100, 30)
+    fun attackGust()       = Move("GUST",        PokemonType.FLYING,  40, 100, 35)
 
     // --- 🐛 CATERPIE SHABLONY S PARAMETREM LEVEL ---
-
-    // level: Int = 1 udává, že pokud parametr nezadáš, vezme se level 1
     fun createCaterpie(level: Int = 1) = Pokemon(
         name = "CATERPIE", level = level, maxHp = 22, attack = 6, defense = 7, speed = 9,
         moves = mutableListOf(attackTackle(), attackStringShot())
@@ -132,10 +173,10 @@ object BattleFactory {
     fun createMew() = Pokemon(
         name = "MEW", level = 5, maxHp = 35, attack = 12, defense = 10, speed = 15,
         moves = listOf(
-            Move("BAFIKYBAF",  "NORMAL",  40, 100, 35),
-            Move("MEGA PUNCH", "NORMAL",  80,  85, 20),
-            Move("GROWL",      "NORMAL",   0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
-            Move("TAIL WHIP",  "NORMAL",   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
+            Move("BAFIKYBAF",  PokemonType.NORMAL,  40, 100, 35),
+            Move("MEGA PUNCH", PokemonType.NORMAL,  80,  85, 20),
+            Move("GROWL",      PokemonType.NORMAL,   0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
+            Move("TAIL WHIP",  PokemonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
         )
     )
 
@@ -144,29 +185,29 @@ object BattleFactory {
     fun createDiglett() = Pokemon(
         name = "DIGLETT", level = 5, maxHp = 20, attack = 7, defense = 5, speed = 14,
         moves = listOf(
-            Move("SCRATCH",  "NORMAL", 35, 100, 35),
-            Move("GROWL",    "NORMAL",  0, 100, 40),
-            Move("SAND ATK", "GROUND",  0,  85, 15)
+            Move("SCRATCH",  PokemonType.NORMAL, 35, 100, 35),
+            Move("GROWL",    PokemonType.NORMAL,  0, 100, 40),
+            Move("SAND ATK", PokemonType.GROUND,  0,  85, 15)
         )
     )
 
     fun createPikachu() = Pokemon(
         name = "PIKACHU", level = 6, maxHp = 25, attack = 11, defense = 6, speed = 18,
         moves = listOf(
-            Move("THUNDER SHOCK", "ELECTRIC", 40, 100, 30),
-            Move("QUICK ATTACK",  "NORMAL",   40, 100, 30),
-            Move("TAIL WHIP",     "NORMAL",    0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
-            Move("GROWL",         "NORMAL",    0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
+            Move("THUNDER SHOCK", PokemonType.ELECTRIC, 40, 100, 30),
+            Move("QUICK ATTACK",  PokemonType.NORMAL,   40, 100, 30),
+            Move("TAIL WHIP",     PokemonType.NORMAL,    0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
+            Move("GROWL",         PokemonType.NORMAL,    0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
         )
     )
 
     fun createEevee() = Pokemon(
         name = "EEVEE", level = 5, maxHp = 24, attack = 9, defense = 8, speed = 13,
         moves = listOf(
-            Move("TACKLE",    "NORMAL", 40, 100, 35),
-            Move("SAND ATK",  "NORMAL",  0,  85, 15),
-            Move("GROWL",     "NORMAL",  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
-            Move("TAIL WHIP", "NORMAL",  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
+            Move("TACKLE",    PokemonType.NORMAL, 40, 100, 35),
+            Move("SAND ATK",  PokemonType.NORMAL,  0,  85, 15),
+            Move("GROWL",     PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
+            Move("TAIL WHIP", PokemonType.NORMAL,  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
         )
     )
 
@@ -175,40 +216,40 @@ object BattleFactory {
     fun createBulbasaur() = Pokemon(
         name = "BULBASAUR", level = 7, maxHp = 28, attack = 10, defense = 10, speed = 10,
         moves = listOf(
-            Move("VINE WHIP",  "GRASS",  45, 100, 25),
-            Move("TACKLE",     "NORMAL", 40, 100, 35),
-            Move("GROWL",      "NORMAL",  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
-            Move("LEECH SEED", "GRASS",   0,  90, 10)
+            Move("VINE WHIP",  PokemonType.GRASS,  45, 100, 25),
+            Move("TACKLE",     PokemonType.NORMAL, 40, 100, 35),
+            Move("GROWL",      PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
+            Move("LEECH SEED", PokemonType.GRASS,   0,  90, 10)
         )
     )
 
     fun createSquirtle() = Pokemon(
         name = "SQUIRTLE", level = 7, maxHp = 27, attack = 9, defense = 12, speed = 11,
         moves = listOf(
-            Move("WATER GUN", "WATER",  40, 100, 25),
-            Move("TACKLE",    "NORMAL", 40, 100, 35),
-            Move("TAIL WHIP", "NORMAL",  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
-            Move("BUBBLE",    "WATER",  40, 100, 30)
+            Move("WATER GUN", PokemonType.WATER,  40, 100, 25),
+            Move("TACKLE",    PokemonType.NORMAL, 40, 100, 35),
+            Move("TAIL WHIP", PokemonType.NORMAL,  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
+            Move("BUBBLE",    PokemonType.WATER,  40, 100, 30)
         )
     )
 
     fun createCharmander() = Pokemon(
         name = "CHARMANDER", level = 7, maxHp = 26, attack = 12, defense = 8, speed = 14,
         moves = listOf(
-            Move("EMBER",      "FIRE",   40, 100, 25),
-            Move("SCRATCH",    "NORMAL", 40, 100, 35),
-            Move("GROWL",      "NORMAL",  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
-            Move("SMOKESCREEN","NORMAL",  0, 100, 20)
+            Move("EMBER",      PokemonType.FIRE,   40, 100, 25),
+            Move("SCRATCH",    PokemonType.NORMAL, 40, 100, 35),
+            Move("GROWL",      PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
+            Move("SMOKESCREEN",PokemonType.NORMAL,  0, 100, 20)
         )
     )
 
     fun createGastly() = Pokemon(
         name = "GASTLY", level = 7, maxHp = 22, attack = 13, defense = 5, speed = 16,
         moves = listOf(
-            Move("LICK",      "GHOST",   30, 100, 30),
-            Move("HYPNOSIS",  "PSYCHIC",  0,  60, 20),
-            Move("NIGHT SHADE","GHOST",  40,  95, 15),
-            Move("SPITE",     "GHOST",    0, 100, 10)
+            Move("LICK",      PokemonType.GHOST,   30, 100, 30),
+            Move("HYPNOSIS",  PokemonType.PSYCHIC,  0,  60, 20),
+            Move("NIGHT SHADE",PokemonType.GHOST,  40,  95, 15),
+            Move("SPITE",     PokemonType.GHOST,    0, 100, 10)
         )
     )
 
@@ -217,30 +258,30 @@ object BattleFactory {
     fun createHaunter() = Pokemon(
         name = "HAUNTER", level = 9, maxHp = 26, attack = 15, defense = 6, speed = 18,
         moves = listOf(
-            Move("SHADOW PUNCH", "GHOST",   60, 100, 20),
-            Move("LICK",         "GHOST",   30, 100, 30),
-            Move("HYPNOSIS",     "PSYCHIC",  0,  60, 20),
-            Move("CURSE",        "GHOST",    0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
+            Move("SHADOW PUNCH", PokemonType.GHOST,   60, 100, 20),
+            Move("LICK",         PokemonType.GHOST,   30, 100, 30),
+            Move("HYPNOSIS",     PokemonType.PSYCHIC,  0,  60, 20),
+            Move("CURSE",        PokemonType.GHOST,    0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
         )
     )
 
     fun createGengar() = Pokemon(
         name = "GENGAR", level = 10, maxHp = 30, attack = 16, defense = 7, speed = 20,
         moves = listOf(
-            Move("SHADOW BALL", "GHOST",   65,  80, 15),
-            Move("LICK",        "GHOST",   30, 100, 30),
-            Move("HYPNOSIS",    "PSYCHIC",  0,  60, 20),
-            Move("CURSE",       "GHOST",    0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
+            Move("SHADOW BALL", PokemonType.GHOST,   65,  80, 15),
+            Move("LICK",        PokemonType.GHOST,   30, 100, 30),
+            Move("HYPNOSIS",    PokemonType.PSYCHIC,  0,  60, 20),
+            Move("CURSE",       PokemonType.GHOST,    0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
         )
     )
 
     fun createSnorlax() = Pokemon(
         name = "SNORLAX", level = 10, maxHp = 50, attack = 14, defense = 10, speed = 5,
         moves = listOf(
-            Move("BODY SLAM", "NORMAL", 85,  85, 15),
-            Move("TACKLE",    "NORMAL", 40, 100, 35),
-            Move("AMNESIA",   "PSYCHIC", 0, 100, 20),
-            Move("YAWN",      "NORMAL",  0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_ATK)
+            Move("BODY SLAM", PokemonType.NORMAL, 85,  85, 15),
+            Move("TACKLE",    PokemonType.NORMAL, 40, 100, 35),
+            Move("AMNESIA",   PokemonType.PSYCHIC, 0, 100, 20),
+            Move("YAWN",      PokemonType.NORMAL,  0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_ATK)
         )
     )
 
@@ -249,33 +290,32 @@ object BattleFactory {
     fun createCharizard() = Pokemon(
         name = "CHARIZARD", level = 14, maxHp = 40, attack = 20, defense = 12, speed = 17,
         moves = listOf(
-            Move("FLAMETHROWER", "FIRE",   90,  85, 15),
-            Move("WING ATTACK",  "FLYING", 60, 100, 35),
-            Move("SLASH",        "NORMAL", 70, 100, 20),
-            Move("GROWL",        "NORMAL",  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
+            Move("FLAMETHROWER", PokemonType.FIRE,   90,  85, 15),
+            Move("WING ATTACK",  PokemonType.FLYING, 60, 100, 35),
+            Move("SLASH",        PokemonType.NORMAL, 70, 100, 20),
+            Move("GROWL",        PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
         )
     )
 
     fun createMewtwo() = Pokemon(
         name = "MEWTWO", level = 18, maxHp = 45, attack = 24, defense = 14, speed = 22,
         moves = listOf(
-            Move("PSYCHIC",   "PSYCHIC", 90,  90, 10),
-            Move("SWIFT",     "NORMAL",  60, 100, 20),
-            Move("BARRIER",   "PSYCHIC",  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
-            Move("RECOVER",   "NORMAL",   0, 100, 10)
+            Move("PSYCHIC",   PokemonType.PSYCHIC, 90,  90, 10),
+            Move("SWIFT",     PokemonType.NORMAL,  60, 100, 20),
+            Move("BARRIER",   PokemonType.PSYCHIC,  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
+            Move("RECOVER",   PokemonType.NORMAL,   0, 100, 10)
         )
     )
 
     // ── MYTHIC ────────────────────────────────────────────────────────
 
-    /** Divoký Mew — odlišný od hráčova Mewa jménem */
     fun createWildMew() = Pokemon(
         name = "MEW", level = 20, maxHp = 42, attack = 18, defense = 18, speed = 20,
         moves = listOf(
-            Move("PSYCHIC",    "PSYCHIC", 90,  90, 10),
-            Move("MEGA PUNCH", "NORMAL",  80,  85, 20),
-            Move("TRANSFORM",  "NORMAL",   0, 100, 10),
-            Move("SOFTBOILED", "NORMAL",   0, 100, 10)
+            Move("PSYCHIC",    PokemonType.PSYCHIC, 90,  90, 10),
+            Move("MEGA PUNCH", PokemonType.NORMAL,  80,  85, 20),
+            Move("TRANSFORM",  PokemonType.NORMAL,   0, 100, 10),
+            Move("SOFTBOILED", PokemonType.NORMAL,   0, 100, 10)
         )
     )
 

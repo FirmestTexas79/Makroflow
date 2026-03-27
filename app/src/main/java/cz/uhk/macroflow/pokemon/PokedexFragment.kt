@@ -124,14 +124,16 @@ class PokedexFragment : Fragment() {
 
     private fun showDetail(pokemon: PokedexEntryEntity, isUnlocked: Boolean, isInInventory: Boolean, catchCount: Int) {
         tvDetailNumber.text = "#${pokemon.pokedexId}"
-        tvDetailName.text   = if (isUnlocked) pokemon.displayName else "???"
-        tvDetailType.text   = if (isUnlocked) pokemon.type.uppercase() else "???"
+        tvDetailName.text = if (isUnlocked) pokemon.displayName else "???"
+        tvDetailType.text = if (isUnlocked) pokemon.type.uppercase() else "???"
 
         if (isInInventory) {
-            tvDetailType.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#BC6C25"))
+            tvDetailType.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#BC6C25"))
             tvDetailType.text = "${pokemon.type.uppercase()} • V INVENTÁŘI ($catchCount ×)"
         } else {
-            tvDetailType.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#DDA15E"))
+            tvDetailType.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#DDA15E"))
             if (isUnlocked) {
                 tvDetailType.text = "${pokemon.type.uppercase()} • ($catchCount ×)"
             }
@@ -143,7 +145,8 @@ class PokedexFragment : Fragment() {
             if (pokemon.unlockedHint.isNotEmpty()) pokemon.unlockedHint else "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
         }
 
-        val imageUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
+        val imageUrl =
+            "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
 
         ivDetailSprite.load(imageUrl) {
             placeholder(R.drawable.ic_home)
@@ -164,16 +167,27 @@ class PokedexFragment : Fragment() {
             btnTestEvo.visibility = View.VISIBLE
             btnTestEvo.setOnClickListener {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val lastCaught = db.capturedPokemonDao().getAllCaught().find { it.pokemonId == "010" }
+                    val lastCaught =
+                        db.capturedPokemonDao().getAllCaught().find { it.pokemonId == "010" }
 
                     withContext(Dispatchers.Main) {
                         if (lastCaught != null) {
+
+                            // 🧠 Vytáhneme si pravidla pro Caterpie z našeho nového manažera!
+                            val growthProfile = PokemonGrowthManager.getProfile("010")
+                            val targetEvolveId = growthProfile?.evolutionToId ?: "011"
+                            val evolveLvl = growthProfile?.evolutionLevel ?: 7
+
+                            // ⚔️ Zjistíme, jestli se má naučit útok pro daný level (Harden pro lvl 7)
+                            val moveForEvo =
+                                PokemonGrowthManager.getNewMoveForLevel(targetEvolveId, evolveLvl)
+
                             val testEvoDialog = EvolutionDialog(
                                 context = requireContext(),
                                 capturedPokemonId = lastCaught.id,
                                 oldId = "010",
-                                newId = "011",
-                                newMoveToLearn = Move("Harden", "Normal", 0, 100, 30, 30, StatEffect.LOWER_ENEMY_DEF),
+                                newId = targetEvolveId,
+                                newMoveToLearn = moveForEvo, // Už žádný hardcoded Move!
                                 onComplete = {
                                     btnTestEvo.visibility = View.GONE
                                     isFirstLoad = true // vynutíme nový load refresh dat

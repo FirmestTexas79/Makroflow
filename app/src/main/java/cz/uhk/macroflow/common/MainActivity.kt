@@ -74,7 +74,6 @@ class MainActivity : AppCompatActivity() {
         private const val REQ_NOTIFICATION_PERMISSION = 100
     }
 
-    // ✅ Plynulá kouřová aura Spooky / Ghost Plate
     private val lureSmokeHandler = Handler(Looper.getMainLooper())
     private var isLureActive = false
 
@@ -110,7 +109,19 @@ class MainActivity : AppCompatActivity() {
         fabHome.setOnClickListener {
             replaceFragment(DashboardFragment())
             bottomNav.selectedItemId = R.id.nav_placeholder
+
+            for (i in 0 until bottomNav.menu.size()) {
+                val menuItem = bottomNav.menu.getItem(i)
+                val itemView = bottomNav.findViewById<View>(menuItem.itemId) ?: continue
+                itemView.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .translationY(0f)
+                    .setDuration(200)
+                    .start()
+            }
         }
+
         fabHome.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -138,8 +149,32 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_history -> replaceFragment(HistoryFragment())
                 R.id.nav_profile -> replaceFragment(ProfileFragment())
             }
+
+            bottomNav.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+
+            for (i in 0 until bottomNav.menu.size()) {
+                val menuItem = bottomNav.menu.getItem(i)
+                val itemView = bottomNav.findViewById<View>(menuItem.itemId) ?: continue
+
+                if (menuItem.itemId == item.itemId) {
+                    itemView.animate()
+                        .scaleX(1.1f)
+                        .scaleY(1.1f)
+                        .translationY(-(4.dp))
+                        .setDuration(250)
+                        .start()
+                } else {
+                    itemView.animate()
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .translationY(0f)
+                        .setDuration(200)
+                        .start()
+                }
+            }
             true
         }
+
         btnOpenDrawer.setOnClickListener { openDrawer() }
 
         navigationView.setNavigationItemSelectedListener { item ->
@@ -173,7 +208,6 @@ class MainActivity : AppCompatActivity() {
 
         checkAchievementsDelayed()
 
-        // ✅ Spuštění kouře při spuštění obrazovky
         runItemSpawner()
     }
 
@@ -182,15 +216,12 @@ class MainActivity : AppCompatActivity() {
         updatePokemonVisibility()
         awardDailyXp()
 
-        // ✅ Kontrola stavu desky po návratu z jiného menu
         runItemSpawner()
     }
 
-    // ── XP & Univerzální Evoluční Engine ──────────────────────────────
-
     private fun awardDailyXp() {
         val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1) // 🔑 Čteme unikátní ID instance
+        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
         if (activeCapturedId == -1) return
 
         val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
@@ -202,9 +233,8 @@ class MainActivity : AppCompatActivity() {
                 val pokemon = db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
 
                 if (pokemon != null) {
-                    pokemon.xp += 20 // Přidáme XP
+                    pokemon.xp += 20
 
-                    // Výpočet nového levelu (RPG matematika)
                     val newLevel = PokemonLevelCalc.levelFromXp(pokemon.xp)
                     val oldLevel = pokemon.level
                     pokemon.level = newLevel
@@ -215,7 +245,6 @@ class MainActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@MainActivity, "🎉 ${pokemon.name} získal 20 XP!", Toast.LENGTH_SHORT).show()
 
-                        // Zkontrolujeme evoluci
                         val entry = withContext(Dispatchers.IO) { db.pokedexEntryDao().getEntry(pokemon.pokemonId) }
                         if (entry != null && entry.evolveLevel > 0 && newLevel >= entry.evolveLevel && newLevel > oldLevel) {
                             val nextMove = getEvolutionMove(entry.evolveToId)
@@ -252,10 +281,7 @@ class MainActivity : AppCompatActivity() {
         ).show()
     }
 
-    // ── Pokémon na liště ──────────────────────────────────────────────
-
     fun openPokemonBattle() {
-        // ✅ Automaticky vypne kouř z desky před tím, než se načte bojová scéna!
         stopLureSmoke()
 
         supportFragmentManager.beginTransaction()
@@ -317,9 +343,6 @@ class MainActivity : AppCompatActivity() {
             pokemonBehavior?.start()
         }
     }
-
-
-    // ── 💨 Částicový generátor pro Lure (Ghost / Spooky Plate) ──────────
 
     fun runItemSpawner() {
         val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
@@ -411,10 +434,14 @@ class MainActivity : AppCompatActivity() {
         overlayContainer?.removeAllViews()
     }
 
-
-    // ── 🔄 Navigace a Spodní UI prvky ───────────────────────────────────
-
     fun replaceFragment(fragment: Fragment) {
+        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+        val ghostActive = prefs.getBoolean("ghostPlateActive", false)
+
+        if (fragment !is DashboardFragment && ghostActive) {
+            stopLureSmoke()
+        }
+
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
             .replace(R.id.nav_host_fragment, fragment)
@@ -440,8 +467,6 @@ class MainActivity : AppCompatActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideStatusBar()
     }
-
-    // ── 🏆 Achievements & Ostatní ──────────────────────────────────────────
 
     fun checkAchievements() {
         lifecycleScope.launch {
@@ -526,3 +551,7 @@ class MainActivity : AppCompatActivity() {
         stopLureSmoke()
     }
 }
+
+// ✅ SPRÁVNÉ UMÍSTĚNÍ: Úplně mimo třídu MainActivity, na samotný konec souboru!
+val Int.dp: Float
+    get() = this * android.content.res.Resources.getSystem().displayMetrics.density

@@ -26,7 +26,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_marginStart="4dp"
-            app:layout_constraintHorizontal_weight="0.25"
+            app:layout_constraintHorizontal_weight="0.22"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/toggleGroup"
             app:layout_constraintBottom_toBottomOf="@id/toggleGroup"
@@ -88,7 +88,7 @@
             app:selectionRequired="true"
             app:singleSelection="true"
             app:checkedButton="@+id/btnRest"
-            app:layout_constraintHorizontal_weight="0.75"
+            app:layout_constraintHorizontal_weight="0.78"
             app:layout_constraintStart_toEndOf="@id/divider"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -102,15 +102,15 @@
                 android:text="OFF"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.02"
+                android:letterSpacing="0.01"
                 android:textColor="#BC6C25"
+                android:padding="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 app:strokeColor="#20BC6C25"
                 app:rippleColor="#1ABC6C25"
                 app:cornerRadius="12dp"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="8sp"
-                app:autoSizeMaxTextSize="10sp" />
+                android:maxLines="1" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPush"
@@ -121,15 +121,15 @@
                 android:text="PUSH"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.02"
+                android:letterSpacing="0.01"
                 android:textColor="#606C38"
+                android:padding="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 app:strokeColor="#20606C38"
                 app:rippleColor="#1A606C38"
                 app:cornerRadius="12dp"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="8sp"
-                app:autoSizeMaxTextSize="10sp" />
+                android:maxLines="1" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPull"
@@ -140,15 +140,15 @@
                 android:text="PULL"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.02"
+                android:letterSpacing="0.01"
                 android:textColor="#283618"
+                android:padding="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 app:strokeColor="#20283618"
                 app:rippleColor="#1A283618"
                 app:cornerRadius="12dp"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="8sp"
-                app:autoSizeMaxTextSize="10sp" />
+                android:maxLines="1" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnLegs"
@@ -159,15 +159,15 @@
                 android:text="LEGS"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.02"
+                android:letterSpacing="0.01"
                 android:textColor="#283618"
+                android:padding="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 app:strokeColor="#20283618"
                 app:rippleColor="#1A283618"
                 app:cornerRadius="12dp"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="8sp"
-                app:autoSizeMaxTextSize="10sp" />
+                android:maxLines="1" />
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
 

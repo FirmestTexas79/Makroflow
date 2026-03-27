@@ -36,6 +36,8 @@ import cz.uhk.macroflow.training.TrainerFragment
 import cz.uhk.macroflow.training.TrainingTimeManager
 import cz.uhk.macroflow.achievements.AchievementEngine
 import cz.uhk.macroflow.data.CheckInEntity
+import cz.uhk.macroflow.pokemon.EvolutionDialog
+import cz.uhk.macroflow.pokemon.PokemonXpEngine
 
 class DashboardFragment : Fragment() {
 
@@ -48,6 +50,7 @@ class DashboardFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        // Ujistíme se, že se layout správně nafoukne do kontejneru
         return inflater.inflate(R.layout.activity_dashboard, container, false)
     }
 
@@ -215,6 +218,36 @@ class DashboardFragment : Fragment() {
             newAchievements.forEach { ach ->
                 Toast.makeText(context, "🏆 Achievement odemčen: ${ach.titleCs}", Toast.LENGTH_LONG).show()
             }
+
+            // 🚀 --- NOVÉ: OKAMŽITÝ PŘEPOČET XP A EVOLUCE PO RITUÁLU ---
+            val xpResult = withContext(Dispatchers.IO) {
+                PokemonXpEngine.checkAndAwardDailyXp(requireContext())
+            }
+
+            if (xpResult.awardedXp > 0) {
+                Toast.makeText(context, "✨ Pokémon získal ${xpResult.awardedXp} XP za rituál!", Toast.LENGTH_SHORT).show()
+
+                // Aktualizujeme zobrazení Pokémona na spodní liště v MainActivity
+                (activity as? MainActivity)?.updatePokemonVisibility()
+            }
+
+            if (xpResult.shouldEvolve && xpResult.evolutionData != null) {
+                val evoData = xpResult.evolutionData
+
+                val dialog = EvolutionDialog(
+                    context = requireContext(),
+                    capturedPokemonId = evoData.capturedId,
+                    oldId = evoData.oldId,
+                    newId = evoData.newId,
+                    newMoveToLearn = evoData.moveToLearn,
+                    onComplete = {
+                        // Po zavření dialogu zaktualizujeme UI lišty znovu pro novou formu Pokémona
+                        (activity as? MainActivity)?.updatePokemonVisibility()
+                        refreshAllData(requireView())
+                    }
+                )
+                dialog.show()
+            }
         }
     }
 
@@ -363,6 +396,9 @@ class DashboardFragment : Fragment() {
         val HOLD_MS = 5000L
 
         fab.setOnTouchListener { v, event ->
+            // Nejdříve necháme tlačítko zpracovat standardní chování (stisknutí, vlnový efekt)
+            val handled = v.onTouchEvent(event)
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     holdStart = System.currentTimeMillis()
@@ -371,20 +407,17 @@ class DashboardFragment : Fragment() {
                             holdStart = 0L
                             v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             if (isAdded) {
-                                (activity as? MainActivity)
-                                    ?.openPokemonBattle()
+                                (activity as? MainActivity)?.openPokemonBattle()
                             }
                         }
                     }, HOLD_MS)
-                    false
                 }
-                MotionEvent.ACTION_UP,
-                MotionEvent.ACTION_CANCEL -> {
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     holdStart = 0L
-                    false
                 }
-                else -> false
             }
+            // Vrátíme handled, aby Android věděl, že dotyk normálně pokračuje dál
+            handled
         }
     }
 }
