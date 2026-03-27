@@ -5,33 +5,16 @@ import android.util.Log
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.data.BodyMetricsEntity
+import cz.uhk.macroflow.data.CheckInEntity
+import cz.uhk.macroflow.data.ConsumedSnackEntity
+import cz.uhk.macroflow.data.WaterEntity
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.iterator
 import kotlin.math.abs
 import kotlin.math.exp
 
 /**
  * AchievementEngine — precizní kontrola podmínek achievementů.
- *
- * Každé kritérium je explicitně definované — žádné mezery:
- *
- * VODA: den splněn = SUM(ml za den) >= cíl z MacroCalculator
- *       (ne jen libovolný součet záznamů)
- *
- * MAKRA: den splněn = sněděné makro >= 90% cíle z MacroCalculator
- *        pro DANÝ den (zohledňuje typ tréninku ten den)
- *
- * STREAK: přísně po sobě jdoucí kalendářní dny — žádná mezera
- *
- * CHECK-IN: počítáme záznamy kde datum existuje v tabulce checkins
- *           (ne duplicity — CheckInDao používá REPLACE, takže max 1/den)
- *
- * COINY: při každém novém odemčení se automaticky přidají coiny dle tieru:
- *   BRONZE  = 1 coin
- *   SILVER  = 3 coins
- *   GOLD    = 10 coins
- *   DIAMOND = 50 coins
  */
 object AchievementEngine {
 
@@ -39,10 +22,10 @@ object AchievementEngine {
 
     // Hodnoty coinů za každý tier
     fun coinsForTier(tier: AchievementTier): Int = when (tier) {
-        AchievementTier.BRONZE  -> 1
-        AchievementTier.SILVER  -> 3
-        AchievementTier.GOLD    -> 10
-        AchievementTier.DIAMOND -> 50
+        AchievementTier.BRONZE  -> 5
+        AchievementTier.SILVER  -> 10
+        AchievementTier.GOLD    -> 50
+        AchievementTier.DIAMOND -> 100
     }
 
     // ── Veřejné API ───────────────────────────────────────────────────
@@ -84,7 +67,6 @@ object AchievementEngine {
 
     /**
      * Vypočítá kalendářní streak — přísně po sobě jdoucí dny.
-     * Přijme seznam datumů (yyyy-MM-dd), vrátí délku aktuálního streaku.
      */
     private fun calcStreak(dates: List<String>): Int {
         if (dates.isEmpty()) return 0
@@ -92,7 +74,6 @@ object AchievementEngine {
         val sorted = dates.distinct().sorted()  // unikátní dny, vzestupně
         val cal = Calendar.getInstance()
 
-        // Začni od dneška nebo včerejška (pokud dnes ještě není záznam)
         val today = sdf.format(cal.time)
         cal.add(Calendar.DAY_OF_YEAR, -1)
         val yesterday = sdf.format(cal.time)
@@ -103,10 +84,14 @@ object AchievementEngine {
             else                       -> return 0  // poslední záznam starší než včera = streak přerušen
         }
 
-        // Počítej zpětně
         var streak = 0
         val checkCal = Calendar.getInstance()
-        checkCal.time = sdf.parse(startDate) ?: return 0
+
+        try {
+            checkCal.time = sdf.parse(startDate) ?: return 0
+        } catch (e: Exception) {
+            return 0
+        }
 
         while (true) {
             val expected = sdf.format(checkCal.time)
@@ -122,7 +107,6 @@ object AchievementEngine {
     private fun checkStreaks(db: AppDatabase): List<AchievementDef> {
         val result = mutableListOf<AchievementDef>()
 
-        // CheckIn má max 1 záznam/den díky PrimaryKey = date
         val checkInDates = db.checkInDao().getAllCheckInsSync().map { it.date }
         val streak = calcStreak(checkInDates)
 
@@ -151,22 +135,26 @@ object AchievementEngine {
         )
 
         val dayResults = byDate.map { (dateStr, items) ->
-            val date = sdf.parse(dateStr) ?: return@map null
-            val target = MacroCalculator.calculateForDate(context, date)
+            try {
+                val date = sdf.parse(dateStr) ?: return@map null
+                val target = MacroCalculator.calculateForDate(context, date)
 
-            if (target.protein <= 0 || target.carbs <= 0 || target.fat <= 0)
-                return@map null
+                if (target.protein <= 0 || target.carbs <= 0 || target.fat <= 0)
+                    return@map null
 
-            val eatP = items.sumOf { it.p.toDouble() }
-            val eatS = items.sumOf { it.s.toDouble() }
-            val eatT = items.sumOf { it.t.toDouble() }
+                val eatP = items.sumOf { it.p.toDouble() }
+                val eatS = items.sumOf { it.s.toDouble() }
+                val eatT = items.sumOf { it.t.toDouble() }
 
-            DayResult(
-                date      = dateStr,
-                proteinOk = eatP >= target.protein * 0.90,
-                carbsOk   = eatS >= target.carbs   * 0.90,
-                fatOk     = eatT >= target.fat     * 0.90
-            )
+                DayResult(
+                    date      = dateStr,
+                    proteinOk = eatP >= target.protein * 0.90,
+                    carbsOk   = eatS >= target.carbs   * 0.90,
+                    fatOk     = eatT >= target.fat     * 0.90
+                )
+            } catch (e: Exception) {
+                null
+            }
         }.filterNotNull()
 
         val proteinTotal = dayResults.count { it.proteinOk }
@@ -207,16 +195,21 @@ object AchievementEngine {
         var totalSplneno = 0
 
         for ((dateStr, items) in byDate) {
-            val date   = sdf.parse(dateStr) ?: continue
-            val target = MacroCalculator.calculateForDate(context, date)
-            val goalMl = (target.water * 1000).toInt()
-            if (goalMl <= 0) continue
+            // ✅ TVRDÁ POJISTKA PRO PARSOVÁNÍ DATUMU VODY (Tady to padalo)
+            try {
+                val date = sdf.parse(dateStr) ?: continue
+                val target = MacroCalculator.calculateForDate(context, date)
+                val goalMl = (target.water * 1000).toInt()
+                if (goalMl <= 0) continue
 
-            val actualMl = items.sumOf { it.amountMl }
+                val actualMl = items.sumOf { it.amountMl }
 
-            if (actualMl >= goalMl) {
-                splneneDny += dateStr
-                totalSplneno++
+                if (actualMl >= goalMl) {
+                    splneneDny += dateStr
+                    totalSplneno++
+                }
+            } catch (e: Exception) {
+                e.printStackTrace() // Poškozené datum se přeskočí a aplikace NESPADNE!
             }
         }
 
@@ -354,22 +347,26 @@ object AchievementEngine {
             val checkIn = db.checkInDao().getCheckInByDateSync(dateStr)
                 ?: return null
 
-            val target = MacroCalculator.calculateForDate(context, date)
-            val items  = allConsumed[dateStr]
-            if (items == null || target.protein <= 0) return null
+            try {
+                val target = MacroCalculator.calculateForDate(context, date)
+                val items  = allConsumed[dateStr]
+                if (items == null || target.protein <= 0) return null
 
-            val eatP = items.sumOf { it.p.toDouble() }
-            val eatS = items.sumOf { it.s.toDouble() }
-            val eatT = items.sumOf { it.t.toDouble() }
+                val eatP = items.sumOf { it.p.toDouble() }
+                val eatS = items.sumOf { it.s.toDouble() }
+                val eatT = items.sumOf { it.t.toDouble() }
 
-            val macrosOk = eatP >= target.protein * 0.90 &&
-                    eatS >= target.carbs   * 0.90 &&
-                    eatT >= target.fat     * 0.90
-            if (!macrosOk) return null
+                val macrosOk = eatP >= target.protein * 0.90 &&
+                        eatS >= target.carbs   * 0.90 &&
+                        eatT >= target.fat     * 0.90
+                if (!macrosOk) return null
 
-            val goalMl   = (target.water * 1000).toInt()
-            val actualMl = allWater[dateStr]?.sumOf { it.amountMl } ?: 0
-            if (actualMl < goalMl) return null
+                val goalMl   = (target.water * 1000).toInt()
+                val actualMl = allWater[dateStr]?.sumOf { it.amountMl } ?: 0
+                if (actualMl < goalMl) return null
+            } catch (e: Exception) {
+                return null
+            }
 
             cal.add(Calendar.DAY_OF_YEAR, -1)
         }

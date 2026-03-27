@@ -19,7 +19,7 @@ object PokemonXpEngine {
     )
 
     data class EvolutionRequest(
-        val capturedId: Int,
+        val capturedId: Long, // 🔥 Opraveno na Long (protože caughtDate je Long)
         val oldId: String,
         val newId: String,
         val moveToLearn: Move?
@@ -31,28 +31,28 @@ object PokemonXpEngine {
         val db = AppDatabase.getDatabase(context)
 
         val gamePrefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val activeCapturedId = gamePrefs.getInt("currentOnBarCapturedId", -1)
+        val activeCapturedId = gamePrefs.getLong("currentOnBarCapturedId", -1L) // 🔥 Opraveno na getLong
 
-        if (!gamePrefs.getBoolean("pokemonAcquired", false) || activeCapturedId == -1) {
+        if (!gamePrefs.getBoolean("pokemonAcquired", false) || activeCapturedId == -1L) {
             return@withContext XpResult(0)
         }
 
-        // Vytáhneme konkrétního Pokémona z batohu
-        val activePokemon = db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
+        // Vytáhneme konkrétního Pokémona z batohu pomocí caughtDate (activeCapturedId)
+        val activePokemon = db.capturedPokemonDao().getAllCaught().find { it.caughtDate == activeCapturedId } // 🔥 Opraveno na caughtDate
             ?: return@withContext XpResult(0)
 
         val prefs = context.getSharedPreferences("PokemonXpPrefs", Context.MODE_PRIVATE)
         var totalAwarded = 0
 
         // 1. Odměna za otevření aplikace
-        val lastOpenKey = "last_open_${activePokemon.id}"
+        val lastOpenKey = "last_open_${activePokemon.caughtDate}" // 🔥 Opraveno na caughtDate
         if (prefs.getString(lastOpenKey, "") != today) {
             totalAwarded += XpRewards.DAILY_OPEN
             prefs.edit().putString(lastOpenKey, today).apply()
         }
 
         // 2. Odměna za ranní Check-in
-        val lastCheckInKey = "last_checkin_${activePokemon.id}"
+        val lastCheckInKey = "last_checkin_${activePokemon.caughtDate}" // 🔥 Opraveno na caughtDate
         if (prefs.getString(lastCheckInKey, "") != today) {
             val checkIn = db.checkInDao().getCheckInByDateSync(today)
             if (checkIn != null) {
@@ -62,7 +62,7 @@ object PokemonXpEngine {
         }
 
         // 3. Odměna za poctivé zapisování jídel (aspoň 3 jídla)
-        val lastFoodKey = "last_food_${activePokemon.id}"
+        val lastFoodKey = "last_food_${activePokemon.caughtDate}" // 🔥 Opraveno na caughtDate
         if (prefs.getString(lastFoodKey, "") != today) {
             val foodCount = db.consumedSnackDao().getAllConsumedSync().count { it.date == today }
             if (foodCount >= 3) {
@@ -89,14 +89,13 @@ object PokemonXpEngine {
 
         if (pokedexRule != null && pokedexRule.evolveLevel > 0 && activePokemon.level >= pokedexRule.evolveLevel && pokedexRule.evolveToId.isNotEmpty()) {
 
-            // ✅ OPRAVA: Útok získáme dynamicky z našeho nového PokemonGrowthManageru pro správný level!
             val nextMove = PokemonGrowthManager.getNewMoveForLevel(pokedexRule.evolveToId, pokedexRule.evolveLevel)
 
             return@withContext XpResult(
                 awardedXp = totalAwarded,
-                shouldEvolve = leveledUp, // Evoluci spustíme pouze v případě, že právě teď udělal level up na/přes evoluční hranici
+                shouldEvolve = leveledUp,
                 evolutionData = EvolutionRequest(
-                    capturedId = activePokemon.id,
+                    capturedId = activePokemon.caughtDate, // 🔥 Opraveno na caughtDate
                     oldId = activePokemon.pokemonId,
                     newId = pokedexRule.evolveToId,
                     moveToLearn = nextMove

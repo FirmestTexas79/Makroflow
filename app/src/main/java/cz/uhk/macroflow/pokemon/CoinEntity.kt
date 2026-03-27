@@ -35,15 +35,15 @@ interface CoinDao {
 // --- 🎒 POKÉ-KAPSA (Chycení Pokémoni) ---
 @Entity(tableName = "captured_pokemon")
 data class CapturedPokemonEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0, // ✅ VRÁCENO NA AUTO-GENERACÍ (Opraví errory s id)
     var pokemonId: String,
     var name: String,
     val isShiny: Boolean = false,
-    var isLocked: Boolean = false, // Změněno na var pro úpravu v adapteru
+    var isLocked: Boolean = false,
     val caughtDate: Long = System.currentTimeMillis(),
     var moveListStr: String = "",
     var level: Int = 1,
-    var xp: Int = 0 // ✅ PŘIDÁNO: Každý Pokémon si drží své vlastní XP!
+    var xp: Int = 0
 )
 
 @Dao
@@ -65,12 +65,15 @@ interface CapturedPokemonDao {
 
     @Query("DELETE FROM captured_pokemon WHERE pokemonId = :id")
     fun deletePokemonById(id: String)
+
+    @Query("DELETE FROM captured_pokemon") // 🔥 NOVÉ: Smaže lokální tabulku před syncem
+    fun deleteAllCapturedLocally()
 }
 
 // --- 🎒 BATOH (Předměty a Bally) ---
 @Entity(tableName = "user_items")
 data class UserItemEntity(
-    @PrimaryKey val itemId: String, // "poke_ball", "great_ball"
+    @PrimaryKey val itemId: String,
     val quantity: Int = 0
 )
 
@@ -112,10 +115,8 @@ data class PokedexEntryEntity(
     val type: String,
     val macroDesc: String,
     val unlockedHint: String,
-
-    // ✅ NOVÉ: Evoluční pravidla pro statický Pokédex
-    val evolveLevel: Int = 0,          // Na jakém lvl se vyvíjí (0 = nevyvíjí se)
-    val evolveToId: String = ""        // Na jaké Pokedex ID se vyvíjí (např. "011")
+    val evolveLevel: Int = 0,
+    val evolveToId: String = ""
 )
 
 @Dao
@@ -136,7 +137,7 @@ interface PokedexEntryDao {
 // --- 📖 TRVALÝ ZÁZNAM POKÉDEXU (Jednou chycen, navždy objeven) ---
 @Entity(tableName = "pokedex_status")
 data class PokedexStatusEntity(
-    @PrimaryKey val pokemonId: String, // "050", "094"
+    @PrimaryKey val pokemonId: String,
     val unlocked: Boolean = true,
     val unlockedDate: Long = System.currentTimeMillis()
 )

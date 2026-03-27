@@ -28,6 +28,13 @@ val MIGRATION_8_14 = object : Migration(8, 14) {
     }
 }
 
+// 👣 ✅ NOVÁ MIGRACE PRO KROKY (Verze 14 -> 15)
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("CREATE TABLE IF NOT EXISTS steps (date TEXT PRIMARY KEY NOT NULL, count INTEGER NOT NULL DEFAULT 0)")
+    }
+}
+
 @Database(
     entities = [
         SnackEntity::class,
@@ -43,9 +50,10 @@ val MIGRATION_8_14 = object : Migration(8, 14) {
         PokedexEntryEntity::class,
         PokedexStatusEntity::class,
         SeenPokemonEntity::class,
-        PokemonXpEntity::class
+        PokemonXpEntity::class,
+        StepsEntity::class // 👈 ✅ Přidána nová entita pro kroky
     ],
-    version = 14, // 👈 Vráceno zpět na 14
+    version = 15, // 👈 ✅ Zvednuto na verzi 15 kvůli krokům
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -64,6 +72,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pokedexStatusDao(): PokedexStatusDao
     abstract fun seenPokemonDao(): SeenPokemonDao
     abstract fun pokemonXpDao(): PokemonXpDao
+    abstract fun stepsDao(): StepsDao // 👈 ✅ Přidáno rozhraní pro DAO kroků
 
     companion object {
         @Volatile
@@ -76,7 +85,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_7_8, MIGRATION_8_14)
+                    .addMigrations(MIGRATION_7_8, MIGRATION_8_14, MIGRATION_14_15) // 👈 ✅ Přidána nová migrace
                     .fallbackToDestructiveMigration()
                     .allowMainThreadQueries()
                     .addCallback(object : Callback() {

@@ -7,6 +7,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -54,13 +58,18 @@ import cz.uhk.macroflow.pokemon.PokemonGrowthManager
 import cz.uhk.macroflow.pokemon.PokemonLevelCalc
 import cz.uhk.macroflow.pokemon.WandererFactory
 import cz.uhk.macroflow.training.PlanFragment
+import cz.uhk.macroflow.data.StepsEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import kotlin.random.Random
 
-class MainActivity : AppCompatActivity() {
+// 👣 ✅MainActivity teď spravuje kroky pro celou aplikaci
+class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
@@ -78,6 +87,11 @@ class MainActivity : AppCompatActivity() {
 
     private val lureSmokeHandler = Handler(Looper.getMainLooper())
     private var isLureActive = false
+
+    // 👣 ✅ Senzorové proměnné celo-aplikace
+    private var sensorManager: SensorManager? = null
+    private var stepDetectorSensor: Sensor? = null
+    private var todayStepsCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,9 +120,15 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) replaceFragment(DashboardFragment())
 
         MakroflowNotifications.createChannels(this)
-        requestNotificationPermissionAndSchedule()
+        requestPermissionsAndSchedule() // 👈 Upraveno, aby se zeptalo i na krokoměr
 
         window.decorView.post { updatePokemonVisibility() }
+
+        // 👣 ✅ Inicializace HW senzoru z Pixelu
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        stepDetectorSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+
+        loadTodayStepsFromDb() // Načteme ranní stav do RAM
 
         onBackPressedDispatcher.addCallback(this) {
             if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
@@ -197,35 +217,30 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_inventory  -> replaceFragment(InventoryFragment())
                 R.id.drawerProfile  -> { replaceFragment(ProfileFragment()); bottomNav.selectedItemId = R.id.nav_profile }
                 R.id.drawerAchievements -> replaceFragment(AchievementsFragment())
-                R.id.drawerSettings     -> replaceFragment(SettingsFragment())
-                R.id.drawerDisclaimer   -> replaceFragment(DisclaimerFragment())
-                R.id.drawerResetAchievements -> {
-                    AlertDialog.Builder(this)
-                        .setTitle("Smazat achievementy?")
-                        .setMessage("Všechny odemčené achievementy budou smazány. Tuto akci nelze vrátit.")
-                        .setPositiveButton("Smazat") { _, _ ->
-                            resetAchievements()
-                            Toast.makeText(this, "✓ Achievementy smazány", Toast.LENGTH_SHORT).show()
-                        }
-                        .setNegativeButton("Zrušit", null).show()
-                    return@setNavigationItemSelectedListener true
-                }
                 R.id.drawerSignOut -> {
-                    // 🔥 2. OPRAVA ODHLÁŠENÍ: Totální smazání lokálních dat, ať se nemíchají s jiným účtem
                     lifecycleScope.launch(Dispatchers.IO) {
+                        val db = AppDatabase.getDatabase(this@MainActivity)
+
                         if (FirebaseRepository.isLoggedIn) {
                             try {
                                 FirebaseRepository.syncLocalDataToCloud(applicationContext)
-                            } catch (e: Exception) { e.printStackTrace() }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
                             FirebaseRepository.signOut()
                         }
 
-                        // Promazání Room DB lokálně
-                        AppDatabase.getDatabase(this@MainActivity).clearAllTables()
+                        withContext(Dispatchers.Main) {
+                            pokemonBehavior?.stop()
+                            stopLureSmoke()
+                        }
 
-                        // Vymazání offline herních nastavení
+                        db.stepsDao().deleteAll()
+                        db.clearAllTables()
+
                         getSharedPreferences("GamePrefs", MODE_PRIVATE).edit().clear().apply()
                         getSharedPreferences("UserPrefs", MODE_PRIVATE).edit().clear().apply()
+                        getSharedPreferences("TrainingPrefs", MODE_PRIVATE).edit().clear().apply()
 
                         withContext(Dispatchers.Main) {
                             startActivity(Intent(this@MainActivity, LoginActivity::class.java))
@@ -246,8 +261,55 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         updatePokemonVisibility()
         awardDailyXp()
-
         runItemSpawner()
+
+        // 👣 ✅ Senzor běží pořád, když je aplikace na popředí
+        stepDetectorSensor?.let {
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Senzor vypneme jen když se aplikace minimalizuje
+        sensorManager?.unregisterListener(this)
+    }
+
+    // 👣 ✅ Živý poslech pro celou aplikaci!
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
+            todayStepsCount++
+            saveStepsToDb(todayStepsCount)
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    private fun loadTodayStepsFromDb() {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(this@MainActivity)
+            val entity = db.stepsDao().getStepsForDateSync(todayStr)
+            todayStepsCount = entity?.count ?: 0
+        }
+    }
+
+    private fun saveStepsToDb(count: Int) {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val db = AppDatabase.getDatabase(this@MainActivity)
+        val entity = StepsEntity(date = todayStr, count = count)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            db.stepsDao().insertSteps(entity)
+
+            if (FirebaseRepository.isLoggedIn) {
+                try {
+                    FirebaseRepository.uploadSteps(entity)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
     }
 
     private fun awardDailyXp() {
@@ -273,7 +335,6 @@ class MainActivity : AppCompatActivity() {
                     db.capturedPokemonDao().updatePokemon(pokemon)
                     prefs.edit().putInt("lastXpDay_$activeCapturedId", today).apply()
 
-                    // ☁️ Push i pro denní automatické XP
                     if (FirebaseRepository.isLoggedIn) {
                         FirebaseRepository.uploadCapturedPokemon(pokemon)
                     }
@@ -320,7 +381,6 @@ class MainActivity : AppCompatActivity() {
 
                 db.capturedPokemonDao().updatePokemon(pokemon)
 
-                // ☁️ OKAMŽITÝ CLOUD ZÁPIS XP
                 if (FirebaseRepository.isLoggedIn) {
                     try {
                         FirebaseRepository.uploadCapturedPokemon(pokemon)
@@ -363,16 +423,6 @@ class MainActivity : AppCompatActivity() {
         "011" -> BattleFactory.attackHarden()
         "012" -> BattleFactory.attackGust()
         else  -> null
-    }
-
-    private fun showLevelUpToast(pokemonId: String, newLevel: Int) {
-        val name = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-            .getString("currentOnBarName", "Pokémon") ?: "Pokémon"
-        Toast.makeText(
-            this,
-            "🎉 $name dosáhl Level $newLevel!",
-            Toast.LENGTH_LONG
-        ).show()
     }
 
     fun openPokemonBattle() {
@@ -580,19 +630,18 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus) hideStatusBar()
     }
 
-    fun checkAchievements() {
-        lifecycleScope.launch {
-            val newlyUnlocked = withContext(Dispatchers.IO) {
-                AchievementEngine.checkAll(this@MainActivity)
-            }
-            if (newlyUnlocked.isNotEmpty()) {
-                AchievementUnlockQueue.enqueue(this@MainActivity, newlyUnlocked)
-            }
-        }
-    }
-
     fun checkAchievementsDelayed(delayMs: Long = 1500L) {
-        Handler(Looper.getMainLooper()).postDelayed({ checkAchievements() }, delayMs)
+        Handler(Looper.getMainLooper()).postDelayed({
+            lifecycleScope.launch {
+                val db = AppDatabase.getDatabase(this@MainActivity)
+                val newlyUnlocked = withContext(Dispatchers.IO) {
+                    AchievementEngine.checkAll(this@MainActivity)
+                }
+                if (newlyUnlocked.isNotEmpty()) {
+                    AchievementUnlockQueue.enqueue(this@MainActivity, newlyUnlocked)
+                }
+            }
+        }, delayMs)
     }
 
     fun resetAchievements() {
@@ -639,14 +688,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun requestNotificationPermissionAndSchedule() {
+    private fun requestPermissionsAndSchedule() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                == PackageManager.PERMISSION_GRANTED) {
-                MakroflowNotifications.scheduleAll(this)
-            } else {
-                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIFICATION_PERMISSION)
+            val perms = mutableListOf(Manifest.permission.POST_NOTIFICATIONS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                perms.add(Manifest.permission.ACTIVITY_RECOGNITION)
             }
+            requestPermissions(perms.toTypedArray(), REQ_NOTIFICATION_PERMISSION)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            requestPermissions(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION), REQ_NOTIFICATION_PERMISSION)
         } else {
             MakroflowNotifications.scheduleAll(this)
         }
@@ -654,7 +704,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_NOTIFICATION_PERMISSION) MakroflowNotifications.scheduleAll(this)
+        if (requestCode == REQ_NOTIFICATION_PERMISSION) {
+            MakroflowNotifications.scheduleAll(this)
+        }
     }
 
     override fun onDestroy() {
@@ -662,7 +714,7 @@ class MainActivity : AppCompatActivity() {
         pokemonBehavior?.stop()
         stopLureSmoke()
     }
-}
 
-val Int.dp: Float
-    get() = this * android.content.res.Resources.getSystem().displayMetrics.density
+    val Int.dp: Float
+        get() = this * android.content.res.Resources.getSystem().displayMetrics.density
+}

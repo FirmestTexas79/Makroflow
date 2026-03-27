@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButtonToggleGroup
@@ -18,6 +19,10 @@ import com.google.android.material.card.MaterialCardView
 import cz.uhk.macroflow.common.MakroflowNotifications
 import cz.uhk.macroflow.common.MakroflowTimePicker
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.data.AppDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PlanFragment : Fragment() {
 
@@ -51,6 +56,12 @@ class PlanFragment : Fragment() {
         return view
     }
 
+    // ✅ Přidáno načítání do onResume pro zobrazení čerstvých kroků při každém návratu na obrazovku
+    override fun onResume() {
+        super.onResume()
+        view?.let { updateStats(it) }
+    }
+
     private fun updateStats(view: View) {
         var push = 0; var pull = 0; var legs = 0; var rest = 0
         daysMap.forEach { (key, _, _) ->
@@ -67,6 +78,21 @@ class PlanFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvStatRestCount)?.text = rest.toString()
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val tvTotalSteps = view.findViewById<TextView>(R.id.tvTotalStepsCount)
+        val db = AppDatabase.getDatabase(requireContext())
+
+        // 👣 ✅ Živý poslech Flow napojený POUZE na existenci Pohledu (View)
+        // Vyčistí se, jakmile odejdeš, nevznikají duplicity v pozadí
+        viewLifecycleOwner.lifecycleScope.launch {
+            db.stepsDao().getTotalStepsAllTimeFlow().collect { allTimeSteps ->
+                tvTotalSteps?.text = (allTimeSteps ?: 0).toString()
+            }
+        }
+    }
+
     inner class TrainingPlanAdapter : RecyclerView.Adapter<TrainingPlanAdapter.PlanViewHolder>() {
 
         inner class PlanViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -75,7 +101,6 @@ class PlanFragment : Fragment() {
             val tvDayFull: TextView                     = view.findViewById(R.id.tvDayFull)
             val accent: View                            = view.findViewById(R.id.viewAccent)
             val toggleGroup: MaterialButtonToggleGroup  = view.findViewById(R.id.toggleGroup)
-            // Time pill — přidáme programově pokud není v XML
             val tvTimePill: TextView?                   = view.findViewById(R.id.tvTrainingTimePill)
         }
 
@@ -101,7 +126,6 @@ class PlanFragment : Fragment() {
             }
             updateCardVisual(holder, savedType)
 
-            // ── Čas tréninku ─────────────────────────────────────────
             updateTimePill(holder, englishName, savedType)
             holder.tvTimePill?.setOnClickListener {
                 showTimePicker(englishName, holder)
@@ -119,6 +143,8 @@ class PlanFragment : Fragment() {
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 updateCardVisual(holder, type)
                 updateTimePill(holder, englishName, type)
+
+                // Přepočítá statistiky dnů i načte celkové kroky
                 view?.let { updateStats(it) }
             }
         }
@@ -160,7 +186,6 @@ class PlanFragment : Fragment() {
                 val currentType = trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest"
                 updateTimePill(holder, dayEnglish, currentType)
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                // Přeplánuj workout notifikace pro nový čas
                 MakroflowNotifications.rescheduleWorkout(ctx)
             }
         }

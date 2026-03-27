@@ -146,7 +146,7 @@ object FirebaseRepository {
         val snaps = userDoc().collection("water").get().await()
         return snaps.documents.mapNotNull { doc ->
             WaterEntity(
-                date = doc.id,
+                date = doc.getString("date") ?: "",
                 amountMl = (doc.getLong("amountMl") ?: 0L).toInt(),
                 timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis()
             )
@@ -242,7 +242,6 @@ object FirebaseRepository {
         val snaps = userDoc().collection("captured_pokemon").get().await()
         return snaps.documents.mapNotNull { doc ->
             CapturedPokemonEntity(
-                id = 0,
                 pokemonId = doc.getString("pokemonId") ?: "",
                 name = doc.getString("name") ?: "",
                 isShiny = doc.getBoolean("isShiny") ?: false,
@@ -357,10 +356,34 @@ object FirebaseRepository {
         }
     }
 
+    // ========== 👣 KROKY ==========
+
+    suspend fun uploadSteps(steps: StepsEntity) {
+        val data = mapOf(
+            "count" to steps.count
+        )
+        // Každý den má svůj unikátní dokument ("2026-03-27")
+        userDoc().collection("steps").document(steps.date)
+            .set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun downloadAllSteps(): List<StepsEntity> {
+        val snaps = userDoc().collection("steps").get().await()
+        return snaps.documents.mapNotNull { doc ->
+            StepsEntity(
+                date = doc.id,
+                count = (doc.getLong("count") ?: 0L).toInt()
+            )
+        }
+    }
+
     // ========== 🔄 KOMPLETNÍ SYNC ==========
 
     suspend fun syncLocalDataToCloud(context: Context) {
         val localDb = AppDatabase.getDatabase(context)
+
+        // ✅ Tady si vytvoříme dnešní datum pro kroky
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
         localDb.userProfileDao().getProfileSync()?.let { uploadProfile(it) }
 
@@ -379,6 +402,9 @@ object FirebaseRepository {
 
         localDb.coinDao().getBalance()?.let { uploadCoins(it) }
         localDb.userItemDao().getAllItems().forEach { uploadUserItem(it) }
+
+        // ✅ Teď už proměnná today existuje a kompilace projde hladce!
+        localDb.stepsDao().getStepsForDateSync(today)?.let { uploadSteps(it) }
 
         // 🦖 1. Zlatý rámeček v kapse
         val localCaught = localDb.capturedPokemonDao().getAllCaught()
@@ -426,12 +452,15 @@ object FirebaseRepository {
 
         localDb.coinDao().setBalance(downloadCoins())
         downloadAllUserItems().forEach { localDb.userItemDao().insertOrUpdateItem(it) }
+
+        // 🔥 OPRAVA ZDE: Než Room stáhne duplikáty, smaže ty lokální a stáhne je čisté z Cloudu!
+        localDb.capturedPokemonDao().deleteAllCapturedLocally()
         downloadAllCapturedPokemon().forEach { localDb.capturedPokemonDao().insertPokemon(it) }
+
         downloadAllAchievements().forEach { localDb.achievementDao().unlock(it) }
-
         downloadAllPokedexStatus().forEach { localDb.pokedexStatusDao().unlockPokemon(it) }
-
         downloadAllPokemonXp().forEach { localDb.pokemonXpDao().setXp(it) }
+        downloadAllSteps().forEach { localDb.stepsDao().insertSteps(it) }
     }
 
     fun signOut() = auth.signOut()

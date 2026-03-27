@@ -36,6 +36,7 @@ import cz.uhk.macroflow.training.TrainerFragment
 import cz.uhk.macroflow.training.TrainingTimeManager
 import cz.uhk.macroflow.achievements.AchievementEngine
 import cz.uhk.macroflow.data.CheckInEntity
+import cz.uhk.macroflow.data.StepsEntity
 import cz.uhk.macroflow.pokemon.EvolutionDialog
 import cz.uhk.macroflow.pokemon.PokedexStatusEntity
 import cz.uhk.macroflow.pokemon.PokemonLevelCalc
@@ -64,6 +65,17 @@ class DashboardFragment : Fragment() {
         val coachCard     = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
         val btnSave       = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
+        // 👣 ✅ ŽIVÝ ODBĚR KROKŮ PŘES FLOW — Čte to, co MainActivity zapisuje
+        val tvTodaySteps = view.findViewById<TextView>(R.id.tvTotalStepsCount)
+        val db = AppDatabase.getDatabase(requireContext())
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            db.stepsDao().getStepsForDateFlow(today).collect { entity ->
+                val stepsToday = entity?.count ?: 0
+                tvTodaySteps?.text = stepsToday.toString()
+            }
+        }
+
         setupEasterEgg(view)
 
         view.findViewById<MaterialCardView>(R.id.cardStartTraining).setOnClickListener {
@@ -76,8 +88,6 @@ class DashboardFragment : Fragment() {
 
         coachCard.setOnClickListener {
             lifecycleScope.launch(Dispatchers.Main) {
-                val db = AppDatabase.getDatabase(requireContext())
-
                 val todayCheckIn = withContext(Dispatchers.IO) {
                     db.checkInDao().getCheckInByDateSync(today)
                 }
@@ -209,7 +219,6 @@ class DashboardFragment : Fragment() {
                 AchievementEngine.checkAll(requireContext())
             }
 
-            // ✅ 2. CLOUD SYNCHRONIZACE PRO CHECK-IN
             if (FirebaseRepository.isLoggedIn) {
                 withContext(Dispatchers.IO) {
                     try {
@@ -228,7 +237,6 @@ class DashboardFragment : Fragment() {
                 Toast.makeText(context, "🏆 Achievement odemčen: ${ach.titleCs}", Toast.LENGTH_LONG).show()
             }
 
-            // 🚀 --- OPRAVENÉ: OKAMŽITÝ REAL-TIME PŘEPOČET XP ---
             lifecycleScope.launch(Dispatchers.IO) {
                 val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 val prefs = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
@@ -243,7 +251,6 @@ class DashboardFragment : Fragment() {
                         (activity as? MainActivity)?.addXpToActivePokemonRealTime(XpRewards.CHECK_IN)
                     }
 
-                    // ✅ 3. CLOUD SYNCHRONIZACE XP PO KAŽDÉM PŘIDÁNÍ
                     if (FirebaseRepository.isLoggedIn) {
                         val updatedXp = db.pokemonXpDao().getXp(activeId)
                         if (updatedXp != null) {
