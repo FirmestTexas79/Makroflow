@@ -90,6 +90,8 @@ object SpawnManager {
         SpawnPool("093", "HAUNTER",   Rarity.EPIC,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createHaunter() },
         SpawnPool("094", "GENGAR",    Rarity.EPIC,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createGengar() },
 
+
+        SpawnPool("115", "KANGASKHAN",Rarity.EPIC,   listOf(Conditions.ALWAYS)) { BattleFactory.createKangaskhan() },
         // 💤 Snorlax se odemkne až po 7 splněných ranních check-inech
         SpawnPool("143", "SNORLAX",   Rarity.EPIC,   listOf(Conditions.MinCheckInCount(7))) { BattleFactory.createSnorlax() },
 

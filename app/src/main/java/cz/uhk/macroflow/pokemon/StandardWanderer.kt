@@ -32,6 +32,46 @@ interface TransitionEffect {
 // ─────────────────────────────────────────────
 // TRANSITION EFFECTS
 // ─────────────────────────────────────────────
+class HeavyTransitionEffect : TransitionEffect {
+    private val dp = android.content.res.Resources.getSystem().displayMetrics.density
+
+    override fun playDisappear(view: View, baseScale: Float, onDone: () -> Unit) {
+        // Kangaskhan při odchodu plynule propadne dolů a zmizí
+        view.animate()
+            .translationYBy(100f * dp)
+            .alpha(0f)
+            .setDuration(400)
+            .setInterpolator(AccelerateInterpolator())
+            .withEndAction { onDone() }
+            .start()
+    }
+
+    override fun playAppear(view: View, baseScale: Float, targetY: Float, onDone: () -> Unit) {
+        val parent = view.parent as? ViewGroup
+        view.visibility = View.VISIBLE
+        view.alpha = 0f
+        view.translationY = targetY - 50f * dp // Spadne mírně shora
+        view.scaleX = baseScale
+        view.scaleY = baseScale
+
+        view.animate()
+            .alpha(1f)
+            .translationY(targetY)
+            .setDuration(500)
+            .setInterpolator(OvershootInterpolator(1.4f))
+            .withEndAction {
+                if (parent != null) {
+                    // Otřes Dashboardu po dopadu!
+                    ObjectAnimator.ofFloat(parent, "translationX", 0f, -12f * dp, 12f * dp, -6f * dp, 6f * dp, 0f).apply {
+                        duration = 450
+                        start()
+                    }
+                }
+                onDone()
+            }
+            .start()
+    }
+}
 
 class SmokeTransitionEffect(private val purple: Boolean = false) : TransitionEffect {
     private val dp = android.content.res.Resources.getSystem().displayMetrics.density
@@ -359,7 +399,66 @@ class StandardWanderer(
             "151" -> mewTapReaction()
             "150" -> mewtwoTapReaction()
             "092", "093", "094" -> ghostTapReaction()
+            "025","026" -> pikachuTapReaction() // Použije blesky z Pikachu!
             else  -> defaultTapReaction()
+        }
+    }
+
+
+    private fun pikachuTapReaction() {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+
+        // 1. Zastavíme chůzi a kolébání na místě
+        stopWobble()
+        moveAnim?.cancel()
+
+        // 2. Vylekání a fialová aura (Mew bubble styl)
+        val flashColor = if (pokemonId == "025") Color.argb(180, 255, 230, 0) else Color.argb(180, 255, 100, 255) // Žlutá/Fialová
+        val sizeH = (12 * dp).toInt()
+
+        val colorFlash = View(context).apply {
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(flashColor) }
+            layoutParams = ViewGroup.LayoutParams(pokemonView.width, pokemonView.height)
+            x = pokemonView.x; y = pokemonView.y; alpha = 0f
+        }
+        parent.addView(colorFlash)
+
+        // 💥 Animace vibrace a blesků
+        AnimatorSet().apply {
+            playTogether(
+                // Vibrace na místě
+                ObjectAnimator.ofFloat(pokemonView, "scaleX", -baseScale, -baseScale * 1.15f, -baseScale),
+                ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.15f, baseScale),
+                // Blesky pod nohama (GradientDrawable)
+                ObjectAnimator.ofFloat(colorFlash, "alpha", 0f, 0.9f, 0f)
+            )
+            duration = 350
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    if (!running) return
+
+                    // 💥 Vystřelíme 6 blesků do kruhu kolem něj!
+                    val cx = pokemonView.x + pokemonView.width / 2f
+                    val cy = pokemonView.y + pokemonView.height / 2f
+
+                    repeat(6) { i ->
+                        handler.postDelayed({
+                            if (!running) return@postDelayed
+                            val angle = i * (360f / 6f)
+                            val dist = 40f * dp
+                            val bx = cx + dist * cos(Math.toRadians(angle.toDouble())).toFloat()
+                            val by = cy + dist * sin(Math.toRadians(angle.toDouble())).toFloat()
+
+                            spawnBolt(parent, bx, by, i % 2 == 0) // Každý druhý je velký!
+                        }, i * 40L)
+                    }
+
+                    // Vrátíme ho do normálu
+                    startWobble()
+                    parent.removeView(colorFlash)
+                }
+            })
+            start()
         }
     }
 
@@ -663,6 +762,7 @@ class StandardWanderer(
             "007" -> crossingSquirtle(fromX, toX)
             "092" -> crossingGastly(fromX, toX)
             "093" -> crossingHaunter(fromX, toX)
+            "115" -> crossingKangaskhan(fromX, toX)
             "006" -> crossingCharizard(fromX, toX)
             "150" -> crossingMewtwo(fromX, toX)
             "151" -> crossingMew(fromX, toX)
@@ -752,6 +852,123 @@ class StandardWanderer(
                 }
             })
             start()
+        }
+    }
+
+    private fun crossingKangaskhan(fromX: Float, toX: Float) {
+        val parent = pokemonView.parent as? ViewGroup ?: run { defaultCrossing(fromX, toX); return }
+        stopWobble()
+
+        val stepCount = 3
+        val stepDist = (toX - fromX) / stepCount
+        var currentStep = 0
+
+        // ✅ REKURZIVNÍ FUNKCE PŘESNĚ JAKO U PIKACHU!
+        fun doHeavyStep() {
+            if (!running) return
+
+            if (currentStep >= stepCount) {
+                pokemonView.x = toX
+                facingRight = toX > fromX
+                applyFacing(facingRight)
+                if (running) { startWobble(); scheduleStep(Random.nextLong(1500, 3000)) }
+                return
+            }
+
+            val startX = fromX + (currentStep * stepDist)
+            val nextX = fromX + ((currentStep + 1) * stepDist)
+
+            // 1. Těžký skok (nahoru a dopředu)
+            val jumpY = ObjectAnimator.ofFloat(pokemonView, "translationY", targetTranslationY, targetTranslationY - 32f * dp, targetTranslationY).apply {
+                duration = 600
+                interpolator = AccelerateDecelerateInterpolator()
+            }
+            val jumpX = ObjectAnimator.ofFloat(pokemonView, "x", startX, nextX).apply {
+                duration = 600
+                interpolator = LinearInterpolator()
+            }
+
+            AnimatorSet().apply {
+                playTogether(jumpX, jumpY)
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        if (!running) return
+
+                        // 💥 DOPAD: Otřes Dashboardu (voláme tvé shakeView na parenta)
+                        shakeView(parent)
+
+                        // 🌀 Vykreslení kreativního efektu dopadu na zemi
+                        spawnStompWave(parent, nextX + viewW / 2f, pokemonView.y + pokemonView.height)
+
+                        currentStep++
+                        handler.postDelayed({ doHeavyStep() }, 250) // Krátká pauza mezi kroky
+                    }
+                })
+                start()
+            }
+        }
+
+        facingRight = toX > fromX
+        applyFacing(facingRight)
+        doHeavyStep()
+    }
+
+    // ✅ KREATIVNÍ POMOCNÁ METODA PRO TLAKOVOU VLNU A ODLÉTAJÍCÍ PRACH
+    private fun spawnStompWave(parent: ViewGroup, x: Float, y: Float) {
+        val sizeW = (60 * dp).toInt()
+        val sizeH = (20 * dp).toInt()
+
+        // 1. Rázová kruhová vlna pod nohama
+        val wave = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.argb(0, 0, 0, 0)) // Průhledný střed
+                setStroke((2.5f * dp).toInt(), Color.parseColor("#BC6C25")) // 🎨 Barva z tvého manuálu!
+            }
+            layoutParams = ViewGroup.LayoutParams(sizeW, sizeH)
+            this.x = x - sizeW / 2f
+            this.y = y - sizeH / 2f
+            alpha = 1f
+        }
+        parent.addView(wave)
+
+        AnimatorSet().apply {
+            playTogether(
+                ObjectAnimator.ofFloat(wave, "scaleX", 0.4f, 1.8f),
+                ObjectAnimator.ofFloat(wave, "scaleY", 0.4f, 1.8f),
+                ObjectAnimator.ofFloat(wave, "alpha", 1f, 0f)
+            )
+            duration = 450
+            interpolator = DecelerateInterpolator()
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(a: Animator) { parent.removeView(wave) }
+            })
+            start()
+        }
+
+        // 2. Odlétávající kousky hlíny do stran (kombinace tvého spawnBolt a DigTransition)
+        repeat(4) { i ->
+            val dirtSz = (4 * dp).toInt()
+            val dirt = View(context).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.parseColor("#DDA15E")) // 🎨 Druhá barva z manuálu!
+                }
+                layoutParams = ViewGroup.LayoutParams(dirtSz, dirtSz)
+                this.x = x; this.y = y; alpha = 0.9f
+            }
+            parent.addView(dirt)
+
+            val dirX = if (i % 2 == 0) -1.2f else 1.2f
+            val dirY = if (i < 2) -1f else -0.5f
+
+            dirt.animate()
+                .translationXBy(dirX * Random.nextFloat() * 45f * dp)
+                .translationYBy(dirY * Random.nextFloat() * 30f * dp)
+                .scaleX(0f).scaleY(0f).alpha(0f)
+                .setDuration(450)
+                .withEndAction { parent.removeView(dirt) }
+                .start()
         }
     }
 

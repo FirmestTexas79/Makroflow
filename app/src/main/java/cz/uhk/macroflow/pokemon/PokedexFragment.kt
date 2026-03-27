@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.common.MainActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,7 +32,7 @@ class PokedexFragment : Fragment() {
     private lateinit var tvDetailName: TextView
     private lateinit var tvDetailType: TextView
     private lateinit var tvDetailMacro: TextView
-    private lateinit var btnTestEvo: Button // ✅ Přidáno
+    private lateinit var btnTestEvo: Button
 
     private var isFirstLoad = true
     private lateinit var pokedexAdapter: PokedexAdapter
@@ -50,7 +51,7 @@ class PokedexFragment : Fragment() {
         tvDetailName   = view.findViewById(R.id.tvDetailName)
         tvDetailType   = view.findViewById(R.id.tvDetailType)
         tvDetailMacro  = view.findViewById(R.id.tvDetailMacro)
-        btnTestEvo     = view.findViewById(R.id.btnTestEvo) // ✅ Propojeno
+        btnTestEvo     = view.findViewById(R.id.btnTestEvo)
 
         rvPokedex = view.findViewById(R.id.rvPokedex)
         rvPokedex.layoutManager = GridLayoutManager(requireContext(), 3)
@@ -71,10 +72,9 @@ class PokedexFragment : Fragment() {
             }
 
             val unlockedIds = withContext(Dispatchers.IO) {
-                // Spojíme ID z tabulky statusu s ID pokémonů, které reálně máme v batohu
                 val statusIds = db.pokedexStatusDao().getUnlockedIds()
                 val caughtIds = db.capturedPokemonDao().getAllCaught().map { it.pokemonId }
-                (statusIds + caughtIds).distinct() // Spojí seznamy a odstraní duplicity
+                (statusIds + caughtIds).distinct()
             }
 
             val catchStats = withContext(Dispatchers.IO) {
@@ -162,39 +162,47 @@ class PokedexFragment : Fragment() {
             ivDetailSprite.alpha = 1.0f
         }
 
-        // ✅ LOGIKA TLAČÍTKA TEST EVOLUCE V DETAILU
-        if (isInInventory && pokemon.pokedexId == "010") {
+        if (isInInventory && (pokemon.pokedexId == "010" || pokemon.pokedexId == "025")) {
             btnTestEvo.visibility = View.VISIBLE
             btnTestEvo.setOnClickListener {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val lastCaught =
-                        db.capturedPokemonDao().getAllCaught().find { it.pokemonId == "010" }
+                    val lastCaught = db.capturedPokemonDao().getAllCaught()
+                        .find { it.pokemonId == pokemon.pokedexId }
 
                     withContext(Dispatchers.Main) {
                         if (lastCaught != null) {
+                            val growthProfile = PokemonGrowthManager.getProfile(pokemon.pokedexId)
+                            val targetEvolveId = growthProfile?.evolutionToId ?: ""
+                            val evolveLvl = growthProfile?.evolutionLevel ?: 1
 
-                            // 🧠 Vytáhneme si pravidla pro Caterpie z našeho nového manažera!
-                            val growthProfile = PokemonGrowthManager.getProfile("010")
-                            val targetEvolveId = growthProfile?.evolutionToId ?: "011"
-                            val evolveLvl = growthProfile?.evolutionLevel ?: 7
+                            if (targetEvolveId.isNotEmpty()) {
+                                // 1. Zkusíme útok pro tabulkový level evoluce
+                                var moveForEvo = PokemonGrowthManager.getNewMoveForLevel(
+                                    targetEvolveId,
+                                    evolveLvl
+                                )
 
-                            // ⚔️ Zjistíme, jestli se má naučit útok pro daný level (Harden pro lvl 7)
-                            val moveForEvo =
-                                PokemonGrowthManager.getNewMoveForLevel(targetEvolveId, evolveLvl)
-
-                            val testEvoDialog = EvolutionDialog(
-                                context = requireContext(),
-                                capturedPokemonId = lastCaught.id,
-                                oldId = "010",
-                                newId = targetEvolveId,
-                                newMoveToLearn = moveForEvo, // Už žádný hardcoded Move!
-                                onComplete = {
-                                    btnTestEvo.visibility = View.GONE
-                                    isFirstLoad = true // vynutíme nový load refresh dat
-                                    loadPokedex()
+                                // ✅ 2. Fallback: Pokud tam nic není (jako u Raichu na levelu 6), vytáhneme automaticky startovní útok z Levelu 1 nové evoluce!
+                                if (moveForEvo == null) {
+                                    moveForEvo = PokemonGrowthManager.getNewMoveForLevel(targetEvolveId, 1)
                                 }
-                            )
-                            testEvoDialog.show()
+
+                                val testEvoDialog = EvolutionDialog(
+                                    context = requireContext(),
+                                    capturedPokemonId = lastCaught.id,
+                                    oldId = pokemon.pokedexId,
+                                    newId = targetEvolveId,
+                                    newMoveToLearn = moveForEvo,
+                                    onComplete = {
+                                        btnTestEvo.visibility = View.GONE
+                                        isFirstLoad = true
+                                        loadPokedex()
+
+                                        (activity as? MainActivity)?.updatePokemonVisibility()
+                                    }
+                                )
+                                testEvoDialog.show()
+                            }
                         }
                     }
                 }

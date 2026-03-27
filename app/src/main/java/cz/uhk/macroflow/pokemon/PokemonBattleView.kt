@@ -201,10 +201,12 @@ class PokemonBattleView @JvmOverloads constructor(
         "GENGAR"     -> 34f
         "HAUNTER"    -> 32f
         "GASTLY"     -> 28f
+        "KANGASKHAN" -> 34f
         "BULBASAUR"  -> 28f
         "SQUIRTLE"   -> 26f
         "CHARMANDER" -> 28f
         "PIKACHU"    -> 24f
+        "RAICHU"     -> 30f
         "EEVEE"      -> 24f
         "DIGLETT"    -> 22f
         else         -> 28f
@@ -481,6 +483,7 @@ class PokemonBattleView @JvmOverloads constructor(
             "012" -> BattleFactory.createButterfree()
             "050" -> BattleFactory.createDiglett()
             "025" -> BattleFactory.createPikachu()
+            "026" -> BattleFactory.createRaichu()
             "133" -> BattleFactory.createEevee()
             "001" -> BattleFactory.createBulbasaur()
             "007" -> BattleFactory.createSquirtle()
@@ -488,6 +491,7 @@ class PokemonBattleView @JvmOverloads constructor(
             "092" -> BattleFactory.createGastly()
             "093" -> BattleFactory.createHaunter()
             "094" -> BattleFactory.createGengar()
+            "115" -> BattleFactory.createKangaskhan()
             "143" -> BattleFactory.createSnorlax()
             "006" -> BattleFactory.createCharizard()
             "150" -> BattleFactory.createMewtwo()
@@ -586,6 +590,7 @@ class PokemonBattleView @JvmOverloads constructor(
             "DIGLETT", "PIKACHU", "EEVEE", "CATERPIE" -> 0.055f
             "MEWTWO", "MEW"                           -> 0.025f
             "CHARIZARD", "SNORLAX"                    -> 0.030f
+            "KANGASKHAN"                              -> 0.030f
             else                                      -> 0.040f
         }
 
@@ -640,6 +645,7 @@ class PokemonBattleView @JvmOverloads constructor(
             "MEWTWO", "MEW"                -> 0.40f
             "CHARIZARD"                    -> 0.25f
             "SNORLAX", "HAUNTER", "GENGAR" -> 0.15f
+            "KANGASKHAN"                   -> 0.20f
             else                           -> 0.08f
         }
 

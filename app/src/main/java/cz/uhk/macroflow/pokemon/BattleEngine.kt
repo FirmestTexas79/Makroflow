@@ -152,6 +152,12 @@ object BattleFactory {
     fun attackStringShot() = Move("STRING SHOT", PokemonType.BUG,      0,  95, 40, statEffect = StatEffect.LOWER_ENEMY_DEF)
     fun attackHarden()     = Move("HARDEN",      PokemonType.NORMAL,   0, 100, 30)
     fun attackGust()       = Move("GUST",        PokemonType.FLYING,  40, 100, 35)
+    // V BattleEngine.kt -> objekt BattleFactory
+    fun attackThunderShock() = Move("THUNDER SHOCK", PokemonType.ELECTRIC, 40, 100, 30)
+    fun attackQuickAttack()  = Move("QUICK ATTACK",  PokemonType.NORMAL,   40, 100, 30)
+    fun attackSlam()         = Move("SLAM",          PokemonType.NORMAL,   80,  75, 20)
+    fun attackThunderbolt()  = Move("THUNDERBOLT",   PokemonType.ELECTRIC, 90, 100, 15)
+    fun attackThunder()      = Move("THUNDER",       PokemonType.ELECTRIC, 110, 70, 10)
 
     // --- 🐛 CATERPIE SHABLONY S PARAMETREM LEVEL ---
     fun createCaterpie(level: Int = 1) = Pokemon(
@@ -198,6 +204,14 @@ object BattleFactory {
             Move("QUICK ATTACK",  PokemonType.NORMAL,   40, 100, 30),
             Move("TAIL WHIP",     PokemonType.NORMAL,    0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
             Move("GROWL",         PokemonType.NORMAL,    0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
+        )
+    )
+
+    fun createRaichu(level: Int = 10) = Pokemon(
+        name = "RAICHU", level = level, maxHp = 35, attack = 16, defense = 11, speed = 21,
+        moves = mutableListOf(
+            Move("THUNDER SHOCK", PokemonType.ELECTRIC, 40, 100, 30),
+            Move("QUICK ATTACK", PokemonType.NORMAL, 40, 100, 30)
         )
     )
 
@@ -275,6 +289,14 @@ object BattleFactory {
         )
     )
 
+    fun createKangaskhan(level: Int = 1) = Pokemon(
+        name = "KANGASKHAN", level = level, maxHp = 45, attack = 15, defense = 12, speed = 14,
+        moves = mutableListOf(
+            Move("TACKLE", PokemonType.NORMAL, 40, 100, 35),
+            Move("BITE", PokemonType.NORMAL, 60, 100, 25)
+        )
+    )
+
     fun createSnorlax() = Pokemon(
         name = "SNORLAX", level = 10, maxHp = 50, attack = 14, defense = 10, speed = 5,
         moves = listOf(
@@ -345,6 +367,7 @@ object BattleFactory {
 
         "DIGLETT"   -> "050"
         "PIKACHU"   -> "025"
+        "RAICHU"    -> "026"
         "EEVEE"     -> "133"
         "BULBASAUR" -> "001"
         "SQUIRTLE"  -> "007"
@@ -352,6 +375,7 @@ object BattleFactory {
         "GASTLY"    -> "092"
         "HAUNTER"   -> "093"
         "GENGAR"    -> "094"
+        "KANGASKHAN" -> "115"
         "SNORLAX"   -> "143"
         "CHARIZARD" -> "006"
         "MEWTWO"    -> "150"
@@ -368,6 +392,7 @@ object BattleFactory {
 
         "DIGLETT"   -> "diglett"
         "PIKACHU"   -> "pikachu"
+        "RAICHU"    -> "raichu"
         "EEVEE"     -> "eevee"
         "BULBASAUR" -> "bulbasaur"
         "SQUIRTLE"  -> "squirtle"
@@ -375,6 +400,7 @@ object BattleFactory {
         "GASTLY"    -> "gastly"
         "HAUNTER"   -> "haunter"
         "GENGAR"    -> "gengar"
+        "KANGASKHAN" -> "kangaskhan"
         "SNORLAX"   -> "snorlax"
         "CHARIZARD" -> "charizard"
         "MEWTWO"    -> "mewtwo"

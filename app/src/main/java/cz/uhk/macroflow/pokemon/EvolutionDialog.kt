@@ -34,10 +34,9 @@ class EvolutionDialog(
     private val newId: String,          // "011"
     private val newMoveToLearn: Move?,  // Útok, který se má naučit (např. Harden)
     private val onComplete: () -> Unit
-
 ) : Dialog(context) {
 
-    private val dialogScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.Job())
+    private val dialogScope = kotlinx.coroutines.CoroutineScope(Dispatchers.Main + kotlinx.coroutines.Job())
     private lateinit var ivEvoSprite: ImageView
     private lateinit var ivEvoSilhouette: ImageView
     private lateinit var tvEvoText: TextView
@@ -55,9 +54,8 @@ class EvolutionDialog(
         setContentView(R.layout.dialog_evolution)
         setCancelable(false)
 
-        // ✅ VYNUCENÍ PEVNÉ ŠÍŘKY DIALOGU, ABY SE NEROZTAHOVAL DO NEKONEČNA
         window?.setLayout(
-            (context.resources.displayMetrics.density * 340).toInt(), // šířka v dp
+            (context.resources.displayMetrics.density * 340).toInt(),
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
 
@@ -73,12 +71,8 @@ class EvolutionDialog(
     }
 
     private fun loadData() {
-        Log.d("EVO_DEBUG", "0. loadData() spuštěno!")
-
         dialogScope.launch {
             try {
-                Log.d("EVO_DEBUG", "0.1 Sahám do DB pro capturedId = $capturedPokemonId")
-
                 val pokemonInDb = withContext(Dispatchers.IO) {
                     db.capturedPokemonDao().getAllCaught().find { it.id == capturedPokemonId }
                 }
@@ -89,13 +83,10 @@ class EvolutionDialog(
                     db.pokedexEntryDao().getEntry(newId)
                 }
 
-                Log.d("EVO_DEBUG", "0.2 DB vrátila: pokemonInDb found = ${pokemonInDb != null}")
-
                 if (pokemonInDb != null) {
                     activePokemon = pokemonInDb
                     startEvolutionAnimation(oldEntry, newEntry)
                 } else {
-                    Log.d("EVO_DEBUG", "0.3 Chyba: pokemonInDb je NULL!")
                     Toast.makeText(context, "❌ Chyba: Pokémon v DB nenalezen.", Toast.LENGTH_SHORT).show()
                     dismiss()
                     onComplete()
@@ -129,18 +120,16 @@ class EvolutionDialog(
             listener(
                 onSuccess = { _, _ ->
                     ivEvoSilhouette.load(oldUrl)
-                    runEvoAnimator(oldName, newName, newUrl)
+                    runEvoAnimator(oldName, newName, newUrl, newEntry)
                 },
                 onError = { _, _ ->
-                    runEvoAnimator(oldName, newName, newUrl)
+                    runEvoAnimator(oldName, newName, newUrl, newEntry)
                 }
             )
         }
     }
 
-    private fun runEvoAnimator(oldName: String, newName: String, newSpriteUrl: String) {
-        Log.d("EVO_DEBUG", "4. runEvoAnimator započal")
-
+    private fun runEvoAnimator(oldName: String, newName: String, newSpriteUrl: String, newEntry: PokedexEntryEntity?) {
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 3000
             addUpdateListener { anim ->
@@ -159,37 +148,33 @@ class EvolutionDialog(
 
         animator.addListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
-                Log.d("EVO_DEBUG", "5. Animace úspěšně SKONČILA!")
                 ivEvoSprite.alpha = 1f
                 ivEvoSilhouette.visibility = View.GONE
 
                 ivEvoSprite.load(newSpriteUrl)
-
                 tvEvoText.text = "Gratulace! Tvoje $oldName se vyvinula v $newName!"
-
-                Log.d("EVO_DEBUG", "6. Zapisuji do databáze pomocí dialogScope...")
 
                 dialogScope.launch {
                     try {
                         withContext(Dispatchers.IO) {
                             activePokemon.pokemonId = newId
-                            activePokemon.name = newName.uppercase()
+                            activePokemon.name = newEntry?.displayName?.uppercase() ?: newName.uppercase()
                             db.capturedPokemonDao().updatePokemon(activePokemon)
 
                             val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                            prefs.edit()
-                                .putString("currentOnBarId", newId)
-                                .putString("currentOnBarName", newName.uppercase())
-                                .apply()
+                            val currentActiveId = prefs.getString("currentOnBarId", "") ?: ""
+
+                            if (currentActiveId == oldId) {
+                                prefs.edit()
+                                    .putString("currentOnBarId", newId)
+                                    .putString("currentOnBarName", activePokemon.name)
+                                    .apply()
+                            }
                         }
 
-                        Log.d("EVO_DEBUG", "7. Databáze úspěšně uložena.")
-
                         if (newMoveToLearn != null) {
-                            Log.d("EVO_DEBUG", "8a. Nabízím nový útok")
                             showMoveLearning(newMoveToLearn)
                         } else {
-                            Log.d("EVO_DEBUG", "8b. Žádný útok k naučení, zavírám za 2s")
                             ivEvoSprite.postDelayed({
                                 dismiss()
                                 onComplete()
@@ -201,8 +186,6 @@ class EvolutionDialog(
                 }
             }
         })
-
-        Log.d("EVO_DEBUG", "🔥 STARTOVÁNÍ ANIMÁTORU")
         animator.start()
     }
 
@@ -211,9 +194,18 @@ class EvolutionDialog(
             .filter { it.isNotEmpty() }
             .toMutableList()
 
-        llMoveSelection.visibility = View.VISIBLE
+        if (currentMoves.contains(newMove.name)) {
+            ivEvoSprite.postDelayed({
+                dismiss()
+                onComplete()
+            }, 1500)
+            return
+        }
 
         if (currentMoves.size < 4) {
+            // ✅ AUTOMATICKÉ UČENÍ (Méně než 4 útoky) - obrázek ponecháme viditelný!
+            llMoveSelection.visibility = View.VISIBLE
+
             currentMoves.add(newMove.name)
             activePokemon.moveListStr = currentMoves.joinToString(",")
 
@@ -233,13 +225,18 @@ class EvolutionDialog(
                 }
             }
         } else {
+            // 🔥 PLNO (4 útoky) - Skryjeme evoluční obrázek, aby byl prostor na tlačítka "co zapomenout"
+            ivEvoSprite.visibility = View.GONE
+            ivEvoSilhouette.visibility = View.GONE
+
+            llMoveSelection.visibility = View.VISIBLE
             tvNewMovePrompt.text = "${activePokemon.name} se chce naučit ${newMove.name}! Vyber útok k zapomnění:"
             llCurrentMoves.removeAllViews()
 
             currentMoves.forEachIndexed { index, moveName ->
                 val btn = Button(context).apply {
                     text = moveName
-                    backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#424242"))
+                    backgroundTintList = ColorStateList.valueOf(Color.parseColor("#424242"))
                     setTextColor(Color.WHITE)
                     setOnClickListener {
                         confirmForgetMove(index, moveName, newMove, currentMoves)
@@ -264,7 +261,7 @@ class EvolutionDialog(
 
         val btnYes = Button(context).apply {
             text = "ANO, zapomenout $moveNameOld"
-            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#DDA15E"))
+            backgroundTintList = ColorStateList.valueOf(Color.parseColor("#DDA15E"))
             setOnClickListener {
                 val updatedMoves = currentMoves.toMutableList()
                 if (indexToForget < updatedMoves.size) {
@@ -273,6 +270,9 @@ class EvolutionDialog(
                 activePokemon.moveListStr = updatedMoves.joinToString(",")
 
                 saveMoveQuietly(activePokemon) {
+                    // 🔥 VRÁCENÍ OBRÁZKU - Po vyřešení zápisu obrázek zase ukážeme nahoře!
+                    ivEvoSprite.visibility = View.VISIBLE
+
                     tvNewMovePrompt.text = "Útok úspěšně zapomenut! ${activePokemon.name} se naučil ${moveNew.name}!"
                     llCurrentMoves.removeAllViews()
 
@@ -286,7 +286,7 @@ class EvolutionDialog(
 
         val btnNo = Button(context).apply {
             text = "NE, zrušit"
-            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#BC6C25"))
+            backgroundTintList = ColorStateList.valueOf(Color.parseColor("#BC6C25"))
             setOnClickListener {
                 showMoveLearning(moveNew)
             }
@@ -297,7 +297,6 @@ class EvolutionDialog(
     }
 
     private fun saveMoveQuietly(pokemon: CapturedPokemonEntity, onSaved: () -> Unit) {
-        // ✅ OPRAVA: Používáme bezpečný dialogScope pro zápis do DB
         dialogScope.launch {
             withContext(Dispatchers.IO) {
                 db.capturedPokemonDao().updatePokemon(pokemon)
@@ -308,6 +307,6 @@ class EvolutionDialog(
 
     override fun dismiss() {
         super.dismiss()
-        dialogScope.cancel() // Uklidíme běžící procesy, aby to nežralo paměť po zavření
+        dialogScope.cancel()
     }
 }

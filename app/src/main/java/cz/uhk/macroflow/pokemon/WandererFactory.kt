@@ -34,6 +34,8 @@ object WandererFactory {
         WandererConfig("093", 1.6f, { ctx, view, sc -> StandardWanderer(ctx, view, "093", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
         WandererConfig("094", 1.5f, { ctx, view, sc -> StandardWanderer(ctx, view, "094", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
         WandererConfig("143", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "143", sc) }) { SmokeTransitionEffect(false) },
+        WandererConfig("115", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "115", sc, HeavyTransitionEffect()) }) { HeavyTransitionEffect() }, // 🦖 Tady je tvůj Kangaskhan!
+        WandererConfig("026", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "026", sc) }) { SmokeTransitionEffect(false) },
 
         // --- LEGENDARY ────────────────────────────────────────────────
         WandererConfig("006", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "006", sc) }) { SmokeTransitionEffect(false) },

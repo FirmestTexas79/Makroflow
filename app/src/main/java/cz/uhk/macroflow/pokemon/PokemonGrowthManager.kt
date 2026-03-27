@@ -44,15 +44,37 @@ object PokemonGrowthManager {
             )
         ),
 
-        // --- ⚡ PIKACHU ---
         "025" to PokemonGrowthProfile(
             pokedexId = "025",
-            evolutionLevel = 20, // Jen jako příklad
-            evolutionToId = "026", // Raichu
+            evolutionLevel = 6, // Přirozená evoluce
+            evolutionToId = "026",
             movesLearnedAt = listOf(
                 LearnableMove(1, BattleFactory.attackTackle()),
-                LearnableMove(6, Move("Thunder Shock", PokemonType.ELECTRIC, 40, 100, 30)),
-                LearnableMove(11, Move("Quick Attack", PokemonType.NORMAL, 40, 100, 30))
+                LearnableMove(6, BattleFactory.attackThunderShock()),
+                LearnableMove(11, BattleFactory.attackQuickAttack())
+            )
+        ),
+
+        "026" to PokemonGrowthProfile(
+            pokedexId = "026",
+            evolutionLevel = 0,
+            evolutionToId = "",
+            movesLearnedAt = listOf(
+                LearnableMove(1, BattleFactory.attackThunderShock()), // 👈 Naučí se hned při evoluci!
+                LearnableMove(8, BattleFactory.attackSlam()),
+                LearnableMove(10, BattleFactory.attackThunderbolt()),
+                LearnableMove(11, BattleFactory.attackThunder())
+            )
+        ),
+
+        "115" to PokemonGrowthProfile(
+            pokedexId = "115",
+            evolutionLevel = 0,    // ❌ Nevyvíjí se
+            evolutionToId = "",    // ❌ Žádné další ID
+            movesLearnedAt = listOf(
+                LearnableMove(1, Move("TACKLE", PokemonType.NORMAL, 40, 100, 35)),
+                LearnableMove(1, Move("TAIL WHIP", PokemonType.NORMAL, 0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)),
+                LearnableMove(10, Move("MEGA PUNCH", PokemonType.NORMAL, 80, 85, 20)) // Naučí se na lvl 10
             )
         )
         // ➕ Sem budeš jednoduše pod sebe dopisovat všechny ostatní Pokémony a jejich křivky!
