@@ -6,8 +6,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import cz.uhk.macroflow.achievements.AchievementEntity
-import cz.uhk.macroflow.pokemon.CapturedPokemonEntity
-import cz.uhk.macroflow.pokemon.UserItemEntity
+import cz.uhk.macroflow.pokemon.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
@@ -24,7 +23,7 @@ object FirebaseRepository {
 
     private fun userDoc() = db.collection("users").document(currentUser!!.uid)
 
-    // ========== PROFIL ==========
+    // ========== 👤 PROFIL PROFIL ==========
 
     suspend fun uploadProfile(profile: UserProfileEntity) {
         val data = mapOf(
@@ -51,7 +50,7 @@ object FirebaseRepository {
         )
     }
 
-    // ========== TRÉNINKOVÝ PLÁN ==========
+    // ========== 📋 TRÉNINKOVÝ PLÁN ==========
 
     suspend fun uploadTrainingPlan(plan: Map<String, String>) {
         userDoc().collection("data").document("training_plan")
@@ -65,7 +64,7 @@ object FirebaseRepository {
         return snap.data as? Map<String, String> ?: emptyMap()
     }
 
-    // ========== CHECK-INY ==========
+    // ========== 📈 CHECK-INY ==========
 
     suspend fun uploadCheckIn(checkIn: CheckInEntity) {
         val data = mapOf(
@@ -97,7 +96,7 @@ object FirebaseRepository {
         }
     }
 
-    // ========== TĚLESNÉ MÍRY ==========
+    // ========== 📏 TĚLESNÉ MÍRY ==========
 
     suspend fun uploadBodyMetrics(metrics: BodyMetricsEntity) {
         val data = mapOf(
@@ -131,7 +130,30 @@ object FirebaseRepository {
         }
     }
 
-    // --- VLASTNÍ POTRAVINY (Číselník) ---
+    // ========== 💧 VODA ==========
+
+    suspend fun uploadWater(water: WaterEntity) {
+        val data = mapOf(
+            "date" to water.date,
+            "amountMl" to water.amountMl,
+            "timestamp" to water.timestamp
+        )
+        userDoc().collection("water").document(water.timestamp.toString())
+            .set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun downloadAllWater(): List<WaterEntity> {
+        val snaps = userDoc().collection("water").get().await()
+        return snaps.documents.mapNotNull { doc ->
+            WaterEntity(
+                date = doc.id,
+                amountMl = (doc.getLong("amountMl") ?: 0L).toInt(),
+                timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis()
+            )
+        }
+    }
+
+    // ========== 🍕 VLASTNÍ POTRAVINY ==========
 
     suspend fun uploadCustomSnack(snack: SnackEntity) {
         val data = mapOf(
@@ -161,7 +183,7 @@ object FirebaseRepository {
         }
     }
 
-    // --- SNĚDENÉ POTRAVINY (Historie konzumace) ---
+    // ========== 🍕 SNĚDENÉ POTRAVINY ==========
 
     suspend fun uploadConsumedSnack(consumed: ConsumedSnackEntity) {
         val data = mapOf(
@@ -197,7 +219,7 @@ object FirebaseRepository {
         }
     }
 
-    // --- 🎒 CHYCENÍ POKÉMONI (Kapsa) ---
+    // ========== 🦖 INVENTÁŘ (Zlatý rámeček v kapse) ==========
 
     suspend fun uploadCapturedPokemon(pokemon: CapturedPokemonEntity) {
         val data = mapOf(
@@ -205,9 +227,14 @@ object FirebaseRepository {
             "name" to pokemon.name,
             "isShiny" to pokemon.isShiny,
             "isLocked" to pokemon.isLocked,
-            "caughtDate" to pokemon.caughtDate
+            "caughtDate" to pokemon.caughtDate,
+            "moveListStr" to pokemon.moveListStr,
+            "level" to pokemon.level,
+            "xp" to pokemon.xp
         )
-        userDoc().collection("captured_pokemon").document(pokemon.id.toString())
+
+        // ✅ Každá instance má své unikátní časové ID - nikdy se nepřepíše
+        userDoc().collection("captured_pokemon").document(pokemon.caughtDate.toString())
             .set(data, SetOptions.merge()).await()
     }
 
@@ -215,17 +242,47 @@ object FirebaseRepository {
         val snaps = userDoc().collection("captured_pokemon").get().await()
         return snaps.documents.mapNotNull { doc ->
             CapturedPokemonEntity(
-                id = doc.id.toIntOrNull() ?: 0,
+                id = 0,
                 pokemonId = doc.getString("pokemonId") ?: "",
                 name = doc.getString("name") ?: "",
                 isShiny = doc.getBoolean("isShiny") ?: false,
                 isLocked = doc.getBoolean("isLocked") ?: false,
-                caughtDate = doc.getLong("caughtDate") ?: System.currentTimeMillis()
+                caughtDate = doc.getLong("caughtDate") ?: System.currentTimeMillis(),
+                moveListStr = doc.getString("moveListStr") ?: "",
+                level = (doc.getLong("level") ?: 1L).toInt(),
+                xp = (doc.getLong("xp") ?: 0L).toInt()
             )
         }
     }
 
-    // --- 🎒 BATOH (Předměty a Bally) ---
+    suspend fun deleteCapturedPokemon(caughtDate: Long) {
+        userDoc().collection("captured_pokemon").document(caughtDate.toString()).delete().await()
+    }
+
+    // ========== 📖 POKÉDEX STATUS (Trvale barevný = aspoň jednou chycený) ==========
+
+    suspend fun uploadPokedexStatus(pokemonId: String) {
+        val data = mapOf(
+            "unlocked" to true,
+            "unlockedDate" to System.currentTimeMillis()
+        )
+
+        userDoc().collection("pokedex_status").document(pokemonId)
+            .set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun downloadAllPokedexStatus(): List<PokedexStatusEntity> {
+        val snaps = userDoc().collection("pokedex_status").get().await()
+        return snaps.documents.mapNotNull { doc ->
+            PokedexStatusEntity(
+                pokemonId = doc.id,
+                unlocked = true,
+                unlockedDate = doc.getLong("unlockedDate") ?: System.currentTimeMillis()
+            )
+        }
+    }
+
+    // ========== 🎒 BATOH (Předměty a Bally) ==========
 
     suspend fun uploadUserItem(item: UserItemEntity) {
         val data = mapOf("quantity" to item.quantity)
@@ -243,7 +300,46 @@ object FirebaseRepository {
         }
     }
 
-    // --- 🏆 ACHIEVEMENTY ---
+    // ========== 🧪 POKEMON XP ==========
+
+    suspend fun uploadPokemonXp(xp: PokemonXpEntity) {
+        val data = mapOf(
+            "totalXp" to xp.totalXp,
+            "lastDailyRewardDate" to xp.lastDailyRewardDate
+        )
+        userDoc().collection("pokemon_xp").document(xp.pokemonId)
+            .set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun downloadAllPokemonXp(): List<PokemonXpEntity> {
+        val snaps = userDoc().collection("pokemon_xp").get().await()
+        return snaps.documents.mapNotNull { doc ->
+            PokemonXpEntity(
+                pokemonId = doc.id,
+                totalXp = (doc.getLong("totalXp") ?: 0L).toInt(),
+                lastDailyRewardDate = doc.getString("lastDailyRewardDate") ?: ""
+            )
+        }
+    }
+
+    // ========== 💰 COINY ==========
+
+    suspend fun uploadCoins(coins: CoinEntity) {
+        val data = mapOf("balance" to coins.balance)
+        userDoc().collection("wallet").document("coins")
+            .set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun downloadCoins(): CoinEntity {
+        val snap = userDoc().collection("wallet").document("coins").get().await()
+        if (!snap.exists()) return CoinEntity(balance = 100)
+        return CoinEntity(
+            id = 1,
+            balance = (snap.getLong("balance") ?: 100L).toInt()
+        )
+    }
+
+    // ========== 🏆 ACHIEVEMENTY ==========
 
     suspend fun uploadAchievement(achievement: AchievementEntity) {
         val data = mapOf("unlockedAt" to achievement.unlockedAt)
@@ -261,48 +357,56 @@ object FirebaseRepository {
         }
     }
 
-    // ========== SYNC (Room → Cloud po přihlášení) ==========
+    // ========== 🔄 KOMPLETNÍ SYNC ==========
 
     suspend fun syncLocalDataToCloud(context: Context) {
-        val db = AppDatabase.Companion.getDatabase(context)
+        val localDb = AppDatabase.getDatabase(context)
 
-        // 1. Profil
-        db.userProfileDao().getProfileSync()?.let { uploadProfile(it) }
+        localDb.userProfileDao().getProfileSync()?.let { uploadProfile(it) }
 
-        // 2. Tréninkový plán
         val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
         val days = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
         val plan = days.associateWith { prefs.getString("type_$it", "rest") ?: "rest" }
         uploadTrainingPlan(plan)
 
-        // 3. Check-iny
-        db.checkInDao().getAllCheckInsSync().forEach { uploadCheckIn(it) }
+        localDb.checkInDao().getAllCheckInsSync().forEach { uploadCheckIn(it) }
+        localDb.bodyMetricsDao().getAllSync().forEach { uploadBodyMetrics(it) }
 
-        // 4. Tělesné míry
-        db.bodyMetricsDao().getAllSync().forEach { uploadBodyMetrics(it) }
+        localDb.snackDao().getAllSnacks().first().forEach { uploadCustomSnack(it) }
+        localDb.consumedSnackDao().getAllConsumedSync().forEach { uploadConsumedSnack(it) }
 
-        // 5. Vlastní snacky
-        db.snackDao().getAllSnacks().first().forEach { uploadCustomSnack(it) }
+        localDb.waterDao().getAllWaterSync().forEach { uploadWater(it) }
 
-        // 6. Historie konzumace (přečte dnešek)
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        db.consumedSnackDao().getConsumedByDate(today).first().forEach { uploadConsumedSnack(it) }
+        localDb.coinDao().getBalance()?.let { uploadCoins(it) }
+        localDb.userItemDao().getAllItems().forEach { uploadUserItem(it) }
 
-        // 7. Pokémony, Bally a Achievementy
-        db.capturedPokemonDao().getAllCaught().forEach { uploadCapturedPokemon(it) }
-        db.userItemDao().getAllItems().forEach { uploadUserItem(it) }
-        db.achievementDao().getAllUnlocked().forEach { uploadAchievement(it) }
+        // 🦖 1. Zlatý rámeček v kapse
+        val localCaught = localDb.capturedPokemonDao().getAllCaught()
+        localCaught.forEach { uploadCapturedPokemon(it) }
+
+        // 📖 2. Trvale barevný Pokédex
+        val localStatusIds = localDb.pokedexStatusDao().getUnlockedIds()
+        val localCaughtIds = localCaught.map { it.pokemonId }
+        val allUnlockedIds = (localStatusIds + localCaughtIds).distinct()
+
+        allUnlockedIds.forEach { id ->
+            uploadPokedexStatus(pokemonId = id)
+        }
+
+        localDb.achievementDao().getAllUnlocked().forEach { uploadAchievement(it) }
+        localCaught.forEach { pokemon ->
+            val xpEntity = localDb.pokemonXpDao().getXp(pokemon.pokemonId)
+            if (xpEntity != null) uploadPokemonXp(xpEntity)
+        }
     }
 
-    // ========== DOWNLOAD (Cloud → Room po přihlášení) ==========
+    // ========== 🔄 KOMPLETNÍ DOWNLOAD ==========
 
     suspend fun syncCloudDataToLocal(context: Context) {
-        val localDb = AppDatabase.Companion.getDatabase(context)
+        val localDb = AppDatabase.getDatabase(context)
 
-        // 1. Profil
         downloadProfile()?.let { localDb.userProfileDao().saveProfile(it) }
 
-        // 2. Tréninkový plán
         val plan = downloadTrainingPlan()
         if (plan.isNotEmpty()) {
             val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
@@ -311,23 +415,23 @@ object FirebaseRepository {
             editor.apply()
         }
 
-        // 3. Check-iny
         downloadAllCheckIns().forEach { localDb.checkInDao().insertCheckIn(it) }
-
-        // 4. Tělesné míry
         downloadAllBodyMetrics().forEach { localDb.bodyMetricsDao().save(it) }
-
-        // 5. Vlastní snacky
         downloadAllCustomSnacks().forEach { localDb.snackDao().insertSnack(it) }
 
-        // 6. Historie konzumace
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         downloadConsumedByDate(today).forEach { localDb.consumedSnackDao().insertConsumed(it) }
 
-        // 7. Pokémony, Bally a Achievementy
-        downloadAllCapturedPokemon().forEach { localDb.capturedPokemonDao().insertPokemon(it) }
+        downloadAllWater().forEach { localDb.waterDao().insertWater(it) }
+
+        localDb.coinDao().setBalance(downloadCoins())
         downloadAllUserItems().forEach { localDb.userItemDao().insertOrUpdateItem(it) }
+        downloadAllCapturedPokemon().forEach { localDb.capturedPokemonDao().insertPokemon(it) }
         downloadAllAchievements().forEach { localDb.achievementDao().unlock(it) }
+
+        downloadAllPokedexStatus().forEach { localDb.pokedexStatusDao().unlockPokemon(it) }
+
+        downloadAllPokemonXp().forEach { localDb.pokemonXpDao().setXp(it) }
     }
 
     fun signOut() = auth.signOut()

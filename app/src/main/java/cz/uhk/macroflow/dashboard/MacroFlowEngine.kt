@@ -70,20 +70,48 @@ object MacroFlowEngine {
         }
     }
 
-    suspend fun logSwipedFood(context: Context, name: String, p: Double, s: Double, t: Double, cal: Double) {
+    // V MacroFlowEngine.kt
+    suspend fun logSwipedFood(
+        context: Context,
+        name: String,
+        p: Double,
+        s: Double,
+        t: Double,
+        cal: Double,
+        mealContext: String = "NO_TRAINING" // Přidán parametr s výchozí hodnotou
+    ) {
         withContext(Dispatchers.IO) {
-            val db = AppDatabase.Companion.getDatabase(context)
+            val db = AppDatabase.getDatabase(context)
             val now = Date()
+            val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
+
             val snack = ConsumedSnackEntity(
-                date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now),
+                date = todayStr,
                 time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now),
                 name = name,
                 p = p.toFloat(),
                 s = s.toFloat(),
                 t = t.toFloat(),
-                calories = cal.toInt()
+                calories = cal.toInt(),
+                mealContext = mealContext // 👈 Tady ho bezpečně propíšeme!
             )
             db.consumedSnackDao().insertConsumed(snack)
+
+            // ☁️ CLOUD ZÁPIS:
+            if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) {
+                try {
+                    cz.uhk.macroflow.data.FirebaseRepository.uploadConsumedSnack(snack)
+                } catch (e: Exception) {
+                    android.util.Log.e("FIREBASE_SYNC", "Nepovedlo se uložit snack: ${e.message}")
+                }
+            }
+
+            // 🦖 REAL-TIME XP (Když sní jídlo, dostane XP ihned bez restartu!):
+            withContext(Dispatchers.Main) {
+                (context as? cz.uhk.macroflow.common.MainActivity)?.addXpToActivePokemonRealTime(
+                    cz.uhk.macroflow.pokemon.XpRewards.LOGGED_FOOD
+                )
+            }
         }
     }
 }

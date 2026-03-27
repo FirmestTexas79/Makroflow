@@ -10,6 +10,9 @@ import android.view.View
 import coil.ImageLoader
 import coil.request.ImageRequest
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.data.FirebaseRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlin.math.*
 import kotlin.random.Random
 
@@ -72,21 +75,31 @@ class PokemonBattleView @JvmOverloads constructor(
         PokemonSprites.init(context)
 
         val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val activeId = prefs.getString("currentOnBarId", "050") ?: "050"
+        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1) // 👈 Načítáme ID konkrétního pokémona, ne globální dex ID!
 
         Thread {
-            val xpEntity = db.pokemonXpDao().getXp(activeId)
-            val playerLevel = if (xpEntity != null) PokemonLevelCalc.levelFromXp(xpEntity.totalXp) else 5
+            val db = AppDatabase.getDatabase(context)
 
-            // ✅ OPRAVA: Použijeme tvou metodu createPlayerPokemon, která už v sobě má evoluce a statistiky!
-            val playerWithStats = createPlayerPokemon(activeId, playerLevel)
+            // 🔍 Získáme přesnou instanci Pokémona z batohu!
+            val caughtPokemon = db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
+
+            // 🎯 Vezmeme level reálně z něj! Pokud ho nemáme, dáme fallback na 1.
+            val playerLevel = caughtPokemon?.level ?: 1
+            val pId = caughtPokemon?.pokemonId ?: "050"
+
+            val playerWithStats = createPlayerPokemon(pId, playerLevel)
 
             val baseEnemy = SpawnManager.rollWildEncounter(context)
             val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
             val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
 
-            db.seenPokemonDao().markSeen(SeenPokemonEntity(BattleFactory.pokedexId(enemyWithStats)))
+            val enemyId = BattleFactory.pokedexId(enemyWithStats)
+
+            // 1. Lokální uložení, že jsme pokémona viděli
+            db.seenPokemonDao().markSeen(SeenPokemonEntity(enemyId))
+
+
 
             handler.post {
                 gs = BattleState(
@@ -97,9 +110,8 @@ class PokemonBattleView @JvmOverloads constructor(
 
                 handler.post(cursorTick)
 
-                // ✅ OPRAVA: Prohodíme flagy načítání správně (Nepřítel zepředu, Hráč zezadu)
-                loadSprite(spriteUrl(BattleFactory.webName(enemyWithStats)), isPlayer = false) // Divoký
-                loadSprite(spriteUrl(BattleFactory.webName(playerWithStats)), isPlayer = true)  // Ty zezadu
+                loadSprite(spriteUrl(BattleFactory.webName(enemyWithStats)), isPlayer = false)
+                loadSprite(spriteUrl(BattleFactory.webName(playerWithStats)), isPlayer = true)
 
                 invalidate()
             }
@@ -445,7 +457,7 @@ class PokemonBattleView @JvmOverloads constructor(
             }
             if (mv.power > 0) {
 
-                // ✅ OPRAVA: Pro zjednodušení vezmeme typ nepřítele podle jeho prvního útoku v seznamu
+                // ✅ Pro zjednodušení vezmeme typ nepřítele podle jeho prvního útoku v seznamu
                 val enemyType = gs.enemy.moves.firstOrNull()?.type ?: PokemonType.NORMAL
 
                 // Přidali jsme typy do výpočtu damage!
@@ -457,7 +469,37 @@ class PokemonBattleView @JvmOverloads constructor(
                         if (gs.enemy.currentHp <= 0) {
                             gs.enemyVisible = false; gs.phase = BattlePhase.ENEMY_FAINTED
                             setText("${gs.enemy.name}", "FAINTED!")
-                            pendingAction = { onCaught?.invoke() }
+
+                            // ⚔️ ODMĚNA ZA PORAŽENÍ NEPŘÍTELE (RPG XP)
+                            Thread {
+                                val pId = BattleFactory.pokedexId(gs.enemy)
+                                val spawnEntry = SpawnManager.allEntries.find { it.id == pId }
+                                val rarity = spawnEntry?.rarity ?: Rarity.COMMON
+
+                                // 1. Základní XP podle rarity
+                                val baseScore = when (rarity) {
+                                    Rarity.COMMON -> 15
+                                    Rarity.RARE -> 30
+                                    Rarity.EPIC -> 60
+                                    Rarity.LEGENDARY -> 120
+                                    Rarity.MYTHIC -> 250
+                                }
+
+                                // 2. Modifikátor za level nepřítele
+                                val levelBonus = gs.enemy.level * 3
+                                val totalBattleXp = baseScore + levelBonus
+
+                                handler.post {
+                                    // ✅ Okamžitý přepis do UI a uložení do Cloudu přes MainActivity!
+                                    (context as? cz.uhk.macroflow.common.MainActivity)?.addXpToActivePokemonRealTime(totalBattleXp)
+
+                                    // Počkáme 2 vteřiny, než se dočte text o porážce a pak teprve dialog zavřeme
+                                    handler.postDelayed({
+                                        onCaught?.invoke()
+                                    }, 2000)
+                                }
+                            }.start()
+
                         } else {
                             setText("IT DEALT", "$dmg DAMAGE!")
                             scheduleAfterText { enemyTurn() }
@@ -669,16 +711,25 @@ class PokemonBattleView @JvmOverloads constructor(
 
         val pId = BattleFactory.pokedexId(gs.enemy)
 
-        // ✅ Uložíme do inventáře Pokémona včetně reálného bojového levelu!
         val entity = CapturedPokemonEntity(
             pokemonId = pId,
             name = gs.enemy.name,
-            level = gs.enemy.level // 👈 Zde předáváme RPG úroveň
+            level = gs.enemy.level,
+            caughtDate = System.currentTimeMillis() // Přidá unikátní čas chycení
         )
 
         Thread {
             db.capturedPokemonDao().insertPokemon(entity)
-            db.pokedexStatusDao().unlockPokemon(PokedexStatusEntity(pId))
+
+            if (FirebaseRepository.isLoggedIn) {
+                kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                    // ✅ Uloží do inventáře s unikátním ID (nepřepíše se!)
+                    FirebaseRepository.uploadCapturedPokemon(entity)
+
+                    // ✅ Označí v Pokédexu jako viděného i chyceného
+                    FirebaseRepository.uploadPokedexStatus(pId)
+                }
+            }
 
             val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
             val isAcquired = prefs.getBoolean("pokemonAcquired", false)

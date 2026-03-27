@@ -295,23 +295,26 @@ class FoodSwipeDialog : DialogFragment() {
     }
 
     // ── Potvrzení jídla — uloží s mealContext ────────────────────────
+    // V souboru FoodSwipeDialog.kt
     private fun handleConfirm(view: View) {
         if (snackList.isEmpty()) return
         val snack = snackList.removeAt(0)
+
         lifecycleScope.launch {
-            val now = Date()
             val kcal = ((snack.p * 4) + (snack.s * 4) + (snack.t * 9)).toDouble()
-            val entity = ConsumedSnackEntity(
-                date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now),
-                time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now),
+
+            // ✅ OPRAVA: Voláme centrální mozek pro zápis jídla!
+            // To zajistí zápis do Roomu, odeslání do Cloudu a spuštění real-time XP!
+            cz.uhk.macroflow.dashboard.MacroFlowEngine.logSwipedFood(
+                context = requireContext(),
                 name = snack.name,
-                p = snack.p,
-                s = snack.s,
-                t = snack.t,
-                calories = kcal.toInt(),
-                mealContext = currentMealContext.name  // ← Uložíme kontext!
+                p = snack.p.toDouble(),
+                s = snack.s.toDouble(),
+                t = snack.t.toDouble(),
+                cal = kcal,
+                mealContext = currentMealContext.name // Předej kontext do upravené metody níže!
             )
-            AppDatabase.Companion.getDatabase(requireContext()).consumedSnackDao().insertConsumed(entity)
+
             resetCardPositionAndData(view)
         }
     }

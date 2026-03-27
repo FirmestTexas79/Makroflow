@@ -37,7 +37,11 @@ import cz.uhk.macroflow.training.TrainingTimeManager
 import cz.uhk.macroflow.achievements.AchievementEngine
 import cz.uhk.macroflow.data.CheckInEntity
 import cz.uhk.macroflow.pokemon.EvolutionDialog
-import cz.uhk.macroflow.pokemon.PokemonXpEngine
+import cz.uhk.macroflow.pokemon.PokedexStatusEntity
+import cz.uhk.macroflow.pokemon.PokemonLevelCalc
+import cz.uhk.macroflow.pokemon.PokemonXpEntity
+import cz.uhk.macroflow.pokemon.PokemonGrowthManager
+import cz.uhk.macroflow.pokemon.XpRewards
 
 class DashboardFragment : Fragment() {
 
@@ -50,7 +54,6 @@ class DashboardFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        // Ujistíme se, že se layout správně nafoukne do kontejneru
         return inflater.inflate(R.layout.activity_dashboard, container, false)
     }
 
@@ -73,7 +76,7 @@ class DashboardFragment : Fragment() {
 
         coachCard.setOnClickListener {
             lifecycleScope.launch(Dispatchers.Main) {
-                val db = AppDatabase.Companion.getDatabase(requireContext())
+                val db = AppDatabase.getDatabase(requireContext())
 
                 val todayCheckIn = withContext(Dispatchers.IO) {
                     db.checkInDao().getCheckInByDateSync(today)
@@ -117,17 +120,23 @@ class DashboardFragment : Fragment() {
 
         waterPill = view.findViewById(R.id.waterPillView)
         waterPill.setOnClickListener {
-            val dialog = WaterDialog()
+            val dialog = cz.uhk.macroflow.dashboard.WaterDialog()
             dialog.onWaterLogged = { addedMl ->
                 waterCurrentMl += addedMl
                 updateWaterPill(view)
 
-                // ✅ TICHÉ ODESLÁNÍ SNÍSTÍ VODNÍHO PITNÉHO REŽIMU
                 if (FirebaseRepository.isLoggedIn) {
                     lifecycleScope.launch(Dispatchers.IO) {
-                        val db = AppDatabase.Companion.getDatabase(requireContext())
-                        val todayWater = db.waterDao().getTotalMlForDateSync(today)
-                        // Musíme sjednotit odeslání do Firebase Repository pro vodu (když to bude potřeba)
+                        try {
+                            val waterEntity = cz.uhk.macroflow.data.WaterEntity(
+                                date = today,
+                                amountMl = addedMl,
+                                timestamp = System.currentTimeMillis()
+                            )
+                            FirebaseRepository.uploadWater(waterEntity)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
                 }
             }
@@ -153,7 +162,7 @@ class DashboardFragment : Fragment() {
     private fun refreshAllData(view: View) {
         lifecycleScope.launch(Dispatchers.Main.immediate) {
             val context = context ?: return@launch
-            val db = AppDatabase.Companion.getDatabase(context)
+            val db = AppDatabase.getDatabase(context)
 
             val consumedList = withContext(Dispatchers.IO) {
                 db.consumedSnackDao().getConsumedByDate(today).first()
@@ -193,14 +202,14 @@ class DashboardFragment : Fragment() {
         )
 
         lifecycleScope.launch(Dispatchers.Main) {
-            val db = AppDatabase.Companion.getDatabase(requireContext())
+            val db = AppDatabase.getDatabase(requireContext())
 
             val newAchievements = withContext(Dispatchers.IO) {
                 db.checkInDao().insertCheckIn(checkInEntity)
                 AchievementEngine.checkAll(requireContext())
             }
 
-            // ✅ TICHÉ ODESLÁNÍ DO CLOUDU
+            // ✅ 2. CLOUD SYNCHRONIZACE PRO CHECK-IN
             if (FirebaseRepository.isLoggedIn) {
                 withContext(Dispatchers.IO) {
                     try {
@@ -219,34 +228,29 @@ class DashboardFragment : Fragment() {
                 Toast.makeText(context, "🏆 Achievement odemčen: ${ach.titleCs}", Toast.LENGTH_LONG).show()
             }
 
-            // 🚀 --- NOVÉ: OKAMŽITÝ PŘEPOČET XP A EVOLUCE PO RITUÁLU ---
-            val xpResult = withContext(Dispatchers.IO) {
-                PokemonXpEngine.checkAndAwardDailyXp(requireContext())
-            }
+            // 🚀 --- OPRAVENÉ: OKAMŽITÝ REAL-TIME PŘEPOČET XP ---
+            lifecycleScope.launch(Dispatchers.IO) {
+                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                val prefs = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+                val activeId = prefs.getString("currentOnBarId", "050") ?: "050"
 
-            if (xpResult.awardedXp > 0) {
-                Toast.makeText(context, "✨ Pokémon získal ${xpResult.awardedXp} XP za rituál!", Toast.LENGTH_SHORT).show()
+                val xpEntity = db.pokemonXpDao().getXp(activeId) ?: PokemonXpEntity(activeId)
 
-                // Aktualizujeme zobrazení Pokémona na spodní liště v MainActivity
-                (activity as? MainActivity)?.updatePokemonVisibility()
-            }
+                if (xpEntity.lastDailyRewardDate != todayStr) {
+                    db.pokemonXpDao().setXp(xpEntity.copy(lastDailyRewardDate = todayStr))
 
-            if (xpResult.shouldEvolve && xpResult.evolutionData != null) {
-                val evoData = xpResult.evolutionData
-
-                val dialog = EvolutionDialog(
-                    context = requireContext(),
-                    capturedPokemonId = evoData.capturedId,
-                    oldId = evoData.oldId,
-                    newId = evoData.newId,
-                    newMoveToLearn = evoData.moveToLearn,
-                    onComplete = {
-                        // Po zavření dialogu zaktualizujeme UI lišty znovu pro novou formu Pokémona
-                        (activity as? MainActivity)?.updatePokemonVisibility()
-                        refreshAllData(requireView())
+                    withContext(Dispatchers.Main) {
+                        (activity as? MainActivity)?.addXpToActivePokemonRealTime(XpRewards.CHECK_IN)
                     }
-                )
-                dialog.show()
+
+                    // ✅ 3. CLOUD SYNCHRONIZACE XP PO KAŽDÉM PŘIDÁNÍ
+                    if (FirebaseRepository.isLoggedIn) {
+                        val updatedXp = db.pokemonXpDao().getXp(activeId)
+                        if (updatedXp != null) {
+                            FirebaseRepository.uploadPokedexStatus(activeId)
+                        }
+                    }
+                }
             }
         }
     }
@@ -258,7 +262,7 @@ class DashboardFragment : Fragment() {
     private fun updateWaterUI(view: View, status: DailyStatus) {
         waterGoalMl = (status.target.water * 1000).toInt()
         lifecycleScope.launch {
-            val db = AppDatabase.Companion.getDatabase(requireContext())
+            val db = AppDatabase.getDatabase(requireContext())
             waterCurrentMl = withContext(Dispatchers.IO) {
                 db.waterDao().getTotalMlForDateSync(today)
             }
@@ -396,9 +400,7 @@ class DashboardFragment : Fragment() {
         val HOLD_MS = 5000L
 
         fab.setOnTouchListener { v, event ->
-            // Nejdříve necháme tlačítko zpracovat standardní chování (stisknutí, vlnový efekt)
             val handled = v.onTouchEvent(event)
-
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     holdStart = System.currentTimeMillis()
@@ -416,7 +418,6 @@ class DashboardFragment : Fragment() {
                     holdStart = 0L
                 }
             }
-            // Vrátíme handled, aby Android věděl, že dotyk normálně pokračuje dál
             handled
         }
     }

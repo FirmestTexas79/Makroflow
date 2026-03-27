@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.google.android.material.tabs.TabLayout
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.R
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +57,6 @@ class InventoryFragment : Fragment() {
     private fun loadData() {
         lifecycleScope.launch {
             if (currentTab == 0) {
-                // ✅ Každá entita si teď nese vlastní XP i level v sobě!
                 val list = withContext(Dispatchers.IO) { db.capturedPokemonDao().getAllCaught() }
                 rvInventory.adapter = PokemonAdapter(list)
             } else {
@@ -91,7 +91,6 @@ class InventoryFragment : Fragment() {
             val item = list[position]
             val prefs = holder.itemView.context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
 
-            // 🔍 Ověřujeme na základě unikátní číselné instance DB Primary Key!
             val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
             val isAcquired = prefs.getBoolean("pokemonAcquired", false)
             val isActiveOnBar = isAcquired && (item.id == activeCapturedId)
@@ -100,7 +99,6 @@ class InventoryFragment : Fragment() {
 
             holder.tvName.text = item.name
 
-            // ✅ Každý má svůj vlastní text levelu a vlastní XP progress bar
             holder.tvLevel.visibility = View.VISIBLE
             holder.pbXp.visibility = View.VISIBLE
             holder.tvLevel.text = "Lv.${item.level}"
@@ -120,6 +118,12 @@ class InventoryFragment : Fragment() {
                 lifecycleScope.launch(Dispatchers.IO) {
                     item.isLocked = !item.isLocked
                     db.capturedPokemonDao().updatePokemon(item)
+
+                    // ☁️ Synchronizujeme změnu zámku s Cloudem
+                    if (FirebaseRepository.isLoggedIn) {
+                        FirebaseRepository.uploadCapturedPokemon(item)
+                    }
+
                     withContext(Dispatchers.Main) { loadData() }
                 }
             }
@@ -127,7 +131,7 @@ class InventoryFragment : Fragment() {
             holder.btnPin.setOnClickListener {
                 requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                     .putBoolean("pokemonAcquired", true)
-                    .putInt("currentOnBarCapturedId", item.id) // ✅ Uložíme unikátní ID instance
+                    .putInt("currentOnBarCapturedId", item.id)
                     .putString("currentOnBarId", item.pokemonId)
                     .putString("currentOnBarName", item.name.uppercase())
                     .apply()
@@ -139,36 +143,47 @@ class InventoryFragment : Fragment() {
             holder.btnUnpin.setOnClickListener {
                 requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                     .putBoolean("pokemonAcquired", false)
-                    .putInt("currentOnBarCapturedId", -1) // ✅ Smažeme instanci
+                    .putInt("currentOnBarCapturedId", -1)
                     .apply()
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
                 loadData()
                 Toast.makeText(requireContext(), "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
             }
 
+            // 🔥 OPRAVENÉ MAZÁNÍ S CLOUDEM
             holder.btnDelete.setOnClickListener {
                 if (item.isLocked) {
                     Toast.makeText(requireContext(), "Odemkni pokémona před smazáním! 🔒", Toast.LENGTH_SHORT).show()
                 } else {
                     lifecycleScope.launch(Dispatchers.IO) {
+                        // 1. Smažeme z lokální SQLite DB
                         db.capturedPokemonDao().deletePokemon(item)
+
+                        // 2. ✅ OPRAVENO: Smažeme z Cloudu podle unikátního časového razítka (Long)
+                        if (FirebaseRepository.isLoggedIn) {
+                            try {
+                                FirebaseRepository.deleteCapturedPokemon(item.caughtDate)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+
                         if (isActiveOnBar) {
                             prefs.edit().putBoolean("pokemonAcquired", false).putInt("currentOnBarCapturedId", -1).apply()
                         }
+
                         withContext(Dispatchers.Main) {
                             (requireActivity() as? MainActivity)?.updatePokemonVisibility()
                             loadData()
+                            Toast.makeText(requireContext(), "🗑️ Pokémon smazán lokálně i v cloudu.", Toast.LENGTH_SHORT).show()
                         }
                     }
-                    Toast.makeText(requireContext(), "🗑️ Pokémon smazán.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
         override fun getItemCount() = list.size
     }
-
-    // ── 🎒 Item adapter (Předměty beze změny) ──
 
     private inner class ItemAdapter(private val list: List<UserItemEntity>) :
         RecyclerView.Adapter<ItemAdapter.VH>() {
@@ -224,6 +239,14 @@ class InventoryFragment : Fragment() {
                     lifecycleScope.launch(Dispatchers.IO) {
                         if (db.userItemDao().consumeItem("lure_lamp", 1)) {
                             prefs.edit().putBoolean("ghostPlateActive", true).apply()
+
+                            // ☁️ Uložíme snížení itemů i v cloudu
+                            if (FirebaseRepository.isLoggedIn) {
+                                val updatedItem = db.userItemDao().getItem("lure_lamp")
+                                if (updatedItem != null) {
+                                    FirebaseRepository.uploadUserItem(updatedItem)
+                                }
+                            }
 
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(requireContext(), "👻 Spooky Plate aktivován!", Toast.LENGTH_SHORT).show()

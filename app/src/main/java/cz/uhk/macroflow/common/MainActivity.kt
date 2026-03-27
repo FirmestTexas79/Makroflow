@@ -47,13 +47,11 @@ import cz.uhk.macroflow.pokemon.InventoryFragment
 import cz.uhk.macroflow.pokemon.PokedexFragment
 import cz.uhk.macroflow.pokemon.PokemonBattleFragment
 import cz.uhk.macroflow.pokemon.PokemonBehavior
-import cz.uhk.macroflow.pokemon.PokemonXpEngine
 import cz.uhk.macroflow.pokemon.BattleFactory
 import cz.uhk.macroflow.pokemon.Move
 import cz.uhk.macroflow.pokemon.Pokemon
 import cz.uhk.macroflow.pokemon.PokemonGrowthManager
 import cz.uhk.macroflow.pokemon.PokemonLevelCalc
-import cz.uhk.macroflow.pokemon.PokemonXpEntity
 import cz.uhk.macroflow.pokemon.WandererFactory
 import cz.uhk.macroflow.training.PlanFragment
 import kotlinx.coroutines.Dispatchers
@@ -85,6 +83,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         hideStatusBar()
+
+        // ☁️ 1. AUTOSYNC PŘI STARTU: Pojistka pro případ offline změn
+        if (FirebaseRepository.isLoggedIn) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    FirebaseRepository.syncLocalDataToCloud(applicationContext)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
 
         drawerLayout   = findViewById(R.id.drawerLayout)
         navigationView = findViewById(R.id.navigationView)
@@ -202,9 +211,27 @@ class MainActivity : AppCompatActivity() {
                     return@setNavigationItemSelectedListener true
                 }
                 R.id.drawerSignOut -> {
-                    if (FirebaseRepository.isLoggedIn) FirebaseRepository.signOut()
-                    startActivity(Intent(this, LoginActivity::class.java))
-                    finish()
+                    // 🔥 2. OPRAVA ODHLÁŠENÍ: Totální smazání lokálních dat, ať se nemíchají s jiným účtem
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        if (FirebaseRepository.isLoggedIn) {
+                            try {
+                                FirebaseRepository.syncLocalDataToCloud(applicationContext)
+                            } catch (e: Exception) { e.printStackTrace() }
+                            FirebaseRepository.signOut()
+                        }
+
+                        // Promazání Room DB lokálně
+                        AppDatabase.getDatabase(this@MainActivity).clearAllTables()
+
+                        // Vymazání offline herních nastavení
+                        getSharedPreferences("GamePrefs", MODE_PRIVATE).edit().clear().apply()
+                        getSharedPreferences("UserPrefs", MODE_PRIVATE).edit().clear().apply()
+
+                        withContext(Dispatchers.Main) {
+                            startActivity(Intent(this@MainActivity, LoginActivity::class.java))
+                            finish()
+                        }
+                    }
                 }
             }
             true
@@ -246,6 +273,11 @@ class MainActivity : AppCompatActivity() {
                     db.capturedPokemonDao().updatePokemon(pokemon)
                     prefs.edit().putInt("lastXpDay_$activeCapturedId", today).apply()
 
+                    // ☁️ Push i pro denní automatické XP
+                    if (FirebaseRepository.isLoggedIn) {
+                        FirebaseRepository.uploadCapturedPokemon(pokemon)
+                    }
+
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@MainActivity, "🎉 ${pokemon.name} získal 20 XP!", Toast.LENGTH_SHORT).show()
 
@@ -269,66 +301,58 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // V MainActivity.kt
-    // V MainActivity.kt — úplně jedno kam do těla třídy
-
     fun addXpToActivePokemonRealTime(xpAmount: Int) {
-        val prefs = getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val activeId = prefs.getString("currentOnBarId", "050") ?: "050"
+        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
+        if (activeCapturedId == -1) return
 
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(this@MainActivity)
+            val pokemon = db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
 
-            // 1. Vytáhneme staré XP z tvé nové Room tabulky
-            val currentXpEntity = db.pokemonXpDao().getXp(activeId) ?: PokemonXpEntity(activeId)
-            val oldXp = currentXpEntity.totalXp
-            val newXp = oldXp + xpAmount
+            if (pokemon != null) {
+                val oldLevel = pokemon.level
 
-            // 2. Vypočítáme levely pomocí tvého PokemonLevelCalc
-            val oldLevel = PokemonLevelCalc.levelFromXp(oldXp)
-            val newLevel = PokemonLevelCalc.levelFromXp(newXp)
+                pokemon.xp += xpAmount
 
-            // 3. Uložíme nové XP do databáze
-            db.pokemonXpDao().setXp(currentXpEntity.copy(totalXp = newXp))
+                val newLevel = PokemonLevelCalc.levelFromXp(pokemon.xp)
+                pokemon.level = newLevel
 
-            withContext(Dispatchers.Main) {
-                // ✅ Okamžitá hláška o zisku XP na obrazovce!
-                Toast.makeText(this@MainActivity, "🎉 Aktivní Pokémon získal $xpAmount XP!", Toast.LENGTH_SHORT).show()
+                db.capturedPokemonDao().updatePokemon(pokemon)
 
-                // 4. 🔥 Pokud došlo k Level UP a Pokémon má evoluci, spustíme EvolutionDialog!
-                val entry = withContext(Dispatchers.IO) { db.pokedexEntryDao().getEntry(activeId) }
+                // ☁️ OKAMŽITÝ CLOUD ZÁPIS XP
+                if (FirebaseRepository.isLoggedIn) {
+                    try {
+                        FirebaseRepository.uploadCapturedPokemon(pokemon)
+                    } catch (e: Exception) {
+                        Log.e("FIREBASE_SYNC", "Chyba uploadu pokémona: ${e.message}")
+                    }
+                }
 
-                if (entry != null && newLevel > oldLevel) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "🎉 ${pokemon.name} získal $xpAmount XP!", Toast.LENGTH_SHORT).show()
 
-                    val growthProfile = PokemonGrowthManager.getProfile(activeId)
-                    val targetEvolveId = growthProfile?.evolutionToId ?: ""
-                    val evolveLvl = growthProfile?.evolutionLevel ?: 1
+                    val entry = withContext(Dispatchers.IO) { db.pokedexEntryDao().getEntry(pokemon.pokemonId) }
+                    if (entry != null && entry.evolveLevel > 0 && newLevel >= entry.evolveLevel && newLevel > oldLevel) {
 
-                    // Zkontrolujeme, jestli vůbec má zapsanou evoluci a jestli na ni dosáhl
-                    if (targetEvolveId.isNotEmpty() && newLevel >= evolveLvl) {
+                        val growthProfile = PokemonGrowthManager.getProfile(pokemon.pokemonId)
+                        val targetEvolveId = growthProfile?.evolutionToId ?: ""
 
-                        var nextMove = PokemonGrowthManager.getNewMoveForLevel(targetEvolveId, evolveLvl)
+                        var nextMove = PokemonGrowthManager.getNewMoveForLevel(targetEvolveId, entry.evolveLevel)
                         if (nextMove == null) {
                             nextMove = PokemonGrowthManager.getNewMoveForLevel(targetEvolveId, 1)
                         }
 
-                        // Najdeme v inventáři reálnou instanci Pokémona k evoluci
-                        val caughtPokemon = withContext(Dispatchers.IO) {
-                            db.capturedPokemonDao().getAllCaught().find { it.pokemonId == activeId }
+                        val dialog = EvolutionDialog(
+                            context = this@MainActivity,
+                            capturedPokemonId = pokemon.id,
+                            oldId = pokemon.pokemonId,
+                            newId = targetEvolveId,
+                            newMoveToLearn = nextMove
+                        ) {
+                            updatePokemonVisibility()
                         }
-
-                        if (caughtPokemon != null) {
-                            val dialog = EvolutionDialog(
-                                context = this@MainActivity,
-                                capturedPokemonId = caughtPokemon.id,
-                                oldId = activeId,
-                                newId = targetEvolveId,
-                                newMoveToLearn = nextMove
-                            ) {
-                                updatePokemonVisibility() // Změní animaci a obrázek na liště po evoluci!
-                            }
-                            dialog.show()
-                        }
+                        dialog.show()
                     }
                 }
             }
@@ -383,10 +407,6 @@ class MainActivity : AppCompatActivity() {
         ivPokemon.layoutParams.height = (52 * dp).toInt()
         ivPokemon.requestLayout()
 
-        // V MainActivity.kt najdi tuto část uvnitř updatePokemonVisibility()
-
-        // V MainActivity.kt uvnitř updatePokemonVisibility()
-
         if (pId != lastLoadedId) {
             lastLoadedId = pId
             pokemonBehavior?.stop()
@@ -396,7 +416,6 @@ class MainActivity : AppCompatActivity() {
             ivPokemon.scaleX = 1f; ivPokemon.scaleY = 1f
             ivPokemon.alpha = 1f; ivPokemon.rotation = 0f
 
-            // 🔍 1. Vytvoříme si dočasný fiktivní objekt Pokémona, abychom z BattleFactory vytáhli 100% správné webName!
             val tempPokemon = Pokemon(
                 name = pName.uppercase(),
                 level = 1,
@@ -408,7 +427,6 @@ class MainActivity : AppCompatActivity() {
             )
             val webName = BattleFactory.webName(tempPokemon)
 
-            // ✅ 2. Použijeme spolehlivou firered-leafgreen sadu, kde Raichu i ostatní spolehlivě fungují
             val imageUrl = "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
 
             Log.d("POKEMON_IMAGE", "Načítám obrázek z: $imageUrl pro ID: $pId")
@@ -424,7 +442,6 @@ class MainActivity : AppCompatActivity() {
                     },
                     onError = { _, _ ->
                         Log.e("POKEMON_IMAGE", "Nepodařilo se načíst obrázek z: $imageUrl")
-                        // Fallback pro jistotu na caterpie, aby tam nezůstalo prázdno
                         ivPokemon.load("https://img.pokemondb.net/sprites/firered-leafgreen/normal/caterpie.png")
                         ivPokemon.visibility = View.VISIBLE
                     }
@@ -647,6 +664,5 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-// ✅ SPRÁVNÉ UMÍSTĚNÍ: Úplně mimo třídu MainActivity, na samotný konec souboru!
 val Int.dp: Float
     get() = this * android.content.res.Resources.getSystem().displayMetrics.density
