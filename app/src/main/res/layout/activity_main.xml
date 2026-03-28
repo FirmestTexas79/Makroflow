@@ -9,7 +9,7 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#FEFAE0">
+        android:background="@color/brand_cream">
 
         <FrameLayout
             android:id="@+id/nav_host_fragment"
@@ -38,11 +38,12 @@
                     android:background="@android:color/transparent"
                     app:elevation="0dp"
                     app:itemIconSize="26dp"
-                    app:itemIconTint="#FEFAE0"
-                    app:itemTextColor="#FEFAE0"
-                    app:itemPaddingTop="12dp"
+                    app:itemIconTint="@color/brand_cream"
+                    app:itemTextColor="@color/brand_cream"
                     app:labelVisibilityMode="selected"
-                    app:menu="@menu/bottom_menu" />
+                    app:menu="@menu/bottom_menu"
+                    app:itemTextAppearanceActive="@style/BottomNavText.Active"
+                    app:itemTextAppearanceInactive="@style/BottomNavText.Inactive" />
 
             </LinearLayout>
 
@@ -53,13 +54,13 @@
                 android:layout_alignParentTop="true"
                 android:layout_centerHorizontal="true"
                 android:src="@drawable/ic_logo_white"
-                app:backgroundTint="#283618"
+                app:backgroundTint="@color/brand_dark"
                 app:borderWidth="3dp"
                 app:elevation="10dp"
                 app:fabCustomSize="68dp"
                 app:maxImageSize="32dp"
-                app:strokeColor="#606C38"
-                app:tint="#FEFAE0" />
+                app:strokeColor="@color/brand_primary"
+                app:tint="@color/brand_cream" />
         </RelativeLayout>
 
         <ImageView
@@ -73,7 +74,7 @@
             android:scaleType="fitCenter"
             android:visibility="gone"
             android:elevation="15dp"
-            android:contentDescription="Diglett" />
+            android:contentDescription="@string/diglett_description" />
 
         <FrameLayout
             android:id="@+id/smokeOverlayContainer"
@@ -97,9 +98,9 @@
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#15283618"
+                android:backgroundTint="@color/brand_dark_alpha12"
                 android:src="@drawable/ic_drawer_user"
-                android:contentDescription="Menu"
+                android:contentDescription="@string/menu_open_desc"
                 android:padding="10dp" />
         </FrameLayout>
     </RelativeLayout>
@@ -110,7 +111,10 @@
         android:layout_height="match_parent"
         android:layout_gravity="end"
         android:fitsSystemWindows="true"
-        android:background="#FEFAE0"
+        android:background="@color/brand_cream"
         app:headerLayout="@layout/drawer_header"
-        app:menu="@menu/drawer_menu" />
+        app:menu="@menu/drawer_menu"
+
+        app:itemIconTint="@color/brand_dark"
+        app:itemTextColor="@color/brand_dark"/>
 </androidx.drawerlayout.widget.DrawerLayout>

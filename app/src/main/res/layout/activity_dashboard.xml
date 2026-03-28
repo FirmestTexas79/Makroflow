@@ -38,364 +38,364 @@
 
 
         <LinearLayout
-        android:id="@+id/dashboardScroll"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/dashboardScroll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="52dp"
-            android:paddingBottom="4dp">
+            android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvTrainingStatus"
-                android:layout_width="wrap_content"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#283618"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="6dp"
-                android:text="DNES: REST"
-                android:textColor="#FEFAE0"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.12"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <TextView
-                android:id="@+id/tvDashboardTitle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:fontFamily="sans-serif-black"
-                android:text="Dashboard"
-                android:textColor="#283618"
-                android:textSize="36sp"
-                android:lineSpacingMultiplier="0.9"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvTrainingStatus" />
-
-            <TextView
-                android:id="@+id/tvUserGreeting"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="Sleduj svůj den. Každé sousto se počítá."
-                android:textColor="#606C38"
-                android:textSize="13sp"
-                android:alpha="0.75"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvDashboardTitle" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/circleContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="40dp"
-            android:layout_marginTop="-12dp">
-
-            <View
-                android:id="@+id/ratioKeeper"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                app:layout_constraintDimensionRatio="1:1"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <ProgressBar
-                android:id="@+id/progressProtein_Target"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:padding="52dp"
-                android:scaleX="-1"
-                android:alpha="0.35"
-                android:progressDrawable="@drawable/circle_progress_protein"
-                app:layout_constraintTop_toTopOf="@id/ratioKeeper"
-                app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
-                app:layout_constraintStart_toStartOf="@id/ratioKeeper"
-                app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
-
-            <ProgressBar
-                android:id="@+id/progressProtein_Eaten"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:padding="52dp"
-                android:scaleX="-1"
-                android:progressDrawable="@drawable/circle_progress_protein_light"
-                app:layout_constraintTop_toTopOf="@id/ratioKeeper"
-                app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
-                app:layout_constraintStart_toStartOf="@id/ratioKeeper"
-                app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
-
-            <ProgressBar
-                android:id="@+id/progressCarbs_Target"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:padding="26dp"
-                android:scaleX="-1"
-                android:alpha="0.35"
-                android:progressDrawable="@drawable/circle_progress_carbs"
-                app:layout_constraintTop_toTopOf="@id/ratioKeeper"
-                app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
-                app:layout_constraintStart_toStartOf="@id/ratioKeeper"
-                app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
-
-            <ProgressBar
-                android:id="@+id/progressCarbs_Eaten"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:padding="26dp"
-                android:scaleX="-1"
-                android:progressDrawable="@drawable/circle_progress_carbs_light"
-                app:layout_constraintTop_toTopOf="@id/ratioKeeper"
-                app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
-                app:layout_constraintStart_toStartOf="@id/ratioKeeper"
-                app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
-
-            <ProgressBar
-                android:id="@+id/progressFat_Target"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:padding="0dp"
-                android:scaleX="-1"
-                android:alpha="0.35"
-                android:progressDrawable="@drawable/circle_progress_fat"
-                app:layout_constraintTop_toTopOf="@id/ratioKeeper"
-                app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
-                app:layout_constraintStart_toStartOf="@id/ratioKeeper"
-                app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
-
-            <ProgressBar
-                android:id="@+id/progressFat_Eaten"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:padding="0dp"
-                android:scaleX="-1"
-                android:progressDrawable="@drawable/circle_progress_fat_light"
-                app:layout_constraintTop_toTopOf="@id/ratioKeeper"
-                app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
-                app:layout_constraintStart_toStartOf="@id/ratioKeeper"
-                app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
-
-            <TextView
-                android:id="@+id/btnFoodLog"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginEnd="4dp"
-                android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#283618"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="10dp"
-                android:text="☰"
-                android:textColor="#FEFAE0"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:clickable="true"
-                android:focusable="true"
-                android:elevation="4dp"
-                app:layout_constraintEnd_toEndOf="@id/ratioKeeper"
-                app:layout_constraintTop_toTopOf="@id/ratioKeeper" />
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical"
-                app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
-                app:layout_constraintEnd_toEndOf="@id/ratioKeeper"
-                app:layout_constraintStart_toStartOf="@id/ratioKeeper"
-                app:layout_constraintTop_toTopOf="@id/ratioKeeper">
+                android:paddingHorizontal="24dp"
+                android:paddingTop="52dp"
+                android:paddingBottom="4dp">
 
                 <TextView
-                    android:id="@+id/tvCalories"
+                    android:id="@+id/tvTrainingStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-black"
-                    android:text="0"
-                    android:textColor="#283618"
-                    android:textSize="22sp"
-                    android:maxLines="1" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="KCAL CÍL"
-                    android:textColor="#606C38"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#283618"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="6dp"
+                    android:text="DNES: REST"
+                    android:textColor="#FEFAE0"
                     android:textSize="11sp"
                     android:textStyle="bold"
-                    android:letterSpacing="0.1" />
+                    android:letterSpacing="0.12"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/tvDashboardTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="sans-serif-black"
+                    android:text="Dashboard"
+                    android:textColor="#283618"
+                    android:textSize="36sp"
+                    android:lineSpacingMultiplier="0.9"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvTrainingStatus" />
+
+                <TextView
+                    android:id="@+id/tvUserGreeting"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Sleduj svůj den. Každé sousto se počítá."
+                    android:textColor="#606C38"
+                    android:textSize="13sp"
+                    android:alpha="0.75"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvDashboardTitle" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/circleContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="40dp"
+                android:layout_marginTop="-12dp">
+
+                <View
+                    android:id="@+id/ratioKeeper"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    app:layout_constraintDimensionRatio="1:1"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ProgressBar
+                    android:id="@+id/progressProtein_Target"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="52dp"
+                    android:scaleX="-1"
+                    android:alpha="0.35"
+                    android:progressDrawable="@drawable/circle_progress_protein"
+                    app:layout_constraintTop_toTopOf="@id/ratioKeeper"
+                    app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
+                    app:layout_constraintStart_toStartOf="@id/ratioKeeper"
+                    app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
+
+                <ProgressBar
+                    android:id="@+id/progressProtein_Eaten"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="52dp"
+                    android:scaleX="-1"
+                    android:progressDrawable="@drawable/circle_progress_protein_light"
+                    app:layout_constraintTop_toTopOf="@id/ratioKeeper"
+                    app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
+                    app:layout_constraintStart_toStartOf="@id/ratioKeeper"
+                    app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
+
+                <ProgressBar
+                    android:id="@+id/progressCarbs_Target"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="26dp"
+                    android:scaleX="-1"
+                    android:alpha="0.35"
+                    android:progressDrawable="@drawable/circle_progress_carbs"
+                    app:layout_constraintTop_toTopOf="@id/ratioKeeper"
+                    app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
+                    app:layout_constraintStart_toStartOf="@id/ratioKeeper"
+                    app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
+
+                <ProgressBar
+                    android:id="@+id/progressCarbs_Eaten"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="26dp"
+                    android:scaleX="-1"
+                    android:progressDrawable="@drawable/circle_progress_carbs_light"
+                    app:layout_constraintTop_toTopOf="@id/ratioKeeper"
+                    app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
+                    app:layout_constraintStart_toStartOf="@id/ratioKeeper"
+                    app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
+
+                <ProgressBar
+                    android:id="@+id/progressFat_Target"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="0dp"
+                    android:scaleX="-1"
+                    android:alpha="0.35"
+                    android:progressDrawable="@drawable/circle_progress_fat"
+                    app:layout_constraintTop_toTopOf="@id/ratioKeeper"
+                    app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
+                    app:layout_constraintStart_toStartOf="@id/ratioKeeper"
+                    app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
+
+                <ProgressBar
+                    android:id="@+id/progressFat_Eaten"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:padding="0dp"
+                    android:scaleX="-1"
+                    android:progressDrawable="@drawable/circle_progress_fat_light"
+                    app:layout_constraintTop_toTopOf="@id/ratioKeeper"
+                    app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
+                    app:layout_constraintStart_toStartOf="@id/ratioKeeper"
+                    app:layout_constraintEnd_toEndOf="@id/ratioKeeper" />
+
+                <TextView
+                    android:id="@+id/btnFoodLog"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#283618"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="10dp"
+                    android:text="☰"
+                    android:textColor="#FEFAE0"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:elevation="4dp"
+                    app:layout_constraintEnd_toEndOf="@id/ratioKeeper"
+                    app:layout_constraintTop_toTopOf="@id/ratioKeeper" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
+                    app:layout_constraintEnd_toEndOf="@id/ratioKeeper"
+                    app:layout_constraintStart_toStartOf="@id/ratioKeeper"
+                    app:layout_constraintTop_toTopOf="@id/ratioKeeper">
+
+                    <TextView
+                        android:id="@+id/tvCalories"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-black"
+                        android:text="0"
+                        android:textColor="@color/brand_dark"
+                        android:textSize="22sp"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dashboard_kcal_target"
+                        android:textColor="@color/brand_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="10dp">
+                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginHorizontal="12dp" android:text="@string/dashboard_macros_today" android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.14" />
+                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
             </LinearLayout>
-        </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginHorizontal="24dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="10dp">
-            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#20283618" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginHorizontal="12dp" android:text="MAKRA DNES" android:textColor="#606C38" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.14" />
-            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#20283618" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/layoutMacros"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="20dp"
-            android:orientation="horizontal">
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
+            <LinearLayout
+                android:id="@+id/layoutMacros"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="5dp"
-                app:cardCornerRadius="20dp"
-                app:cardBackgroundColor="@color/brand_dark_light"
-                app:cardElevation="0dp">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="12dp"
-                    android:gravity="center"
-                    android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BÍLKOVINY" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.08" android:textColor="#FEFAE0" android:alpha="0.7" />
-                    <TextView android:id="@+id/tvValueProtein" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0 / 0g" android:textColor="#FEFAE0" android:fontFamily="sans-serif-black" android:textSize="12sp" android:maxLines="1" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                android:layout_marginHorizontal="20dp"
+                android:orientation="horizontal">
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="5dp"
-                app:cardCornerRadius="20dp"
-                app:cardBackgroundColor="@color/brand_accent_warm"
-                app:cardElevation="0dp">
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:padding="12dp"
-                    android:gravity="center"
-                    android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SACHARIDY" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.08" android:textColor="#FEFAE0" android:alpha="0.7" />
-                    <TextView android:id="@+id/tvValueCarbs" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0 / 0g" android:textColor="#FEFAE0" android:fontFamily="sans-serif-black" android:textSize="12sp" android:maxLines="1" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                    android:layout_weight="1"
+                    android:layout_marginEnd="5dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardBackgroundColor="@color/brand_dark_light"
+                    app:cardElevation="0dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="12dp"
+                        android:gravity="center"
+                        android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/snack_label_p_full" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.08" android:textColor="@color/brand_cream" android:alpha="0.7" />
+                        <TextView android:id="@+id/tvValueProtein" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0 / 0g" android:textColor="@color/brand_cream" android:fontFamily="sans-serif-black" android:textSize="12sp" android:maxLines="1" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="5dp"
-                app:cardCornerRadius="20dp"
-                app:cardBackgroundColor="@color/brand_accent_deep"
-                app:cardElevation="0dp">
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:padding="12dp"
-                    android:gravity="center"
-                    android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TUKY" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.08" android:textColor="#FEFAE0" android:alpha="0.7" />
-                    <TextView android:id="@+id/tvValueFat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0 / 0g" android:textColor="#FEFAE0" android:fontFamily="sans-serif-black" android:textSize="12sp" android:maxLines="1" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
+                    android:layout_weight="1"
+                    android:layout_marginHorizontal="5dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardBackgroundColor="@color/brand_accent_warm"
+                    app:cardElevation="0dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="12dp"
+                        android:gravity="center"
+                        android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/snack_label_s_full" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.08" android:textColor="@color/brand_cream" android:alpha="0.7" />
+                        <TextView android:id="@+id/tvValueCarbs" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0 / 0g" android:textColor="@color/brand_cream" android:fontFamily="sans-serif-black" android:textSize="12sp" android:maxLines="1" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardCoachAdvice"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginTop="16dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardBackgroundColor="#FEFAE0"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:strokeColor="#20283618"
-            app:strokeWidth="1.5dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:orientation="vertical">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="💡 TIP OD TRENÉRA" android:textColor="#606C38" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.1" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Klikni pro rituál →" android:textColor="#606C38" android:textSize="10sp" android:alpha="0.5" />
-                </LinearLayout>
-                <TextView android:id="@+id/tvCoachMessage" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Načítám tvůj stav..." android:textColor="#283618" android:textSize="14sp" android:lineSpacingMultiplier="1.3" />
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="5dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardBackgroundColor="@color/brand_accent_deep"
+                    app:cardElevation="0dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="12dp"
+                        android:gravity="center"
+                        android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/snack_label_t_full" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.08" android:textColor="@color/brand_cream" android:alpha="0.7" />
+                        <TextView android:id="@+id/tvValueFat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0 / 0g" android:textColor="@color/brand_cream" android:fontFamily="sans-serif-black" android:textSize="12sp" android:maxLines="1" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal">
-
-            <cz.uhk.macroflow.dashboard.WaterPillView
-                android:id="@+id/waterPillView"
-                android:layout_width="0dp"
-                android:layout_height="72dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:clickable="true"
-                android:focusable="true" />
 
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardTodayWorkout"
-                android:layout_width="0dp"
-                android:layout_height="72dp"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
+                android:id="@+id/cardCoachAdvice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="16dp"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardCornerRadius="36dp"
-                app:cardBackgroundColor="#283618"
-                app:cardElevation="0dp">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:paddingHorizontal="14dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dnes cvičíš v:" android:textColor="#FEFAE0" android:textSize="12sp" android:alpha="0.6" />
-                    <TextView android:id="@+id/tvTodayWorkoutPill" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Nastavit čas" android:textColor="#DDA15E" android:textSize="18sp" android:fontFamily="sans-serif-black" />
+                app:cardBackgroundColor="@color/brand_cream"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/brand_dark_alpha12"
+                app:strokeWidth="1.5dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="16dp" android:orientation="vertical">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/coach_tip_label" android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.1" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/coach_ritual_prompt" android:textColor="@color/brand_primary" android:textSize="10sp" android:alpha="0.5" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/tvCoachMessage" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/coach_loading" android:textColor="@color/brand_dark" android:textSize="14sp" android:lineSpacingMultiplier="1.3" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardStartTraining"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginTop="16dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardBackgroundColor="#283618"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="0dp">
-            <androidx.constraintlayout.widget.ConstraintLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="20dp">
-                <ImageView android:id="@+id/ivTrainingIcon" android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_barcode_scan" app:tint="#FEFAE0" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent" />
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:orientation="vertical" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toStartOf="@+id/ivChevron" app:layout_constraintStart_toEndOf="@id/ivTrainingIcon" app:layout_constraintTop_toTopOf="parent">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="CHYTRÝ TRENÉR" android:textColor="#FEFAE0" android:textSize="15sp" android:fontFamily="sans-serif-black" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Analýza hloubky a trajektorie" android:textColor="#DDA15E" android:textSize="12sp" android:alpha="0.85" />
-                </LinearLayout>
-                <ImageView android:id="@+id/ivChevron" android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_chevron_right" app:tint="#FEFAE0" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent" />
-            </androidx.constraintlayout.widget.ConstraintLayout>
-        </com.google.android.material.card.MaterialCardView>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal">
+
+                <cz.uhk.macroflow.dashboard.WaterPillView
+                    android:id="@+id/waterPillView"
+                    android:layout_width="0dp"
+                    android:layout_height="72dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardTodayWorkout"
+                    android:layout_width="0dp"
+                    android:layout_height="72dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardCornerRadius="36dp"
+                    app:cardBackgroundColor="@color/brand_dark"
+                    app:cardElevation="0dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:paddingHorizontal="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/workout_label" android:textColor="@color/brand_cream" android:textSize="12sp" android:alpha="0.6" />
+                        <TextView android:id="@+id/tvTodayWorkoutPill" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="@string/workout_set_time" android:textColor="@color/brand_accent_warm" android:textSize="18sp" android:fontFamily="sans-serif-black" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardStartTraining"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/brand_dark"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp">
+                <androidx.constraintlayout.widget.ConstraintLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="20dp">
+                    <ImageView android:id="@+id/ivTrainingIcon" android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_barcode_scan" app:tint="@color/brand_cream" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:orientation="vertical" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toStartOf="@+id/ivChevron" app:layout_constraintStart_toEndOf="@id/ivTrainingIcon" app:layout_constraintTop_toTopOf="parent">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/trainer_smart_label" android:textColor="@color/brand_cream" android:textSize="15sp" android:fontFamily="sans-serif-black" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/trainer_description" android:textColor="@color/brand_accent_warm" android:textSize="12sp" android:alpha="0.85" />
+                    </LinearLayout>
+                    <ImageView android:id="@+id/ivChevron" android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_chevron_right" app:tint="@color/brand_cream" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -409,7 +409,7 @@
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="METABOLICKÝ ARCHITEKT"
+                    android:text="@string/metabolic_architect_label"
                     android:textColor="@color/brand_dark"
                     android:textSize="12sp"
                     android:textStyle="bold"
@@ -428,170 +428,171 @@
 
             </LinearLayout>
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardEliteOptions"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone"
-            app:cardBackgroundColor="#FEFAE0"
-            app:cardCornerRadius="28dp"
-            app:cardElevation="0dp"
-            app:strokeColor="#20283618"
-            app:strokeWidth="1.5dp">
-
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardEliteOptions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="KONFIGURACE METABOLISMU"
-                    android:textColor="#283618"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.2"
-                    android:layout_marginBottom="16dp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="8dp"
-                        android:hint="Tuk (BF %)"
-                        app:boxCornerRadiusTopStart="16dp"
-                        app:boxCornerRadiusTopEnd="16dp"
-                        app:boxCornerRadiusBottomStart="16dp"
-                        app:boxCornerRadiusBottomEnd="16dp"
-                        app:boxStrokeColor="#606C38"
-                        app:hintTextColor="#606C38"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etEliteBF"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"
-                            android:textColor="#283618" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:hint="Zápěstí (cm)"
-                        app:boxCornerRadiusTopStart="16dp"
-                        app:boxCornerRadiusTopEnd="16dp"
-                        app:boxCornerRadiusBottomStart="16dp"
-                        app:boxCornerRadiusBottomEnd="16dp"
-                        app:boxStrokeColor="#606C38"
-                        app:hintTextColor="#606C38"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etEliteWrist"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"
-                            android:textColor="#283618" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="Nutriční protokol"
-                    app:boxCornerRadiusTopStart="16dp"
-                    app:boxCornerRadiusTopEnd="16dp"
-                    app:boxCornerRadiusBottomStart="16dp"
-                    app:boxCornerRadiusBottomEnd="16dp"
-                    app:boxStrokeColor="@color/brand_primary"
-                    app:hintTextColor="@color/brand_primary"
-                    app:endIconTint="@color/brand_dark"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
-
-                    <AutoCompleteTextView
-                        android:id="@+id/autoDietType"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="none"
-                        android:textColor="@color/brand_dark"
-                        android:padding="16dp"
-                        android:dropDownSelector="@android:color/transparent"
-                        android:popupBackground="@drawable/bg_dropdown_rounded" />
-                </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/brand_cream"
+                app:cardCornerRadius="28dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/brand_dark_alpha12"
+                app:strokeWidth="1.5dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:layout_marginTop="24dp"
-                    android:gravity="center_horizontal">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="STRUKTURA NUTRIČNÍHO PROTOKOLU"
+                        android:text="@string/elite_config_title"
                         android:textColor="@color/brand_dark"
                         android:textSize="10sp"
-                        android:letterSpacing="0.1"
                         android:textStyle="bold"
-                        android:layout_marginBottom="12dp"/>
-
-                    <cz.uhk.macroflow.dashboard.PieChartView
-                        android:id="@+id/pieChartMacro"
-                        android:layout_width="160dp"
-                        android:layout_height="160dp" />
+                        android:letterSpacing="0.2"
+                        android:layout_marginBottom="16dp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:paddingHorizontal="12dp"
                         android:orientation="horizontal">
 
-                        <TextView
-                            android:id="@+id/tvProteinPct"
+                        <com.google.android.material.textfield.TextInputLayout
                             android:layout_width="0dp"
-                            android:layout_weight="1"
                             android:layout_height="wrap_content"
-                            android:text="B: 25%"
-                            android:textSize="12sp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="8dp"
+                            android:hint="@string/elite_hint_bf"
+                            app:boxCornerRadiusTopStart="16dp"
+                            app:boxCornerRadiusTopEnd="16dp"
+                            app:boxCornerRadiusBottomStart="16dp"
+                            app:boxCornerRadiusBottomEnd="16dp"
+                            app:boxStrokeColor="@color/brand_primary"
+                            app:hintTextColor="@color/brand_primary"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etEliteBF"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="numberDecimal"
+                                android:textColor="@color/brand_dark" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:hint="@string/elite_hint_wrist"
+                            app:boxCornerRadiusTopStart="16dp"
+                            app:boxCornerRadiusTopEnd="16dp"
+                            app:boxCornerRadiusBottomStart="16dp"
+                            app:boxCornerRadiusBottomEnd="16dp"
+                            app:boxStrokeColor="@color/brand_primary"
+                            app:hintTextColor="@color/brand_primary"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etEliteWrist"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="numberDecimal"
+                                android:textColor="@color/brand_dark" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/elite_hint_protocol"
+                        app:boxCornerRadiusTopStart="16dp"
+                        app:boxCornerRadiusTopEnd="16dp"
+                        app:boxCornerRadiusBottomStart="16dp"
+                        app:boxCornerRadiusBottomEnd="16dp"
+                        app:boxStrokeColor="@color/brand_primary"
+                        app:hintTextColor="@color/brand_primary"
+                        app:endIconTint="@color/brand_dark"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/autoDietType"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:textColor="@color/brand_dark"
+                            android:padding="16dp"
+                            android:dropDownSelector="@android:color/transparent"
+                            android:popupBackground="@drawable/bg_dropdown_rounded" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="24dp"
+                        android:gravity="center_horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/elite_structure_title"
+                            android:textColor="@color/brand_dark"
+                            android:textSize="10sp"
+                            android:letterSpacing="0.1"
                             android:textStyle="bold"
-                            android:textColor="@color/brand_primary" /> <TextView
-                        android:id="@+id/tvCarbPct"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="S: 45%"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:gravity="center"
-                        android:textColor="@color/brand_accent_warm" /> <TextView
-                        android:id="@+id/tvFatPct"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="T: 30%"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:gravity="end"
-                        android:textColor="@color/brand_accent_deep" /> </LinearLayout>
+                            android:layout_marginBottom="12dp"/>
+
+                        <cz.uhk.macroflow.dashboard.PieChartView
+                            android:id="@+id/pieChartMacro"
+                            android:layout_width="160dp"
+                            android:layout_height="160dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="20dp"
+                            android:paddingHorizontal="12dp"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvProteinPct"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/macro_p_pct_default"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/brand_primary" />
+                            <TextView
+                                android:id="@+id/tvCarbPct"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/macro_s_pct_default"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:gravity="center"
+                                android:textColor="@color/brand_accent_warm" />
+                            <TextView
+                                android:id="@+id/tvFatPct"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/macro_t_pct_default"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:gravity="end"
+                                android:textColor="@color/brand_accent_deep" />
+                        </LinearLayout>
+                    </LinearLayout>
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-    </LinearLayout>
+        </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
     <com.google.android.material.card.MaterialCardView
@@ -601,31 +602,31 @@
         android:layout_gravity="center"
         android:layout_marginHorizontal="24dp"
         android:visibility="gone"
-        app:cardBackgroundColor="#FEFAE0"
+        app:cardBackgroundColor="@color/brand_cream"
         app:cardCornerRadius="28dp"
         app:cardElevation="30dp"
         app:strokeWidth="2dp"
-        app:strokeColor="#283618">
+        app:strokeColor="@color/brand_dark">
         <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="wrap_content" app:layout_constrainedHeight="true">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_status_pill" android:backgroundTint="#DDA15E" android:paddingHorizontal="14dp" android:paddingVertical="5dp" android:text="RANNÍ RITUÁL" android:textColor="#FEFAE0" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.12" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:fontFamily="sans-serif-black" android:text="Jak se dnes cítíš?" android:textSize="22sp" android:textColor="#283618" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:layout_marginBottom="16dp" android:text="Zaznamenej svůj stav pro dnešek" android:textSize="13sp" android:textColor="#606C38" android:alpha="0.8" />
-                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Dnešní váha" app:suffixText="kg">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_status_pill" android:backgroundTint="@color/brand_accent_warm" android:paddingHorizontal="14dp" android:paddingVertical="5dp" android:text="@string/ritual_header" android:textColor="@color/brand_cream" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.12" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:fontFamily="sans-serif-black" android:text="@string/ritual_question" android:textSize="22sp" android:textColor="@color/brand_dark" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:layout_marginBottom="16dp" android:text="@string/ritual_subtitle" android:textSize="13sp" android:textColor="@color/brand_primary" android:alpha="0.8" />
+                <com.google.android.material.textfield.TextInputLayout style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/ritual_hint_weight" app:suffixText="kg">
                     <com.google.android.material.textfield.TextInputEditText android:id="@+id/etCheckInWeight" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal" />
                 </com.google.android.material.textfield.TextInputLayout>
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="20dp" android:layout_marginBottom="4dp">
-                    <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#20283618" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginHorizontal="10dp" android:text="TVŮJ STAV" android:textColor="#606C38" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.14" />
-                    <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#20283618" />
+                    <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginHorizontal="10dp" android:text="@string/ritual_status_label" android:textColor="@color/brand_primary" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.14" />
+                    <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
                 </LinearLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Míra energie (1–5)" android:textColor="#283618" android:textStyle="bold" android:textSize="12sp" />
-                <com.google.android.material.slider.Slider android:id="@+id/sliderEnergy" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="1.0" android:valueTo="5.0" android:stepSize="1.0" app:thumbColor="#283618" app:trackColorActive="#283618" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Kvalita spánku (1–5)" android:textColor="#283618" android:textStyle="bold" android:textSize="12sp" />
-                <com.google.android.material.slider.Slider android:id="@+id/sliderSleep" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="1.0" android:valueTo="5.0" android:stepSize="1.0" app:thumbColor="#DDA15E" app:trackColorActive="#DDA15E" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Jak moc jsi hladový? (1–5)" android:textColor="#283618" android:textStyle="bold" android:textSize="12sp" />
-                <com.google.android.material.slider.Slider android:id="@+id/sliderHunger" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="1.0" android:valueTo="5.0" android:stepSize="1.0" app:thumbColor="#283618" app:trackColorActive="#283618" />
-                <com.google.android.material.button.MaterialButton android:id="@+id/btnSaveRitual" android:layout_width="match_parent" android:layout_height="56dp" android:layout_marginTop="20dp" android:text="ULOŽIT A ZAČÍT 🔥" android:textStyle="bold" android:backgroundTint="#283618" app:cornerRadius="16dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/label_energy_level" android:textColor="@color/brand_dark" android:textStyle="bold" android:textSize="12sp" />
+                <com.google.android.material.slider.Slider android:id="@+id/sliderEnergy" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="1.0" android:valueTo="5.0" android:stepSize="1.0" app:thumbColor="@color/brand_dark" app:trackColorActive="@color/brand_dark" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/label_sleep_quality" android:textColor="@color/brand_dark" android:textStyle="bold" android:textSize="12sp" />
+                <com.google.android.material.slider.Slider android:id="@+id/sliderSleep" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="1.0" android:valueTo="5.0" android:stepSize="1.0" app:thumbColor="@color/brand_accent_warm" app:trackColorActive="@color/brand_accent_warm" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/label_hunger_level" android:textColor="@color/brand_dark" android:textStyle="bold" android:textSize="12sp" />
+                <com.google.android.material.slider.Slider android:id="@+id/sliderHunger" android:layout_width="match_parent" android:layout_height="wrap_content" android:valueFrom="1.0" android:valueTo="5.0" android:stepSize="1.0" app:thumbColor="@color/brand_dark" app:trackColorActive="@color/brand_dark" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnSaveRitual" android:layout_width="match_parent" android:layout_height="56dp" android:layout_marginTop="20dp" android:text="@string/ritual_btn_save" android:textStyle="bold" android:backgroundTint="@color/brand_dark" app:cornerRadius="16dp" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </com.google.android.material.card.MaterialCardView>

@@ -4,19 +4,18 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FEFAE0">
+    android:background="@color/brand_cream">
 
-    <!-- Dekorativní listy -->
     <ImageView
-        android:layout_width="220dp"
-        android:layout_height="220dp"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
         android:layout_gravity="top|end"
-        android:layout_marginTop="-50dp"
-        android:layout_marginEnd="-60dp"
+        android:layout_marginTop="-40dp"
+        android:layout_marginEnd="-80dp"
         android:src="@drawable/bg_monstera_leaf_1"
-        android:alpha="0.07"
-        android:rotation="-20"
-        app:tint="#283618" />
+        android:alpha="0.12"
+        android:rotation="-15"
+        app:tint="@color/brand_dark" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -30,39 +29,39 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- ══ HEADER ══ -->
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="24dp"
                 android:paddingTop="56dp"
-                android:paddingBottom="8dp">
+                android:paddingBottom="16dp">
 
                 <TextView
                     android:id="@+id/tvAchBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_status_pill"
-                    android:backgroundTint="#DDA15E"
+                    android:backgroundTint="@color/brand_accent_warm"
                     android:paddingHorizontal="16dp"
                     android:paddingVertical="6dp"
-                    android:text="TVOJE ÚSPĚCHY"
-                    android:textColor="#FEFAE0"
+                    android:text="@string/ach_badge"
+                    android:textColor="@color/brand_cream"
                     android:textSize="11sp"
-                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-black"
                     android:letterSpacing="0.12"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
+                    android:id="@+id/tvAchTitle"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="12dp"
                     android:fontFamily="sans-serif-black"
-                    android:text="Achievementy"
-                    android:textColor="#283618"
-                    android:textSize="42sp"
-                    android:lineSpacingMultiplier="0.9"
+                    android:text="@string/ach_title"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="44sp"
+                    android:lineSpacingMultiplier="0.85"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvAchBadge" />
@@ -71,78 +70,100 @@
                     android:id="@+id/tvAchievementSub"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="odemčených achievementů"
-                    android:textColor="#606C38"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/ach_subtitle"
+                    android:textColor="@color/brand_primary"
                     android:textSize="13sp"
-                    android:alpha="0.75"
+                    android:alpha="0.8"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tvAchBadge" />
+                    app:layout_constraintTop_toBottomOf="@id/tvAchTitle" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- ══ CELKOVÝ PROGRESS ══ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="8dp"
-                app:cardCornerRadius="20dp"
-                app:cardBackgroundColor="#283618"
-                app:cardElevation="0dp">
+                app:cardCornerRadius="28dp"
+                app:cardBackgroundColor="@color/brand_dark"
+                app:cardElevation="8dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="24dp">
 
-                    <LinearLayout
+                    <RelativeLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:layout_height="wrap_content">
 
-                        <TextView
-                            android:id="@+id/tvAchievementCount"
-                            android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="0 / 36"
-                            android:textColor="#DDA15E"
-                            android:textSize="28sp"
-                            android:fontFamily="sans-serif-black" />
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvAchievementCount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="12 / 36"
+                                android:textColor="@color/brand_accent_warm"
+                                android:textSize="32sp"
+                                android:fontFamily="sans-serif-black" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="CELKOVÝ POKROK"
+                                android:textColor="@color/brand_cream_alpha50"
+                                android:textSize="10sp"
+                                android:fontFamily="sans-serif-black"
+                                android:letterSpacing="0.1" />
+                        </LinearLayout>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🏆"
-                            android:textSize="28sp" />
+                            android:layout_alignParentRight="true"
+                            android:layout_centerInParent="true"
+                            android:text="@string/ach_trophy_emoji"
+                            android:textSize="36sp" />
+                    </RelativeLayout>
 
-                    </LinearLayout>
-
-                    <!-- Progress bar -->
                     <ProgressBar
                         android:id="@+id/pbAchievementTotal"
                         style="?android:attr/progressBarStyleHorizontal"
                         android:layout_width="match_parent"
-                        android:layout_height="8dp"
-                        android:layout_marginTop="12dp"
+                        android:layout_height="12dp"
+                        android:layout_marginTop="20dp"
                         android:progressDrawable="@drawable/macro_progress_gradient"
                         android:max="36"
-                        android:progress="0" />
+                        android:progress="12" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ══ ACHIEVEMENT KARTY (generované kódem) ══ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/ach_badge"
+                android:textColor="@color/brand_primary"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.15" />
+
             <LinearLayout
                 android:id="@+id/achievementContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingHorizontal="12dp"
-                android:paddingTop="8dp" />
+                android:paddingHorizontal="16dp" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

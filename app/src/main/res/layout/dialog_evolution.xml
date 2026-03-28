@@ -2,95 +2,138 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="320dp"
+    android:layout_width="340dp"
     android:layout_height="wrap_content"
     android:layout_gravity="center"
-    app:cardBackgroundColor="#283618"
-    app:cardCornerRadius="16dp"
-    app:strokeWidth="3dp"
-    app:strokeColor="#BC6C25">
+    app:cardBackgroundColor="@color/retro_terminal_bg"
+    app:cardCornerRadius="26dp"
+    app:strokeWidth="2dp"
+    app:strokeColor="@color/brand_accent_deep"
+    android:elevation="12dp">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="180dp"
-            android:background="#1E1E1E">
-
-            <ImageView
-                android:id="@+id/ivEvoSprite"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
-                android:layout_gravity="center"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_home" />
-
-            <ImageView
-                android:id="@+id/ivEvoSilhouette"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
-                android:layout_gravity="center"
-                android:scaleType="fitCenter"
-                android:visibility="gone"
-                android:src="@drawable/ic_home" />
-        </FrameLayout>
+        android:layout_height="wrap_content">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/llMainContent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#606C38"
-            android:layout_marginTop="12dp"
-            android:padding="12dp">
+            android:padding="20dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <TextView
-                android:id="@+id/tvEvoText"
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:background="@drawable/bg_retro_scanlines">
+
+                <View
+                    android:layout_width="160dp"
+                    android:layout_height="160dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_glass_gloss" />
+
+                <ImageView
+                    android:id="@+id/ivEvoSprite"
+                    android:layout_width="130dp"
+                    android:layout_height="130dp"
+                    android:layout_gravity="center"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_home" />
+
+                <ImageView
+                    android:id="@+id/ivEvoSilhouette"
+                    android:layout_width="130dp"
+                    android:layout_height="130dp"
+                    android:layout_gravity="center"
+                    android:scaleType="fitCenter"
+                    android:visibility="gone"
+                    app:tint="@color/brand_dark"
+                    android:src="@drawable/ic_home" />
+            </FrameLayout>
+
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="Co se to děje?..."
-                android:textColor="#FEFAE0"
-                android:textSize="14sp" />
-        </LinearLayout>
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/brand_primary"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/brand_cream_alpha40"
+                app:strokeWidth="1dp">
 
-        <LinearLayout
-            android:id="@+id/llMoveSelection"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"
-            android:layout_marginTop="12dp">
-
-            <TextView
-                android:id="@+id/tvNewMovePrompt"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="Vyber útok k zapomnění:"
-                android:textColor="#DDA15E"
-                android:textSize="12sp"
-                android:layout_marginBottom="8dp"/>
+                <TextView
+                    android:id="@+id/tvEvoText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:lineSpacingMultiplier="1.2"
+                    android:padding="16dp"
+                    android:shadowColor="#80FEFAE0"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="6"
+                    android:text="@string/evo_default_text"
+                    android:textColor="@color/retro_font_glow"
+                    android:textSize="14sp" />
+            </com.google.android.material.card.MaterialCardView>
 
             <LinearLayout
-                android:id="@+id/llCurrentMoves"
+                android:id="@+id/llMoveSelection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-            </LinearLayout>
+                android:layout_marginTop="20dp"
+                android:orientation="vertical"
+                android:visibility="visible">
 
-            <Button
-                android:id="@+id/btnCancelLearning"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Učit se nový útok nechci"
-                android:backgroundTint="#BC6C25"
-                android:textColor="#FEFAE0"/>
+                <TextView
+                    android:id="@+id/tvNewMovePrompt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:fontFamily="monospace"
+                    android:text="@string/evo_move_prompt"
+                    android:textColor="@color/brand_accent_warm"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/llCurrentMoves"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancelLearning"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="12dp"
+                    android:fontFamily="sans-serif-black"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/evo_btn_cancel"
+                    android:textColor="@color/brand_cream"
+                    android:textSize="14sp"
+                    app:backgroundTint="@color/brand_accent_deep"
+                    app:cornerRadius="24dp" />
+            </LinearLayout>
         </LinearLayout>
 
-    </LinearLayout>
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:alpha="0.4"
+            android:background="@drawable/bg_glass_shimmer"
+            android:clickable="false"
+            android:focusable="false"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

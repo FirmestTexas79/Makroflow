@@ -6,32 +6,32 @@
         <item
             android:id="@+id/drawerProfile"
             android:icon="@drawable/ic_logo_black"
-            android:title="Můj profil"
+            android:title="@string/title_profile"
             android:checkable="true" />
 
         <item
             android:id="@+id/drawerAchievements"
             android:icon="@drawable/ic_high"
-            android:title="Achievements"
+            android:title="@string/label_achievements"
             android:checkable="true" />
 
-        <item android:title="MOJE SBÍRKA">
+        <item android:title="@string/label_my_collection">
             <menu>
                 <item
                     android:id="@+id/nav_pokedex"
                     android:icon="@drawable/ic_home"
-                    android:title="Pokédex" />
+                    android:title="@string/label_pokedex_editor" />
                 <item
                     android:id="@+id/nav_inventory"
                     android:icon="@drawable/ic_home"
-                    android:title="Kapsa a Batoh" />
+                    android:title="@string/label_inventory" />
             </menu>
         </item>
 
         <item
             android:id="@+id/drawerSettings"
             android:icon="@drawable/ic_save"
-            android:title="Nastavení"
+            android:title="@string/settings_title"
             android:checkable="true" />
 
     </group>
@@ -41,7 +41,7 @@
         <item
             android:id="@+id/drawerDisclaimer"
             android:icon="@drawable/ic_macro_fat"
-            android:title="Prohlášení"
+            android:title="@string/label_disclaimer"
             android:checkable="false" />
 
     </group>
@@ -51,19 +51,17 @@
         <item
             android:id="@+id/drawerResetAchievements"
             android:icon="@drawable/ic_delete_confirm"
-            android:title="🗑️ Smazat achievementy"
+            android:title="@string/label_delete_achievements"
             android:checkable="false" />
 
     </group>
-
-
 
     <group android:id="@+id/groupAccount">
 
         <item
             android:id="@+id/drawerSignOut"
             android:icon="@drawable/ic_back"
-            android:title="Odhlásit se"
+            android:title="@string/label_sign_out"
             android:checkable="false" />
 
     </group>

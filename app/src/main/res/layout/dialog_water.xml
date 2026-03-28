@@ -2,34 +2,23 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="360dp"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/bg_water_dialog"
-    android:padding="24dp">
-
-    <!-- Badge + titulek -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_status_pill"
-        android:backgroundTint="#4A8FA8"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="5dp"
-        android:text="HYDRATACE"
-        android:textColor="#FEFAE0"
-        android:textSize="10sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.12" />
+    android:padding="26dp"
+    android:layout_marginHorizontal="20dp"
+    android:layout_marginVertical="16dp"
+    android:layout_gravity="center">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
         android:fontFamily="sans-serif-black"
         android:text="Nalejte vodu"
-        android:textColor="#FEFAE0"
-        android:textSize="26sp" />
+        android:textColor="@color/brand_cream"
+        android:textSize="32sp"
+        android:lineSpacingMultiplier="0.85" />
 
     <TextView
         android:id="@+id/tvWaterGoalLabel"
@@ -37,141 +26,124 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:layout_marginBottom="12dp"
-        android:text="Načítám..."
-        android:textColor="#FEFAE0"
-        android:textSize="12sp"
-        android:alpha="0.5"
-        android:singleLine="true" />
+        android:text="Cíl: 4000 ml · Vypito: 4600 ml"
+        android:textColor="@color/brand_cream_alpha60"
+        android:textSize="13sp" />
 
-    <!-- Sklenice -->
     <cz.uhk.macroflow.dashboard.WaterGlassView
         android:id="@+id/waterGlassView"
-        android:layout_width="match_parent"
-        android:layout_height="200dp" />
+        android:layout_width="200dp"
+        android:layout_height="220dp"
+        android:layout_gravity="center"
+        android:layout_marginVertical="8dp" />
 
-    <!-- Preset — tři tlačítka na jednom řádku, fixní šířka -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="44dp"
-        android:layout_marginTop="14dp"
-        android:orientation="horizontal"
-        android:baselineAligned="false">
+        android:layout_height="54dp"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn150ml"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginEnd="5dp"
-            android:text="150 ml"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:singleLine="true"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:textColor="#FEFAE0"
-            app:strokeColor="#40FEFAE0"
-            app:cornerRadius="22dp" />
+            android:layout_marginEnd="8dp"
+            android:text="150"
+            android:textColor="@color/brand_cream"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-black"
+            app:strokeColor="@color/brand_cream_alpha40"
+            app:cornerRadius="16dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn250ml"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginHorizontal="5dp"
-            android:text="250 ml"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:singleLine="true"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:textColor="#FEFAE0"
-            app:strokeColor="#40FEFAE0"
-            app:cornerRadius="22dp" />
+            android:layout_marginHorizontal="4dp"
+            android:text="250"
+            android:textColor="@color/brand_cream"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-black"
+            app:strokeColor="@color/brand_cream_alpha40"
+            app:cornerRadius="16dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn500ml"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginStart="5dp"
-            android:text="500 ml"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:singleLine="true"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:textColor="#FEFAE0"
-            app:strokeColor="#40FEFAE0"
-            app:cornerRadius="22dp" />
-
+            android:layout_marginStart="8dp"
+            android:text="500"
+            android:textColor="@color/brand_cream"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-black"
+            app:strokeColor="@color/brand_cream_alpha40"
+            app:cornerRadius="16dp" />
     </LinearLayout>
 
-    <!-- Manuální zadání -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilWaterAmount"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:hint="nebo napiš přesné množství"
+        android:layout_marginTop="20dp"
+        android:hint="Napište přesné množství"
         app:suffixText="ml"
-        app:boxStrokeColor="#4A8FA8"
-        app:boxStrokeWidth="1.5dp"
-        app:hintTextColor="#80FEFAE0"
-        app:boxCornerRadiusTopStart="14dp"
-        app:boxCornerRadiusTopEnd="14dp"
-        app:boxCornerRadiusBottomStart="14dp"
-        app:boxCornerRadiusBottomEnd="14dp">
+        app:suffixTextColor="@color/brand_cream"
+        app:boxStrokeColor="@color/brand_cream_alpha40"
+        app:hintTextColor="@color/brand_cream"
+        app:boxCornerRadiusTopStart="18dp"
+        app:boxCornerRadiusTopEnd="18dp"
+        app:boxCornerRadiusBottomStart="18dp"
+        app:boxCornerRadiusBottomEnd="18dp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etWaterAmount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="number"
-            android:textColor="#FEFAE0"
-            android:textSize="16sp"
+            android:textColor="@color/brand_cream"
+            android:textSize="20sp"
             android:fontFamily="sans-serif-black"
             android:gravity="center"
-            android:paddingVertical="10dp" />
-
+            android:paddingVertical="12dp" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Akce -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:orientation="horizontal">
+        android:layout_marginTop="26dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancelWater"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
-            android:layout_height="52dp"
-            android:layout_marginEnd="8dp"
-            android:text="Zrušit"
-            android:textColor="#80FEFAE0"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            app:cornerRadius="16dp" />
+            android:layout_height="56dp"
+            android:text="ZRUŠIT"
+            android:textColor="@color/brand_cream_alpha60"
+            android:fontFamily="sans-serif-black"
+            android:textSize="14sp"
+            android:layout_marginEnd="8dp"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnConfirmWater"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
-            android:text="💧 Vypít"
-            android:textColor="#283618"
-            android:textStyle="bold"
+            android:text="VYPÍT"
+            android:textColor="@color/brand_dark"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-black"
+            app:backgroundTint="@color/brand_cream"
+            app:cornerRadius="26dp"
             android:insetTop="0dp"
-            android:insetBottom="0dp"
-            app:backgroundTint="#FEFAE0"
-            app:cornerRadius="16dp" />
-
+            android:insetBottom="0dp" />
     </LinearLayout>
-
 </LinearLayout>

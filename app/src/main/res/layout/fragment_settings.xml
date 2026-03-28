@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FEFAE0">
+    android:background="@color/brand_cream">
 
     <ImageView
         android:layout_width="180dp"
@@ -15,7 +15,7 @@
         android:src="@drawable/bg_monstera_leaf_1"
         android:alpha="0.07"
         android:rotation="-15"
-        app:tint="#283618" />
+        app:tint="@color/brand_dark" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -29,7 +29,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- ══ HEADER ══ -->
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -42,11 +41,11 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_status_pill"
-                    android:backgroundTint="#606C38"
+                    android:backgroundTint="@color/brand_primary"
                     android:paddingHorizontal="16dp"
                     android:paddingVertical="6dp"
-                    android:text="KONFIGURACE"
-                    android:textColor="#FEFAE0"
+                    android:text="@string/settings_badge"
+                    android:textColor="@color/brand_cream"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
@@ -59,8 +58,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:fontFamily="sans-serif-black"
-                    android:text="Nastavení"
-                    android:textColor="#283618"
+                    android:text="@string/settings_title"
+                    android:textColor="@color/brand_dark"
                     android:textSize="42sp"
                     android:lineSpacingMultiplier="0.9"
                     app:layout_constraintStart_toStartOf="parent"
@@ -71,8 +70,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Cheaty a editace dat aplikace."
-                    android:textColor="#606C38"
+                    android:text="@string/settings_subtitle"
+                    android:textColor="@color/brand_primary"
                     android:textSize="13sp"
                     android:alpha="0.75"
                     app:layout_constraintStart_toStartOf="parent"
@@ -80,7 +79,6 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- ══ ODDĚLOVAČ: DEV CHEATY ══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -90,16 +88,15 @@
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="12dp">
                 <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="#20283618" />
+                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="12dp" android:text="🛠 DEV CHEATY"
-                    android:textColor="#606C38" android:textSize="10sp" android:textStyle="bold"
+                    android:layout_marginHorizontal="12dp" android:text="@string/label_dev_cheats"
+                    android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold"
                     android:letterSpacing="0.14" />
                 <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="#20283618" />
+                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
             </LinearLayout>
 
-            <!-- Cheat karty — 3 vedle sebe -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -107,14 +104,13 @@
                 android:layout_marginHorizontal="20dp"
                 android:gravity="center">
 
-                <!-- Poké Ball -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
-                    android:layout_height="90dp"
+                    android:layout_height="100dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     app:cardCornerRadius="20dp"
-                    app:cardBackgroundColor="#283618"
+                    app:cardBackgroundColor="@color/brand_dark"
                     app:cardElevation="0dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -129,24 +125,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="32dp"
                             android:layout_marginTop="4dp"
-                            android:text="+5 Poké Ball"
+                            android:text="@string/btn_cheat_poke"
                             android:textSize="9sp"
-                            android:textColor="#FEFAE0"
+                            android:textColor="@color/brand_cream"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            app:backgroundTint="#606C38"
+                            app:backgroundTint="@color/brand_primary"
                             app:cornerRadius="10dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Great Ball -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
-                    android:layout_height="90dp"
+                    android:layout_height="100dp"
                     android:layout_weight="1"
                     android:layout_marginHorizontal="3dp"
                     app:cardCornerRadius="20dp"
-                    app:cardBackgroundColor="#283618"
+                    app:cardBackgroundColor="@color/brand_dark"
                     app:cardElevation="0dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -161,24 +156,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="32dp"
                             android:layout_marginTop="4dp"
-                            android:text="+5 Great Ball"
+                            android:text="@string/btn_cheat_great"
                             android:textSize="9sp"
-                            android:textColor="#FEFAE0"
+                            android:textColor="@color/brand_cream"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            app:backgroundTint="#606C38"
+                            app:backgroundTint="@color/brand_primary"
                             app:cornerRadius="10dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Coiny -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
-                    android:layout_height="90dp"
+                    android:layout_height="100dp"
                     android:layout_weight="1"
                     android:layout_marginStart="6dp"
                     app:cardCornerRadius="20dp"
-                    app:cardBackgroundColor="#283618"
+                    app:cardBackgroundColor="@color/brand_dark"
                     app:cardElevation="0dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -193,19 +187,17 @@
                             android:layout_width="match_parent"
                             android:layout_height="32dp"
                             android:layout_marginTop="4dp"
-                            android:text="+100 Coinů"
+                            android:text="@string/btn_cheat_coins"
                             android:textSize="9sp"
-                            android:textColor="#FEFAE0"
+                            android:textColor="@color/brand_cream"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            app:backgroundTint="#DDA15E"
+                            app:backgroundTint="@color/brand_accent_warm"
                             app:cornerRadius="10dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-
             </LinearLayout>
 
-            <!-- ══ ODDĚLOVAČ: POKÉDEX ══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -215,25 +207,24 @@
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="12dp">
                 <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="#20283618" />
+                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="12dp" android:text="📖 POKÉDEX EDITOR"
-                    android:textColor="#606C38" android:textSize="10sp" android:textStyle="bold"
+                    android:layout_marginHorizontal="12dp" android:text="@string/label_pokedex_editor"
+                    android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold"
                     android:letterSpacing="0.14" />
                 <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="#20283618" />
+                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
             </LinearLayout>
 
-            <!-- Pokédex edit karta -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
                 app:cardCornerRadius="20dp"
-                app:cardBackgroundColor="#FEFAE0"
+                app:cardBackgroundColor="@color/brand_cream"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#15283618">
+                app:strokeColor="@color/brand_dark_alpha12">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -250,8 +241,8 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="EDITOVAT POPIS"
-                            android:textColor="#DDA15E"
+                            android:text="@string/label_edit_desc_caps"
+                            android:textColor="@color/brand_accent_warm_light"
                             android:textSize="10sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.1" />
@@ -259,8 +250,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Upravit typ a popis pokémona"
-                            android:textColor="#283618"
+                            android:text="@string/settings_edit_pokedex_hint"
+                            android:textColor="@color/brand_dark"
                             android:textSize="14sp"
                             android:fontFamily="sans-serif-black" />
                     </LinearLayout>
@@ -269,16 +260,14 @@
                         android:id="@+id/btnEditPokedex"
                         android:layout_width="wrap_content"
                         android:layout_height="44dp"
-                        android:text="Editovat"
-                        android:textColor="#FEFAE0"
+                        android:text="@string/btn_edit"
+                        android:textColor="@color/brand_cream"
                         android:textSize="12sp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
-                        app:backgroundTint="#283618"
+                        app:backgroundTint="@color/brand_dark"
                         app:cornerRadius="12dp" />
-
                 </LinearLayout>
-
             </com.google.android.material.card.MaterialCardView>
 
             <LinearLayout
@@ -290,13 +279,13 @@
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="12dp">
                 <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="#20283618" />
+                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="12dp" android:text="🧪 TESTOVÁNÍ"
-                    android:textColor="#606C38" android:textSize="10sp" android:textStyle="bold"
+                    android:layout_marginHorizontal="12dp" android:text="@string/label_testing"
+                    android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold"
                     android:letterSpacing="0.14" />
                 <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="#20283618" />
+                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
             </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -305,10 +294,10 @@
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginBottom="40dp"
                 app:cardCornerRadius="20dp"
-                app:cardBackgroundColor="#FEFAE0"
+                app:cardBackgroundColor="@color/brand_cream"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#15283618">
+                app:strokeColor="@color/brand_dark_alpha12">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -319,8 +308,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="PŘIDAT POKÉMONA DO KAPSY"
-                        android:textColor="#DDA15E"
+                        android:text="@string/label_add_to_pocket"
+                        android:textColor="@color/brand_accent_warm_light"
                         android:textSize="10sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.1" />
@@ -329,8 +318,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Zadej ID z Pokédexu (např. 025)"
-                        android:textColor="#283618"
+                        android:text="@string/settings_id_hint_desc"
+                        android:textColor="@color/brand_dark"
                         android:textSize="14sp"
                         android:fontFamily="sans-serif-black" />
 
@@ -348,31 +337,30 @@
                             android:layout_weight="1"
                             android:layout_marginEnd="12dp"
                             android:background="@drawable/bg_status_pill"
-                            android:backgroundTint="#15283618"
-                            android:hint="Např. 004"
+                            android:backgroundTint="@color/brand_dark_alpha5"
+                            android:hint="@string/hint_id_example"
                             android:inputType="number"
                             android:maxLength="3"
                             android:paddingHorizontal="16dp"
                             android:textSize="14sp"
-                            android:textColor="#283618" />
+                            android:textColor="@color/brand_dark" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnCheatAddPokemon"
                             android:layout_width="wrap_content"
                             android:layout_height="44dp"
-                            android:text="Získat"
-                            android:textColor="#FEFAE0"
+                            android:text="@string/btn_get"
+                            android:textColor="@color/brand_cream"
                             android:textSize="12sp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            app:backgroundTint="#283618"
+                            app:backgroundTint="@color/brand_dark"
                             app:cornerRadius="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-
     </androidx.core.widget.NestedScrollView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

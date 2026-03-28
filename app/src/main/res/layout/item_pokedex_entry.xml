@@ -5,10 +5,10 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="5dp"
-    app:cardBackgroundColor="#FEFAE0"
+    app:cardBackgroundColor="@color/brand_cream"
     app:cardCornerRadius="18dp"
     app:cardElevation="0dp"
-    app:strokeColor="#20283618"
+    app:strokeColor="@color/brand_dark_alpha12"
     app:strokeWidth="1dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -18,20 +18,18 @@
         android:paddingTop="10dp"
         android:paddingBottom="10dp">
 
-        <!-- Číslo v rohu -->
         <TextView
             android:id="@+id/tvPokedexNumber"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="#001"
-            android:textColor="#50606C38"
+            android:text="@string/pokedex_number_placeholder"
+            android:textColor="@color/brand_dark_alpha40"
             android:textSize="9sp"
             android:textStyle="bold"
             android:letterSpacing="0.05"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Sprite -->
         <ImageView
             android:id="@+id/ivPokedexSprite"
             android:layout_width="60dp"
@@ -43,19 +41,18 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvPokedexNumber" />
 
-        <!-- Jméno -->
         <TextView
             android:id="@+id/tvPokedexName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:textColor="#283618"
+            android:textColor="@color/brand_dark"
             android:textSize="11sp"
             android:textStyle="bold"
             android:gravity="center"
             android:maxLines="1"
             android:ellipsize="end"
-            android:text=".???"
+            android:text="@string/pokedex_unknown_name"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/ivPokedexSprite" />

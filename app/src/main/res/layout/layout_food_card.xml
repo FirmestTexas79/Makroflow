@@ -7,11 +7,6 @@
     android:clipToPadding="false"
     android:gravity="center">
 
-    <!--
-        Kontextový banner — zobrazí se automaticky nad kartou
-        podle aktuálního času vs. čas tréninku.
-        FoodSwipeDialog ho nastaví přes tvFoodContextBanner.
-    -->
     <TextView
         android:id="@+id/tvFoodContextBanner"
         android:layout_width="wrap_content"
@@ -25,8 +20,8 @@
         android:textStyle="bold"
         android:gravity="center"
         android:background="@drawable/bg_status_pill"
-        android:backgroundTint="#283618"
-        android:textColor="#FEFAE0"
+        android:backgroundTint="@color/brand_dark"
+        android:textColor="@color/brand_cream"
         android:visibility="gone"
         android:elevation="4dp" />
 
@@ -65,7 +60,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Název jídla"
+                android:text="@string/food_card_default_name"
                 android:textSize="26sp"
                 android:textStyle="bold"
                 android:textColor="@color/brand_dark"
@@ -74,10 +69,6 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
-            <!--
-                Štítek kontextu uvnitř karty — malý, pod názvem
-                Ukazuje např. "PRE trénink" nebo "POST okno"
-            -->
             <TextView
                 android:id="@+id/tvFoodTimingTag"
                 android:layout_width="wrap_content"
@@ -89,8 +80,8 @@
                 android:textStyle="bold"
                 android:letterSpacing="0.08"
                 android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#15606C38"
-                android:textColor="#606C38"
+                android:backgroundTint="@color/brand_primary_alpha08"
+                android:textColor="@color/brand_primary"
                 android:visibility="gone"
                 app:layout_constraintTop_toBottomOf="@id/tvFoodName"
                 app:layout_constraintStart_toStartOf="parent"
@@ -100,7 +91,7 @@
                 android:id="@+id/tvCalLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ENERGIE"
+                android:text="@string/food_card_energy_label"
                 android:textSize="12sp"
                 android:letterSpacing="0.1"
                 android:textColor="@color/brand_accent_deep"
@@ -116,7 +107,7 @@
                 android:textSize="48sp"
                 android:fontFamily="sans-serif-black"
                 android:textColor="@color/brand_dark"
-                app:layout_constraintTop_toBottomOf="@id/tvFoodName"
+                app:layout_constraintTop_toBottomOf="@id/tvFoodTimingTag"
                 app:layout_constraintBottom_toTopOf="@id/macroContainer"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />

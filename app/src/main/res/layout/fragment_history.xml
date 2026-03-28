@@ -4,9 +4,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FEFAE0">
+    android:background="@color/brand_cream">
 
-    <!-- Dekorativní listy v pozadí -->
     <ImageView
         android:layout_width="200dp"
         android:layout_height="200dp"
@@ -16,7 +15,7 @@
         android:src="@drawable/bg_monstera_leaf_1"
         android:alpha="0.06"
         android:rotation="-15"
-        app:tint="#283618" />
+        app:tint="@color/brand_dark" />
 
     <ImageView
         android:layout_width="120dp"
@@ -27,7 +26,7 @@
         android:src="@drawable/bg_monstera_leaf_2"
         android:alpha="0.07"
         android:rotation="60"
-        app:tint="#606C38" />
+        app:tint="@color/brand_primary" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -41,7 +40,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- ══ HEADER ══ -->
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -54,11 +52,11 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_status_pill"
-                    android:backgroundTint="#606C38"
+                    android:backgroundTint="@color/brand_primary"
                     android:paddingHorizontal="16dp"
                     android:paddingVertical="6dp"
-                    android:text="DENÍK POKROKU"
-                    android:textColor="#FEFAE0"
+                    android:text="@string/history_badge"
+                    android:textColor="@color/brand_cream"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
@@ -71,8 +69,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:fontFamily="sans-serif-black"
-                    android:text="Historie"
-                    android:textColor="#283618"
+                    android:text="@string/history_title"
+                    android:textColor="@color/brand_dark"
                     android:textSize="42sp"
                     android:lineSpacingMultiplier="0.9"
                     app:layout_constraintStart_toStartOf="parent"
@@ -84,8 +82,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Vyber den a sleduj svůj plán a symetrii"
-                    android:textColor="#606C38"
+                    android:text="@string/history_subtitle"
+                    android:textColor="@color/brand_primary"
                     android:textSize="13sp"
                     android:alpha="0.75"
                     app:layout_constraintStart_toStartOf="parent"
@@ -93,14 +91,13 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- ══ KALENDÁŘ — vlastní tmavý styl ══ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="20dp"
                 app:cardCornerRadius="24dp"
-                app:cardBackgroundColor="#283618"
+                app:cardBackgroundColor="@color/brand_dark"
                 app:cardElevation="0dp">
 
                 <LinearLayout
@@ -109,7 +106,6 @@
                     android:orientation="vertical"
                     android:padding="4dp">
 
-                    <!-- Navigace měsíce -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -124,10 +120,10 @@
                             android:layout_width="36dp"
                             android:layout_height="36dp"
                             android:background="@drawable/bg_status_pill"
-                            android:backgroundTint="#30FEFAE0"
+                            android:backgroundTint="@color/brand_cream_alpha20"
                             android:src="@drawable/ic_chevron_right"
                             android:rotation="180"
-                            app:tint="#FEFAE0"
+                            app:tint="@color/brand_cream"
                             android:scaleType="center" />
 
                         <TextView
@@ -136,8 +132,8 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:gravity="center"
-                            android:text="Březen 2026"
-                            android:textColor="#FEFAE0"
+                            android:text="@string/history_month_placeholder"
+                            android:textColor="@color/brand_cream"
                             android:textSize="15sp"
                             android:textStyle="bold"
                             android:fontFamily="sans-serif-black" />
@@ -147,14 +143,13 @@
                             android:layout_width="36dp"
                             android:layout_height="36dp"
                             android:background="@drawable/bg_status_pill"
-                            android:backgroundTint="#30FEFAE0"
+                            android:backgroundTint="@color/brand_cream_alpha20"
                             android:src="@drawable/ic_chevron_right"
-                            app:tint="#FEFAE0"
+                            app:tint="@color/brand_cream"
                             android:scaleType="center" />
 
                     </LinearLayout>
 
-                    <!-- Hlavičky dní Po-Ne -->
                     <LinearLayout
                         android:id="@+id/calDayHeaders"
                         android:layout_width="match_parent"
@@ -163,30 +158,29 @@
                         android:paddingHorizontal="8dp">
 
                         <TextView android:layout_width="0dp" android:layout_height="match_parent"
-                            android:layout_weight="1" android:gravity="center" android:text="Po"
-                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                            android:layout_weight="1" android:gravity="center" android:text="@string/day_mon_short"
+                            android:textColor="@color/brand_accent_warm" android:textSize="11sp" android:textStyle="bold" />
                         <TextView android:layout_width="0dp" android:layout_height="match_parent"
-                            android:layout_weight="1" android:gravity="center" android:text="Út"
-                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                            android:layout_weight="1" android:gravity="center" android:text="@string/day_tue_short"
+                            android:textColor="@color/brand_accent_warm" android:textSize="11sp" android:textStyle="bold" />
                         <TextView android:layout_width="0dp" android:layout_height="match_parent"
-                            android:layout_weight="1" android:gravity="center" android:text="St"
-                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                            android:layout_weight="1" android:gravity="center" android:text="@string/day_wed_short"
+                            android:textColor="@color/brand_accent_warm" android:textSize="11sp" android:textStyle="bold" />
                         <TextView android:layout_width="0dp" android:layout_height="match_parent"
-                            android:layout_weight="1" android:gravity="center" android:text="Čt"
-                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                            android:layout_weight="1" android:gravity="center" android:text="@string/day_thu_short"
+                            android:textColor="@color/brand_accent_warm" android:textSize="11sp" android:textStyle="bold" />
                         <TextView android:layout_width="0dp" android:layout_height="match_parent"
-                            android:layout_weight="1" android:gravity="center" android:text="Pá"
-                            android:textColor="#DDA15E" android:textSize="11sp" android:textStyle="bold" />
+                            android:layout_weight="1" android:gravity="center" android:text="@string/day_fri_short"
+                            android:textColor="@color/brand_accent_warm" android:textSize="11sp" android:textStyle="bold" />
                         <TextView android:layout_width="0dp" android:layout_height="match_parent"
-                            android:layout_weight="1" android:gravity="center" android:text="So"
-                            android:textColor="#8BFEFAE0" android:textSize="11sp" android:textStyle="bold" />
+                            android:layout_weight="1" android:gravity="center" android:text="@string/day_sat_short"
+                            android:textColor="@color/brand_cream_alpha60" android:textSize="11sp" android:textStyle="bold" />
                         <TextView android:layout_width="0dp" android:layout_height="match_parent"
-                            android:layout_weight="1" android:gravity="center" android:text="Ne"
-                            android:textColor="#8BFEFAE0" android:textSize="11sp" android:textStyle="bold" />
+                            android:layout_weight="1" android:gravity="center" android:text="@string/day_sun_short"
+                            android:textColor="@color/brand_cream_alpha60" android:textSize="11sp" android:textStyle="bold" />
 
                     </LinearLayout>
 
-                    <!-- Mřížka dnů — 6 řádků x 7 sloupců, generovaná v kódu -->
                     <GridLayout
                         android:id="@+id/calGrid"
                         android:layout_width="match_parent"
@@ -198,7 +192,6 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ══ VYBRANÝ DEN — pill štítek ══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -212,7 +205,7 @@
                     android:layout_width="0dp"
                     android:layout_height="1dp"
                     android:layout_weight="1"
-                    android:background="#20283618" />
+                    android:background="@color/brand_dark_alpha12" />
 
                 <TextView
                     android:id="@+id/tvSelectedDate"
@@ -220,11 +213,11 @@
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="12dp"
                     android:background="@drawable/bg_status_pill"
-                    android:backgroundTint="#283618"
+                    android:backgroundTint="@color/brand_dark"
                     android:paddingHorizontal="16dp"
                     android:paddingVertical="7dp"
-                    android:text="DNES"
-                    android:textColor="#FEFAE0"
+                    android:text="@string/history_today_label"
+                    android:textColor="@color/brand_cream"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
@@ -233,11 +226,10 @@
                     android:layout_width="0dp"
                     android:layout_height="1dp"
                     android:layout_weight="1"
-                    android:background="#20283618" />
+                    android:background="@color/brand_dark_alpha12" />
 
             </LinearLayout>
 
-            <!-- ══ MAKRA KARTY — 2x2 grid ══ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -245,14 +237,13 @@
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="4dp">
 
-                <!-- Kalorie — velká karta -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
                     android:layout_height="90dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="8dp"
                     app:cardCornerRadius="20dp"
-                    app:cardBackgroundColor="#283618"
+                    app:cardBackgroundColor="@color/brand_dark"
                     app:cardElevation="0dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -265,27 +256,26 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="—"
-                            android:textColor="#DDA15E"
+                            android:textColor="@color/brand_accent_warm"
                             android:textSize="22sp"
                             android:fontFamily="sans-serif-black" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="KCAL PLÁN"
-                            android:textColor="#FEFAE0"
+                            android:text="@string/history_label_kcal_plan"
+                            android:textColor="@color/brand_cream"
                             android:textSize="9sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Typ tréninku -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
                     android:layout_height="90dp"
                     android:layout_weight="1"
                     app:cardCornerRadius="20dp"
-                    app:cardBackgroundColor="#606C38"
+                    app:cardBackgroundColor="@color/brand_primary"
                     app:cardElevation="0dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -298,14 +288,14 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="—"
-                            android:textColor="#FEFAE0"
+                            android:textColor="@color/brand_cream"
                             android:textSize="18sp"
                             android:fontFamily="sans-serif-black" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="TYP DNE"
-                            android:textColor="#FEFAE0"
+                            android:text="@string/history_label_day_type"
+                            android:textColor="@color/brand_cream"
                             android:textSize="9sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.1" />
@@ -320,9 +310,9 @@
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="12dp"
                 app:cardCornerRadius="24dp"
-                app:cardBackgroundColor="#FEFAE0"
+                app:cardBackgroundColor="@color/brand_cream"
                 app:cardElevation="0dp"
-                app:strokeColor="#18283618"
+                app:strokeColor="@color/brand_dark_alpha12"
                 app:strokeWidth="1dp">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
@@ -335,7 +325,7 @@
                         android:layout_width="40dp"
                         android:layout_height="40dp"
                         android:background="@drawable/bg_status_pill"
-                        android:backgroundTint="#15283618"
+                        android:backgroundTint="@color/brand_dark_alpha5"
                         android:gravity="center"
                         android:text="👟"
                         android:textSize="18sp"
@@ -359,7 +349,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-black"
                             android:text="0"
-                            android:textColor="#283618"
+                            android:textColor="@color/brand_dark"
                             android:textSize="20sp" />
 
                         <TextView
@@ -367,8 +357,8 @@
                             android:layout_height="wrap_content"
                             android:alpha="0.6"
                             android:letterSpacing="0.05"
-                            android:text="KROKŮ ZA DEN"
-                            android:textColor="#283618"
+                            android:text="@string/history_label_steps_per_day"
+                            android:textColor="@color/brand_dark"
                             android:textSize="9sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -389,32 +379,30 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-black"
                             android:text="+0 kcal"
-                            android:textColor="#DDA15E"
+                            android:textColor="@color/brand_accent_warm"
                             android:textSize="16sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:alpha="0.8"
-                            android:text="EXTRA ENERGIE"
-                            android:textColor="#606C38"
+                            android:text="@string/history_label_extra_energy"
+                            android:textColor="@color/brand_primary"
                             android:textSize="9sp"
                             android:textStyle="bold" />
                     </LinearLayout>
-
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Makro detail karta B/S/T -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="8dp"
                 app:cardCornerRadius="20dp"
-                app:cardBackgroundColor="#FEFAE0"
+                app:cardBackgroundColor="@color/brand_cream"
                 app:cardElevation="0dp"
-                app:strokeColor="#18283618"
+                app:strokeColor="@color/brand_dark_alpha12"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -423,7 +411,6 @@
                     android:orientation="horizontal"
                     android:padding="16dp">
 
-                    <!-- Bílkoviny -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -435,14 +422,14 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="—"
-                            android:textColor="#606C38"
+                            android:textColor="@color/brand_primary"
                             android:textSize="18sp"
                             android:fontFamily="sans-serif-black" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="BÍLKOVINY"
-                            android:textColor="#606C38"
+                            android:text="@string/label_protein"
+                            android:textColor="@color/brand_primary"
                             android:textSize="9sp"
                             android:textStyle="bold"
                             android:alpha="0.7"
@@ -453,9 +440,8 @@
                         android:layout_width="1dp"
                         android:layout_height="32dp"
                         android:layout_gravity="center_vertical"
-                        android:background="#20283618" />
+                        android:background="@color/brand_dark_alpha12" />
 
-                    <!-- Sacharidy -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -467,14 +453,14 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="—"
-                            android:textColor="#DDA15E"
+                            android:textColor="@color/brand_accent_warm"
                             android:textSize="18sp"
                             android:fontFamily="sans-serif-black" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="SACHARIDY"
-                            android:textColor="#DDA15E"
+                            android:text="@string/label_carbs"
+                            android:textColor="@color/brand_accent_warm"
                             android:textSize="9sp"
                             android:textStyle="bold"
                             android:alpha="0.8"
@@ -485,9 +471,8 @@
                         android:layout_width="1dp"
                         android:layout_height="32dp"
                         android:layout_gravity="center_vertical"
-                        android:background="#20283618" />
+                        android:background="@color/brand_dark_alpha12" />
 
-                    <!-- Tuky -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -499,24 +484,22 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="—"
-                            android:textColor="#BC6C25"
+                            android:textColor="@color/brand_accent_deep"
                             android:textSize="18sp"
                             android:fontFamily="sans-serif-black" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="TUKY"
-                            android:textColor="#BC6C25"
+                            android:text="@string/label_fats"
+                            android:textColor="@color/brand_accent_deep"
                             android:textSize="9sp"
                             android:textStyle="bold"
                             android:alpha="0.8"
                             android:letterSpacing="0.08" />
                     </LinearLayout>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ══ SYMETRIE KARTY ══ -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardHistoryMetrics"
                 android:layout_width="match_parent"
@@ -524,9 +507,9 @@
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="16dp"
                 app:cardCornerRadius="24dp"
-                app:cardBackgroundColor="#FEFAE0"
+                app:cardBackgroundColor="@color/brand_cream"
                 app:cardElevation="0dp"
-                app:strokeColor="#18283618"
+                app:strokeColor="@color/brand_dark_alpha12"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -535,7 +518,6 @@
                     android:orientation="vertical"
                     android:padding="20dp">
 
-                    <!-- Symetrie header -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -551,8 +533,8 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Symetrie těla"
-                                android:textColor="#283618"
+                                android:text="@string/history_title_symmetry"
+                                android:textColor="@color/brand_dark"
                                 android:textSize="16sp"
                                 android:fontFamily="sans-serif-black" />
 
@@ -560,31 +542,27 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Zadej míry v sekci Profil"
-                                android:textColor="#606C38"
+                                android:text="@string/history_hint_metrics"
+                                android:textColor="@color/brand_primary"
                                 android:textSize="11sp"
                                 android:alpha="0.7" />
-
                         </LinearLayout>
 
-                        <!-- Pill status symetrie -->
                         <TextView
                             android:id="@+id/tvSymmetryStatus"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:background="@drawable/bg_status_pill"
-                            android:backgroundTint="#DDA15E"
+                            android:backgroundTint="@color/brand_accent_warm"
                             android:paddingHorizontal="12dp"
                             android:paddingVertical="5dp"
-                            android:text="BEZ DAT"
-                            android:textColor="#FEFAE0"
+                            android:text="@string/history_status_no_data"
+                            android:textColor="@color/brand_cream"
                             android:textSize="10sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.08" />
-
                     </LinearLayout>
 
-                    <!-- Graf symetrie -->
                     <cz.uhk.macroflow.history.SymmetryGraphView
                         android:id="@+id/historySymmetryGraph"
                         android:layout_width="match_parent"
@@ -592,7 +570,6 @@
                         android:layout_marginTop="12dp"
                         android:visibility="invisible" />
 
-                    <!-- Placeholder — žádná data -->
                     <LinearLayout
                         android:id="@+id/layoutNoMetrics"
                         android:layout_width="match_parent"
@@ -611,25 +588,22 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Pro tento den nemáš zadané míry"
-                            android:textColor="#283618"
+                            android:text="@string/history_no_metrics_msg"
+                            android:textColor="@color/brand_dark"
                             android:textSize="13sp"
                             android:alpha="0.5"
                             android:gravity="center" />
-
                     </LinearLayout>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ══ TIP KARTA ══ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="16dp"
                 app:cardCornerRadius="20dp"
-                app:cardBackgroundColor="#283618"
+                app:cardBackgroundColor="@color/brand_dark"
                 app:cardElevation="0dp">
 
                 <LinearLayout
@@ -656,8 +630,8 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Jak číst symetrii"
-                            android:textColor="#DDA15E"
+                            android:text="@string/history_tip_title"
+                            android:textColor="@color/brand_accent_warm"
                             android:textSize="13sp"
                             android:textStyle="bold" />
 
@@ -665,11 +639,10 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Čím více polygon vyplní pavučinu, tím lepší symetrie. Krk je referenční bod."
-                            android:textColor="#FEFAE0"
+                            android:text="@string/history_tip_desc"
+                            android:textColor="@color/brand_cream"
                             android:textSize="12sp"
                             android:alpha="0.75" />
-
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

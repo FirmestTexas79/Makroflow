@@ -53,4 +53,252 @@
     <string name="plan_pull">PULL</string>
     <string name="plan_legs">LEGS</string>
     <string name="plan_set_time">🕐 Nastavit čas</string>
+
+    <string name="sheet_label_today">DNES</string>
+    <string name="sheet_title_diet">SNACK</string>
+    <string name="sheet_kcal_format">%s kcal</string>
+    <string name="sheet_hint_swipe">← přejeď pro smazání</string>
+    <string name="sheet_empty_state">Zatím nic nezalogováno 🍽️</string>
+
+    <string name="metrics_title">MĚŘENÍ OBVODŮ</string>
+    <string name="metrics_today">Dnes</string>
+    <string name="metrics_unit_cm">cm</string>
+    <string name="metrics_hint_neck">Krk</string>
+    <string name="metrics_hint_chest">Hrudník</string>
+    <string name="metrics_hint_bicep">Biceps</string>
+    <string name="metrics_hint_forearm">Předloktí</string>
+    <string name="metrics_hint_waist">Pas</string>
+    <string name="metrics_hint_abdomen">Břicho</string>
+    <string name="metrics_hint_thigh">Stehno</string>
+    <string name="metrics_hint_calf">Lýtko</string>
+    <string name="metrics_btn_save">ULOŽIT PRO TENTO DEN</string>
+
+    <string name="food_card_energy_label">ENERGIE</string>
+    <string name="food_card_default_name">Název jídla</string>
+    <string name="food_card_kcal_format">%s kcal</string>
+    <string name="food_card_gram_format">%sg</string>
+
+    <string name="snack_default_name">Název snacku</string>
+    <string name="snack_weight_format">%sg</string>
+    <string name="macro_p_format">B: %sg</string>
+    <string name="macro_s_format">S: %sg</string>
+    <string name="macro_t_format">T: %sg</string>
+
+    <string name="shop_item_buy_format">KOUPIT ZA %1$s 🪙</string>
+    <string name="shop_item_name_count_format">%1$s (%2$dx)</string>
+    <string name="shop_item_default_name">Předmět</string>
+    <string name="shop_item_default_desc">Popis předmětu se zobrazí zde.</string>
+
+    <string name="pokemon_lvl_format">Lvl %d</string>
+    <string name="pokemon_default_name">Pokémon</string>
+    <string name="pokemon_xp_label">XP</string>
+
+    <string name="pokedex_number_format">#%03d</string>
+    <string name="pokedex_unknown_name">.???</string>
+    <string name="pokedex_unknown_number">#???</string>
+
+    <string name="macro_ratio_format">%1$sg / %2$sg</string>
+    <string name="macro_label_protein">Bílkoviny</string>
+    <string name="macro_label_carbs">Sacharidy</string>
+    <string name="macro_label_fat">Tuky</string>
+    <string name="found_training">HLEDÁM...</string>
+    <string name="bally">Bally</string>
+    <string name="lure">Návnady</string>
+
+    <string name="shop_badge_label">POKÉ OBCHOD</string>
+    <string name="shop_title_main">Obchod s\nItemy</string>
+    <string name="shop_subtitle">Kup si bally za ušetřené mince.</string>
+    <string name="coin_emoji">🪙</string>
+
+    <string name="pokedex_region_label">KANTO REGION</string>
+    <string name="pokedex_title">Pokédex</string>
+    <string name="pokedex_subtitle">Chyť je všechny — tréninkem a disciplínou.</string>
+    <string name="pokedex_number_placeholder">#001</string>
+    <string name="pokedex_type_placeholder">TRÁVA / JED</string>
+    <string name="pokedex_macro_desc_placeholder">Základní stavební kámen jídelníčku. Nezapomínej na listovou zeleninu.</string>
+    <string name="pokedex_btn_evo_test">Test Evoluce</string>
+    <string name="pokedex_list_separator">KANTO DEX</string>
+
+    <string name="inv_label">MŮJ INVENTÁŘ</string>
+    <string name="inv_title">Kapsa a\nBatoh</string>
+    <string name="inv_subtitle">Chycení Pokémoni a herní předměty.</string>
+    <string name="inv_tab_pocket">Poké-kapsa</string>
+    <string name="inv_tab_backpack">Batoh (Itemy)</string>
+
+    <string name="checkin_label">RANNÍ RITUÁL</string>
+    <string name="checkin_weight_hint">Dnešní váha</string>
+    <string name="checkin_weight_suffix">kg</string>
+    <string name="checkin_energy_label">Míra energie (1-5)</string>
+    <string name="checkin_sleep_label">Kvalita spánku (1-5)</string>
+    <string name="checkin_hunger_label">Jak moc jsi hladový? (1-5)</string>
+    <string name="checkin_btn_save">ULOŽIT RITUÁL</string>
+
+    <string name="ach_badge">TVOJE ÚSPĚCHY</string>
+    <string name="ach_title">Achievementy</string>
+    <string name="ach_subtitle">Odemčené milníky tvé cesty</string>
+    <string name="ach_progress_format">%1$d / %2$d</string>
+    <string name="ach_trophy_emoji">🏆</string>
+
+    <string name="drawer_avatar_placeholder">M</string>
+    <string name="drawer_default_name">Elitní Trenér</string>
+    <string name="drawer_status_offline">Offline režim</string>
+    <string name="drawer_btn_auth">PŘIHLÁSIT / REGISTROVAT</string>
+    <string name="drawer_stats_label">TVOJE ÚROVEŇ</string>
+
+    <string name="inv_label_prefix">Sekce:</string>
+
+    <string name="water_title">Nalejte vodu</string>
+    <string name="water_goal_loading">Načítám cíl...</string>
+    <string name="water_preset_150">150 ml</string>
+    <string name="water_preset_250">250 ml</string>
+    <string name="water_preset_500">500 ml</string>
+    <string name="water_hint_manual">nebo napiš přesné množství</string>
+    <string name="water_suffix_ml">ml</string>
+    <string name="water_btn_cancel">Zrušit</string>
+    <string name="water_btn_confirm">💧 Vypít</string>
+
+
+    <string name="evo_default_text">CO SE TO DĚJE?... \nSYSTEM DETEKUJE EVOLUCI!</string>
+    <string name="evo_move_prompt">> INICIACE UČENÍ ÚTOKU</string>
+    <string name="evo_btn_cancel">ZRUŠIT PŘEPSÁNÍ DAT</string>
+    <string name="evo_placeholder_move">BLESKOVÝ ÚTOK</string>
+
+    <string name="snack_dialog_title">Nový snack do databáze</string>
+    <string name="snack_hint_name">Název snacku</string>
+    <string name="snack_hint_weight">Váha balení</string>
+    <string name="snack_label_p">B</string>
+    <string name="snack_label_s">S</string>
+    <string name="snack_label_t">T</string>
+    <string name="snack_toggle_preworkout">Předtréninkový snack</string>
+    <string name="snack_btn_save">ULOŽIT DO DATABÁZE</string>
+
+
+    <string name="evo_title">CO SE TO DĚJE?!</string>
+    <string name="evo_detected">SYSTÉM DETEKUJE EVOLUCI!</string>
+    <string name="evo_placeholder_btn">INICIACE UČENÍ ÚTOKU</string>
+    <string name="diglett_description">Tvůj osobní trenér Diglett</string>
+    <string name="menu_open_desc">Otevřít navigaci</string>
+
+    <string name="nav_pokedex">Pokédex</string>
+    <string name="nav_inventory">Batoh</string>
+    <string name="nav_achievements">Úspěchy</string>
+    <string name="nav_settings">Nastavení</string>
+    <string name="nav_sign_out">Odhlásit se</string>
+
+
+
+    <string name="dashboard_status_rest">DNES: REST</string>
+    <string name="dashboard_title">Dashboard</string>
+    <string name="dashboard_tagline">Sleduj svůj den. Každé sousto se počítá.</string>
+    <string name="icon_menu_dots">☰</string>
+    <string name="dashboard_kcal_target">KCAL CÍL</string>
+    <string name="dashboard_macros_today">MAKRA DNES</string>
+    <string name="snack_label_p_full">BÍLKOVINY</string>
+    <string name="snack_label_s_full">SACHARIDY</string>
+    <string name="snack_label_t_full">TUKY</string>
+    <string name="coach_tip_label">💡 TIP OD TRENÉRA</string>
+    <string name="coach_ritual_prompt">Klikni pro rituál →</string>
+    <string name="coach_loading">Načítám tvůj stav...</string>
+    <string name="workout_label">Dnes cvičíš v:</string>
+    <string name="workout_set_time">Nastavit čas</string>
+    <string name="trainer_smart_label">CHYTRÝ TRENÉR</string>
+    <string name="trainer_description">Analýza hloubky a trajektorie</string>
+    <string name="metabolic_architect_label">METABOLICKÝ ARCHITEKT</string>
+    <string name="elite_config_title">KONFIGURACE METABOLISMU</string>
+    <string name="elite_hint_bf">Tuk (BF %)</string>
+    <string name="elite_hint_wrist">Zápěstí (cm)</string>
+    <string name="elite_hint_protocol">Nutriční protokol</string>
+    <string name="elite_structure_title">STRUKTURA NUTRIČNÍHO PROTOKOLU</string>
+    <string name="macro_p_pct_default">B: 25%</string>
+    <string name="macro_s_pct_default">S: 45%</string>
+    <string name="macro_t_pct_default">T: 30%</string>
+    <string name="ritual_header">RANNÍ RITUÁL</string>
+    <string name="ritual_question">Jak se dnes cítíš?</string>
+    <string name="ritual_subtitle">Zaznamenej svůj stav pro dnešek</string>
+    <string name="ritual_hint_weight">Dnešní váha</string>
+    <string name="ritual_status_label">TVŮJ STAV</string>
+    <string name="label_energy_level">Míra energie (1–5)</string>
+    <string name="label_sleep_quality">Kvalita spánku (1–5)</string>
+    <string name="label_hunger_level">Jak moc jsi hladový? (1–5)</string>
+    <string name="ritual_btn_save">ULOŽIT A ZAČÍT 🔥</string>
+
+    <string name="setup_badge_profile">PROFIL</string>
+    <string name="setup_title">Nastavení</string>
+    <string name="setup_subtitle">Nastav svůj profil. Makra se přizpůsobí.</string>
+    <string name="setup_section_basic">ZÁKLADNÍ ÚDAJE</string>
+    <string name="setup_section_lifestyle">ŽIVOTNÍ STYL</string>
+    <string name="unit_years">let</string>
+    <string name="setup_label_steps">DENNÍ CÍL KROKŮ</string>
+    <string name="setup_steps_default">6000 kroků</string>
+    <string name="setup_label_measurements">MOJE OBVODY</string>
+    <string name="setup_section_account">ÚČET</string>
+    <string name="setup_offline_mode">Offline režim</string>
+    <string name="setup_btn_login">Přihlásit se</string>
+
+    <string name="history_badge">DENÍK POKROKU</string>
+    <string name="history_title">HISTORIE</string>
+    <string name="history_subtitle">Vyber den a sleduj svůj plán a symetrii</string>
+    <string name="history_month_placeholder">Březen 2026</string>
+    <string name="history_today_label">DNES</string>
+    <string name="history_label_kcal_plan">KCAL PLÁN</string>
+    <string name="history_label_day_type">TYP DNE</string>
+    <string name="day_mon_short">Po</string>
+    <string name="day_tue_short">Út</string>
+    <string name="day_wed_short">St</string>
+    <string name="day_thu_short">Čt</string>
+    <string name="day_fri_short">Pá</string>
+    <string name="day_sat_short">So</string>
+    <string name="day_sun_short">Ne</string>
+    <string name="history_label_steps_per_day">KROKŮ ZA DEN</string>
+    <string name="history_label_extra_energy">EXTRA ENERGIE</string>
+    <string name="label_protein">BÍLKOVINY</string>
+    <string name="label_carbs">SACHARIDY</string>
+    <string name="label_fats">TUKY</string>
+    <string name="history_title_symmetry">Symetrie těla</string>
+    <string name="history_hint_metrics">Zadej míry v sekci Profil</string>
+    <string name="history_status_no_data">BEZ DAT</string>
+    <string name="history_no_metrics_msg">Pro tento den nemáš zadané míry</string>
+    <string name="history_tip_title">Jak číst symetrii</string>
+    <string name="history_tip_desc">Čím více polygon vyplní pavučinu, tím lepší symetrie. Krk je referenční bod.</string>
+
+    <string name="label_weekly_plan">PLÁN</string>
+    <string name="training_schedule_title">Tréninkový\nRozvrh</string>
+    <string name="training_schedule_subtitle">Nastav svůj týden. Makra se přizpůsobí.</string>
+    <string name="label_setup_days">NASTAV KAŽDÝ DEN</string>
+    <string name="tip_macros_adapt_title">Makra se přizpůsobí každému dni</string>
+    <string name="tip_push_desc">🏋️ PUSH  +300 kcal · standardní bílkoviny</string>
+    <string name="tip_pull_desc">💪 PULL  +350 kcal · vyšší bílkoviny</string>
+    <string name="tip_legs_desc">🦵 LEGS  +600 kcal · více bílkovin · více vody</string>
+    <string name="tip_off_desc">😴 OFF    základní TDEE · žádné bonusy</string>
+
+    <string name="settings_badge">KONFIGURACE</string>
+    <string name="settings_title">Nastavení</string>
+    <string name="settings_subtitle">Cheaty a editace dat aplikace.</string>
+    <string name="label_dev_cheats">🛠 DEV CHEATY</string>
+
+    <string name="btn_cheat_poke">+5 Poké</string>
+    <string name="btn_cheat_great">+5 Great</string>
+    <string name="btn_cheat_coins">+100 Coinů</string>
+
+    <string name="label_pokedex_editor">POKÉDEX</string>
+    <string name="label_edit_desc_caps">EDITOVAT POPIS</string>
+    <string name="settings_edit_pokedex_hint">Upravit typ a popis pokémona</string>
+    <string name="btn_edit">Editovat</string>
+
+    <string name="label_testing">🧪 TESTOVÁNÍ</string>
+    <string name="label_add_to_pocket">PŘIDAT POKÉMONA DO KAPSY</string>
+    <string name="settings_id_hint_desc">Zadej ID z Pokédexu (např. 025)</string>
+    <string name="hint_id_example">Např. 004</string>
+    <string name="btn_get">Získat</string>
+
+    <string name="label_achievements">Achievements</string>
+    <string name="label_my_collection">MOJE SBÍRKA</string>
+    <string name="label_inventory">Kapsa a Batoh</string>
+    <string name="label_disclaimer">Prohlášení</string>
+    <string name="label_delete_achievements">🗑️ Smazat achievementy</string>
+    <string name="label_sign_out">Odhlásit se</string>
+
+
+
+
 </resources>

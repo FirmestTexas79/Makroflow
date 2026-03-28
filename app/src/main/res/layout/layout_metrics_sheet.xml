@@ -16,7 +16,7 @@
             android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="MĚŘENÍ OBVODŮ"
+            android:text="@string/metrics_title"
             android:textColor="@color/brand_dark"
             android:textSize="20sp"
             android:fontFamily="sans-serif-black"
@@ -30,7 +30,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:background="@drawable/bg_status_pill"
-            android:backgroundTint="#1A606C38"
+            android:backgroundTint="@color/brand_primary_alpha10"
             android:padding="4dp">
 
             <ImageButton
@@ -46,7 +46,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="8dp"
-                android:text="Dnes"
+                android:text="@string/metrics_today"
                 android:textColor="@color/brand_dark"
                 android:textStyle="bold"
                 android:textSize="14sp" />
@@ -73,8 +73,8 @@
             android:layout_gravity="fill_horizontal"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:hint="Krk"
-            app:suffixText="cm"
+            android:hint="@string/metrics_hint_neck"
+            app:suffixText="@string/metrics_unit_cm"
             app:boxStrokeColor="@color/brand_primary"
             app:hintTextColor="@color/brand_primary">
             <com.google.android.material.textfield.TextInputEditText
@@ -91,8 +91,8 @@
             android:layout_gravity="fill_horizontal"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:hint="Hrudník"
-            app:suffixText="cm"
+            android:hint="@string/metrics_hint_chest"
+            app:suffixText="@string/metrics_unit_cm"
             app:boxStrokeColor="@color/brand_primary"
             app:hintTextColor="@color/brand_primary">
             <com.google.android.material.textfield.TextInputEditText
@@ -109,8 +109,8 @@
             android:layout_gravity="fill_horizontal"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:hint="Biceps"
-            app:suffixText="cm"
+            android:hint="@string/metrics_hint_bicep"
+            app:suffixText="@string/metrics_unit_cm"
             app:boxStrokeColor="@color/brand_primary"
             app:hintTextColor="@color/brand_primary">
             <com.google.android.material.textfield.TextInputEditText
@@ -127,8 +127,8 @@
             android:layout_gravity="fill_horizontal"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:hint="Předloktí"
-            app:suffixText="cm"
+            android:hint="@string/metrics_hint_forearm"
+            app:suffixText="@string/metrics_unit_cm"
             app:boxStrokeColor="@color/brand_primary"
             app:hintTextColor="@color/brand_primary">
             <com.google.android.material.textfield.TextInputEditText
@@ -145,8 +145,8 @@
             android:layout_gravity="fill_horizontal"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:hint="Pas"
-            app:suffixText="cm"
+            android:hint="@string/metrics_hint_waist"
+            app:suffixText="@string/metrics_unit_cm"
             app:boxStrokeColor="@color/brand_primary"
             app:hintTextColor="@color/brand_primary">
             <com.google.android.material.textfield.TextInputEditText
@@ -163,8 +163,8 @@
             android:layout_gravity="fill_horizontal"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:hint="Břicho"
-            app:suffixText="cm"
+            android:hint="@string/metrics_hint_abdomen"
+            app:suffixText="@string/metrics_unit_cm"
             app:boxStrokeColor="@color/brand_primary"
             app:hintTextColor="@color/brand_primary">
             <com.google.android.material.textfield.TextInputEditText
@@ -181,8 +181,8 @@
             android:layout_gravity="fill_horizontal"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:hint="Stehno"
-            app:suffixText="cm"
+            android:hint="@string/metrics_hint_thigh"
+            app:suffixText="@string/metrics_unit_cm"
             app:boxStrokeColor="@color/brand_primary"
             app:hintTextColor="@color/brand_primary">
             <com.google.android.material.textfield.TextInputEditText
@@ -199,8 +199,8 @@
             android:layout_gravity="fill_horizontal"
             android:layout_columnWeight="1"
             android:layout_margin="6dp"
-            android:hint="Lýtko"
-            app:suffixText="cm"
+            android:hint="@string/metrics_hint_calf"
+            app:suffixText="@string/metrics_unit_cm"
             app:boxStrokeColor="@color/brand_primary"
             app:hintTextColor="@color/brand_primary">
             <com.google.android.material.textfield.TextInputEditText
@@ -217,11 +217,11 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_marginTop="24dp"
-        android:text="ULOŽIT PRO TENTO DEN"
+        android:text="@string/metrics_btn_save"
         android:textColor="@color/brand_cream"
         android:textStyle="bold"
         app:cornerRadius="16dp"
         app:backgroundTint="@color/brand_dark"
-        app:rippleColor="#40FFFFFF"/>
+        app:rippleColor="@color/white"/>
 
 </LinearLayout>

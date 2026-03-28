@@ -25,9 +25,65 @@
 
 
     <color name="brand_dark_alpha20">#33283618</color>
+
+
     <color name="brand_primary_alpha10">#1A606C38</color>
+    <color name="brand_primary_alpha30">#4D606C38</color>
+
     <color name="brand_accent_deep_alpha20">#33BC6C25</color>
+    <color name="brand_accent_deep_alpha50">#80BC6C25</color>
+
+
     <color name="brand_accent_warm_alpha20">#33DDA15E</color>
+
+    <color name="brand_dark_alpha05">#0D283618</color>
+    <color name="brand_dark_alpha10">#1A283618</color>
+    <color name="brand_dark_alpha12">#1F283618</color>
+    <color name="brand_dark_alpha40">#66283618</color>
+
+    <color name="brand_primary_alpha08">#15606C38</color>
+
+    <color name="brand_cream_alpha10">#1AFEFAE0</color>
+    <color name="brand_cream_alpha50">#80FEFAE0</color>
+    <color name="brand_cream_alpha80">#CCFEFAE0</color>
+
+
+    <color name="brand_primary_alpha20">#33606C38</color>
+
+    <color name="brand_accent_warm_alpha30">#4DE9B072</color>
+    <color name="brand_dark_alpha30">#4D283618</color>
+
+    <color name="brand_dark_alpha5">#0D283618</color>
+    <color name="brand_dark_alpha80">#CC283618</color>
+    <color name="brand_accent_warm_alpha15">#26E9B072</color>
+
+    <color name="brand_cream_alpha20">#33FEFAE0</color>
+    <color name="brand_cream_alpha60">#99FEFAE0</color>
+    <color name="brand_accent_warm_alpha10">#1AE9B072</color>
+
+    <color name="brand_water_accent">#4A8FA8</color>
+    <color name="brand_cream_alpha40">#66FEFAE0</color>
+    <color name="brand_cream_alpha15">#26FEFAE0</color>
+
+
+    <color name="brand_white_aura">#33FEFAE0</color>
+
+    <color name="brand_black_evo">#121212</color>
+
+    <color name="retro_terminal_bg">#0A1008</color>
+    <color name="retro_font_glow">#CCFEFAE0</color>
+    <color name="glass_shimmer_light">#40FFFFFF</color>
+    <color name="glass_shimmer_dark">#00FFFFFF</color>
+
+    <color name="glass_shimmer">#33FFFFFF</color>
+    <color name="retro_terminal_black">#0D1208</color>
+    <color name="brand_dark_alpha15">#26283618</color>
+
+    <string name="app_name_caps">MAKROFLOW</string>
+    <string name="app_tagline">Tvůj inteligentní nutriční\na tréninkový asistent</string>
+    <string name="login_google">Přihlásit se přes Google</string>
+    <string name="login_offline">Pokračovat bez účtu</string>
+
 
 
 </resources>

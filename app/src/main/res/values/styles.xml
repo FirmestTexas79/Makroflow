@@ -7,4 +7,16 @@
         <item name="android:textColor">@color/brand_dark</item>
     </style>
 
+    <style name="BottomNavText" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-condensed</item>
+    </style>
+
+    <style name="BottomNavText.Active" parent="BottomNavText">
+    </style>
+
+    <style name="BottomNavText.Inactive" parent="BottomNavText">
+    </style>
+
 </resources>

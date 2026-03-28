@@ -1,84 +1,115 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="@color/brand_dark"
-    android:paddingStart="24dp"
-    android:paddingEnd="24dp"
-    android:paddingTop="48dp"
-    android:paddingBottom="24dp">
+    android:paddingHorizontal="24dp"
+    android:paddingTop="56dp"
+    android:paddingBottom="32dp">
 
-    <!-- Avatar kruh -->
+    <View
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="@color/brand_primary_alpha10"
+        android:rotation="-45"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="-30dp"
+        android:layout_marginEnd="-30dp" />
+
     <FrameLayout
-        android:layout_width="72dp"
-        android:layout_height="72dp">
+        android:id="@+id/avatarContainer"
+        android:layout_width="86dp"
+        android:layout_height="86dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Pozadí avataru -->
         <View
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/bg_lifestyle_circle"
-            android:backgroundTint="#606C38" />
+            android:backgroundTint="@color/brand_cream_alpha20" />
 
-        <!-- Iniciály / ikona -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="6dp"
+            android:background="@drawable/bg_lifestyle_circle"
+            android:backgroundTint="@color/brand_primary" />
+
         <TextView
             android:id="@+id/tvAvatarInitials"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center"
-            android:text=""
-            android:textColor="#FEFAE0"
-            android:textSize="28sp"
+            android:text="@string/drawer_avatar_placeholder"
+            android:textColor="@color/brand_cream"
+            android:textSize="32sp"
             android:fontFamily="sans-serif-black" />
 
-        <!-- Zelená tečka — online indikátor -->
         <View
             android:id="@+id/viewOnlineDot"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:layout_gravity="bottom|end"
-            android:layout_margin="2dp"
+            android:layout_margin="4dp"
             android:background="@drawable/bg_lifestyle_circle"
-            android:backgroundTint="#4CAF50"
-            android:visibility="gone" />
+            android:backgroundTint="@color/color_high"
+            android:elevation="4dp" />
     </FrameLayout>
 
-    <!-- Jméno -->
+    <TextView
+        android:id="@+id/tvDrawerStatsLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="@string/drawer_stats_label"
+        android:textColor="@color/brand_accent_warm"
+        android:textSize="10sp"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.15"
+        app:layout_constraintTop_toBottomOf="@id/avatarContainer"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <TextView
         android:id="@+id/tvDrawerName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="Sportovec"
-        android:textColor="#FEFAE0"
-        android:textSize="18sp"
-        android:fontFamily="sans-serif-black" />
+        android:text="@string/drawer_default_name"
+        android:textColor="@color/brand_cream"
+        android:textSize="24sp"
+        android:fontFamily="sans-serif-black"
+        android:lineSpacingMultiplier="0.9"
+        app:layout_constraintTop_toBottomOf="@id/tvDrawerStatsLabel"
+        app:layout_constraintStart_toStartOf="parent" />
 
-    <!-- Email / stav -->
     <TextView
         android:id="@+id/tvDrawerEmail"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:text="Offline režim"
-        android:textColor="#DDA15E"
-        android:textSize="13sp" />
+        android:text="@string/drawer_status_offline"
+        android:textColor="@color/brand_cream_alpha60"
+        android:textSize="13sp"
+        app:layout_constraintTop_toBottomOf="@id/tvDrawerName"
+        app:layout_constraintStart_toStartOf="parent" />
 
-    <!-- Přihlásit se tlačítko — zobrazí se jen v offline režimu -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnDrawerLogin"
+        style="@style/Widget.Material3.Button.TonalButton"
         android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:layout_marginTop="12dp"
-        android:text="Přihlásit / Registrovat"
-        android:textSize="12sp"
+        android:layout_height="48dp"
+        android:layout_marginTop="20dp"
+        android:text="@string/drawer_btn_auth"
         android:textColor="@color/brand_dark"
-        app:backgroundTint="#FEFAE0"
-        app:cornerRadius="20dp"
-        app:strokeWidth="0dp"
-        android:visibility="visible" />
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-black"
+        app:backgroundTint="@color/brand_cream"
+        app:cornerRadius="14dp"
+        app:layout_constraintTop_toBottomOf="@id/tvDrawerEmail"
+        app:layout_constraintStart_toStartOf="parent" />
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

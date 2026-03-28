@@ -1,34 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardPokeGrid"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
-    app:cardBackgroundColor="#FEFAE0"
-    app:cardCornerRadius="12dp"
-    app:strokeColor="#606C38"
-    app:strokeWidth="2dp">
+    android:layout_margin="6dp"
+    app:cardBackgroundColor="@color/brand_cream"
+    app:cardCornerRadius="20dp"
+    app:strokeColor="@color/brand_primary"
+    app:strokeWidth="2dp"
+    app:cardElevation="2dp">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="vertical"
         android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvPokeGridLevel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_dark"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:text="Lvl 1"
+            android:textColor="@color/brand_cream"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <ImageView
             android:id="@+id/ivPokeGrid"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:scaleType="fitCenter" />
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginTop="4dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_home"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <TextView
             android:id="@+id/tvPokeGridName"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:textColor="#283618"
-            android:textStyle="bold" />
+            android:gravity="center"
+            android:text="@string/pokemon_default_name"
+            android:textColor="@color/brand_dark"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-black"
+            app:layout_constraintTop_toBottomOf="@id/ivPokeGrid"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -5,13 +5,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:background="#FEFAE0">
+    android:background="@color/brand_cream">
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingBottom="120dp">
+        android:paddingBottom="120dp"
+        android:overScrollMode="never">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -30,13 +31,13 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_status_pill"
-                    android:backgroundTint="#DDA15E"
+                    android:backgroundTint="@color/brand_accent_warm"
                     android:paddingHorizontal="16dp"
                     android:paddingVertical="6dp"
-                    android:text="POKÉ OBCHOD"
-                    android:textColor="#FEFAE0"
+                    android:text="@string/shop_badge_label"
+                    android:textColor="@color/brand_cream"
                     android:textSize="11sp"
-                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-black"
                     android:letterSpacing="0.12"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -45,7 +46,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_status_pill"
-                    android:backgroundTint="#BC6C25"
+                    android:backgroundTint="@color/brand_accent_deep"
                     android:gravity="center_vertical"
                     android:paddingHorizontal="12dp"
                     android:paddingVertical="6dp"
@@ -57,15 +58,15 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="100"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/white"
                         android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:fontFamily="sans-serif-black" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
-                        android:text="🪙"
+                        android:text="@string/coin_emoji"
                         android:textSize="13sp" />
                 </LinearLayout>
 
@@ -75,8 +76,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:fontFamily="sans-serif-black"
-                    android:text="Obchod s\nItemy"
-                    android:textColor="#283618"
+                    android:text="@string/shop_title_main"
+                    android:textColor="@color/brand_dark"
                     android:textSize="38sp"
                     android:lineSpacingMultiplier="0.92"
                     app:layout_constraintStart_toStartOf="parent"
@@ -88,8 +89,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Kup si bally za ušetřené mince."
-                    android:textColor="#606C38"
+                    android:text="@string/shop_subtitle"
+                    android:textColor="@color/brand_primary"
                     android:textSize="13sp"
                     android:alpha="0.8"
                     app:layout_constraintStart_toStartOf="parent"
@@ -103,28 +104,29 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="24dp"
                 android:layout_marginTop="12dp"
-                android:background="#FEFAE0"
-                app:tabIndicatorColor="#BC6C25"
-                app:tabSelectedTextColor="#283618"
-                app:tabTextColor="#606C38"
-                app:tabTextAppearance="@style/TextAppearance.Material3.TitleSmall">
+                android:background="@color/brand_cream"
+                app:tabIndicatorColor="@color/brand_accent_deep"
+                app:tabSelectedTextColor="@color/brand_dark"
+                app:tabTextColor="@color/brand_primary"
+                app:tabTextAppearance="@style/TextAppearance.Material3.TitleSmall"
+                app:tabRippleColor="@color/brand_primary_alpha10">
 
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Bally" />
+                    android:text="@string/bally" />
 
                 <com.google.android.material.tabs.TabItem
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Návnady" />
+                    android:text="@string/lure" />
             </com.google.android.material.tabs.TabLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginHorizontal="24dp"
-                android:background="#20283618" />
+                android:background="@color/brand_dark_alpha12" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvShopItems"

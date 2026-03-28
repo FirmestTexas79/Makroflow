@@ -5,14 +5,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FEFAE0">
+    android:background="@color/brand_cream">
 
     <LinearLayout
         android:id="@+id/pokedexTopSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="#FEFAE0">
+        android:background="@color/brand_cream">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -26,13 +26,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#606C38"
+                android:backgroundTint="@color/brand_primary"
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="6dp"
-                android:text="KANTO REGION"
-                android:textColor="#FEFAE0"
+                android:text="@string/pokedex_region_label"
+                android:textColor="@color/brand_cream"
                 android:textSize="11sp"
-                android:textStyle="bold"
+                android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.12"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -43,8 +43,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:fontFamily="sans-serif-black"
-                android:text="Pokédex"
-                android:textColor="#283618"
+                android:text="@string/pokedex_title"
+                android:textColor="@color/brand_dark"
                 android:textSize="34sp"
                 android:lineSpacingMultiplier="0.9"
                 app:layout_constraintStart_toStartOf="parent"
@@ -52,11 +52,12 @@
                 app:layout_constraintTop_toBottomOf="@id/tvPokedexBadge" />
 
             <TextView
+                android:id="@+id/tvPokedexSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="Chyť je všechny — tréninkem a disciplínou."
-                android:textColor="#606C38"
+                android:text="@string/pokedex_subtitle"
+                android:textColor="@color/brand_primary"
                 android:textSize="13sp"
                 android:alpha="0.75"
                 app:layout_constraintStart_toStartOf="parent"
@@ -71,8 +72,9 @@
             android:layout_marginTop="6dp"
             android:layout_marginBottom="12dp"
             app:cardCornerRadius="24dp"
-            app:cardBackgroundColor="#283618"
-            app:cardElevation="4dp">
+            app:cardBackgroundColor="@color/brand_dark"
+            app:cardElevation="4dp"
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -88,7 +90,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:background="@drawable/bg_status_pill"
-                        android:backgroundTint="#1AFEFAE0" />
+                        android:backgroundTint="@color/brand_cream_alpha10" />
                     <ImageView
                         android:id="@+id/ivDetailSprite"
                         android:layout_width="110dp"
@@ -109,10 +111,10 @@
                         android:id="@+id/tvDetailNumber"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="#001"
-                        android:textColor="#80FEFAE0"
+                        android:text="@string/pokedex_number_placeholder"
+                        android:textColor="@color/brand_cream_alpha50"
                         android:textSize="12sp"
-                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-black"
                         android:letterSpacing="0.08" />
 
                     <TextView
@@ -121,8 +123,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:fontFamily="sans-serif-black"
-                        android:text="Bulbasaur"
-                        android:textColor="#FEFAE0"
+                        android:text="@string/pokemon_default_name"
+                        android:textColor="@color/brand_cream"
                         android:textSize="24sp" />
 
                     <TextView
@@ -131,21 +133,21 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:background="@drawable/bg_status_pill"
-                        android:backgroundTint="#DDA15E"
+                        android:backgroundTint="@color/brand_accent_warm"
                         android:paddingHorizontal="14dp"
                         android:paddingVertical="5dp"
-                        android:text="TRÁVA / JED"
-                        android:textColor="#283618"
+                        android:text="@string/pokedex_type_placeholder"
+                        android:textColor="@color/brand_dark"
                         android:textSize="11sp"
-                        android:textStyle="bold" />
+                        android:fontFamily="sans-serif-black" />
 
                     <TextView
                         android:id="@+id/tvDetailMacro"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:text="Základní stavební kámen jídelníčku. Nezapomínej na listovou zeleninu."
-                        android:textColor="#BDFEFAE0"
+                        android:text="@string/pokedex_macro_desc_placeholder"
+                        android:textColor="@color/brand_cream_alpha80"
                         android:textSize="12sp"
                         android:lineSpacingMultiplier="1.3"
                         android:maxLines="3"
@@ -156,10 +158,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="Test Evoluce"
+                        android:text="@string/pokedex_btn_evo_test"
                         android:visibility="gone"
-                        android:textColor="#283618"
-                        app:backgroundTint="#DDA15E"
+                        android:textColor="@color/brand_dark"
+                        android:fontFamily="sans-serif-black"
+                        app:backgroundTint="@color/brand_accent_warm"
                         app:cornerRadius="12dp" />
 
                 </LinearLayout>
@@ -174,13 +177,13 @@
             android:layout_marginHorizontal="24dp"
             android:layout_marginBottom="8dp">
             <View android:layout_width="0dp" android:layout_height="1dp"
-                android:layout_weight="1" android:background="#20283618" />
+                android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp" android:text="KANTO DEX"
-                android:textColor="#606C38" android:textSize="10sp" android:textStyle="bold"
+                android:layout_marginHorizontal="12dp" android:text="@string/pokedex_list_separator"
+                android:textColor="@color/brand_primary" android:textSize="10sp" android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.14" />
             <View android:layout_width="0dp" android:layout_height="1dp"
-                android:layout_weight="1" android:background="#20283618" />
+                android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
         </LinearLayout>
     </LinearLayout>
 

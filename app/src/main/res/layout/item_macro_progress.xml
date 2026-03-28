@@ -12,21 +12,23 @@
         android:id="@+id/tvMacroName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Bílkoviny"
+        android:text="@string/macro_label_protein"
         android:textColor="@color/brand_dark"
         android:textSize="12sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.02" />
+        android:fontFamily="sans-serif-black"
+        android:textAllCaps="true"
+        android:letterSpacing="0.05" />
 
     <ProgressBar
         android:id="@+id/macroProgress"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"
         android:layout_width="match_parent"
-        android:layout_height="10dp"
+        android:layout_height="12dp"
         android:layout_marginTop="6dp"
         android:layout_marginBottom="6dp"
         android:progress="70"
-        android:progressDrawable="@drawable/macro_progress_gradient" />
+        android:progressDrawable="@drawable/macro_progress_gradient"
+        android:progressBackgroundTint="@color/brand_dark_alpha05" />
 
     <TextView
         android:id="@+id/tvMacroValue"
@@ -35,6 +37,7 @@
         android:text="120g / 180g"
         android:textColor="@color/brand_primary"
         android:textSize="11sp"
-        android:fontFamily="monospace" />
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium" />
 
 </LinearLayout>

@@ -9,11 +9,11 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground"
-    app:cardBackgroundColor="#FEFAE0"
+    app:cardBackgroundColor="@color/brand_cream"
     app:cardCornerRadius="20dp"
     app:cardElevation="0dp"
     app:strokeWidth="1dp"
-    app:strokeColor="#18283618">
+    app:strokeColor="@color/brand_dark_alpha10">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -23,7 +23,6 @@
         android:paddingTop="14dp"
         android:paddingBottom="12dp">
 
-        <!-- Řádek 1: Název + kalorie -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -35,30 +34,28 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Název snacku"
-                android:textColor="#283618"
+                android:text="@string/snack_default_name"
+                android:textColor="@color/brand_dark"
                 android:textSize="14sp"
                 android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
                 android:ellipsize="end" />
 
-            <!-- Hmotnost pill -->
             <TextView
                 android:id="@+id/tvSnackWeight"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#12283618"
+                android:backgroundTint="@color/brand_dark_alpha10"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="3dp"
                 android:text="100g"
-                android:textColor="#606C38"
+                android:textColor="@color/brand_primary"
                 android:textSize="10sp"
                 android:textStyle="bold" />
 
         </LinearLayout>
 
-        <!-- Řádek 2: Makro hodnoty -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -66,13 +63,12 @@
             android:layout_marginTop="6dp"
             android:gravity="center_vertical">
 
-            <!-- B: bílkoviny — zelené -->
             <TextView
                 android:id="@+id/valP"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="B: 0g"
-                android:textColor="#606C38"
+                android:textColor="@color/brand_primary"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
@@ -80,15 +76,14 @@
                 android:layout_width="1dp"
                 android:layout_height="10dp"
                 android:layout_marginHorizontal="8dp"
-                android:background="#30283618" />
+                android:background="@color/brand_dark_alpha20" />
 
-            <!-- S: sacharidy — zlaté -->
             <TextView
                 android:id="@+id/valS"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="S: 0g"
-                android:textColor="#DDA15E"
+                android:textColor="@color/brand_accent_warm"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
@@ -96,21 +91,19 @@
                 android:layout_width="1dp"
                 android:layout_height="10dp"
                 android:layout_marginHorizontal="8dp"
-                android:background="#30283618" />
+                android:background="@color/brand_dark_alpha20" />
 
-            <!-- T: tuky — oranžové -->
             <TextView
                 android:id="@+id/valT"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="T: 0g"
-                android:textColor="#BC6C25"
+                android:textColor="@color/brand_accent_deep"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
         </LinearLayout>
 
-        <!-- Řádek 3: Makro-flow bary -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="6dp"
@@ -119,18 +112,16 @@
             android:weightSum="100"
             android:clipChildren="true"
             android:background="@drawable/bg_status_pill"
-            android:backgroundTint="#0D283618">
+            android:backgroundTint="@color/brand_dark_alpha05">
 
-            <!-- Bar bílkoviny -->
             <View
                 android:id="@+id/barP"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="10"
                 android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#606C38" />
+                android:backgroundTint="@color/brand_primary" />
 
-            <!-- Bar sacharidy -->
             <View
                 android:id="@+id/barS"
                 android:layout_width="0dp"
@@ -138,9 +129,8 @@
                 android:layout_weight="10"
                 android:layout_marginStart="2dp"
                 android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#DDA15E" />
+                android:backgroundTint="@color/brand_accent_warm" />
 
-            <!-- Bar tuky -->
             <View
                 android:id="@+id/barT"
                 android:layout_width="0dp"
@@ -148,9 +138,8 @@
                 android:layout_weight="10"
                 android:layout_marginStart="2dp"
                 android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#BC6C25" />
+                android:backgroundTint="@color/brand_accent_deep" />
 
-            <!-- Zbývající prostor — vyplní zbytek do 100 -->
             <View
                 android:id="@+id/barEmpty"
                 android:layout_width="0dp"

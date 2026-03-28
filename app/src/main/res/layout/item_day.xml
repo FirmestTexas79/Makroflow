@@ -11,7 +11,7 @@
     app:cardCornerRadius="24dp"
     app:cardElevation="0dp"
     app:strokeWidth="1.5dp"
-    app:strokeColor="@color/brand_dark_alpha20">
+    app:strokeColor="#20283618">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -74,7 +74,7 @@
             android:id="@+id/divider"
             android:layout_width="1dp"
             android:layout_height="36dp"
-            android:background="@color/brand_dark_alpha20"
+            android:background="#20283618"
             app:layout_constraintStart_toEndOf="@id/layoutDayLabel"
             app:layout_constraintEnd_toStartOf="@id/toggleGroup"
             app:layout_constraintTop_toTopOf="@id/toggleGroup"
@@ -102,13 +102,11 @@
                 android:text="@string/plan_off"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.01"
                 android:textColor="@color/black"
                 android:padding="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                app:strokeColor="@color/brand_accent_deep_alpha20"
-                app:rippleColor="@color/brand_accent_deep_alpha20"
+                app:strokeColor="#20283618"
                 app:cornerRadius="12dp"
                 android:maxLines="1" />
 
@@ -121,14 +119,11 @@
                 android:text="@string/plan_push"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.01"
                 android:textColor="@color/brand_dark"
                 android:padding="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                app:strokeColor="@color/brand_primary_alpha10"
-                app:rippleColor="@color/brand_primary_alpha10"
-                app:cornerRadius="12dp"
+                app:strokeColor="#20283618"
                 android:maxLines="1" />
 
             <com.google.android.material.button.MaterialButton
@@ -140,14 +135,11 @@
                 android:text="@string/plan_pull"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.01"
                 android:textColor="@color/brand_primary"
                 android:padding="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                app:strokeColor="@color/brand_dark_alpha20"
-                app:rippleColor="@color/brand_dark_alpha20"
-                app:cornerRadius="12dp"
+                app:strokeColor="#20283618"
                 android:maxLines="1" />
 
             <com.google.android.material.button.MaterialButton
@@ -159,14 +151,11 @@
                 android:text="@string/plan_legs"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.01"
                 android:textColor="@color/brand_accent_deep"
                 android:padding="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                app:strokeColor="@color/brand_dark_alpha20"
-                app:rippleColor="@color/brand_dark_alpha20"
-                app:cornerRadius="12dp"
+                app:strokeColor="#20283618"
                 android:maxLines="1" />
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
@@ -183,7 +172,7 @@
             android:paddingHorizontal="12dp"
             android:paddingVertical="5dp"
             android:background="@drawable/bg_status_pill"
-            android:backgroundTint="@color/brand_primary_alpha10"
+            android:backgroundTint="#1A606C38"
             android:clickable="true"
             android:focusable="true"
             android:visibility="gone"

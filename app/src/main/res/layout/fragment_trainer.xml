@@ -6,6 +6,24 @@
     android:layout_height="match_parent"
     android:background="@color/black">
 
+    <androidx.camera.view.PreviewView
+        android:id="@+id/viewFinder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <cz.uhk.macroflow.training.GraphicOverlay
+        android:id="@+id/graphicOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="@id/viewFinder"
+        app:layout_constraintEnd_toEndOf="@id/viewFinder"
+        app:layout_constraintStart_toStartOf="@id/viewFinder"
+        app:layout_constraintTop_toTopOf="@id/viewFinder" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/topBar"
         android:layout_width="match_parent"
@@ -14,14 +32,18 @@
         android:paddingBottom="16dp"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
+        android:background="@drawable/bg_gradient_top_shadow"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="#40000000"
             android:src="@drawable/ic_back"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
             app:tint="@color/white"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -33,11 +55,13 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_status_pill"
             android:backgroundTint="@color/brand_dark"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="10dp"
-            android:text="HLEDÁM..."
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="12dp"
+            android:text="@string/found_training"
             android:textColor="@color/brand_cream"
-            android:textStyle="bold"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.05"
+            android:textSize="12sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -49,31 +73,16 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:layout_marginHorizontal="32dp"
-        android:layout_marginBottom="100dp"
+        android:layout_marginBottom="64dp"
         android:text="ZAČÍT TRÉNINK"
         android:textColor="@color/white"
         android:textSize="18sp"
-        android:textStyle="bold"
+        android:fontFamily="sans-serif-black"
         app:backgroundTint="@color/brand_primary"
-        app:cornerRadius="16dp"
+        app:cornerRadius="24dp"
+        app:elevation="8dp"
+        app:strokeColor="#40FFFFFF"
+        app:strokeWidth="2dp"
         app:layout_constraintBottom_toBottomOf="parent" />
-
-    <androidx.camera.view.PreviewView
-        android:id="@+id/viewFinder"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/btnStartTraining"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/topBar" />
-
-    <cz.uhk.macroflow.training.GraphicOverlay
-        android:id="@+id/graphicOverlay"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/viewFinder"
-        app:layout_constraintEnd_toEndOf="@id/viewFinder"
-        app:layout_constraintStart_toStartOf="@id/viewFinder"
-        app:layout_constraintTop_toTopOf="@id/viewFinder" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

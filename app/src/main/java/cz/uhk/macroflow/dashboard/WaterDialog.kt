@@ -45,6 +45,19 @@ class WaterDialog : DialogFragment() {
         return dialog
     }
 
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.apply {
+            // Nastavíme šířku na 380dp (přepočet na pixely)
+            val width = (380 * resources.displayMetrics.density).toInt()
+            setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT)
+
+            // Tohle zajistí, že tvůj bg_water_dialog bude mít průhledné rohy
+            setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+        }
+    }
+
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? = inflater.inflate(cz.uhk.macroflow.R.layout.dialog_water, container, false)

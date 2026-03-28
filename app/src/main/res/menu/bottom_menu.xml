@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
+
     <item
         android:id="@+id/nav_plan"
         android:icon="@android:drawable/ic_menu_agenda"
-        android:title="Plán" />
+        android:title="@string/label_weekly_plan" />
+
     <item
         android:id="@+id/nav_snack"
         android:icon="@android:drawable/ic_menu_today"
-        android:title="Snack" />
+        android:title="@string/sheet_title_diet" />
 
     <item
         android:id="@+id/nav_placeholder"
@@ -17,11 +19,11 @@
     <item
         android:id="@+id/nav_history"
         android:icon="@android:drawable/ic_menu_recent_history"
-        android:title="Historie" />
+        android:title="@string/history_title" />
+
     <item
         android:id="@+id/nav_profile"
         android:icon="@android:drawable/ic_menu_manage"
-        android:title="Profil" />
-
+        android:title="@string/setup_badge_profile" />
 
 </menu>
