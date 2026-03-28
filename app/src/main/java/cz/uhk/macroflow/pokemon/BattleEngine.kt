@@ -269,6 +269,17 @@ object BattleFactory {
 
     // ── EPIC ──────────────────────────────────────────────────────────
 
+
+    fun createPorygon() = Pokemon(
+        name = "PORYGON", level = 12, maxHp = 42, attack = 15, defense = 16, speed = 11,
+        moves = listOf(
+            Move("TRI ATTACK", PokemonType.NORMAL,  80, 100, 10),
+            Move("PSYBEAM",    PokemonType.PSYCHIC, 65, 100, 20),
+            Move("SHARPEN",    PokemonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
+            Move("TACKLE",     PokemonType.NORMAL,  40, 100, 35)
+        )
+    )
+
     fun createHaunter() = Pokemon(
         name = "HAUNTER", level = 9, maxHp = 26, attack = 15, defense = 6, speed = 18,
         moves = listOf(
@@ -361,23 +372,27 @@ object BattleFactory {
     /** Vrátí pokédex ID pro daného nepřítele */
     /** Vrátí pokédex ID pro daného nepřítele */
     fun pokedexId(pokemon: Pokemon): String = when (pokemon.name) {
+
+
+
+
+        "BULBASAUR" -> "001"
+        "CHARMANDER"-> "004"
+        "CHARIZARD" -> "006"
+        "SQUIRTLE"  -> "007"
         "CATERPIE"  -> "010" // ✅ Doplněno
         "METAPOD"   -> "011" // ✅ Doplněno
         "BUTTERFREE"-> "012" // ✅ Doplněno
-
-        "DIGLETT"   -> "050"
         "PIKACHU"   -> "025"
         "RAICHU"    -> "026"
-        "EEVEE"     -> "133"
-        "BULBASAUR" -> "001"
-        "SQUIRTLE"  -> "007"
-        "CHARMANDER"-> "004"
+        "DIGLETT"   -> "050"
         "GASTLY"    -> "092"
         "HAUNTER"   -> "093"
         "GENGAR"    -> "094"
         "KANGASKHAN" -> "115"
+        "EEVEE"     -> "133"
+        "PORYGON"   -> "137"
         "SNORLAX"   -> "143"
-        "CHARIZARD" -> "006"
         "MEWTWO"    -> "150"
         "MEW"       -> "151"
         else        -> "000"
@@ -389,6 +404,8 @@ object BattleFactory {
         "CATERPIE"   -> "caterpie"
         "METAPOD"    -> "metapod"
         "BUTTERFREE" -> "butterfree"
+
+        "PORYGON" -> "porygon"
 
         "DIGLETT"   -> "diglett"
         "PIKACHU"   -> "pikachu"

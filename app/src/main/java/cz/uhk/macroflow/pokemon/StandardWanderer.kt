@@ -337,6 +337,17 @@ class ButterfreeWanderer(
 }
 
 // ─────────────────────────────────────────────
+// PORYGON
+// ─────────────────────────────────────────────
+
+
+
+
+
+
+
+
+// ─────────────────────────────────────────────
 // HLAVNÍ WANDERER TŘÍDA
 // ─────────────────────────────────────────────
 
@@ -403,7 +414,6 @@ class StandardWanderer(
             else  -> defaultTapReaction()
         }
     }
-
 
     private fun pikachuTapReaction() {
         val parent = pokemonView.parent as? ViewGroup ?: return
@@ -518,6 +528,7 @@ class StandardWanderer(
             "143" -> startSnorlaxIdle()
             "151" -> startMewIdle()
             "150" -> startMewtwoIdle()
+            "137" -> startPorygonIdle()
             "093" -> startHaunterIdle()
             "092" -> startGastlyIdle()
             "006" -> startCharizardIdle()
@@ -635,6 +646,61 @@ class StandardWanderer(
             start()
         }
     }
+
+    private fun startPorygonIdle(): Animator {
+        val levitate = ObjectAnimator.ofFloat(pokemonView, "translationY",
+            targetTranslationY - 6f * dp, targetTranslationY + 6f * dp).apply {
+            duration = 2000; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.REVERSE
+            interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener {
+                // Digitální "jitter" - občasné náhodné cuknutí měřítka
+                if (Random.nextInt(100) > 96) {
+                    pokemonView.scaleX = baseScale * (if (facingRight) 1.1f else -1.1f)
+                } else {
+                    pokemonView.scaleX = if (facingRight) baseScale else -baseScale
+                }
+            }
+            start()
+        }
+        schedulePorygonGlitch()
+        return levitate
+    }
+
+    private fun schedulePorygonGlitch() {
+        if (!running || (pokemonId != "137" && pokemonId != "233")) return
+        handler.postDelayed({
+            if (running) {
+                // Rychlý digitální záškub (Glitch)
+                val oldX = pokemonView.x
+                pokemonView.x = oldX + (Random.nextInt(-10, 10) * dp)
+                pokemonView.alpha = 0.5f
+                handler.postDelayed({
+                    pokemonView.x = oldX
+                    pokemonView.alpha = 1.0f
+                }, 50L)
+                schedulePorygonGlitch()
+            }
+        }, Random.nextLong(3000, 7000))
+    }
+
+    private fun spawnPorygonGlitch() {
+        val ox = pokemonView.x
+        val oy = pokemonView.y
+
+        // Rychlá sekvence digitálního zkratu
+        val glitch = AnimatorSet().apply {
+            playSequentially(
+                ObjectAnimator.ofFloat(pokemonView, "translationX", ox + 10f * dp).setDuration(40),
+                ObjectAnimator.ofFloat(pokemonView, "alpha", 0.3f).setDuration(20),
+                ObjectAnimator.ofFloat(pokemonView, "translationX", ox - 10f * dp).setDuration(40),
+                ObjectAnimator.ofFloat(pokemonView, "alpha", 1.0f).setDuration(20),
+                ObjectAnimator.ofFloat(pokemonView, "translationX", ox).setDuration(40)
+            )
+        }
+        glitch.start()
+    }
+
+
 
     private fun startMewtwoIdle(): Animator =
         ObjectAnimator.ofFloat(pokemonView, "translationY",
@@ -762,6 +828,7 @@ class StandardWanderer(
             "007" -> crossingSquirtle(fromX, toX)
             "092" -> crossingGastly(fromX, toX)
             "093" -> crossingHaunter(fromX, toX)
+            "137" -> crossingPorygon(fromX, toX)
             "115" -> crossingKangaskhan(fromX, toX)
             "006" -> crossingCharizard(fromX, toX)
             "150" -> crossingMewtwo(fromX, toX)
@@ -777,6 +844,44 @@ class StandardWanderer(
             effect.playAppear(pokemonView, baseScale, targetTranslationY) {
                 if (running) { startWobble(); scheduleStep(Random.nextLong(1500, 3000)) }
             }
+        }
+    }
+
+    private fun crossingPorygon(fromX: Float, toX: Float) {
+        idleAnim?.cancel()
+
+        // 1. Digitální rozpad (splácnutí do linky)
+        pokemonView.animate()
+            .scaleY(0.05f).scaleX(baseScale * 2f).alpha(0f)
+            .setDuration(200)
+            .withEndAction {
+                if (!running) return@withEndAction
+
+                // 2. Přesun na novou pozici
+                pokemonView.x = toX
+                facingRight = toX > fromX
+                applyFacing(facingRight)
+
+                // 3. Digitální složení na cíli
+                pokemonView.animate()
+                    .alpha(1f).scaleY(baseScale).scaleX(if (facingRight) baseScale else -baseScale)
+                    .setDuration(250)
+                    .setInterpolator(OvershootInterpolator())
+                    .withEndAction {
+                        startIdleAnimation()
+                        scheduleStep(Random.nextLong(2000, 5000))
+                    }
+            }
+    }
+
+    class PixelTransitionEffect : TransitionEffect {
+        override fun playDisappear(view: View, baseScale: Float, onDone: () -> Unit) {
+            view.animate().scaleY(0.02f).scaleX(baseScale * 2f).alpha(0f).setDuration(200).withEndAction(onDone)
+        }
+        override fun playAppear(view: View, baseScale: Float, targetY: Float, onDone: () -> Unit) {
+            view.translationY = targetY
+            view.alpha = 0f; view.scaleY = 0.02f; view.scaleX = baseScale * 2f
+            view.animate().alpha(1f).scaleY(baseScale).scaleX(baseScale).setDuration(250).withEndAction(onDone)
         }
     }
 
@@ -854,6 +959,7 @@ class StandardWanderer(
             start()
         }
     }
+
 
     private fun crossingKangaskhan(fromX: Float, toX: Float) {
         val parent = pokemonView.parent as? ViewGroup ?: run { defaultCrossing(fromX, toX); return }

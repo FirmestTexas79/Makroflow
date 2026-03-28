@@ -31,6 +31,7 @@ object WandererFactory {
         WandererConfig("092", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "092", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
 
         // --- EPIC ─────────────────────────────────────────────────────
+        WandererConfig("137", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "137", sc, StandardWanderer.PixelTransitionEffect()) }) { StandardWanderer.PixelTransitionEffect() },
         WandererConfig("093", 1.6f, { ctx, view, sc -> StandardWanderer(ctx, view, "093", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
         WandererConfig("094", 1.5f, { ctx, view, sc -> StandardWanderer(ctx, view, "094", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
         WandererConfig("143", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "143", sc) }) { SmokeTransitionEffect(false) },

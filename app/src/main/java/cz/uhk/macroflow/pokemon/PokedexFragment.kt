@@ -95,6 +95,7 @@ class PokedexFragment : Fragment() {
                     "094", // Gengar
                     "115", // Kangaskhan
                     "133", // Eevee
+                    "137", // Porygon
                     "143", // Snorlax
                     "150", // Mewtwo
                     "151"  // Mew
@@ -123,6 +124,7 @@ class PokedexFragment : Fragment() {
         "092", "093", "094" -> "Někteří Pokémoni nesnáší slunce. Zkusil jsi někdy večerní trénink? Říká se, že po 19:00 můžeš narazit na staré duchy."
         "143" -> "Tento Pokémon tvrdě spí. Probudit ho dokáže jen poctivá ranní rutina. Zkus zapsat svůj spánek a váhu 7 dní v kuse!"
         "006" -> "Žhnoucí plameny Charizarda spatří jen opravdoví dříči. Pokračuj v konzistentním zapisování tréninků a budování návyků aspoň 14 dní."
+        "137" -> "Data, data a zase data, býval jsem studentem Statistiky"
         "150", "151" -> "Tajemná psychická energie pulzuje kdesi v nedohlednu. Získá ji jen ten, kdo se stane mistrem dlouhodobé disciplíny v MakroFlow."
         else -> "Zapiš trénink, udržuj disciplínu a vyraz ho hledat!"
     }

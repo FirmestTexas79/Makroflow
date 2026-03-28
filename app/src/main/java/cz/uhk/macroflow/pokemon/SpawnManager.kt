@@ -87,6 +87,8 @@ object SpawnManager {
         // 🌊 Squirtle se odemkne jen při splnění vody v Dashboardu!
         SpawnPool("007", "SQUIRTLE",  Rarity.RARE,   listOf(Conditions.WATER_GOAL_REACHED)) { BattleFactory.createSquirtle() },
 
+        SpawnPool("137", "PORYGON", Rarity.EPIC, listOf(Conditions.MinCheckInCount(3))) { BattleFactory.createPorygon() },
+
         SpawnPool("093", "HAUNTER",   Rarity.EPIC,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createHaunter() },
         SpawnPool("094", "GENGAR",    Rarity.EPIC,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createGengar() },
 
