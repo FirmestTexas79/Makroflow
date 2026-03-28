@@ -29,11 +29,15 @@
         app:tint="#606C38" />
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/dashboardScrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
         android:clipToPadding="false"
-        android:paddingBottom="120dp"> <LinearLayout
+        android:paddingBottom="120dp">
+
+
+        <LinearLayout
         android:id="@+id/dashboardScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -393,28 +397,46 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSwitchToElite"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="8dp"
-            android:text="PŘEPNOUT ELITNÍ REŽIM"
-            android:textColor="#BC6C25"
-            android:textSize="10sp"
-            android:letterSpacing="0.1"
-            app:rippleColor="#20BC6C25" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="24dp"
+                android:paddingVertical="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="METABOLICKÝ ARCHITEKT"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchEliteMode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:track="@drawable/switch_track_custom"
+                    android:thumb="@drawable/switch_thumb_custom"
+                    app:useMaterialThemeColors="false"
+                    app:thumbTint="@null"
+                    app:trackTint="@null"
+                    android:checked="true" />
+
+            </LinearLayout>
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardEliteOptions"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="20dp"
-            android:layout_marginTop="4dp"
+            android:layout_marginBottom="16dp"
             android:visibility="gone"
             app:cardBackgroundColor="#FEFAE0"
-            app:cardCornerRadius="24dp"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="#20283618"
             app:strokeWidth="1.5dp">
@@ -428,12 +450,12 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="ELITNÍ NASTAVENÍ"
-                    android:textColor="#606C38"
+                    android:text="KONFIGURACE METABOLISMU"
+                    android:textColor="#283618"
                     android:textSize="10sp"
                     android:textStyle="bold"
-                    android:letterSpacing="0.1"
-                    android:layout_marginBottom="12dp" />
+                    android:letterSpacing="0.2"
+                    android:layout_marginBottom="16dp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -446,6 +468,12 @@
                         android:layout_weight="1"
                         android:layout_marginEnd="8dp"
                         android:hint="Tuk (BF %)"
+                        app:boxCornerRadiusTopStart="16dp"
+                        app:boxCornerRadiusTopEnd="16dp"
+                        app:boxCornerRadiusBottomStart="16dp"
+                        app:boxCornerRadiusBottomEnd="16dp"
+                        app:boxStrokeColor="#606C38"
+                        app:hintTextColor="#606C38"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etEliteBF"
@@ -460,6 +488,12 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:hint="Zápěstí (cm)"
+                        app:boxCornerRadiusTopStart="16dp"
+                        app:boxCornerRadiusTopEnd="16dp"
+                        app:boxCornerRadiusBottomStart="16dp"
+                        app:boxCornerRadiusBottomEnd="16dp"
+                        app:boxStrokeColor="#606C38"
+                        app:hintTextColor="#606C38"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etEliteWrist"
@@ -474,16 +508,26 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:hint="Preferovaný styl stravování"
+                    android:hint="Nutriční protokol"
+                    app:boxCornerRadiusTopStart="16dp"
+                    app:boxCornerRadiusTopEnd="16dp"
+                    app:boxCornerRadiusBottomStart="16dp"
+                    app:boxCornerRadiusBottomEnd="16dp"
+                    app:boxStrokeColor="#606C38"
+                    app:hintTextColor="#606C38"
+                    app:endIconTint="#283618"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
                     <AutoCompleteTextView
                         android:id="@+id/autoDietType"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="none"
-                        android:textColor="#283618" />
+                        android:textColor="#283618"
+                        android:padding="16dp"
+                        android:dropDownSelector="@android:color/transparent"
+                        android:popupBackground="@drawable/bg_dropdown_rounded" />
                 </com.google.android.material.textfield.TextInputLayout>
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

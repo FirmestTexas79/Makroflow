@@ -20,12 +20,11 @@ object EliteMetabolicEngine {
      */
     fun getDietaryTEFModifier(dietType: String): Double {
         return when (dietType.uppercase()) {
-            "HIGH_PROTEIN" -> 0.25 // Maximální termogeneze (proteiny pálí 25-30% sebe sama)
-            "KETO" -> 0.15         // Vyšší nároky na oxidaci tuků a glukoneogenezi
-            "VEGAN" -> 0.10        // Vysoká vláknina zvyšuje pasivní výdej
-            "LOW_FAT" -> 0.12      // Standardní zpracování sacharidů
-            "CARBO_LOADING" -> 0.08// Efektivní ukládání glykogenu s nízkým TEF
-            else -> 0.12           // BALANCED
+            "HIGH_PROTEIN" -> 0.20
+            "KETO" -> 0.10
+            "VEGAN" -> 0.12
+            "LOW_CARB" -> 0.15
+            else -> 0.10 // BALANCED
         }
     }
 
@@ -37,12 +36,10 @@ object EliteMetabolicEngine {
     fun getCarbSensitivity(wristCm: Double, heightCm: Double): Double {
         if (wristCm <= 0) return 1.0
         val ratio = heightCm / wristCm
-
-        // Hodnoty pro muže (lékařské tabulky): > 10.4 Ektomorf, < 9.6 Endomorf
         return when {
-            ratio > 10.4 -> 1.15 // Ektomorf: Rychlé spalování, vysoká tolerance sacharidů
-            ratio < 9.6 -> 0.85  // Endomorf: Tendence k ukládání, nižší tolerance
-            else -> 1.0          // Mezomorf: Zlatý střed
+            ratio > 10.4 -> 1.10 // Ektomorf: vyšší tolerance sacharidů
+            ratio < 9.6 -> 0.90  // Endomorf: nižší tolerance
+            else -> 1.0
         }
     }
 }

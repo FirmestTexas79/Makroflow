@@ -2,6 +2,7 @@ package cz.uhk.macroflow.dashboard
 
 import android.animation.ObjectAnimator
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
 import android.view.HapticFeedbackConstants
@@ -9,6 +10,8 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -25,6 +28,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.core.content.edit
+import androidx.core.widget.doAfterTextChanged
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.nutrition.ConsumedFoodSheet
 import cz.uhk.macroflow.data.FirebaseRepository
@@ -406,43 +410,141 @@ class DashboardFragment : Fragment() {
 
     private fun setupEliteToggle(view: View) {
         val cardEliteOptions = view.findViewById<MaterialCardView>(R.id.cardEliteOptions)
-        val btnToggleMode = view.findViewById<MaterialButton>(R.id.btnSwitchToElite)
+        val switchElite = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchEliteMode)
         val etWrist = view.findViewById<EditText>(R.id.etEliteWrist)
+        val etBodyFat = view.findViewById<EditText>(R.id.etEliteBF)
+        val autoDietType = view.findViewById<AutoCompleteTextView>(R.id.autoDietType)
+
         val db = AppDatabase.getDatabase(requireContext())
+        val brandDark = Color.parseColor("#283618")
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            // Získáme profil, nebo vytvoříme defaultní, pokud v DB není nic
-            var profile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
+        // BARVY: Definujeme barvy pro oba stavy natvrdo v kódu
+        val colorOn = Color.parseColor("#DDA15E") // brand_accent_warm
+        val colorOff = Color.parseColor("#DAD7CD") // Neutrální šedá
+        val thumbOn = Color.parseColor("#283618") // brand_dark
+        val thumbOff = Color.parseColor("#606C38") // brand_primary
 
+        var isInitialLoading = true
+
+        // 1. VNUCENÍ BAREV (ColorStateList) - Tohle zaručí, že ON bude vždy oranžová
+        val trackStates = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
+            intArrayOf(colorOn, colorOff)
+        )
+        val thumbStates = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(thumbOn, thumbOff)
+        )
+
+        switchElite.trackTintList = trackStates
+        switchElite.thumbTintList = thumbStates
+
+        // Nastavení Dropdownu
+        val dietOptions = listOf("Vyvážená", "Low Carb", "Keto", "Vegan", "High Protein")
+        val dietAdapter = object : ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, dietOptions) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val tv = super.getView(position, convertView, parent) as TextView
+                tv.setTextColor(brandDark)
+                tv.setPadding(48, 40, 48, 40)
+                return tv
+            }
+        }
+        autoDietType?.setAdapter(dietAdapter)
+
+        // 2. NAČTENÍ DAT
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val profile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
             withContext(Dispatchers.Main) {
+                if (!isAdded) return@withContext
+
+                isInitialLoading = true
+
+                // Reset listeneru před nastavením hodnoty
+                switchElite.setOnCheckedChangeListener(null)
+                switchElite.isChecked = profile.isEliteMode
+
+                // Okamžité vykreslení stavu bez animace
+                switchElite.jumpDrawablesToCurrentState()
+
                 cardEliteOptions.visibility = if (profile.isEliteMode) View.VISIBLE else View.GONE
-                etWrist?.setText(profile.lastWristMeasurement.toString())
+
+                if (profile.lastWristMeasurement > 0) etWrist?.setText(profile.lastWristMeasurement.toString())
+                if (profile.bodyFatPercentage > 0) etBodyFat?.setText(profile.bodyFatPercentage.toString())
+                autoDietType?.setText(profile.dietType, false)
+
+                isInitialLoading = false
+
+                // Aktivujeme listener až po kompletním načtení
+                setupSwitchListener(view, switchElite, cardEliteOptions)
+            }
+        }
+
+        // Listenery pro texty
+        etWrist?.doAfterTextChanged { text ->
+            if (!isInitialLoading) {
+                val value = text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
+                saveEliteField(false) { it.copy(lastWristMeasurement = value) }
+            }
+        }
+
+        etBodyFat?.doAfterTextChanged { text ->
+            if (!isInitialLoading) {
+                val value = text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
+                saveEliteField(false) { it.copy(bodyFatPercentage = value) }
+            }
+        }
+
+        autoDietType?.setOnItemClickListener { parent, _, position, _ ->
+            if (!isInitialLoading) {
+                val selected = parent.getItemAtPosition(position).toString()
+                saveEliteField(false) { it.copy(dietType = selected) }
+            }
+        }
+    }
+
+    private fun setupSwitchListener(view: View, switch: com.google.android.material.switchmaterial.SwitchMaterial, optionsCard: View) {
+        switch.setOnCheckedChangeListener { _, isChecked ->
+            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+
+            if (isChecked) {
+                optionsCard.visibility = View.VISIBLE
+                optionsCard.alpha = 0f
+                optionsCard.animate().alpha(1f).setDuration(300).withEndAction {
+                    val scrollView = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.dashboardScrollView)
+                    scrollView?.post {
+                        scrollView.smoothScrollTo(0, optionsCard.bottom)
+                    }
+                }.start()
+            } else {
+                optionsCard.animate().alpha(0f).setDuration(250).withEndAction {
+                    optionsCard.visibility = View.GONE
+                }.start()
+            }
+            // Při přepnutí switche CHCEME refresh dat (kvůli kaloriím)
+            saveEliteField(true) { it.copy(isEliteMode = isChecked) }
+        }
+    }
+
+    private fun saveEliteField(shouldRefreshUI: Boolean, updateBlock: (UserProfileEntity) -> UserProfileEntity) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(requireContext())
+            val currentProfile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
+            val updatedProfile = updateBlock(currentProfile)
+
+            db.userProfileDao().saveProfile(updatedProfile)
+
+            if (FirebaseRepository.isLoggedIn) {
+                try { FirebaseRepository.uploadProfile(updatedProfile) } catch (e: Exception) {}
             }
 
-            btnToggleMode.setOnClickListener {
-                lifecycleScope.launch(Dispatchers.IO) {
-                    // Znovu načíst aktuální stav
-                    val currentProfile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(
-                        id = 1
-                    )
-                    val newMode = !currentProfile.isEliteMode
-
-                    // Vytvoříme kopii s novým modem a ULOŽÍME CELÉ (REPLACE)
-                    val updatedProfile = currentProfile.copy(isEliteMode = newMode)
-                    db.userProfileDao().saveProfile(updatedProfile)
-
-                    withContext(Dispatchers.Main) {
-                        if (newMode) {
-                            cardEliteOptions.visibility = View.VISIBLE
-                            cardEliteOptions.alpha = 0f
-                            cardEliteOptions.animate().alpha(1f).setDuration(300).start()
-                        } else {
-                            cardEliteOptions.animate().alpha(0f).setDuration(200).withEndAction {
-                                cardEliteOptions.visibility = View.GONE
-                            }.start()
-                        }
-                        refreshAllData(view)
-                    }
+            withContext(Dispatchers.Main) {
+                // KLÍČ: UI refreshujeme jen když je to nutné (při přepnutí switche),
+                // ne při každém napsaném písmenku v EditTextu, což rozbíjelo stavy.
+                if (isAdded && view != null && shouldRefreshUI) {
+                    refreshAllData(requireView())
                 }
             }
         }

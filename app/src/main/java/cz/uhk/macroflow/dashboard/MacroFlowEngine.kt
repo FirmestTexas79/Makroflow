@@ -15,10 +15,6 @@ private const val BAZALNI_KROKY = 5000
 
 object MacroFlowEngine {
 
-    /**
-     * HLAVNÍ VÝPOČETNÍ JÁDRO
-     * Zpracovává dynamickou rovnováhu mezi příjmem, výdejem a termickým efektem.
-     */
     fun calculateDailyStatus(context: Context, consumedList: List<ConsumedSnackEntity>): DailyStatus {
         val target = MacroCalculator.calculate(context)
         val db = AppDatabase.getDatabase(context)
@@ -29,17 +25,12 @@ object MacroFlowEngine {
         val weight = target.weight
 
         /**
-         * 1. DYNAMICKÝ VÝDEJ Z KROKŮ (MET Metodika)
-         * Vychází z průměrné intenzity chůze 4 km/h (cca 2.8 MET).
-         * Biologicky: Vyšší váha = vyšší mechanická práce při každém kroku.
+         * 1. DYNAMICKÝ VÝDEJ Z KROKŮ
          */
         val burnedFromSteps = calculateCaloriesFromSteps(stepsCount, weight)
 
         /**
          * 2. DYNAMICKÝ TERMICKÝ EFEKT (TEF)
-         * Trávení jídla spotřebovává energii.
-         * Bílkoviny (25%), Sacharidy (7%), Tuky (2.5%).
-         * Toto vrací do aplikace "biologickou čistou energii".
          */
         val eatenP = consumedList.sumOf { it.p.toDouble() }
         val eatenS = consumedList.sumOf { it.s.toDouble() }
@@ -51,9 +42,6 @@ object MacroFlowEngine {
 
         /**
          * 3. ADAPTIVNÍ NAVÝŠENÍ CÍLŮ
-         * Bonusové kalorie z kroků (LISS aktivita) rozdělujeme:
-         * 70 % Sacharidy (rychlá obnova svalového glykogenu)
-         * 30 % Tuky (podpora buněčných membrán a hormonů)
          */
         val extraCarbsFromSteps = (burnedFromSteps * 0.7) / 4.0
         val extraFatFromSteps = (burnedFromSteps * 0.3) / 9.0
@@ -63,7 +51,7 @@ object MacroFlowEngine {
         val finalTargetFat = target.fat + extraFatFromSteps
 
         return DailyStatus(
-            caloriesLeft = finalTargetCalories - netEatenCalories, // Započten TEF bonus
+            caloriesLeft = finalTargetCalories - netEatenCalories,
             proteinLeft = target.protein - eatenP,
             carbsLeft = finalTargetCarbs - eatenS,
             fatLeft = finalTargetFat - eatenT,
@@ -78,15 +66,9 @@ object MacroFlowEngine {
         )
     }
 
-    /**
-     * Vědecký výpočet kalorií z chůze
-     * Reflektuje nelineární nárůst únavy a mechanickou zátěž hmotnosti.
-     */
     fun calculateCaloriesFromSteps(steps: Int, weight: Double): Double {
         if (steps <= BAZALNI_KROKY) return 0.0
         val extraSteps = steps - BAZALNI_KROKY
-
-        // Konstanta 0.00042 odpovídá pohybu v mírném terénu při 2.8 MET
         return extraSteps * weight * 0.00042
     }
 
@@ -102,30 +84,13 @@ object MacroFlowEngine {
         return when {
             steps >= 12000 && status.caloriesLeft > 800 ->
                 "Dneska jsi pořádná mašina ($steps kroků)! Tvých $weight kg potřebuje dotankovat sacharidy. Navýšili jsme ti limit, tak se neboj kvalitní přílohy! 🏃‍♂️🍝"
-
-            hunger >= 5 ->
-                "Pozor na vlčí hlad! Těch $weight kg dneska potřebuje pořádný objem jídla a bílkovin. 🥩"
-
-            sleep <= 2 && energy >= 4 ->
-                "Jedeš na dluh! Energie tam je, ale tělo $weight kg je po špatné noci v šoku. Dneska už radši žádný kofein odpoledne! ☕🚫"
-
-            energy >= 4 && sleep >= 4 ->
-                "Ideální konstelace! Tvých $weight kg je připraveno na rekordy. Rozbij to! 🔥"
-
-            energy <= 2 && sleep <= 2 ->
-                "Krizový režim. Tělo $weight kg dneska potřebuje úplný rest a regeneraci. 🛌"
-
-            sleep >= 4 && energy <= 3 && hunger >= 4 ->
-                "Spánek byl top, ale motor je prázdný. Tvých $weight kg potřebuje dnes víc paliva! 🍝"
-
-            steps < 3000 && energy >= 3 ->
-                "Dneska je to spíš odpočinek pro tvých $weight kg. Zkus aspoň krátkou procházku, ať se ti lépe tráví! 🚶‍♂️"
-
+            hunger >= 5 -> "Pozor na vlčí hlad! Tělo $weight kg dneska potřebuje pořádný objem jídla a bílkovin. 🥩"
+            sleep <= 2 && energy >= 4 -> "Jedeš na dluh! Energie tam je, ale tělo $weight kg je po špatné noci v šoku. ☕🚫"
+            energy >= 4 && sleep >= 4 -> "Ideální konstelace! Tvých $weight kg je připraveno na rekordy. Rozbij to! 🔥"
             else -> "Váha $weight kg v normě. Sleduj svůj hlad a drž se plánu!"
         }
     }
 
-    // ✅ PLNÁ VERZE: Lokální DB + Firebase Sync
     suspend fun logSwipedFood(
         context: Context,
         name: String,
@@ -150,16 +115,12 @@ object MacroFlowEngine {
                 calories = cal.toInt(),
                 mealContext = mealContext
             )
-
-            // 1. Uložení do lokální Room databáze
             db.consumedSnackDao().insertConsumed(snack)
-
-            // 2. Synchronizace do Firebase (pokud je uživatel přihlášen)
             if (FirebaseRepository.isLoggedIn) {
                 try {
                     FirebaseRepository.uploadConsumedSnack(snack)
                 } catch (e: Exception) {
-                    android.util.Log.e("FIREBASE_SYNC", "Nepovedlo se nahrát snack: ${e.message}")
+                    android.util.Log.e("FIREBASE_SYNC", "Chyba syncu: ${e.message}")
                 }
             }
         }
