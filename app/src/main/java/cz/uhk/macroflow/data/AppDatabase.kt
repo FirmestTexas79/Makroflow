@@ -8,6 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import cz.uhk.macroflow.achievements.AchievementDao
 import cz.uhk.macroflow.achievements.AchievementEntity
 import cz.uhk.macroflow.pokemon.*
+import kotlin.concurrent.thread
 
 @Database(
     entities = [
@@ -27,7 +28,7 @@ import cz.uhk.macroflow.pokemon.*
         PokemonXpEntity::class,
         StepsEntity::class
     ],
-    version = 17, // ✅ Verze 17 zohledňuje všechny aktuální Kotlin modely
+    version = 17,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -59,37 +60,64 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    // ✅ Odstranili jsme pole .addMigrations(). fallbackToDestructiveMigration zařídí zbytek bezpečně!
                     .fallbackToDestructiveMigration()
                     .allowMainThreadQueries()
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
+                            // Základní vklady při prvním spuštění
                             db.execSQL("INSERT INTO coins (id, balance) VALUES (1, 100)")
                             db.execSQL("INSERT INTO user_items (itemId, quantity) VALUES ('poke_ball', 5)")
                             db.execSQL("INSERT INTO user_items (itemId, quantity) VALUES ('great_ball', 3)")
+                        }
 
-                            val kantoList = getKantoNames()
-                            kantoList.forEachIndexed { index, triple ->
-                                val idStr = String.format("%03d", index + 1)
-                                val name = triple.first
-                                val urlName = name.lowercase().replace(" ", "-").replace(".", "").replace("♀", "-f").replace("♂", "-m")
-                                val type = triple.second
-                                val desc = triple.third
-                                val hint = getHintForPokemon(idStr)
-
-                                val evolveLvl = when(idStr) { "010" -> 3; "011" -> 5; else -> 0 }
-                                val evolveTo = when(idStr) { "010" -> "011"; "011" -> "012"; else -> "" }
-
-                                db.execSQL(
-                                    "INSERT INTO pokedex_entries (pokedexId, webName, displayName, type, macroDesc, unlockedHint, evolveLevel, evolveToId) " +
-                                            "VALUES ('$idStr', '$urlName', '$name', '$type', '$desc', '$hint', $evolveLvl, '$evolveTo')"
-                                )
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            super.onOpen(db)
+                            // Naplníme Pokédex asynchronně, aby nezamrzlo UI (opraví nefunkční menu)
+                            thread {
+                                fillPokedexEntries(db)
                             }
                         }
                     })
                     .build()
                     .also { INSTANCE = it }
+            }
+        }
+
+        private fun fillPokedexEntries(db: SupportSQLiteDatabase) {
+            val kantoList = getKantoNames()
+            kantoList.forEachIndexed { index, triple ->
+                val idStr = String.format("%03d", index + 1)
+                val name = triple.first
+                val urlName = name.lowercase()
+                    .replace(" ", "-")
+                    .replace(".", "")
+                    .replace("♀", "-f")
+                    .replace("♂", "-m")
+                val type = triple.second
+                val desc = triple.third
+                val hint = getHintForPokemon(idStr)
+
+                // ✅ Definice evolučních pravidel (Pikachu na Raichu dle tvého zadání)
+                val evolveLvl = when(idStr) {
+                    "010" -> 3   // Caterpie -> Metapod
+                    "011" -> 5   // Metapod -> Butterfree
+                    "025" -> 8   // Pikachu -> Raichu (level-up na 8)
+                    else -> 0
+                }
+                val evolveTo = when(idStr) {
+                    "010" -> "011"
+                    "011" -> "012"
+                    "025" -> "026"
+                    else -> ""
+                }
+
+                // Používáme REPLACE, aby se při každém spuštění aktualizovaly texty/evoluce,
+                // ale Pokédex zůstal dynamický podle getKantoNames
+                db.execSQL(
+                    "INSERT OR REPLACE INTO pokedex_entries (pokedexId, webName, displayName, type, macroDesc, unlockedHint, evolveLevel, evolveToId) " +
+                            "VALUES ('$idStr', '$urlName', '$name', '$type', '$desc', '$hint', $evolveLvl, '$evolveTo')"
+                )
             }
         }
 
@@ -197,7 +225,7 @@ abstract class AppDatabase : RoomDatabase() {
             Triple("Muk", "JED / ŠPINAVÝ OBJEM", "Dirty bulk tě vytrestá. Tuk se shazuje hůř než se nabírá sval."),
             Triple("Shellder", "VODA / VÁPNÍK", "Pevné kosti díky vápníku a vitamínu D3. Krunýř musí držet."),
             Triple("Cloyster", "VODA / KALCIT", "Tuhá ochrana kloubního aparátu. Kloubní výživa s kolagenem je nutnost."),
-            Triple("Ghastly", "DUCH / LEHKÁ VÁHA", "Váha na čince je jen iluze. Důležité je procítění sval."),
+            Triple("Gastly", "DUCH / LEHKÁ VÁHA", "Váha na čince je jen iluze. Důležité je procítění sval."),
             Triple("Haunter", "DUCH / CHEATING", "Negativní opakování a cheating. Používej ho jen jako pokročilou techniku."),
             Triple("Gengar", "DUCH / SVALOVÝ STÍN", "V zrcadle vypadáš vždy menší, než jsi doopravdy (tzv. Bigorexie). Jsi borec!"),
             Triple("Onix", "KAMENNÝ / POSTURA", "Rovná páteř je základ. Neprohýbej se v bedrech u mrtvého tahu."),

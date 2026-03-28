@@ -211,16 +211,50 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         btnOpenDrawer.setOnClickListener { openDrawer() }
 
         navigationView.setNavigationItemSelectedListener { item ->
+            // 1. Zavřeme menu hned po kliknutí
             drawerLayout.closeDrawer(GravityCompat.END)
+
             when (item.itemId) {
-                R.id.nav_pokedex    -> replaceFragment(PokedexFragment())
-                R.id.nav_inventory  -> replaceFragment(InventoryFragment())
-                R.id.drawerProfile  -> { replaceFragment(ProfileFragment()); bottomNav.selectedItemId = R.id.nav_profile }
+                // --- SEKCE: MOJE SBÍRKA ---
+                R.id.nav_pokedex -> replaceFragment(PokedexFragment())
+
+                R.id.nav_inventory -> replaceFragment(InventoryFragment())
+
+                // --- SEKCE: HLAVNÍ (PROFIL & NASTAVENÍ) ---
+                R.id.drawerProfile -> {
+                    replaceFragment(ProfileFragment())
+                    // Synchronizujeme spodní lištu, pokud tam profil je
+                    val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
+                    bottomNav.selectedItemId = R.id.nav_profile
+                }
+
+                // 🔥 TADY JE TA OPRAVA: Propojení na tvůj SettingsFragment
+                R.id.drawerSettings -> replaceFragment(SettingsFragment())
+
                 R.id.drawerAchievements -> replaceFragment(AchievementsFragment())
+
+                // --- SEKCE: DEBUG / OSTATNÍ ---
+                R.id.drawerResetAchievements -> {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val db = AppDatabase.getDatabase(this@MainActivity)
+                        db.achievementDao().deleteAll() // Předpokládám, že máš v DAO tuhle metodu
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Achievementy byly smazány", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+
+                R.id.drawerDisclaimer -> {
+                    // Tady můžeš zobrazit třeba AlertDialog s textem prohlášení
+                    Toast.makeText(this, "Aplikace nenahrazuje lékařskou pomoc.", Toast.LENGTH_LONG).show()
+                }
+
+                // --- SEKCE: ÚČET ---
                 R.id.drawerSignOut -> {
                     lifecycleScope.launch(Dispatchers.IO) {
                         val db = AppDatabase.getDatabase(this@MainActivity)
 
+                        // ☁️ Sync před odhlášením
                         if (FirebaseRepository.isLoggedIn) {
                             try {
                                 FirebaseRepository.syncLocalDataToCloud(applicationContext)
@@ -230,20 +264,27 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                             FirebaseRepository.signOut()
                         }
 
+                        // 🛑 Zastavení běžících procesů
                         withContext(Dispatchers.Main) {
                             pokemonBehavior?.stop()
-                            stopLureSmoke()
+                            // Pokud máš metodu stopLureSmoke() definovanou v MainActivity
+                            try { stopLureSmoke() } catch (e: Exception) {}
                         }
 
+                        // 🧹 Totální očista lokálních dat
                         db.stepsDao().deleteAll()
                         db.clearAllTables()
 
+                        // Vymazání všech SharedPreferences
                         getSharedPreferences("GamePrefs", MODE_PRIVATE).edit().clear().apply()
                         getSharedPreferences("UserPrefs", MODE_PRIVATE).edit().clear().apply()
                         getSharedPreferences("TrainingPrefs", MODE_PRIVATE).edit().clear().apply()
 
+                        // 🚀 Návrat na Login
                         withContext(Dispatchers.Main) {
-                            startActivity(Intent(this@MainActivity, LoginActivity::class.java))
+                            val intent = Intent(this@MainActivity, LoginActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            startActivity(intent)
                             finish()
                         }
                     }

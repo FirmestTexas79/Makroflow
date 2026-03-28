@@ -35,9 +35,9 @@ interface CoinDao {
 // --- 🎒 POKÉ-KAPSA (Chycení Pokémoni) ---
 @Entity(tableName = "captured_pokemon")
 data class CapturedPokemonEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0, // ✅ VRÁCENO NA AUTO-GENERACÍ (Opraví errory s id)
-    var pokemonId: String,
-    var name: String,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    var pokemonId: String,          // Např. "025"
+    var name: String,               // Např. "PIKACHU"
     val isShiny: Boolean = false,
     var isLocked: Boolean = false,
     val caughtDate: Long = System.currentTimeMillis(),
@@ -50,6 +50,10 @@ data class CapturedPokemonEntity(
 interface CapturedPokemonDao {
     @Query("SELECT * FROM captured_pokemon ORDER BY caughtDate DESC")
     fun getAllCaught(): List<CapturedPokemonEntity>
+
+    // ✅ KLÍČOVÉ PRO EVOLUCI: Vyhledání konkrétního kusu v inventáři podle primárního klíče
+    @Query("SELECT * FROM captured_pokemon WHERE id = :id LIMIT 1")
+    fun getPokemonById(id: Int): CapturedPokemonEntity?
 
     @Query("SELECT EXISTS(SELECT 1 FROM captured_pokemon WHERE pokemonId = :pokemonId LIMIT 1)")
     fun hasBeenCaught(pokemonId: String): Boolean
@@ -66,7 +70,7 @@ interface CapturedPokemonDao {
     @Query("DELETE FROM captured_pokemon WHERE pokemonId = :id")
     fun deletePokemonById(id: String)
 
-    @Query("DELETE FROM captured_pokemon") // 🔥 NOVÉ: Smaže lokální tabulku před syncem
+    @Query("DELETE FROM captured_pokemon")
     fun deleteAllCapturedLocally()
 }
 

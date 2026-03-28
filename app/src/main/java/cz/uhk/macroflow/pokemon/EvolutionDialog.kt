@@ -22,6 +22,7 @@ import android.widget.Toast
 import coil.load
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.data.FirebaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -73,59 +74,63 @@ class EvolutionDialog(
     private fun loadData() {
         dialogScope.launch {
             try {
+                // 1. Najdeme konkrétního pokémona v inventáři podle ID
                 val pokemonInDb = withContext(Dispatchers.IO) {
-                    db.capturedPokemonDao().getAllCaught().find { it.id == capturedPokemonId }
-                }
-                val oldEntry = withContext(Dispatchers.IO) {
-                    db.pokedexEntryDao().getEntry(oldId)
-                }
-                val newEntry = withContext(Dispatchers.IO) {
-                    db.pokedexEntryDao().getEntry(newId)
+                    db.capturedPokemonDao().getPokemonById(capturedPokemonId)
                 }
 
                 if (pokemonInDb != null) {
                     activePokemon = pokemonInDb
+
+                    // 2. Načteme data z pokedex_entries podle pokemonId (staré) a newId (nové)
+                    // ✅ OPRAVA: Používáme přímo ID z objektu, aby to sedělo
+                    val oldEntry = withContext(Dispatchers.IO) {
+                        db.pokedexEntryDao().getEntry(pokemonInDb.pokemonId)
+                    }
+                    val newEntry = withContext(Dispatchers.IO) {
+                        db.pokedexEntryDao().getEntry(newId)
+                    }
+
                     startEvolutionAnimation(oldEntry, newEntry)
                 } else {
-                    Toast.makeText(context, "❌ Chyba: Pokémon v DB nenalezen.", Toast.LENGTH_SHORT).show()
+                    Log.e("EVO_DEBUG", "Pokémon s ID $capturedPokemonId nenalezen v DB")
                     dismiss()
                     onComplete()
                 }
             } catch (e: Exception) {
-                Log.e("EVO_DEBUG", "💥 Chyba v loadData DB operaci: ${e.message}", e)
+                Log.e("EVO_DEBUG", "💥 Chyba v loadData: ${e.message}")
+                dismiss()
+                onComplete()
             }
         }
     }
 
     private fun startEvolutionAnimation(oldEntry: PokedexEntryEntity?, newEntry: PokedexEntryEntity?) {
+        // ✅ OPRAVA FALLBACKŮ: Pokud entry chybí, použijeme aspoň ID, ne natvrdo "caterpie"
         val oldName = oldEntry?.displayName ?: "Pokémon"
         val newName = newEntry?.displayName ?: "Nová Forma"
+        val oldWebName = oldEntry?.webName ?: oldId
+        val newWebName = newEntry?.webName ?: newId
 
-        tvEvoText.text = "Co se to děje? Tvoje $oldName začíná zářit!"
+        tvEvoText.text = "Co se to děje? Tvoje $oldName začíná záryt!"
 
         ivEvoSprite.alpha = 1f
         ivEvoSprite.visibility = View.VISIBLE
-
         ivEvoSilhouette.colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
         ivEvoSilhouette.alpha = 0f
         ivEvoSilhouette.visibility = View.VISIBLE
-
-        val oldWebName = oldEntry?.webName ?: "caterpie"
-        val newWebName = newEntry?.webName ?: "metapod"
 
         val oldUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/$oldWebName.png"
         val newUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/$newWebName.png"
 
         ivEvoSprite.load(oldUrl) {
-            listener(
-                onSuccess = { _, _ ->
-                    ivEvoSilhouette.load(oldUrl)
-                    runEvoAnimator(oldName, newName, newUrl, newEntry)
-                },
-                onError = { _, _ ->
-                    runEvoAnimator(oldName, newName, newUrl, newEntry)
-                }
-            )
+            listener(onSuccess = { _, _ ->
+                ivEvoSilhouette.load(oldUrl)
+                runEvoAnimator(oldName, newName, newUrl, newEntry)
+            }, onError = { _, _ ->
+                // I při chybě obrázku animaci spustíme
+                runEvoAnimator(oldName, newName, newUrl, newEntry)
+            })
         }
     }
 
@@ -150,21 +155,27 @@ class EvolutionDialog(
             override fun onAnimationEnd(animation: Animator) {
                 ivEvoSprite.alpha = 1f
                 ivEvoSilhouette.visibility = View.GONE
-
                 ivEvoSprite.load(newSpriteUrl)
                 tvEvoText.text = "Gratulace! Tvoje $oldName se vyvinula v $newName!"
 
                 dialogScope.launch {
                     try {
                         withContext(Dispatchers.IO) {
+                            // UPDATE OBJEKTU
                             activePokemon.pokemonId = newId
                             activePokemon.name = newEntry?.displayName?.uppercase() ?: newName.uppercase()
+
+                            // 1. Zápis do lokální DB
                             db.capturedPokemonDao().updatePokemon(activePokemon)
 
-                            val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                            val currentActiveId = prefs.getString("currentOnBarId", "") ?: ""
+                            // 2. 🔥 KLÍČOVÝ ZÁPIS DO FIREBASE (bez toho se evoluce ztratí)
+                            if (FirebaseRepository.isLoggedIn) {
+                                FirebaseRepository.uploadCapturedPokemon(activePokemon)
+                            }
 
-                            if (currentActiveId == oldId) {
+                            // Update SharedPreferences pro widget/lištu
+                            val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+                            if (prefs.getString("currentOnBarId", "") == oldId) {
                                 prefs.edit()
                                     .putString("currentOnBarId", newId)
                                     .putString("currentOnBarName", activePokemon.name)
@@ -175,13 +186,10 @@ class EvolutionDialog(
                         if (newMoveToLearn != null) {
                             showMoveLearning(newMoveToLearn)
                         } else {
-                            ivEvoSprite.postDelayed({
-                                dismiss()
-                                onComplete()
-                            }, 2000)
+                            ivEvoSprite.postDelayed({ dismiss(); onComplete() }, 2000)
                         }
                     } catch (e: Exception) {
-                        Log.e("EVO_DEBUG", "💥 Chyba při ukládání evoluce do DB: ${e.message}", e)
+                        Log.e("EVO_DEBUG", "💥 Chyba při ukládání: ${e.message}")
                     }
                 }
             }

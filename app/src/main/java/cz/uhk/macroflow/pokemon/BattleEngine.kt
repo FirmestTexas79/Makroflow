@@ -397,7 +397,7 @@ object BattleFactory {
         "BULBASAUR" -> "bulbasaur"
         "SQUIRTLE"  -> "squirtle"
         "CHARMANDER"-> "charmander"
-        "GASTLY"    -> "gastly"
+        "GASTLY"   -> "gastly"
         "HAUNTER"   -> "haunter"
         "GENGAR"    -> "gengar"
         "KANGASKHAN" -> "kangaskhan"

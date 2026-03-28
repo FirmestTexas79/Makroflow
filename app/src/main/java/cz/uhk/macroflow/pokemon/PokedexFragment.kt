@@ -67,47 +67,52 @@ class PokedexFragment : Fragment() {
         isFirstLoad = false
 
         lifecycleScope.launch(Dispatchers.Main) {
-            val invIds = withContext(Dispatchers.IO) {
-                db.capturedPokemonDao().getAllCaught().map { it.pokemonId }
+            val (invIds, unlockedIds, catchStats) = withContext(Dispatchers.IO) {
+                val caught = db.capturedPokemonDao().getAllCaught()
+                val inv = caught.map { it.pokemonId }.toSet()
+                val status = db.pokedexStatusDao().getUnlockedIds()
+                val unlocked = (status + inv).distinct()
+                val stats = caught.groupBy { it.pokemonId }.mapValues { it.value.size }
+                Triple(inv.toList(), unlocked, stats)
             }
 
-            val unlockedIds = withContext(Dispatchers.IO) {
-                val statusIds = db.pokedexStatusDao().getUnlockedIds()
-                val caughtIds = db.capturedPokemonDao().getAllCaught().map { it.pokemonId }
-                (statusIds + caughtIds).distinct()
+            val filteredList = withContext(Dispatchers.IO) {
+                // 1. Získáme seznam všech IDs, která MAJÍ v AppDatabase definovaný popisek
+                // (Tyhle IDs odpovídají tomu, co máš v tom velkém poli Triple v AppDatabase)
+                val definedIds = listOf(
+                    "001", // Bulbasaur
+                    "004", // Charmander
+                    "006", // Charizard
+                    "007", // Squirtle
+                    "010", // Caterpie
+                    "011", // Metapod (Evoluce)
+                    "012", // Butterfree (Evoluce)
+                    "025", // Pikachu
+                    "026", // Raichu (Evoluce)
+                    "050", // Diglett
+                    "092", // Gastly
+                    "093", // Haunter
+                    "094", // Gengar
+                    "115", // Kangaskhan
+                    "133", // Eevee
+                    "143", // Snorlax
+                    "150", // Mewtwo
+                    "151"  // Mew
+                )
+                // 2. Načteme vše z DB
+                val allFromDb = db.pokedexEntryDao().getAllEntries()
+
+                // 3. Pustíme dál jen ty, jejichž ID je v našem seznamu "povolených"
+                allFromDb.filter { entry ->
+                    definedIds.contains(entry.pokedexId)
+                }.sortedBy { it.pokedexId }
             }
 
-            val catchStats = withContext(Dispatchers.IO) {
-                db.capturedPokemonDao().getAllCaught()
-                    .groupBy { it.pokemonId }
-                    .mapValues { it.value.size }
-            }
+            pokedexAdapter.updateData(filteredList, unlockedIds, invIds, catchStats)
 
-            val kantoList = withContext(Dispatchers.IO) {
-                val dbEntries = db.pokedexEntryDao().getAllEntries()
-                if (dbEntries.isEmpty()) {
-                    SpawnManager.allEntries.map { spawn ->
-                        PokedexEntryEntity(
-                            pokedexId = spawn.id,
-                            webName = spawn.name.lowercase(),
-                            displayName = spawn.name,
-                            type = spawn.rarity.label,
-                            macroDesc = "Tento Pokémon čeká na tvůj trénink.",
-                            unlockedHint = getFallbackHint(spawn.id)
-                        )
-                    }
-                } else {
-                    dbEntries
-                }
-            }
-
-            pokedexAdapter.updateData(kantoList, unlockedIds, invIds, catchStats)
-
-            if (kantoList.isNotEmpty()) {
-                val isUnlocked = unlockedIds.contains(kantoList[0].pokedexId)
-                val isInInv = invIds.contains(kantoList[0].pokedexId)
-                val count = catchStats[kantoList[0].pokedexId] ?: 0
-                showDetail(kantoList[0], isUnlocked, isInInv, count)
+            if (filteredList.isNotEmpty()) {
+                val first = filteredList[0]
+                showDetail(first, unlockedIds.contains(first.pokedexId), invIds.contains(first.pokedexId), catchStats[first.pokedexId] ?: 0)
             }
         }
     }
@@ -144,6 +149,8 @@ class PokedexFragment : Fragment() {
         } else {
             if (pokemon.unlockedHint.isNotEmpty()) pokemon.unlockedHint else "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
         }
+
+
 
         val imageUrl =
             "https://img.pokemondb.net/sprites/firered-leafgreen/normal/${pokemon.webName}.png"
