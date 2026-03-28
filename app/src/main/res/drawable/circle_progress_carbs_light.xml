@@ -3,7 +3,7 @@
     <item android:id="@android:id/progress">
         <rotate android:fromDegrees="270" android:toDegrees="270">
             <shape android:shape="ring" android:thickness="15dp" android:useLevel="true">
-                <solid android:color="@color/brand_primary_light" />
+                <solid android:color="@color/brand_accent_warm_light" />
                 <corners android:radius="10dp" />
             </shape>
         </rotate>

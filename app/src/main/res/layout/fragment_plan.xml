@@ -130,10 +130,10 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     app:cardCornerRadius="18dp"
-                    app:cardBackgroundColor="#283618"
+                    app:cardBackgroundColor="@color/brand_dark"
                     app:cardElevation="0dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
-                        <TextView android:id="@+id/tvStatPushCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#DDA15E" android:textSize="26sp" android:fontFamily="sans-serif-black" />
+                        <TextView android:id="@+id/tvStatPushCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#FEFAE0" android:textSize="26sp" android:fontFamily="sans-serif-black" />
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PUSH" android:textColor="#FEFAE0" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -145,7 +145,7 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     app:cardCornerRadius="18dp"
-                    app:cardBackgroundColor="#606C38"
+                    app:cardBackgroundColor="@color/brand_accent_warm"
                     app:cardElevation="0dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
                         <TextView android:id="@+id/tvStatPullCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#FEFAE0" android:textSize="26sp" android:fontFamily="sans-serif-black" />
@@ -160,7 +160,7 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     app:cardCornerRadius="18dp"
-                    app:cardBackgroundColor="#BC6C25"
+                    app:cardBackgroundColor="@color/brand_accent_deep"
                     app:cardElevation="0dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
                         <TextView android:id="@+id/tvStatLegsCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#FEFAE0" android:textSize="26sp" android:fontFamily="sans-serif-black" />

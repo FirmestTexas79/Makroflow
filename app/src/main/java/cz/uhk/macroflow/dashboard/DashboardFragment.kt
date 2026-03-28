@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -416,95 +417,118 @@ class DashboardFragment : Fragment() {
         val autoDietType = view.findViewById<AutoCompleteTextView>(R.id.autoDietType)
 
         val db = AppDatabase.getDatabase(requireContext())
-        val brandDark = Color.parseColor("#283618")
-
-        // BARVY: Definujeme barvy pro oba stavy natvrdo v kódu
-        val colorOn = Color.parseColor("#DDA15E") // brand_accent_warm
-        val colorOff = Color.parseColor("#DAD7CD") // Neutrální šedá
-        val thumbOn = Color.parseColor("#283618") // brand_dark
-        val thumbOff = Color.parseColor("#606C38") // brand_primary
-
         var isInitialLoading = true
 
-        // 1. VNUCENÍ BAREV (ColorStateList) - Tohle zaručí, že ON bude vždy oranžová
-        val trackStates = ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
-            intArrayOf(colorOn, colorOff)
-        )
-        val thumbStates = ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)
-            ),
-            intArrayOf(thumbOn, thumbOff)
-        )
-
-        switchElite.trackTintList = trackStates
-        switchElite.thumbTintList = thumbStates
-
-        // Nastavení Dropdownu
-        val dietOptions = listOf("Vyvážená", "Low Carb", "Keto", "Vegan", "High Protein")
-        val dietAdapter = object : ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, dietOptions) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val tv = super.getView(position, convertView, parent) as TextView
-                tv.setTextColor(brandDark)
-                tv.setPadding(48, 40, 48, 40)
-                return tv
-            }
-        }
-        autoDietType?.setAdapter(dietAdapter)
+        // 1. STYLOVÁNÍ
+        applySwitchStyles(switchElite)
+        setupDietAdapter(autoDietType)
 
         // 2. NAČTENÍ DAT
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val profile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
+
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
-
                 isInitialLoading = true
 
-                // Reset listeneru před nastavením hodnoty
-                switchElite.setOnCheckedChangeListener(null)
-                switchElite.isChecked = profile.isEliteMode
-
-                // Okamžité vykreslení stavu bez animace
-                switchElite.jumpDrawablesToCurrentState()
+                switchElite.apply {
+                    setOnCheckedChangeListener(null)
+                    isChecked = profile.isEliteMode
+                    jumpDrawablesToCurrentState()
+                }
 
                 cardEliteOptions.visibility = if (profile.isEliteMode) View.VISIBLE else View.GONE
 
                 if (profile.lastWristMeasurement > 0) etWrist?.setText(profile.lastWristMeasurement.toString())
                 if (profile.bodyFatPercentage > 0) etBodyFat?.setText(profile.bodyFatPercentage.toString())
-                autoDietType?.setText(profile.dietType, false)
+
+                val diet = profile.dietType ?: "Vyvážená"
+                autoDietType?.setText(diet, false)
+                updateMacroPreview(view, diet) // Prvotní vykreslení grafu
 
                 isInitialLoading = false
-
-                // Aktivujeme listener až po kompletním načtení
                 setupSwitchListener(view, switchElite, cardEliteOptions)
             }
         }
 
-        // Listenery pro texty
-        etWrist?.doAfterTextChanged { text ->
+        // 3. LISTENERY
+        etWrist?.doAfterTextChanged {
             if (!isInitialLoading) {
-                val value = text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
-                saveEliteField(false) { it.copy(lastWristMeasurement = value) }
+                val value = itToDouble(it)
+                saveEliteField(true) { p -> p.copy(lastWristMeasurement = value) }
             }
         }
 
-        etBodyFat?.doAfterTextChanged { text ->
+        etBodyFat?.doAfterTextChanged {
             if (!isInitialLoading) {
-                val value = text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
-                saveEliteField(false) { it.copy(bodyFatPercentage = value) }
+                val value = itToDouble(it)
+                saveEliteField(true) { p -> p.copy(bodyFatPercentage = value) }
             }
         }
 
-        autoDietType?.setOnItemClickListener { parent, _, position, _ ->
+        autoDietType?.setOnItemClickListener { parent, _, pos, _ ->
             if (!isInitialLoading) {
-                val selected = parent.getItemAtPosition(position).toString()
-                saveEliteField(false) { it.copy(dietType = selected) }
+                val selected = parent.getItemAtPosition(pos).toString()
+                updateMacroPreview(view, selected) // Okamžitá změna grafu
+                saveEliteField(true) { it.copy(dietType = selected) }
             }
         }
     }
 
+    /** Funkce, která dynamicky mění šířku barevných segmentů podle zvolené diety */
+    private fun updateMacroPreview(view: View, dietType: String) {
+        val pieChart = view.findViewById<PieChartView>(R.id.pieChartMacro) ?: return
+
+        val tvP = view.findViewById<TextView>(R.id.tvProteinPct)
+        val tvS = view.findViewById<TextView>(R.id.tvCarbPct)
+        val tvT = view.findViewById<TextView>(R.id.tvFatPct)
+
+        // Definice poměrů B-S-T
+        val (p, s, t) = when (dietType) {
+            "Keto" -> Triple(20f, 5f, 75f)
+            "Low Carb" -> Triple(25f, 15f, 60f)
+            "Vegan" -> Triple(15f, 60f, 25f)
+            "High Protein" -> Triple(40f, 20f, 40f)
+            else -> Triple(25f, 45f, 30f) // Vyvážená
+        }
+
+        // Aplikace poměrů do grafu. View se samo překreslí.
+        pieChart.setRatios(p, s, t)
+
+        // Update textových procent. Tady se text zaručeně obarví tvou barvou.
+        tvP?.text = "B: ${p.toInt()}%"
+        tvS?.text = "S: ${s.toInt()}%"
+        tvT?.text = "T: ${t.toInt()}%"
+    }
+
+    /** Pomocná funkce pro konverzi textu na Double */
+    private fun itToDouble(text: Any?): Double = text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
+
+    /** Fixuje barvy switche přímo v kódu */
+    private fun applySwitchStyles(switch: com.google.android.material.switchmaterial.SwitchMaterial) {
+        val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked))
+        val trackColors = intArrayOf(Color.parseColor("#DDA15E"), Color.parseColor("#DAD7CD"))
+        val thumbColors = intArrayOf(Color.parseColor("#283618"), Color.parseColor("#606C38"))
+
+        switch.trackTintList = ColorStateList(states, trackColors)
+        switch.thumbTintList = ColorStateList(states, thumbColors)
+    }
+
+    /** Vizuální nastavení dropdownu pro diety */
+    private fun setupDietAdapter(autoComplete: AutoCompleteTextView?) {
+        val options = listOf("Vyvážená", "Low Carb", "Keto", "Vegan", "High Protein")
+        val adapter = object : ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, options) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                return (super.getView(position, convertView, parent) as TextView).apply {
+                    setTextColor(Color.parseColor("#283618"))
+                    setPadding(48, 40, 48, 40)
+                }
+            }
+        }
+        autoComplete?.setAdapter(adapter)
+    }
+
+    /** Logika přepínání Elite módu a animace karty */
     private fun setupSwitchListener(view: View, switch: com.google.android.material.switchmaterial.SwitchMaterial, optionsCard: View) {
         switch.setOnCheckedChangeListener { _, isChecked ->
             view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -514,20 +538,18 @@ class DashboardFragment : Fragment() {
                 optionsCard.alpha = 0f
                 optionsCard.animate().alpha(1f).setDuration(300).withEndAction {
                     val scrollView = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.dashboardScrollView)
-                    scrollView?.post {
-                        scrollView.smoothScrollTo(0, optionsCard.bottom)
-                    }
+                    scrollView?.post { scrollView.smoothScrollTo(0, optionsCard.bottom) }
                 }.start()
             } else {
                 optionsCard.animate().alpha(0f).setDuration(250).withEndAction {
                     optionsCard.visibility = View.GONE
                 }.start()
             }
-            // Při přepnutí switche CHCEME refresh dat (kvůli kaloriím)
             saveEliteField(true) { it.copy(isEliteMode = isChecked) }
         }
     }
 
+    /** Hlavní funkce pro ukládání do DB a synchronizaci s UI */
     private fun saveEliteField(shouldRefreshUI: Boolean, updateBlock: (UserProfileEntity) -> UserProfileEntity) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(requireContext())
@@ -541,9 +563,8 @@ class DashboardFragment : Fragment() {
             }
 
             withContext(Dispatchers.Main) {
-                // KLÍČ: UI refreshujeme jen když je to nutné (při přepnutí switche),
-                // ne při každém napsaném písmenku v EditTextu, což rozbíjelo stavy.
                 if (isAdded && view != null && shouldRefreshUI) {
+                    // TADY se děje ten přepočet maker v celém dashboardu
                     refreshAllData(requireView())
                 }
             }

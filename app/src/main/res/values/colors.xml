@@ -6,13 +6,28 @@
     <color name="brand_primary">#606C38</color>
     <color name="brand_dark">#283618</color>
     <color name="brand_cream">#FEFAE0</color>
-    <color name="brand_accent_warm">#DDA15E</color>
+
+    <color name="brand_accent_warm_light">#D7AB8A</color>
+    <color name="brand_accent_warm">#E9B072</color>
+
+    <color name="brand_accent_deep_light">#A07352</color>
     <color name="brand_accent_deep">#BC6C25</color>
+
+    <color name="brand_primary_light">#8C9C5B</color>
+    <color name="brand_dark_light">#455A2D</color>
+
+
+
+
     <color name="color_low">#AED581</color>
     <color name="color_medium">#81C784</color>
     <color name="color_high">#4CAF50</color>
 
-    <color name="brand_dark_light">#455A2D</color>
-    <color name="brand_primary_light">#8C9C5B</color>
-    <color name="brand_accent_deep_light">#D68B45</color>
+
+    <color name="brand_dark_alpha20">#33283618</color>
+    <color name="brand_primary_alpha10">#1A606C38</color>
+    <color name="brand_accent_deep_alpha20">#33BC6C25</color>
+    <color name="brand_accent_warm_alpha20">#33DDA15E</color>
+
+
 </resources>

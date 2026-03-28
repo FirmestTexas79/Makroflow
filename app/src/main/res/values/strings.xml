@@ -46,4 +46,11 @@
     <string name="proteiny">PROTEINY 💪</string>
     <string name="man">MUŽ</string>
     <string name="moje_obvody">MOJE OBVODY</string>
+
+    <string name="day_po_short">PO</string>
+    <string name="plan_off">OFF</string>
+    <string name="plan_push">PUSH</string>
+    <string name="plan_pull">PULL</string>
+    <string name="plan_legs">LEGS</string>
+    <string name="plan_set_time">🕐 Nastavit čas</string>
 </resources>
