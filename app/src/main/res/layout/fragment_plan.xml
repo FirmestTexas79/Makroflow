@@ -29,11 +29,11 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_status_pill"
-                    android:backgroundTint="@color/brand_accent_warm"
+                    android:backgroundTint="#BC6C25"
                     android:paddingHorizontal="16dp"
                     android:paddingVertical="6dp"
                     android:text="TÝDENNÍ PLÁN"
-                    android:textColor="@color/brand_cream"
+                    android:textColor="#FEFAE0"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
@@ -59,7 +59,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="👟"
-                        android:textSize="16sp" />
+                        android:textSize="18sp" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -72,20 +72,19 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0 / 6000"
-                            android:textColor="@color/brand_dark"
+                            android:textColor="#283618"
                             android:textSize="14sp"
-                            android:fontFamily="sans-serif-black"
-                            android:lineSpacingMultiplier="0.9" />
+                            android:fontFamily="sans-serif-black" />
 
                         <TextView
-                            android:id="@+id/tvStepsGoalStatus"
+                            android:id="@+id/tvFatBurnedLabel"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="ZBYVÁ 6000"
-                            android:textColor="@color/brand_primary"
-                            android:textSize="8sp"
+                            android:text="🔥 0.0g TUKU"
+                            android:textColor="#BC6C25"
+                            android:textSize="9sp"
                             android:textStyle="bold"
-                            android:letterSpacing="0.1" />
+                            android:letterSpacing="0.05" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -97,7 +96,7 @@
                     android:layout_marginEnd="16dp"
                     android:fontFamily="sans-serif-black"
                     android:text="Tréninkový\nRozvrh"
-                    android:textColor="@color/brand_dark"
+                    android:textColor="#283618"
                     android:textSize="36sp"
                     android:lineSpacingMultiplier="0.92"
                     app:layout_constraintEnd_toStartOf="@+id/llStepsCounter"
@@ -110,7 +109,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:text="Nastav svůj týden. Makra se přizpůsobí."
-                    android:textColor="@color/brand_primary"
+                    android:textColor="#606C38"
                     android:textSize="13sp"
                     android:alpha="0.8"
                     app:layout_constraintStart_toStartOf="parent"
@@ -221,9 +220,7 @@
                     android:orientation="horizontal"
                     android:padding="18dp"
                     android:gravity="center_vertical">
-
                     <TextView android:layout_width="36dp" android:layout_height="wrap_content" android:text="💡" android:textSize="22sp" android:gravity="center" />
-
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="12dp" android:orientation="vertical">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Makra se přizpůsobí každému dni" android:textColor="#DDA15E" android:textSize="13sp" android:textStyle="bold" />
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="🏋️ PUSH  +300 kcal · standardní bílkoviny" android:textColor="#FEFAE0" android:textSize="12sp" />

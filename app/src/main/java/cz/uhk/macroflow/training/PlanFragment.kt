@@ -21,9 +21,12 @@ import cz.uhk.macroflow.common.MakroflowNotifications
 import cz.uhk.macroflow.common.MakroflowTimePicker
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.dashboard.MacroFlowEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.*
 
 class PlanFragment : Fragment() {
 
@@ -57,7 +60,6 @@ class PlanFragment : Fragment() {
         return view
     }
 
-    // ✅ Přidáno načítání do onResume pro zobrazení čerstvých kroků při každém návratu na obrazovku
     override fun onResume() {
         super.onResume()
         view?.let { updateStats(it) }
@@ -82,41 +84,52 @@ class PlanFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // ✅ OPRAVA: Odstraněno tvStepsGoalStatus, které v XML už není
         val tvTotalSteps = view.findViewById<TextView>(R.id.tvTotalStepsCount)
-        val tvStepsStatus = view.findViewById<TextView>(R.id.tvStepsGoalStatus)
+        val tvFatLabel = view.findViewById<TextView>(R.id.tvFatBurnedLabel)
         val tvEmoji = view.findViewById<TextView>(R.id.tvStepsEmoji)
         val llStepsCounter = view.findViewById<LinearLayout>(R.id.llStepsCounter)
 
         val db = AppDatabase.getDatabase(requireContext())
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
         viewLifecycleOwner.lifecycleScope.launch {
-            // 1. Nejprve bezpečně získáme nastavený cíl z profilu (zůstane stabilní po dobu zobrazení fragmentu)
+            // Načtení profilu pro váhu a cíl
             val profile = withContext(Dispatchers.IO) {
                 db.userProfileDao().getProfileSync()
             }
-            val stepGoal = profile?.stepGoal ?: 6000 // Fallback na 6000 pokud není nastaveno
+            val stepGoal = profile?.stepGoal ?: 6000
+            val userWeight = profile?.weight ?: 83.0
 
-            // 2. Odebíráme živý Flow kroků z databáze
-            db.stepsDao().getTotalStepsAllTimeFlow().collect { allTimeSteps ->
-                val stepsToday = allTimeSteps ?: 0
-                val remaining = (stepGoal - stepsToday).coerceAtLeast(0)
+            // Sledování dnešních kroků
+            db.stepsDao().getStepsForDateFlow(todayStr).collect { stepsEntity ->
+                val stepsToday = stepsEntity?.count ?: 0
+                val isGoalReached = stepsToday >= stepGoal
 
-                // UI přepis: Zlomek "aktuální / cíl"
+                // 1. Text kroků (např. 1200 / 6000)
                 tvTotalSteps?.text = "$stepsToday / $stepGoal"
 
-                if (remaining > 0) {
-                    tvStepsStatus?.text = "ZBYVÁ $remaining"
+                // 2. Odborný výpočet spáleného tuku
+                val burnedCalories = MacroFlowEngine.calculateCaloriesFromSteps(stepsToday, userWeight)
+                val fatBurnedGrams = burnedCalories / 9.0
+
+                // ✅ PŘEPIS: Nastavení plamínku a tuku
+                if (!isGoalReached) {
+                    tvFatLabel?.text = String.format(Locale.getDefault(), "🔥 %.1fg TUKU SPÁLENO", fatBurnedGrams)
                     tvEmoji?.text = "👟"
-                    tvStepsStatus?.setTextColor(Color.parseColor("#606C38")) // Standardní zelená
+                    tvFatLabel?.setTextColor(Color.parseColor("#BC6C25"))
                 } else {
-                    tvStepsStatus?.text = "CÍL SPLNĚN!"
+                    // Bonusový text při splnění cíle
+                    tvFatLabel?.text = String.format(Locale.getDefault(), "🎉 %.1fg TUKU! CÍL SPLNĚN", fatBurnedGrams)
                     tvEmoji?.text = "🎉"
-                    tvStepsStatus?.setTextColor(Color.parseColor("#BC6C25")) // Akcentní barva při úspěchu
+                    tvFatLabel?.setTextColor(Color.parseColor("#283618"))
                     llStepsCounter?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#20BC6C25"))
                 }
             }
         }
     }
+
+    // --- RECYCLERVIEW ADAPTER (Ponecháno v plné verzi) ---
 
     inner class TrainingPlanAdapter : RecyclerView.Adapter<TrainingPlanAdapter.PlanViewHolder>() {
 
@@ -128,8 +141,6 @@ class PlanFragment : Fragment() {
             val toggleGroup: MaterialButtonToggleGroup  = view.findViewById(R.id.toggleGroup)
             val tvTimePill: TextView?                   = view.findViewById(R.id.tvTrainingTimePill)
         }
-
-        override fun getItemCount() = daysMap.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlanViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_day, parent, false)
@@ -150,11 +161,9 @@ class PlanFragment : Fragment() {
                 else   -> holder.toggleGroup.check(R.id.btnRest)
             }
             updateCardVisual(holder, savedType)
-
             updateTimePill(holder, englishName, savedType)
-            holder.tvTimePill?.setOnClickListener {
-                showTimePicker(englishName, holder)
-            }
+
+            holder.tvTimePill?.setOnClickListener { showTimePicker(englishName, holder) }
 
             holder.toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
                 if (!isChecked) return@addOnButtonCheckedListener
@@ -168,27 +177,19 @@ class PlanFragment : Fragment() {
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 updateCardVisual(holder, type)
                 updateTimePill(holder, englishName, type)
-
-                // Přepočítá statistiky dnů i načte celkové kroky
                 view?.let { updateStats(it) }
             }
         }
 
         private fun updateTimePill(holder: PlanViewHolder, dayEnglish: String, type: String) {
             val pill = holder.tvTimePill ?: return
-            val isTraining = type != "rest"
-
-            if (!isTraining) {
-                pill.visibility = View.GONE
-                return
-            }
+            if (type == "rest") { pill.visibility = View.GONE; return }
             pill.visibility = View.VISIBLE
             val savedTime = TrainingTimeManager.getTrainingTime(requireContext(), dayEnglish)
             if (savedTime != null) {
                 pill.text = "🕐 $savedTime"
                 pill.setTextColor(Color.parseColor("#606C38"))
-                (pill.background as? GradientDrawable)?.setColor(
-                    Color.parseColor("#15606C38"))
+                (pill.background as? GradientDrawable)?.setColor(Color.parseColor("#15606C38"))
             } else {
                 pill.text = "🕐 Nastavit čas"
                 pill.setTextColor(Color.parseColor("#80606C38"))
@@ -202,26 +203,20 @@ class PlanFragment : Fragment() {
             val initM = existing?.split(":")?.getOrNull(1)?.toIntOrNull() ?: 0
 
             MakroflowTimePicker.Companion.show(
-                parentFragmentManager,
-                initH, initM,
+                parentFragmentManager, initH, initM,
                 "Čas tréninku — ${holder.tvDayFull.text}"
             ) { hour, minute ->
                 val timeStr = String.format("%02d:%02d", hour, minute)
                 TrainingTimeManager.setTrainingTime(ctx, dayEnglish, timeStr)
-                val currentType = trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest"
-                updateTimePill(holder, dayEnglish, currentType)
+                updateTimePill(holder, dayEnglish, trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest")
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 MakroflowNotifications.rescheduleWorkout(ctx)
             }
         }
 
         private fun updateCardVisual(vh: PlanViewHolder, type: String) {
-            val colorPush  = Color.parseColor("#606C38")
-            val colorPull  = Color.parseColor("#283618")
-            val colorLegs  = Color.parseColor("#BC6C25")
-            val colorRest  = Color.parseColor("#20283618")
-            val colorDark  = Color.parseColor("#283618")
-
+            val colorPush = Color.parseColor("#606C38"); val colorPull = Color.parseColor("#283618")
+            val colorLegs = Color.parseColor("#BC6C25"); val colorRest = Color.parseColor("#20283618")
             when (type) {
                 "push" -> {
                     vh.card.strokeColor = colorPush; vh.card.strokeWidth = 4
@@ -240,9 +235,10 @@ class PlanFragment : Fragment() {
                 }
                 else -> {
                     vh.card.strokeColor = colorRest; vh.card.strokeWidth = 2
-                    vh.accent.visibility = View.GONE; vh.tvDay.setTextColor(colorDark)
+                    vh.accent.visibility = View.GONE; vh.tvDay.setTextColor(Color.parseColor("#283618"))
                 }
             }
         }
+        override fun getItemCount() = daysMap.size
     }
 }

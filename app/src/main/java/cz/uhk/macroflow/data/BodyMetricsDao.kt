@@ -2,7 +2,6 @@ package cz.uhk.macroflow.data
 
 import androidx.room.*
 import cz.uhk.macroflow.data.BodyMetricsEntity
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BodyMetricsDao {
@@ -13,9 +12,13 @@ interface BodyMetricsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun save(metrics: BodyMetricsEntity)
 
-    @Query("SELECT * FROM body_metrics ORDER BY date DESC")
-    fun getAllFlow(): Flow<List<BodyMetricsEntity>>
 
     @Query("SELECT * FROM body_metrics")
     fun getAllSync(): List<BodyMetricsEntity>
+
+    @Query("SELECT * FROM body_metrics ORDER BY id DESC LIMIT 1")
+    fun getLastMetricsSync(): BodyMetricsEntity?
+
+    @Query("DELETE FROM body_metrics")
+    fun deleteAllLocally()
 }

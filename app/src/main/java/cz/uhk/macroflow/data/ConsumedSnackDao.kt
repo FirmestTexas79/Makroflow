@@ -20,7 +20,6 @@ interface ConsumedSnackDao {
     @Query("DELETE FROM consumed_snacks WHERE timestamp = :timestamp")
     fun deleteConsumedByTimestamp(timestamp: Long)
 
-    // 🧹 ✅ NOVÉ: Smaže všechna lokální jídla před novou čistou synchronizací z cloudu
-    @Query("DELETE FROM consumed_snacks")
+    @Query("DELETE FROM consumed_snacks") // Toto tam musí být!
     fun deleteAllConsumedLocally()
 }

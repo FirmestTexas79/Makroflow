@@ -15,69 +15,84 @@ object MacroCalculator {
 
     fun calculateForDate(context: Context, date: Date): MacroResult {
         val trainingPrefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
-
         val sdf = SimpleDateFormat("EEEE", Locale.ENGLISH)
         val dayName = sdf.format(date)
         val trainingType = trainingPrefs.getString("type_$dayName", "rest")?.lowercase() ?: "rest"
 
-        // Načtení profilu z DB – runBlocking je zde záměrné, MacroCalculator je volán
-        // ze synchronních kontextů (HistoryFragment, atd.). Volání je rychlé (lokální DB).
+        // Načtení profilu včetně nových Elite parametrů
         val profile: UserProfileEntity? = runBlocking {
-            AppDatabase.Companion.getDatabase(context).userProfileDao().getProfileSync()
+            AppDatabase.getDatabase(context).userProfileDao().getProfileSync()
         }
 
-        // Fallback na SharedPrefs pro případ, že DB profil ještě nebyl vytvořen
-        // (první spuštění po migraci)
-        val legacyPrefs = context.getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        val weight = profile?.weight ?: 83.0
+        val height = profile?.height ?: 175.0
+        val age = profile?.age ?: 22
+        val gender = profile?.gender ?: "male"
+        val activityMultiplier = profile?.activityMultiplier ?: 1.2f
 
-        val weight = profile?.weight
-            ?: legacyPrefs.getString("weightAkt", "83.0")?.toDoubleOrNull()
-            ?: 83.0
-        val height = profile?.height
-            ?: legacyPrefs.getString("height", "175.0")?.toDoubleOrNull()
-            ?: 175.0
-        val age = profile?.age
-            ?: legacyPrefs.getString("age", "22")?.toIntOrNull()
-            ?: 22
-        val gender = profile?.gender
-            ?: legacyPrefs.getString("gender", "male")?.lowercase()
-            ?: "male"
-        val activityMultiplier = profile?.activityMultiplier
-            ?: legacyPrefs.getFloat("multiplier", 1.2f)
+        // Elite flag z DB
+        val isElite = profile?.isEliteMode ?: false
 
-        // 1. Výpočet BMR (Mifflin-St Jeor)
-        var bmr = (10 * weight) + (6.25 * height) - (5 * age)
-        if (gender == "female") bmr -= 161.0 else bmr += 5.0
-
-        // 2. TDEE
-        val tdee = bmr * activityMultiplier * 1.10
-
-        // 3. Dynamické koeficienty podle tréninku
-        val activityBonus = (activityMultiplier - 1.2) * 0.4
-        val ageFactor = if (age > 40) 0.1 else 0.0
-
-        val (baseProt, baseFat, extraCal) = when {
-            trainingType.contains("legs") ->
-                if (gender == "female") Triple(2.0, 0.9, 450.0) else Triple(2.4, 0.8, 600.0)
-            trainingType.contains("pull") ->
-                if (gender == "female") Triple(1.8, 0.8, 250.0) else Triple(2.2, 0.8, 350.0)
-            trainingType.contains("push") ->
-                if (gender == "female") Triple(1.8, 0.8, 200.0) else Triple(2.2, 0.8, 300.0)
-            else ->
-                if (gender == "female") Triple(1.7, 1.0, 0.0) else Triple(2.0, 1.0, 0.0)
+        /**
+         * 1. VÝPOČET BAZÁLNÍHO METABOLISMU (BMR)
+         * Rozcestník: Klinická LBM metoda vs. Standardní populační metoda.
+         */
+        val bmr = if (isElite) {
+            EliteMetabolicEngine.calculateEliteBMR(weight, profile?.bodyFatPercentage ?: 15.0)
+        } else {
+            var miffBmr = (10 * weight) + (6.25 * height) - (5 * age)
+            if (gender == "female") miffBmr -= 161.0 else miffBmr += 5.0
+            miffBmr
         }
 
-        val finalProtPerKg = baseProt + activityBonus + ageFactor
-        val finalFatPerKg = baseFat + (activityBonus * 0.2)
+        /**
+         * 2. TERMICKÝ EFEKT A CELKOVÝ VÝDEJ (TDEE)
+         */
+        var totalCalories = bmr * activityMultiplier
 
-        val protein = weight * finalProtPerKg
-        val fat = weight * finalFatPerKg
-        val totalCalories = tdee + extraCal
-        val carbs = (totalCalories - (protein * 4) - (fat * 9)) / 4
+        if (isElite) {
+            // V Elite módu připočítáváme specifickou režii trávení podle typu diety
+            val tefModifier = EliteMetabolicEngine.getDietaryTEFModifier(profile?.dietType ?: "BALANCED")
+            totalCalories *= (1.0 + tefModifier)
+        } else {
+            // Standardní fixní TEF 5%
+            totalCalories *= 1.05
+        }
 
-        val waterTotal = (weight * 0.04) + (if (trainingType.contains("legs")) 0.5 else 0.2)
+        /**
+         * 3. TRÉNINKOVÉ KOMPENZACE (EPOC)
+         */
+        val (baseProt, baseFat, trainingExtraKcal) = when {
+            trainingType.contains("legs") -> if (gender == "female") Triple(2.0, 0.9, 500.0) else Triple(2.4, 0.8, 650.0)
+            trainingType.contains("pull") -> if (gender == "female") Triple(1.8, 0.8, 250.0) else Triple(2.2, 0.8, 350.0)
+            trainingType.contains("push") -> if (gender == "female") Triple(1.8, 0.8, 200.0) else Triple(2.2, 0.8, 300.0)
+            else -> if (gender == "female") Triple(1.7, 1.0, 0.0) else Triple(2.0, 1.0, 0.0)
+        }
 
-        // ✅ Vráceno s korektním weight parametrem
+        totalCalories += trainingExtraKcal
+
+        /**
+         * 4. FINÁLNÍ DISTRIBUCE MAKROŽIVIN
+         */
+        val protein = weight * baseProt
+        val fat = weight * baseFat
+
+        // Výpočet sacharidů s ohledem na bio-typologii v Elite módu
+        var carbs = (totalCalories - (protein * 4) - (fat * 9)) / 4
+
+        if (isElite) {
+            val carbSens = EliteMetabolicEngine.getCarbSensitivity(profile?.lastWristMeasurement ?: 17.5, height)
+            // U elitních atletů upravujeme poměr v rámci kalorií podle inzulínové sensitivity
+            carbs *= carbSens
+            // Pozn: Pokud carbSens pohne se sacharidy, zbytek energie se v reálném čase přelije do tuků,
+            // aby byly zachovány kalorie. (Zde pro jednoduchost držíme kalorický strop).
+        }
+
+        /**
+         * 5. MEDICÍNSKÁ HYDRATACE (35-45ml / kg)
+         */
+        val waterTotal = (weight * 0.035) + (if (trainingExtraKcal > 0) 0.8 else 0.0)
+
         return MacroResult(
             calories = totalCalories,
             protein = protein,
@@ -85,7 +100,8 @@ object MacroCalculator {
             fat = fat,
             water = waterTotal,
             trainingType = trainingType.uppercase(),
-            weight = weight
+            weight = weight,
+            isEliteMode = isElite // Přidáno do resultu pro UI kontrolu
         )
     }
 }
@@ -97,5 +113,6 @@ data class MacroResult(
     val fat: Double,
     val water: Double,
     val trainingType: String,
-    val weight: Double // 👈 ✅ Nové: Váha pro přepočet kroků
+    val weight: Double,
+    val isEliteMode: Boolean = false
 )

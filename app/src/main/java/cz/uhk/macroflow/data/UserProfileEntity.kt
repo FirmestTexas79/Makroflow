@@ -11,5 +11,9 @@ data class UserProfileEntity(
     val age: Int = 22,
     val gender: String = "male",
     val activityMultiplier: Float = 1.2f,
-    val stepGoal: Int = 6000 // 👈 ✅ Nové: Uložený cíl kroků v DB!
+    val stepGoal: Int = 6000, // 👈 ✅ Nové: Uložený cíl kroků v DB!
+    val isEliteMode: Boolean = false,
+    val bodyFatPercentage: Double = 15.0,
+    val dietType: String = "BALANCED", // Možnosti: HIGH_PROTEIN, KETO, VEGAN, LOW_FAT, BALANCED, CARBO_LOADING
+    val lastWristMeasurement: Double = 17.5
 )

@@ -37,6 +37,7 @@ import cz.uhk.macroflow.training.TrainingTimeManager
 import cz.uhk.macroflow.achievements.AchievementEngine
 import cz.uhk.macroflow.data.CheckInEntity
 import cz.uhk.macroflow.data.StepsEntity
+import cz.uhk.macroflow.data.UserProfileEntity
 import cz.uhk.macroflow.pokemon.EvolutionDialog
 import cz.uhk.macroflow.pokemon.PokedexStatusEntity
 import cz.uhk.macroflow.pokemon.PokemonLevelCalc
@@ -75,6 +76,8 @@ class DashboardFragment : Fragment() {
                 tvTodaySteps?.text = stepsToday.toString()
             }
         }
+
+        setupEliteToggle(view)
 
         setupEasterEgg(view)
 
@@ -399,6 +402,50 @@ class DashboardFragment : Fragment() {
         ObjectAnimator.ofInt(pbFE, "progress", pbFE.progress, fCurrent).setDuration(800).start()
         ObjectAnimator.ofInt(pbCE, "progress", pbCE.progress, cCurrent).setDuration(1000).start()
         ObjectAnimator.ofInt(pbPE, "progress", pbPE.progress, pCurrent).setDuration(1200).start()
+    }
+
+    private fun setupEliteToggle(view: View) {
+        val cardEliteOptions = view.findViewById<MaterialCardView>(R.id.cardEliteOptions)
+        val btnToggleMode = view.findViewById<MaterialButton>(R.id.btnSwitchToElite)
+        val etWrist = view.findViewById<EditText>(R.id.etEliteWrist)
+        val db = AppDatabase.getDatabase(requireContext())
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            // Získáme profil, nebo vytvoříme defaultní, pokud v DB není nic
+            var profile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
+
+            withContext(Dispatchers.Main) {
+                cardEliteOptions.visibility = if (profile.isEliteMode) View.VISIBLE else View.GONE
+                etWrist?.setText(profile.lastWristMeasurement.toString())
+            }
+
+            btnToggleMode.setOnClickListener {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    // Znovu načíst aktuální stav
+                    val currentProfile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(
+                        id = 1
+                    )
+                    val newMode = !currentProfile.isEliteMode
+
+                    // Vytvoříme kopii s novým modem a ULOŽÍME CELÉ (REPLACE)
+                    val updatedProfile = currentProfile.copy(isEliteMode = newMode)
+                    db.userProfileDao().saveProfile(updatedProfile)
+
+                    withContext(Dispatchers.Main) {
+                        if (newMode) {
+                            cardEliteOptions.visibility = View.VISIBLE
+                            cardEliteOptions.alpha = 0f
+                            cardEliteOptions.animate().alpha(1f).setDuration(300).start()
+                        } else {
+                            cardEliteOptions.animate().alpha(0f).setDuration(200).withEndAction {
+                                cardEliteOptions.visibility = View.GONE
+                            }.start()
+                        }
+                        refreshAllData(view)
+                    }
+                }
+            }
+        }
     }
 
     private fun setupEasterEgg(view: View) {

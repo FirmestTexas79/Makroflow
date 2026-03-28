@@ -14,6 +14,9 @@ interface WaterDao {
     @Query("SELECT * FROM water_log")
     fun getAllWaterSync(): List<WaterEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE) // 👈 ✅ Přidáno REPLACE
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertWater(entry: WaterEntity)
+
+    @Query("DELETE FROM water_log")
+    fun deleteAllWaterLocally()
 }

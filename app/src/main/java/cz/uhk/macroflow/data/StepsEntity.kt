@@ -24,4 +24,7 @@ interface StepsDao {
 
     @Query("DELETE FROM steps")
     fun deleteAll(): Int // 👈 Bez suspend!
+
+    @Query("SELECT * FROM steps")
+    fun getAllStepsSync(): List<StepsEntity>
 }

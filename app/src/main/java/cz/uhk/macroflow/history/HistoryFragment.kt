@@ -12,6 +12,7 @@ import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.dashboard.MacroCalculator
+import cz.uhk.macroflow.dashboard.MacroFlowEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,9 +34,11 @@ class HistoryFragment : Fragment() {
     private lateinit var calGrid: GridLayout
     private lateinit var layoutNoMetrics: View
 
-    private val sdf = SimpleDateFormat("yyyy-MM-01", Locale.getDefault()) // Fix: pro měsíce
-    private val monthSdf = SimpleDateFormat("LLLL yyyy", Locale("cs"))
+    // Nová pole pro kroky
+    private lateinit var tvStepsCount: TextView
+    private lateinit var tvStepsBurned: TextView
 
+    private val monthSdf = SimpleDateFormat("LLLL yyyy", Locale("cs"))
     private val calendar = Calendar.getInstance()
     private val dateKeySdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private var selectedDateKey: String = dateKeySdf.format(Date())
@@ -45,6 +48,7 @@ class HistoryFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_history, container, false)
 
+        // Inicializace UI prvků
         graph            = view.findViewById(R.id.historySymmetryGraph)
         tvDate           = view.findViewById(R.id.tvSelectedDate)
         tvKcal           = view.findViewById(R.id.tvHistoryKcal)
@@ -56,6 +60,10 @@ class HistoryFragment : Fragment() {
         tvMonthLabel     = view.findViewById(R.id.tvMonthLabel)
         calGrid          = view.findViewById(R.id.calGrid)
         layoutNoMetrics  = view.findViewById(R.id.layoutNoMetrics)
+
+        // Inicializace polí pro kroky
+        tvStepsCount     = view.findViewById(R.id.tvHistoryStepsCount)
+        tvStepsBurned    = view.findViewById(R.id.tvHistoryStepsBurned)
 
         view.findViewById<ImageButton>(R.id.btnPrevMonth).setOnClickListener {
             calendar.add(Calendar.MONTH, -1)
@@ -131,17 +139,13 @@ class HistoryFragment : Fragment() {
             label.isEmpty() -> { }
             isSelected -> {
                 cell.setBackgroundResource(R.drawable.bg_status_pill)
-                cell.backgroundTintList = ColorStateList.valueOf(
-                    Color.parseColor("#DDA15E")
-                )
+                cell.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#DDA15E"))
                 cell.setTextColor(Color.parseColor("#283618"))
                 cell.typeface = Typeface.DEFAULT_BOLD
             }
             isToday -> {
                 cell.setBackgroundResource(R.drawable.bg_status_pill)
-                cell.backgroundTintList = ColorStateList.valueOf(
-                    Color.parseColor("#30FEFAE0")
-                )
+                cell.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#30FEFAE0"))
                 cell.setTextColor(Color.parseColor("#FEFAE0"))
                 cell.typeface = Typeface.DEFAULT_BOLD
             }
@@ -163,40 +167,55 @@ class HistoryFragment : Fragment() {
                 loadData(dateKey)
             }
         }
-
         return cell
     }
 
-    private fun dpToPx(dp: Int): Int =
-        (dp * resources.displayMetrics.density).toInt()
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 
     private fun loadData(dateKey: String) {
         val parsed = dateKeySdf.parse(dateKey) ?: Date()
-
         val isToday = dateKey == dateKeySdf.format(Date())
         tvDate.text = if (isToday) "DNES" else dateKey
 
-        val data = MacroCalculator.calculateForDate(requireContext(), parsed)
-        if (data.calories > 0) {
-            tvKcal.text     = "${data.calories.toInt()} kcal"
-            tvTraining.text = data.trainingType
-            tvProtein.text  = "${data.protein.toInt()}g"
-            tvCarbs.text    = "${data.carbs.toInt()}g"
-            tvFat.text      = "${data.fat.toInt()}g"
-        } else {
-            tvKcal.text     = "—"
-            tvTraining.text = "—"
-            tvProtein.text  = "—"
-            tvCarbs.text    = "—"
-            tvFat.text      = "—"
-        }
+        // Základní výpočet z kalkulačky
+        val baseData = MacroCalculator.calculateForDate(requireContext(), parsed)
 
+        lifecycleScope.launch {
+            val db = AppDatabase.getDatabase(requireContext())
+
+            // Načtení kroků z DB
+            val stepsEntity = withContext(Dispatchers.IO) {
+                db.stepsDao().getStepsForDateSync(dateKey)
+            }
+            val stepsCount = stepsEntity?.count ?: 0
+
+            // Výpočet bonusu přes Engine
+            val burnedKcal = MacroFlowEngine.calculateCaloriesFromSteps(stepsCount, baseData.weight)
+
+            // UI Update pro kartu kroků
+            tvStepsCount.text = String.format("%, d", stepsCount).replace(',', ' ')
+            tvStepsBurned.text = if (burnedKcal > 0) "+${burnedKcal.toInt()} kcal" else "+0 kcal"
+
+            // UI Update pro hlavní makra (Base + Bonus z kroků)
+            if (baseData.calories > 0) {
+                val extraCarbs = (burnedKcal * 0.8) / 4.0
+                val extraFat = (burnedKcal * 0.2) / 9.0
+
+                tvKcal.text     = "${(baseData.calories + burnedKcal).toInt()} kcal"
+                tvTraining.text = baseData.trainingType
+                tvProtein.text  = "${baseData.protein.toInt()}g"
+                tvCarbs.text    = "${(baseData.carbs + extraCarbs).toInt()}g"
+                tvFat.text      = "${(baseData.fat + extraFat).toInt()}g"
+            } else {
+                tvKcal.text = "—"; tvTraining.text = "—"; tvProtein.text = "—"; tvCarbs.text = "—"; tvFat.text = "—"
+            }
+        }
         updateSymmetry(dateKey)
     }
 
     private fun updateSymmetry(dateKey: String) {
         lifecycleScope.launch {
-            val db = AppDatabase.Companion.getDatabase(requireContext())
+            val db = AppDatabase.getDatabase(requireContext())
             val metrics = withContext(Dispatchers.IO) {
                 db.bodyMetricsDao().getByDateSync(dateKey)
             }
@@ -205,82 +224,42 @@ class HistoryFragment : Fragment() {
                 graph.visibility = View.INVISIBLE
                 layoutNoMetrics.visibility = View.VISIBLE
                 tvSymmetryStatus.text = "BEZ DAT"
-                tvSymmetryStatus.backgroundTintList =
-                    ColorStateList.valueOf(Color.parseColor("#30283618"))
+                tvSymmetryStatus.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#30283618"))
                 return@launch
             }
 
-            // ✅ TICHÉ ODESLÁNÍ DO CLOUDU (Záloha bez omezení uživatele)
+            // Sync do Firebase
             if (FirebaseRepository.isLoggedIn) {
                 withContext(Dispatchers.IO) {
-                    try {
-                        FirebaseRepository.uploadBodyMetrics(metrics)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    try { FirebaseRepository.uploadBodyMetrics(metrics) } catch (e: Exception) { e.printStackTrace() }
                 }
             }
 
             graph.visibility = View.VISIBLE
             layoutNoMetrics.visibility = View.GONE
             tvSymmetryStatus.text = "AKTIVNÍ"
-            tvSymmetryStatus.backgroundTintList =
-                ColorStateList.valueOf(Color.parseColor("#606C38"))
+            tvSymmetryStatus.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#606C38"))
 
-            val neck    = metrics.neck
-            val chest   = metrics.chest
-            val waist   = metrics.waist
-            val bicep   = metrics.bicep
-            val forearm = metrics.forearm
-            val abdomen = metrics.abdomen
-            val thigh   = metrics.thigh
-            val calf    = metrics.calf
-
-            val wristEst = neck * 0.406f
-
-            fun asymScore(actual: Float, ideal: Float,
-                          tightLow: Float = 0.10f, tightHigh: Float = 0.16f): Float {
+            // Výpočet skóre pro graf (zkráceno pro přehlednost)
+            val wristEst = metrics.neck * 0.406f
+            fun asymScore(actual: Float, ideal: Float, tL: Float = 0.10f, tH: Float = 0.16f): Float {
                 if (ideal <= 0f) return 0.5f
                 val ratio = actual / ideal
-                val tight = if (ratio < 1f) tightLow else tightHigh
-                return exp(-((ratio - 1f).pow(2)) / (2f * tight.pow(2))).coerceIn(0.1f, 1f)
+                val t = if (ratio < 1f) tL else tH
+                return exp(-((ratio - 1f).pow(2)) / (2f * t.pow(2))).coerceIn(0.1f, 1f)
             }
 
-            val idealChest   = neck * 2.87f
-            val idealWaist   = neck * 2.14f
-            val idealBicep   = wristEst * 2.50f
-            val idealForearm = wristEst * 1.93f
-            val idealThigh   = neck * 1.70f
-            val idealCalf    = wristEst * 2.50f
+            val sChest   = asymScore(metrics.chest, metrics.neck * 2.87f, 0.09f, 0.15f)
+            val sWaist   = if ((metrics.waist / (metrics.neck * 2.14f)) <= 1.0f)
+                asymScore(metrics.waist, metrics.neck * 2.14f, 0.08f, 0.08f)
+            else asymScore(metrics.waist, metrics.neck * 2.14f, 0.06f, 0.06f)
+            val sBicep   = asymScore(metrics.bicep, wristEst * 2.50f, 0.10f, 0.18f)
+            val sForearm = asymScore(metrics.forearm, metrics.bicep * 0.853f, 0.07f, 0.10f)
+            val sAbdomen = if (metrics.abdomen <= metrics.waist) 1.0f else exp(-((metrics.abdomen - metrics.waist) / 8f).pow(2)).coerceIn(0.1f, 1.0f)
+            val sThigh   = asymScore(metrics.thigh, metrics.neck * 1.70f, 0.10f, 0.16f)
+            val sCalf    = asymScore(metrics.calf, (wristEst * 2.50f + metrics.bicep) / 2f, 0.10f, 0.16f)
 
-            val scoreChest = asymScore(chest, idealChest, 0.09f, 0.15f)
-
-            val waistRatio = waist / idealWaist
-            val scoreWaist = when {
-                waistRatio <= 1.0f -> exp(-((waistRatio - 1f).pow(2)) / (2 * 0.08f.pow(2))).coerceIn(0.1f, 1f)
-                else               -> exp(-((waistRatio - 1f).pow(2)) / (2 * 0.06f.pow(2))).coerceIn(0.1f, 1f)
-            }
-
-            val scoreBicep = asymScore(bicep, idealBicep, 0.10f, 0.18f)
-
-            val scoreForearm = if (bicep > 0f)
-                asymScore(forearm / bicep, 0.853f, 0.07f, 0.10f)
-            else 0.5f
-
-            val scoreAbdomen = when {
-                abdomen <= waist         -> 1.0f
-                abdomen <= waist + 4f    -> exp(-((abdomen - waist) / 8f).pow(2)).coerceIn(0.5f, 1f)
-                else                     -> exp(-((abdomen - waist - 4f) / 5f).pow(2)).coerceIn(0.1f, 0.7f)
-            }
-
-            val scoreThigh = asymScore(thigh, idealThigh, 0.10f, 0.16f)
-
-            val idealCalfFinal = (idealCalf + bicep) / 2f
-            val scoreCalf = asymScore(calf, idealCalfFinal, 0.10f, 0.16f)
-
-            graph.dataPoints = floatArrayOf(
-                scoreChest, scoreWaist, scoreBicep, scoreForearm, scoreAbdomen, scoreThigh, scoreCalf, 1.0f
-            )
+            graph.dataPoints = floatArrayOf(sChest, sWaist, sBicep, sForearm, sAbdomen, sThigh, sCalf, 1.0f)
             graph.invalidate()
         }
     }

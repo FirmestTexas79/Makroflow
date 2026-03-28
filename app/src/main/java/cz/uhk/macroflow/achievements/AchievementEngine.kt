@@ -191,13 +191,24 @@ object AchievementEngine {
         if (allWater.isEmpty()) return result
 
         val byDate = allWater.groupBy { it.date }
-        val splneneDny  = mutableListOf<String>()
+        val splneneDny = mutableListOf<String>()
         var totalSplneno = 0
 
+        // Definuj si formát pro výpočty v rámci cyklu (např. yyyy-MM-dd)
+        val standardDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
         for ((dateStr, items) in byDate) {
-            // ✅ TVRDÁ POJISTKA PRO PARSOVÁNÍ DATUMU VODY (Tady to padalo)
             try {
-                val date = sdf.parse(dateStr) ?: continue
+                // --- OPRAVA PARSOVÁNÍ ---
+                val date: Date = if (dateStr.all { it.isDigit() }) {
+                    // Pokud jsou v řetězci jen číslice, je to timestamp (Long)
+                    Date(dateStr.toLong())
+                } else {
+                    // Jinak je to klasický textový formát (např. "2026-03-27")
+                    sdf.parse(dateStr) ?: continue
+                }
+                // ------------------------
+
                 val target = MacroCalculator.calculateForDate(context, date)
                 val goalMl = (target.water * 1000).toInt()
                 if (goalMl <= 0) continue
@@ -205,16 +216,21 @@ object AchievementEngine {
                 val actualMl = items.sumOf { it.amountMl }
 
                 if (actualMl >= goalMl) {
-                    splneneDny += dateStr
+                    // Pro výpočet streaku potřebujeme jednotný formát klíče
+                    splneneDny.add(standardDateFormat.format(date))
                     totalSplneno++
                 }
             } catch (e: Exception) {
-                e.printStackTrace() // Poškozené datum se přeskočí a aplikace NESPADNE!
+                // Pokud je záznam totálně poškozený, prostě ho přeskočíme a nepadáme
+                android.util.Log.e("AchievementEngine", "Chyba u data: $dateStr - ${e.message}")
             }
         }
 
-        val streak = calcStreak(splneneDny)
+        // Seřadíme dny, aby streak fungoval správně
+        val sortedSplneneDny = splneneDny.distinct().sorted()
+        val streak = calcStreak(sortedSplneneDny)
 
+        // Logika odemykání
         if (streak >= 3)         tryUnlock(db, "water_bronze")?.let  { result += it }
         if (streak >= 10)        tryUnlock(db, "water_silver")?.let  { result += it }
         if (totalSplneno >= 40)  tryUnlock(db, "water_gold")?.let    { result += it }
