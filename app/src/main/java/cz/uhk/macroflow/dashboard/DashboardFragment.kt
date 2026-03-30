@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -222,48 +223,52 @@ class DashboardFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.Main) {
             val db = AppDatabase.getDatabase(requireContext())
 
+            // 1. Zápis, Analytika a Achievementy (Vše v IO, jak to bylo)
             val newAchievements = withContext(Dispatchers.IO) {
                 db.checkInDao().insertCheckIn(checkInEntity)
+
+                // --- PŘIDÁNO: Výpočet a upload analytiky, aby se vytvořila tabulka ---
+                val history = db.checkInDao().getAllCheckInsSync()
+                val analyticsResult = try {
+                    cz.uhk.macroflow.analytics.BioLogicEngine.calculateFullAnalytics(history)
+                } catch (e: Exception) { null }
+
+                analyticsResult?.let { db.analyticsDao().insertAnalytics(it) }
+
+                if (FirebaseRepository.isLoggedIn) {
+                    try {
+                        FirebaseRepository.uploadCheckIn(checkInEntity)
+                        analyticsResult?.let { FirebaseRepository.uploadAnalytics(it) }
+                    } catch (e: Exception) { e.printStackTrace() }
+                }
+                // --------------------------------------------------------------------
+
                 AchievementEngine.checkAll(requireContext())
             }
 
-            if (FirebaseRepository.isLoggedIn) {
-                withContext(Dispatchers.IO) {
-                    try {
-                        FirebaseRepository.uploadCheckIn(checkInEntity)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-
             refreshAllData(requireView())
-
             Toast.makeText(context, "Rituál úspěšně uložen!", Toast.LENGTH_SHORT).show()
 
+            // Tady už newAchievements bude zase fungovat normálně
             newAchievements.forEach { ach ->
                 Toast.makeText(context, "🏆 Achievement odemčen: ${ach.titleCs}", Toast.LENGTH_LONG).show()
             }
 
+            // Pokémon XP logika (beze změny, tak jak ti fungovala)
             lifecycleScope.launch(Dispatchers.IO) {
                 val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 val prefs = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                 val activeId = prefs.getString("currentOnBarId", "050") ?: "050"
-
                 val xpEntity = db.pokemonXpDao().getXp(activeId) ?: PokemonXpEntity(activeId)
 
                 if (xpEntity.lastDailyRewardDate != todayStr) {
                     db.pokemonXpDao().setXp(xpEntity.copy(lastDailyRewardDate = todayStr))
-
                     withContext(Dispatchers.Main) {
                         (activity as? MainActivity)?.addXpToActivePokemonRealTime(XpRewards.CHECK_IN)
                     }
-
                     if (FirebaseRepository.isLoggedIn) {
                         val updatedXp = db.pokemonXpDao().getXp(activeId)
-                        if (updatedXp != null) {
-                            FirebaseRepository.uploadPokedexStatus(activeId)
-                        }
+                        if (updatedXp != null) { FirebaseRepository.uploadPokedexStatus(activeId) }
                     }
                 }
             }
@@ -574,7 +579,7 @@ class DashboardFragment : Fragment() {
     private fun setupEasterEgg(view: View) {
         val fab = activity?.findViewById<View>(R.id.fabHome) ?: return
         var holdStart = 0L
-        val HOLD_MS = 5000L
+        val HOLD_MS = 3000L
 
         fab.setOnTouchListener { v, event ->
             val handled = v.onTouchEvent(event)

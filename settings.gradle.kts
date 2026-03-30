@@ -19,6 +19,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // TENTO ŘÁDEK JE KLÍČOVÝ PRO GRAFY:
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
