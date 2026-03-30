@@ -12,7 +12,9 @@ import android.widget.*
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.github.mikephil.charting.animation.Easing
 import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.LimitLine
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.ValueFormatter
@@ -240,6 +242,8 @@ class HistoryFragment : Fragment() {
         val predMainEntries = mutableListOf<Entry>()
         val upperEntries = mutableListOf<Entry>()
         val lowerEntries = mutableListOf<Entry>()
+        val dayLabels = mutableMapOf<Float, String>()
+        val displaySdf = SimpleDateFormat("d.M", Locale.getDefault())
 
         lifecycleScope.launch {
             val db = AppDatabase.getDatabase(requireContext())
@@ -248,11 +252,13 @@ class HistoryFragment : Fragment() {
             val isElite = profile?.isEliteMode ?: false
             val rawDiet = (profile?.dietType ?: "Vyvážená").lowercase().trim()
             val bodyFat = profile?.bodyFatPercentage ?: 22.0
+            val height = profile?.height ?: 175.0
+            val wrist = profile?.lastWristMeasurement ?: 16.0
 
-            // 1. NASTAVENÍ ROZSAHU (FIX: 7 dní zpět, 7 dní vpřed)
-            val rangeDays = 7f
+            val rangeDays = 7f // Středový bod
             val totalDays = 14f
 
+            // --- 1. ENGINE LOGIKA ---
             val trendSensitivity = if (isElite) 1.0f else 0.35f
             val (tef, stability) = when {
                 rawDiet.contains("protein") -> 0.22 to 0.70f
@@ -261,16 +267,12 @@ class HistoryFragment : Fragment() {
                 rawDiet.contains("vegan")   -> 0.13 to 0.90f
                 else                        -> 0.11 to 1.00f
             }
-
             val bfFactor = if (bodyFat < 12.0) 0.65 else 1.0 + ((bodyFat - 22.0) / 100.0)
             val sortedHistory = allHistory.sortedBy { it.date }
             val lastWeight = sortedHistory.lastOrNull()?.weight?.toFloat() ?: 75f
 
-            // 2. PLNĚNÍ HISTORIE A ENERGIE (0 až 7)
+            // --- 2. PLNĚNÍ HISTORIE (Index 0 až 7) ---
             val historyMap = sortedHistory.associateBy { it.date }
-            val dayLabels = mutableMapOf<Float, String>()
-            val displaySdf = SimpleDateFormat("d.M.", Locale.getDefault())
-
             for (i in 0..rangeDays.toInt()) {
                 val checkCal = Calendar.getInstance().apply {
                     time = selectedDate
@@ -278,7 +280,6 @@ class HistoryFragment : Fragment() {
                 }
                 val key = dateKeySdf.format(checkCal.time)
                 val xPos = i.toFloat()
-
                 dayLabels[xPos] = displaySdf.format(checkCal.time)
 
                 historyMap[key]?.let { checkIn ->
@@ -286,152 +287,116 @@ class HistoryFragment : Fragment() {
                 }
             }
 
-            // 3. PREDIKCE (7 až 14)
+            // --- 3. PREDIKCE (Index 7 až 14) ---
             if (currentAnalytics != null) {
-                // Načtení hodnot z profilu (který jsi právě uložil v konfiguraci)
-                val height = profile?.height ?: 175.0
-                val wrist = profile?.lastWristMeasurement ?: 16.0 // Tohle se musí updatovat v saveEliteField
-                val bodyFat = profile?.bodyFatPercentage ?: 22.0
-
                 val baseSlope = currentAnalytics.trendSlope.toFloat() * trendSensitivity
                 val metabolicPower = (tef * bfFactor).toFloat()
                 val slopeAdjustment = (metabolicPower - 0.12f) * (if (isElite) 0.5f else 0.15f)
                 val targetSlope = (baseSlope - slopeAdjustment).coerceIn(-0.4f, 0.4f)
 
-                // --- BIOLOGIC DYNAMIKA STÍNU ---
-                // Somatotyp: poměr výšky a zápěstí (R = výška / zápěstí)
-                // Dle tvého EliteMetabolicEngine: 10.4+ (Ektomorf), 9.6-10.4 (Mezomorf), <9.6 (Endomorf)
                 val wristRatio = height / wrist
-
                 val somatotypeFactor = when {
-                    wristRatio > 10.4 -> 0.85f // Ektomorf: stabilnější, užší stín
-                    wristRatio < 9.6 -> 1.30f  // Endomorf: velká retence, široký stín
-                    else -> 1.05f              // Mezomorf: střed
+                    wristRatio > 10.4 -> 0.85f
+                    wristRatio < 9.6 -> 1.30f
+                    else -> 1.05f
                 }
+                val biologicSpreadMultiplier = stability * somatotypeFactor * (bodyFat / 22.0).coerceIn(0.7, 1.5).toFloat()
 
-                // Body Fat nejistota: čím víc tuku, tím víc vody, tím nepředvídatelnější váha
-                val fatUncertainty = (bodyFat / 22.0).coerceIn(0.7, 1.5).toFloat()
-
-                // Celkový koeficient pro stín (kombinace Diety, BF a Zápěstí)
-                val biologicSpreadMultiplier = stability * somatotypeFactor * fatUncertainty
-
-                for (i in 0..rangeDays.toInt()) {
+                // i=0 je DNES (index 7), i=7 je +7 dní (index 14)
+                for (i in 0..7) {
                     val x = rangeDays + i
-                    val damping = (1.0 - (i * 0.04)).coerceAtLeast(0.4)
+                    val damping = (1.0 - (i * 0.03)).coerceAtLeast(0.5)
                     val predWeight = lastWeight + (targetSlope * i * damping).toFloat()
 
-                    // Základní rozptyl (Elite mód je přesnější)
-                    val spreadBase = if (isElite) 0.10f else 0.25f
-
-                    // STÍN: Teď reaguje na změnu zápěstí i BF v konfiguraci
-                    val spread = (spreadBase * biologicSpreadMultiplier) + (i * 0.08f * biologicSpreadMultiplier)
+                    val spreadBase = if (isElite) 0.12f else 0.28f
+                    val spread = (spreadBase + (i * 0.07f)) * biologicSpreadMultiplier
 
                     predMainEntries.add(Entry(x, predWeight))
                     upperEntries.add(Entry(x, predWeight + spread))
                     lowerEntries.add(Entry(x, predWeight - spread))
 
-                    val futCal = Calendar.getInstance().apply {
-                        time = selectedDate
-                        add(Calendar.DAY_OF_YEAR, i)
+                    if (i > 0) { // Nechceme přepsat label pro dnešek
+                        val futCal = Calendar.getInstance().apply {
+                            time = selectedDate
+                            add(Calendar.DAY_OF_YEAR, i)
+                        }
+                        dayLabels[x] = displaySdf.format(futCal.time)
                     }
-                    dayLabels[x] = displaySdf.format(futCal.time)
                 }
             }
 
-            // 4. DATASETS (Logika kornoutu zachována, upraveny barvy a hladkost)
+            // --- 4. DATASETS (Prémiový styling & Fix kornoutu) ---
             val lineData = LineData()
 
             if (upperEntries.isNotEmpty()) {
-                // Horní hranice stínu
+                // S - Horní stín (BC6C25)
                 lineData.addDataSet(LineDataSet(upperEntries, "S").apply {
                     color = Color.TRANSPARENT; setDrawCircles(false); setDrawValues(false)
-                    setDrawFilled(true)
-                    fillColor = Color.parseColor("#BC6C25") // brand_accent_deep
-                    fillAlpha = 50 // Tvůj funkční opar
-                    mode = LineDataSet.Mode.HORIZONTAL_BEZIER
+                    setDrawFilled(true); fillColor = Color.parseColor("#BC6C25"); fillAlpha = 45
+                    mode = LineDataSet.Mode.CUBIC_BEZIER
                 })
-                // Spodní "vykrývací" vrstva (vytváří kornout)
+                // C - Spodní maska (FEFAE0 - musí být 255 alpha)
                 lineData.addDataSet(LineDataSet(lowerEntries, "C").apply {
                     color = Color.TRANSPARENT; setDrawCircles(false); setDrawValues(false)
-                    setDrawFilled(true)
-                    fillColor = Color.parseColor("#FEFAE0") // brand_cream
-                    fillAlpha = 255 // TVŮJ FIX: Plné zakrytí spodku
-                    mode = LineDataSet.Mode.HORIZONTAL_BEZIER
+                    setDrawFilled(true); fillColor = Color.parseColor("#FEFAE0"); fillAlpha = 255
+                    mode = LineDataSet.Mode.CUBIC_BEZIER
                 })
             }
 
-// Predikční čára (DDA15E)
+            // P - Predikce (DDA15E)
             lineData.addDataSet(LineDataSet(predMainEntries, "P").apply {
-                color = Color.parseColor("#DDA15E"); lineWidth = 2.5f
-                enableDashedLine(20f, 15f, 0f); setDrawCircles(false); setDrawValues(false)
-                mode = LineDataSet.Mode.HORIZONTAL_BEZIER
+                color = Color.parseColor("#DDA15E"); lineWidth = 2.2f
+                enableDashedLine(12f, 10f, 0f); setDrawCircles(false); setDrawValues(false)
+                mode = LineDataSet.Mode.CUBIC_BEZIER
             })
 
-// Historická čára (606C38)
+            // H - Historie (606C38)
             lineData.addDataSet(LineDataSet(historyEntries, "H").apply {
-                color = Color.parseColor("#606C38")
-                lineWidth = 3.5f
+                color = Color.parseColor("#606C38"); lineWidth = 3.5f
                 setCircleColor(Color.parseColor("#606C38"))
-                circleRadius = 5f
-                setDrawCircleHole(true); circleHoleColor = Color.parseColor("#FEFAE0")
-                setDrawValues(false)
-                mode = LineDataSet.Mode.HORIZONTAL_BEZIER // Sjednoceno pro hladký přechod
+                circleRadius = 5f; setDrawCircleHole(true); circleHoleColor = Color.parseColor("#FEFAE0")
+                setDrawValues(false); mode = LineDataSet.Mode.CUBIC_BEZIER
             })
 
-// 5. FINÁLNÍ NASTAVENÍ GRAFU
+            // --- 5. FINÁLNÍ NASTAVENÍ GRAFU ---
             historyChart.apply {
                 data = lineData
-                description.isEnabled = false
-                legend.isEnabled = false
-                setExtraOffsets(10f, 10f, 10f, 20f)
-
-                // Čistší pocit z grafu
+                description.isEnabled = false; legend.isEnabled = false
+                setExtraOffsets(10f, 10f, 10f, 15f)
                 setTouchEnabled(true); setPinchZoom(false); setScaleEnabled(false)
 
                 xAxis.apply {
                     position = XAxis.XAxisPosition.BOTTOM
-                    // Změna na decentní poloprůhlednou tmavou
                     textColor = Color.parseColor("#80283618")
                     textSize = 10f
-                    setDrawGridLines(false)
-                    setDrawAxisLine(false) // Odstranění spodní čáry pro Apple Health styl
-                    axisMinimum = 0f
-                    axisMaximum = totalDays
-                    labelCount = 7
+                    setDrawGridLines(false); setDrawAxisLine(false)
+                    axisMinimum = 0f; axisMaximum = totalDays; labelCount = 7
 
                     valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
                         override fun getFormattedValue(value: Float): String = dayLabels[value] ?: ""
                     }
 
                     removeAllLimitLines()
-                    val ll = com.github.mikephil.charting.components.LimitLine(rangeDays).apply {
-                        lineColor = Color.parseColor("#40283618") // Jemnější dělící čára
-                        lineWidth = 1.2f
-                        enableDashedLine(10f, 10f, 0f)
-                    }
-                    addLimitLine(ll)
+                    addLimitLine(LimitLine(rangeDays).apply {
+                        lineColor = Color.parseColor("#40283618")
+                        lineWidth = 1.5f; enableDashedLine(10f, 10f, 0f)
+                    })
                 }
 
                 axisLeft.apply {
                     textColor = Color.parseColor("#80283618")
-                    textSize = 10f
-                    setDrawGridLines(true)
-                    gridColor = Color.parseColor("#15283618") // Ultra jemná mřížka
-                    setDrawAxisLine(false)
+                    textSize = 10f; setDrawGridLines(true); setDrawAxisLine(false)
+                    gridColor = Color.parseColor("#15283618")
                     xOffset = 12f
 
                     val allY = (historyEntries + upperEntries + lowerEntries).map { it.y }
                     if (allY.isNotEmpty()) {
-                        axisMinimum = (allY.minOrNull() ?: 70f) - 1.2f
-                        axisMaximum = (allY.maxOrNull() ?: 80f) + 1.2f
-                    }
-                    valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
-                        override fun getFormattedValue(value: Float): String = String.format("%.1f", value)
+                        axisMinimum = (allY.minOrNull() ?: 70f) - 1.5f
+                        axisMaximum = (allY.maxOrNull() ?: 80f) + 1.5f
                     }
                 }
                 axisRight.isEnabled = false
-
-                animateX(800) // Plynulý náběh
+                animateY(1000, Easing.EaseOutCubic)
                 invalidate()
             }
         }
