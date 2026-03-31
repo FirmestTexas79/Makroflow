@@ -36,83 +36,93 @@ object MacroCalculator {
         val height = profile?.height ?: 175.0
         val age = profile?.age ?: 22
         val gender = profile?.gender ?: "male"
-        val activityMultiplier = (profile?.activityMultiplier ?: 1.5f).toDouble()
         val isElite = profile?.isEliteMode ?: false
+        val wrist = profile?.lastWristMeasurement ?: 15.0
+        val bodyFat = profile?.bodyFatPercentage ?: 12.0
+        val goal = profile?.goal?.uppercase() ?: "MAINTAIN"
 
-        val diet = (profile?.dietType ?: "BALANCED").normalizeDiet()
-
-        // 1. BMR
+        // 1. VÝPOČET BAZÁLNÍHO METABOLISMU (BMR)
         val bmr = if (isElite) {
-            EliteMetabolicEngine.calculateEliteBMR(weight, profile?.bodyFatPercentage ?: 10.0)
+            // Katch-McArdle (Elite) - přesnější pro sportovce s nízkým body fat
+            EliteMetabolicEngine.calculateEliteBMR(weight, bodyFat)
         } else {
+            // Mifflin-St Jeor (Normal) - standardní lékařský vzorec
             var miffBmr = (10 * weight) + (6.25 * height) - (5 * age)
             if (gender == "female") miffBmr -= 161.0 else miffBmr += 5.0
             miffBmr
         }
 
-        // 2. TDEE + TEF + TRAINING
-        var totalCalories = bmr * activityMultiplier
-        totalCalories *= (1.0 + (if (isElite) EliteMetabolicEngine.getDietaryTEFModifier(diet) else 0.05))
+        // 2. VÝPOČET TDEE (CELKOVÝ VÝDEJ)
+        val rawMult = (profile?.activityMultiplier ?: 1.2f).toDouble()
+        val activityMultiplier = if (isElite) (rawMult * 0.85).coerceAtLeast(1.2) else rawMult
+        val maintenanceKcal = bmr * activityMultiplier
 
-        totalCalories += when {
-            trainingType.contains("legs") -> 600.0
-            trainingType.contains("pull") -> 300.0
-            trainingType.contains("push") -> 250.0
+        // APLIKACE CÍLE (GOAL BRANCHING)
+        var targetCalories = when (goal) {
+            "CUT" -> maintenanceKcal * 0.85 // Zdravotně bezpečný deficit 15%
+            "BULK" -> maintenanceKcal * 1.10 // Čisté nabírání (lean bulk) + 10%
+            else -> maintenanceKcal // Udržování (maintenance)
+        }
+
+        // Přidání tréninkového výdeje (dynamicky podle váhy)
+        targetCalories += when {
+            trainingType.contains("legs") -> weight * 5.8
+            trainingType.contains("pull") -> weight * 3.8
+            trainingType.contains("push") -> weight * 3.3
             else -> 0.0
         }
 
-        // 3. NASTAVENÍ ELITE KOEFICIENTŮ (Tvůj manual)
-        var pPerKg = 2.0
-        var fPerKg = 1.0
-        var forceCarbLimit: Double? = null
+        // 3. DISTRIBUCE MAKER (DOKTORSKÁ PŘESNOST)
+        val carbSens = EliteMetabolicEngine.getCarbSensitivity(wrist, height)
+        var pPerKg: Double
+        var fPerKg: Double
 
         if (isElite) {
+            // ELITE VĚTEV - Vyšší nároky na bílkoviny pro ochranu svalové hmoty
+            val diet = (profile?.dietType ?: "BALANCED").normalizeDiet()
             when {
-                diet.contains("KETO") -> {
-                    pPerKg = 1.8   // 135g (Ty jsi psal, že to teď sedí)
-                    fPerKg = 2.4
-                    forceCarbLimit = 38.0
-                }
-                diet.contains("LOW") -> {
-                    pPerKg = 2.4   // 180g bílkovin
-                    fPerKg = 1.5   // 112g tuku (zdravý základ)
-                    forceCarbLimit = 150.0
-                }
-                diet.contains("HIGH") -> {
-                    pPerKg = 2.8   // Zvedneme na 2.8g/kg -> 210g bílkovin (Elite recovery)
-                    fPerKg = 1.1   // Zvedneme na 1.1g/kg -> 82g tuku
-                    // Sacharidy se automaticky dopočítají a vyjdou kolem 450-480g, což je mnohem zdravější objem
-                }
-                diet.contains("VEGAN") -> {
-                    pPerKg = 2.4   // Kompenzace rostlinných bílkovin
-                    fPerKg = 1.2   // Rostlinné tuky jsou klíčové
-                    // Sacharidy vyjdou kolem 400-450g
-                }
-                else -> { // VYVAZENA
-                    pPerKg = 2.2
-                    fPerKg = 1.1
-                }
+                diet.contains("KETO") -> { pPerKg = 2.1; fPerKg = 2.3 }
+                diet.contains("LOW_CARB") -> { pPerKg = 2.5; fPerKg = 1.3 }
+                diet.contains("HIGH_PROTEIN") -> { pPerKg = 2.9; fPerKg = 0.8 }
+                else -> { pPerKg = 2.4; fPerKg = 1.0 }
             }
+        } else {
+            // NORMAL VĚTEV - Standardní sportovní výživa
+            pPerKg = when(goal) {
+                "CUT" -> 2.2 // Vyšší v dietě kvůli sytosti a svalům
+                "BULK" -> 1.9 // V objemu stačí méně díky dostatku energie
+                else -> 2.0
+            }
+            fPerKg = if (carbSens > 1.0) 0.85 else 1.05 // Úprava podle somatotypu (zápěstí)
         }
 
         var protein = weight * pPerKg
         var fat = weight * fPerKg
-        var carbs = (totalCalories - (protein * 4) - (fat * 9)) / 4
+        var carbs = (targetCalories - (protein * 4) - (fat * 9)) / 4
 
-        // 4. KOREKCE A PŘELITÍ (Důležité pro Low Carb!)
+        // 4. PREVENCE SNOWBALL EFEKTU & BIOLOGICKÉ STROPY
+        val maxCarbCap = if (goal == "BULK") weight * 7.5 else weight * 5.5
+        val minFatCap = weight * 0.75 // Nikdy neklesnout pod 0.75g tuku/kg (hormony!)
+
+        // Pokud sacharidy přetečou strop, zbytek jde do tuků
+        if (carbs > maxCarbCap) {
+            val overflow = (carbs - maxCarbCap) * 4
+            carbs = maxCarbCap
+            fat += (overflow / 9)
+        }
+
+        // Pokud tuky klesnou pod minimum, sebereme sacharidy
+        if (fat < minFatCap) {
+            val deficitFat = (minFatCap - fat) * 9
+            fat = minFatCap
+            carbs -= (deficitFat / 4)
+        }
+
+        // Finální doladění Elite Inzulínové senzitivity
         if (isElite) {
-            forceCarbLimit?.let { limit ->
-                if (carbs > limit) {
-                    val extraKcal = (carbs - limit) * 4
-                    carbs = limit
-                    fat += (extraKcal / 9) // Zbytek energie z cukrů jde do tuků
-                }
-            }
-            // Zápěstí ovlivní jen ty, co nejsou Keto/LowCarb
-            if (forceCarbLimit == null) {
-                val carbSens = EliteMetabolicEngine.getCarbSensitivity(profile?.lastWristMeasurement ?: 15.0, height)
-                carbs *= carbSens
-            }
+            val originalCarbs = carbs
+            carbs *= carbSens
+            fat += ((originalCarbs - carbs) * 4) / 9
         }
 
         val finalCalories = (protein * 4) + (carbs * 4) + (fat * 9)
@@ -122,7 +132,7 @@ object MacroCalculator {
             protein = protein,
             carbs = carbs,
             fat = fat,
-            water = (weight * 0.04) + (if (totalCalories > 3000) 1.0 else 0.0),
+            water = (weight * 0.04) + (if (finalCalories > 3000) 1.0 else 0.0),
             trainingType = trainingType.uppercase(),
             weight = weight,
             isEliteMode = isElite

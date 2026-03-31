@@ -141,23 +141,79 @@
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <LinearLayout
+                android:id="@+id/dividerGoal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="28dp"
+                app:layout_constraintTop_toBottomOf="@id/toggleGender"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+                <View android:layout_width="0dp" android:layout_height="1dp"
+                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="12dp" android:text="AKTUÁLNÍ CÍL"
+                    android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold"
+                    android:letterSpacing="0.14" />
+                <View android:layout_width="0dp" android:layout_height="1dp"
+                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleGoal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                app:checkedButton="@+id/btnMaintain"
+                app:layout_constraintTop_toBottomOf="@id/dividerGoal"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCut"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="CUT" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMaintain"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="MAINTAIN" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBulk"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="BULK" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <LinearLayout
                 android:id="@+id/inputsLayout"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_marginTop="16dp"
-                app:layout_constraintTop_toBottomOf="@id/toggleGender"
+                app:layout_constraintTop_toBottomOf="@id/toggleGoal"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilWeight"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/weight"
                     app:suffixText="kg"
-                    app:suffixTextColor="@color/brand_dark"
                     app:boxStrokeColor="@color/brand_primary"
-                    app:hintTextColor="@color/brand_primary"
                     app:boxCornerRadiusTopStart="14dp"
                     app:boxCornerRadiusTopEnd="14dp"
                     app:boxCornerRadiusBottomStart="14dp"
@@ -172,14 +228,13 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilHeight"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:hint="@string/height"
                     app:suffixText="cm"
-                    app:suffixTextColor="@color/brand_dark"
                     app:boxStrokeColor="@color/brand_primary"
-                    app:hintTextColor="@color/brand_primary"
                     app:boxCornerRadiusTopStart="14dp"
                     app:boxCornerRadiusTopEnd="14dp"
                     app:boxCornerRadiusBottomStart="14dp"
@@ -194,14 +249,13 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilAge"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:hint="@string/age"
                     app:suffixText="@string/unit_years"
-                    app:suffixTextColor="@color/brand_dark"
                     app:boxStrokeColor="@color/brand_primary"
-                    app:hintTextColor="@color/brand_primary"
                     app:boxCornerRadiusTopStart="14dp"
                     app:boxCornerRadiusTopEnd="14dp"
                     app:boxCornerRadiusBottomStart="14dp"
@@ -215,6 +269,8 @@
                         android:textColor="@color/brand_dark" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
+
+
 
             <LinearLayout
                 android:id="@+id/dividerLifestyle"

@@ -29,7 +29,7 @@ import kotlin.concurrent.thread
         StepsEntity::class,
         AnalyticsCacheEntity::class
     ],
-    version = 28,
+    version = 29,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

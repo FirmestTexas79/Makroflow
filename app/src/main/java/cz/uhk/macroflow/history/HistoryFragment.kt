@@ -261,9 +261,9 @@ class HistoryFragment : Fragment() {
             // --- 1. ENGINE LOGIKA ---
             val trendSensitivity = if (isElite) 1.0f else 0.35f
             val (tef, stability) = when {
-                rawDiet.contains("protein") -> 0.22 to 0.70f
-                rawDiet.contains("keto")    -> 0.08 to 1.75f
-                rawDiet.contains("low")     -> 0.16 to 1.15f
+                rawDiet.contains("protein") -> 0.22 to 0.80f
+                rawDiet.contains("keto")    -> 0.08 to 0.50f
+                rawDiet.contains("low")     -> 0.16 to 0.60f
                 rawDiet.contains("vegan")   -> 0.13 to 0.90f
                 else                        -> 0.11 to 1.00f
             }
