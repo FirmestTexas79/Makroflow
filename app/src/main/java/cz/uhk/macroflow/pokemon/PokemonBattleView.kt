@@ -74,50 +74,49 @@ class PokemonBattleView @JvmOverloads constructor(
     init {
         PokemonSprites.init(context)
 
+        // 1. Získání preferencí
         val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1) // 👈 Načítáme ID konkrétního pokémona, ne globální dex ID!
+
+        // Zkusíme nejdřív získat unikátní ID z databáze (pokud ho tam ukládáš jako Int)
+        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
+
+        // ZÁLOŽNÍ PLÁN: Pokud nemáme unikátní ID z DB, zkusíme String ID (např. "026")
+        val backupPokemonId = prefs.getString("currentOnBarId", null)
 
         Thread {
             val db = AppDatabase.getDatabase(context)
 
-            // 🔍 Získáme přesnou instanci Pokémona z batohu!
-            val caughtPokemon = db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
+            // 2. Najdeme pokémona v DB
+            val caughtPokemon = if (activeCapturedId != -1) {
+                db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
+            } else null
 
-            // 🎯 Vezmeme level reálně z něj! Pokud ho nemáme, dáme fallback na 1.
+            // 3. Rozhodnutí o ID a Levelu (priorita: DB -> SharedPreferences -> Diglett)
+            val pId = caughtPokemon?.pokemonId ?: backupPokemonId ?: "050"
             val playerLevel = caughtPokemon?.level ?: 1
-            val pId = caughtPokemon?.pokemonId ?: "050"
 
+            // 4. Inicializace hráče
             val playerWithStats = createPlayerPokemon(pId, playerLevel)
 
+            // --- Zbytek logiky pro nepřítele (necháme jak je) ---
             val baseEnemy = SpawnManager.rollWildEncounter(context)
             val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
             val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
 
-            val enemyId = BattleFactory.pokedexId(enemyWithStats)
-
-            // 1. Lokální uložení, že jsme pokémona viděli
-            db.seenPokemonDao().markSeen(SeenPokemonEntity(enemyId))
-
-
-
             handler.post {
                 gs = BattleState(
-                    player    = playerWithStats,
-                    enemy     = enemyWithStats,
+                    player = playerWithStats,
+                    enemy = enemyWithStats,
                     ballCount = currentPokeballs
                 )
-
                 handler.post(cursorTick)
-
                 loadSprite(spriteUrl(BattleFactory.webName(enemyWithStats)), isPlayer = false)
                 loadSprite(spriteUrl(BattleFactory.webName(playerWithStats)), isPlayer = true)
-
                 invalidate()
             }
         }.start()
     }
-
     private fun loadSprite(url: String, isPlayer: Boolean) {
         val loader  = ImageLoader(context)
         val request = ImageRequest.Builder(context)

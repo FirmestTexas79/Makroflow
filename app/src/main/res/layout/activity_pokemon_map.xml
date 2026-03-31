@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mapRootContainer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <RelativeLayout
+        android:id="@+id/mapMainContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:id="@+id/mapBackground"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/poketown" />
+
+        <View
+            android:id="@+id/hotspotForest"
+            android:layout_width="72dp"
+            android:layout_height="100dp"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="50dp"
+            android:background="#44FF0000" />
+
+        <View
+            android:id="@+id/hotspotPokedex"
+            android:layout_width="93dp"
+            android:layout_height="63dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginEnd="67dp"
+            android:layout_marginBottom="657dp"
+            android:background="#44FF0000" />
+
+        <View
+            android:id="@+id/hotspotHome"
+            android:layout_width="105dp"
+            android:layout_height="67dp"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginStart="46dp"
+            android:layout_marginBottom="654dp"
+            android:background="#44FF0000" />
+
+        <ImageView
+            android:id="@+id/ashView"
+            android:layout_width="48dp"
+            android:layout_height="72dp"
+            android:scaleType="fitCenter"
+            android:elevation="10dp" />
+
+        <ImageView
+            android:id="@+id/buddyView"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:scaleType="fitCenter" />
+
+        <ImageButton
+            android:id="@+id/btnExitMap"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="16dp"
+            android:layout_marginTop="50dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:elevation="15dp" />
+
+        <FrameLayout
+            android:id="@+id/mapFragmentContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:elevation="20dp" />
+    </RelativeLayout>
+
+</FrameLayout>

@@ -59,6 +59,7 @@ import cz.uhk.macroflow.pokemon.PokemonLevelCalc
 import cz.uhk.macroflow.pokemon.WandererFactory
 import cz.uhk.macroflow.training.PlanFragment
 import cz.uhk.macroflow.data.StepsEntity
+import cz.uhk.macroflow.pokemon.PokemonMapActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -79,7 +80,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var currentOnBarId: String = ""
 
     private var fabHoldStart = 0L
-    private val FAB_HOLD_MS  = 5000L
+    private val FAB_HOLD_MS  = 2000L
+    private var isLongPressTriggered = false
+    private var holdRunnable: Runnable? = null
+
 
     companion object {
         private const val REQ_NOTIFICATION_PERMISSION = 100
@@ -139,40 +143,53 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
+        // JEDEN JEDNOTNÝ CLICK LISTENER
         fabHome.setOnClickListener {
-            replaceFragment(DashboardFragment())
-            bottomNav.selectedItemId = R.id.nav_placeholder
-
-            for (i in 0 until bottomNav.menu.size()) {
-                val menuItem = bottomNav.menu.getItem(i)
-                val itemView = bottomNav.findViewById<View>(menuItem.itemId) ?: continue
-                itemView.animate()
-                    .scaleX(1.0f)
-                    .scaleY(1.0f)
-                    .translationY(0f)
-                    .setDuration(200)
-                    .start()
+            // Klik se provede jen pokud NEPROBĚHL long press
+            if (!isLongPressTriggered) {
+                replaceFragment(DashboardFragment())
+                bottomNav.selectedItemId = R.id.nav_placeholder
+                resetBottomNavVisuals(bottomNav)
             }
         }
 
+// JEDEN JEDNOTNÝ TOUCH LISTENER PRO LONG PRESS
         fabHome.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    fabHoldStart = System.currentTimeMillis()
-                    v.postDelayed({
-                        if (fabHoldStart > 0L &&
-                            System.currentTimeMillis() - fabHoldStart >= FAB_HOLD_MS) {
-                            fabHoldStart = 0L
-                            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                            openPokemonBattle()
-                        }
-                    }, FAB_HOLD_MS)
-                    false
+                    isLongPressTriggered = false
+
+                    // Vizuální odezva (smáčknutí tlačítka)
+                    v.animate().scaleX(0.85f).scaleY(0.85f).setDuration(150).start()
+
+                    // Vytvoříme úkol pro otevření souboje
+                    holdRunnable = Runnable {
+                        isLongPressTriggered = true
+                        v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        // Vrátíme měřítko zpět
+                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start()
+                        openPokemonBattle()
+                        holdRunnable = null
+                    }
+
+                    // Naplánujeme ho na 2 sekundy
+                    v.postDelayed(holdRunnable!!, 2000L)
                 }
-                MotionEvent.ACTION_UP,
-                MotionEvent.ACTION_CANCEL -> { fabHoldStart = 0L; false }
-                else -> false
+
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    // 🔥 KLÍČOVÁ OPRAVA: Pokud uživatel pustí prst, zrušíme naplánovaný úkol
+                    holdRunnable?.let {
+                        v.removeCallbacks(it)
+                        holdRunnable = null
+                    }
+
+                    // Pokud to nebyl long press, vrátíme velikost tlačítka
+                    if (!isLongPressTriggered) {
+                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
+                    }
+                }
             }
+            false // False zajistí, že event propadne do OnClickListeneru pro krátký klik
         }
 
         bottomNav.setOnItemSelectedListener { item ->
@@ -460,6 +477,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+
+    private fun resetBottomNavVisuals(bottomNav: BottomNavigationView) {
+        for (i in 0 until bottomNav.menu.size()) {
+            val menuItem = bottomNav.menu.getItem(i)
+            val itemView = bottomNav.findViewById<View>(menuItem.itemId) ?: continue
+            itemView.animate()
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .translationY(0f)
+                .setDuration(200)
+                .start()
+        }
+    }
+
     private fun getEvolutionMove(targetId: String): Move? = when (targetId) {
         "011" -> BattleFactory.attackHarden()
         "012" -> BattleFactory.attackGust()
@@ -467,13 +498,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     fun openPokemonBattle() {
-        stopLureSmoke()
+        stopLureSmoke() // Zastavíme částice, pokud běžely
 
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-            .replace(R.id.nav_host_fragment, PokemonBattleFragment())
-            .addToBackStack(null)
-            .commit()
+        // Místo přímého vložení fragmentu spustíme Mapu jako novou aktivitu
+        val intent = Intent(this, PokemonMapActivity::class.java)
+        startActivity(intent)
+
+        // Volitelně: Přidáme animaci přechodu, aby to vypadalo jako vstup do hry
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     fun updatePokemonVisibility() {
