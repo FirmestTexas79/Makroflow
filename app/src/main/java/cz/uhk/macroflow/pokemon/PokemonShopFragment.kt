@@ -26,7 +26,8 @@ data class ShopProduct(
     val desc: String,
     val price: Int,
     val quantityToGive: Int,
-    val imageUrl: String
+    val imageUrl: String,
+    val category: Int
 )
 
 class PokemonShopFragment : Fragment() {
@@ -38,45 +39,16 @@ class PokemonShopFragment : Fragment() {
 
     private var currentTab = 0
 
-    private val ballProducts = listOf(
-        ShopProduct(
-            "poke_ball",
-            "Poké Ball (5x)",
-            "Základní míček na ranní kardio.",
-            20, 5,
-            "https://img.pokemondb.net/sprites/items/poke-ball.png"
-        ),
-        ShopProduct(
-            "great_ball",
-            "Great Ball (3x)",
-            "Lepší šance na těžké váhy.",
-            50, 3,
-            "https://img.pokemondb.net/sprites/items/great-ball.png"
-        )
-    )
-
-    private val lureProducts = listOf(
-        ShopProduct(
-            "lure_lamp",
-            "Spooky Plate",
-            "Zvedne spawn Gengara v noci.",
-            150, 1,
-            "https://img.pokemondb.net/sprites/items/spooky-plate.png"
-        ),
-        ShopProduct(
-            "lure_protein",
-            "Black Belt",
-            "Zaručí spawn Machampa po tréninku.",
-            100, 1,
-            "https://img.pokemondb.net/sprites/items/black-belt.png"
-        )
-    )
+    private val allProducts = listOf(
+        ShopProduct("poke_ball", "Poké Ball (5x)", "Základní míček na ranní kardio.", 20, 5, "https://img.pokemondb.net/sprites/items/poke-ball.png", 0),
+        ShopProduct("great_ball", "Great Ball (3x)", "Lepší šance na těžké váhy.", 50, 3, "https://img.pokemondb.net/sprites/items/great-ball.png", 0),
+        ShopProduct("lure_lamp", "Spooky Plate", "Zvedne spawn Gengara v noci.", 150, 1, "https://img.pokemondb.net/sprites/items/spooky-plate.png", 1),
+        ShopProduct("lure_protein", "Black Belt", "Zaručí spawn Machampa.", 100, 1, "https://img.pokemondb.net/sprites/items/black-belt.png", 1),
+)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_pokemon_shop, container, false)
-    }
+    ): View? = inflater.inflate(R.layout.fragment_pokemon_shop, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -87,6 +59,12 @@ class PokemonShopFragment : Fragment() {
         tvBalance = view.findViewById(R.id.tvShopCoinBalance)
 
         rvShop.layoutManager = GridLayoutManager(requireContext(), 2)
+
+        if (tabLayout.tabCount == 0) {
+            tabLayout.addTab(tabLayout.newTab().setText("Míčky"))
+            tabLayout.addTab(tabLayout.newTab().setText("Lákadla"))
+            tabLayout.addTab(tabLayout.newTab().setText("Raichu"))
+        }
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
@@ -105,14 +83,14 @@ class PokemonShopFragment : Fragment() {
             val balance = withContext(Dispatchers.IO) {
                 db.coinDao().getBalance()?.balance ?: 0
             }
-            tvBalance.text = balance.toString()
+            tvBalance.text = "$balance 🪙"
             updateList()
         }
     }
 
     private fun updateList() {
-        val products = if (currentTab == 0) ballProducts else lureProducts
-        rvShop.adapter = ShopAdapter(products)
+        val filtered = allProducts.filter { it.category == currentTab }
+        rvShop.adapter = ShopAdapter(filtered)
     }
 
     private inner class ShopAdapter(private val products: List<ShopProduct>) :
@@ -134,16 +112,15 @@ class PokemonShopFragment : Fragment() {
             val product = products[position]
             holder.tvName.text = product.name
             holder.tvDesc.text = product.desc
-            holder.btnBuy.text = "KOUPIT ZA ${product.price} 🪙"
+            holder.btnBuy.text = "${product.price} 🪙"
 
             holder.ivIcon.load(product.imageUrl) {
+                crossfade(true)
                 placeholder(R.drawable.ic_home)
                 error(R.drawable.ic_home)
             }
 
-            holder.btnBuy.setOnClickListener {
-                handlePurchase(product)
-            }
+            holder.btnBuy.setOnClickListener { handlePurchase(product) }
         }
 
         override fun getItemCount() = products.size
@@ -151,21 +128,27 @@ class PokemonShopFragment : Fragment() {
 
     private fun handlePurchase(product: ShopProduct) {
         lifecycleScope.launch {
-            val success = withContext(Dispatchers.IO) {
-                db.coinDao().spendCoins(product.price)
+            val currentBalance = withContext(Dispatchers.IO) {
+                db.coinDao().getBalance()?.balance ?: 0
             }
 
-            if (success) {
-                withContext(Dispatchers.IO) {
-                    db.userItemDao().addItem(product.id, product.quantityToGive)
+            if (currentBalance >= product.price) {
+                val success = withContext(Dispatchers.IO) {
+                    db.coinDao().spendCoins(product.price)
                 }
-                Toast.makeText(requireContext(), "🎉 Koupeno: ${product.name}", Toast.LENGTH_SHORT).show()
-                updateUI()
+
+                if (success) {
+                    withContext(Dispatchers.IO) {
+                        db.userItemDao().addItem(product.id, product.quantityToGive)
+                    }
+                    Toast.makeText(requireContext(), "Koupeno: ${product.name}!", Toast.LENGTH_SHORT).show()
+                    updateUI()
+                }
             } else {
                 android.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Nedostatek 🪙")
-                    .setMessage("Pro nákup ${product.name} potřebuješ ${product.price} coinů.")
-                    .setPositiveButton("Rozumím", null)
+                    .setTitle("Málo coinů")
+                    .setMessage("Na tohle nemáš coiny. Běž se hýbat!")
+                    .setPositiveButton("OK", null)
                     .show()
             }
         }

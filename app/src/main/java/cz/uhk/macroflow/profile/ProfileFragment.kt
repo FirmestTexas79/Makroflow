@@ -223,29 +223,34 @@ class ProfileFragment : Fragment() {
 
         val gender = if (toggleGender.checkedButtonId == R.id.btnMale) "male" else "female"
 
-        // ✅ Entita nyní obsahuje goal
-        val profileEntity = UserProfileEntity(
-            id = 1,
-            weight = weight,
-            height = height,
-            age = age,
-            gender = gender,
-            activityMultiplier = selectedMultiplier,
-            stepGoal = stepGoal,
-            goal = selectedGoal
-        )
-
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(requireContext())
-            db.userProfileDao().saveProfile(profileEntity)
+
+            // 1. Získáme aktuální profil (včetně dat z architekta)
+            val currentProfile = db.userProfileDao().getProfileSync() ?: return@launch
+
+            // 2. Vytvoříme kopii pomocí .copy() - přepíšeme jen to, co vidíme v tomto UI
+            // Ostatní hodnoty (BF%, dieta, zápěstí) zůstanou v objektu netknuté
+            val profileToSave = currentProfile.copy(
+                weight = weight,
+                height = height,
+                age = age,
+                gender = gender,
+                activityMultiplier = selectedMultiplier,
+                stepGoal = stepGoal,
+                goal = selectedGoal
+            )
+
+            // 3. Uložíme aktualizovaný profil zpět do DB
+            db.userProfileDao().saveProfile(profileToSave)
 
             requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
                 .edit().putString("weightAkt", weight.toString()).apply()
 
-            // ✅ Synchronizace na Firebase
+            // 4. Synchronizace na Firebase (posíláme kompletní objekt s architektem)
             if (FirebaseRepository.isLoggedIn) {
                 try {
-                    FirebaseRepository.uploadProfile(profileEntity)
+                    FirebaseRepository.uploadProfile(profileToSave)
                 } catch (e: Exception) { e.printStackTrace() }
             }
 

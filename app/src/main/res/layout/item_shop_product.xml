@@ -8,8 +8,8 @@
     android:layout_margin="8dp"
     app:cardBackgroundColor="@color/brand_cream"
     app:cardCornerRadius="20dp"
-    app:strokeColor="@color/brand_primary"
-    app:strokeWidth="2dp"
+    app:strokeColor="@color/brand_primary_alpha30"
+    app:strokeWidth="1dp"
     app:cardElevation="4dp">
 
     <LinearLayout
@@ -25,17 +25,15 @@
             android:layout_height="64dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_home"
-            app:tint="@color/brand_primary" />
-
-        <TextView
-            android:id="@+id/tvProductName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textColor="@color/brand_dark"
-            android:textSize="17sp"
-            android:fontFamily="sans-serif-black"
-            android:text="@string/shop_item_default_name" />
+            app:tint="@null" /> <TextView
+        android:id="@+id/tvProductName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/brand_dark"
+        android:textSize="17sp"
+        android:fontFamily="sans-serif-black"
+        android:text="@string/shop_item_default_name" />
 
         <TextView
             android:id="@+id/tvProductDesc"
@@ -54,7 +52,7 @@
             android:layout_marginTop="16dp"
             android:text="KOUPIT"
             android:textColor="@color/brand_cream"
-            android:textStyle="bold"
+            android:fontFamily="sans-serif-black"
             app:backgroundTint="@color/brand_accent_deep"
             app:cornerRadius="12dp"
             app:rippleColor="@color/white" />
