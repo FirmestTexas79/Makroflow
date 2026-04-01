@@ -82,6 +82,7 @@ class PokedexFragment : Fragment() {
                 val definedIds = listOf(
                     "001", // Bulbasaur
                     "004", // Charmander
+                    "005", // Charmeleon
                     "006", // Charizard
                     "007", // Squirtle
                     "010", // Caterpie
@@ -90,10 +91,13 @@ class PokedexFragment : Fragment() {
                     "025", // Pikachu
                     "026", // Raichu (Evoluce)
                     "050", // Diglett
+                    "051", // Dugtrio (Evoluce)
                     "092", // Gastly
                     "093", // Haunter
                     "094", // Gengar
                     "115", // Kangaskhan
+                    "131", // Lapras
+                    "132", // Ditto
                     "133", // Eevee
                     "137", // Porygon
                     "143", // Snorlax
@@ -123,7 +127,10 @@ class PokedexFragment : Fragment() {
         "007" -> "Cítíš sucho v krku? Vodní Pokémoni se k tvému Dashboardu nepřiblíží, dokud pořádně nehydratuješ a nesplníš dnešní cíl vody!"
         "092", "093", "094" -> "Někteří Pokémoni nesnáší slunce. Zkusil jsi někdy večerní trénink? Říká se, že po 19:00 můžeš narazit na staré duchy."
         "143" -> "Tento Pokémon tvrdě spí. Probudit ho dokáže jen poctivá ranní rutina. Zkus zapsat svůj spánek a váhu 7 dní v kuse!"
+        "005" -> "Já tuhle špeluňu podpálím."
+        "51" -> "Tři shity jdou, v řadě za sebou (Tomáš, Sam a Vítek)"
         "006" -> "Žhnoucí plameny Charizarda spatří jen opravdoví dříči. Pokračuj v konzistentním zapisování tréninků a budování návyků aspoň 14 dní."
+        "131" -> "Pluje si životem a nenechá se ničím rozhodit, zkus udržet vodu po dobu 7 dní."
         "137" -> "Data, data a zase data, býval jsem studentem Statistiky"
         "150", "151" -> "Tajemná psychická energie pulzuje kdesi v nedohlednu. Získá ji jen ten, kdo se stane mistrem dlouhodobé disciplíny v MakroFlow."
         else -> "Zapiš trénink, udržuj disciplínu a vyraz ho hledat!"

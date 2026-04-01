@@ -1,5 +1,7 @@
 package cz.uhk.macroflow.pokemon
 
+import android.R.attr.text
+import android.R.attr.textSize
 import android.animation.*
 import android.content.Context
 import android.graphics.*
@@ -9,7 +11,9 @@ import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.*
+import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.TextView
 import cz.uhk.macroflow.data.AppDatabase
 import kotlin.math.*
 import kotlin.random.Random
@@ -411,6 +415,10 @@ class StandardWanderer(
             "150" -> mewtwoTapReaction()
             "092", "093", "094" -> ghostTapReaction()
             "025","026" -> pikachuTapReaction() // Použije blesky z Pikachu!
+            "131" -> laprasTapReaction()
+            "005" -> charmeleonTapReaction()
+            "051" -> dugtrioTapReaction()
+            "132" -> dittoTapReaction()
             else  -> defaultTapReaction()
         }
     }
@@ -494,6 +502,34 @@ class StandardWanderer(
         }
     }
 
+
+
+    private fun laprasTapReaction() {
+        // Lapras radostně stříkne vodu (modré kuličky)
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val cx = pokemonView.x + pokemonView.width / 2f
+        val cy = pokemonView.y + pokemonView.height * 0.3f
+
+        repeat(8) {
+            val drop = View(context).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.parseColor("#00B0FF"))
+                }
+                layoutParams = ViewGroup.LayoutParams((6 * dp).toInt(), (6 * dp).toInt())
+                x = cx; y = cy
+            }
+            parent.addView(drop)
+            drop.animate()
+                .translationXBy((Random.nextFloat() - 0.5f) * 150f * dp)
+                .translationYBy(-100f * dp - (Random.nextFloat() * 50f * dp))
+                .alpha(0f)
+                .setDuration(800)
+                .withEndAction { parent.removeView(drop) }
+                .start()
+        }
+    }
+
     private fun mewtwoTapReaction() {
         val parent = pokemonView.parent as? View ?: return
         shakeView(parent)
@@ -529,9 +565,13 @@ class StandardWanderer(
             "151" -> startMewIdle()
             "150" -> startMewtwoIdle()
             "137" -> startPorygonIdle()
+            "131" -> startLaprasIdle()
+            "132" -> startDittoIdle()
             "093" -> startHaunterIdle()
             "092" -> startGastlyIdle()
             "006" -> startCharizardIdle()
+            "005" -> startCharmeleonIdle()
+            "051" -> startDugtrioIdle()
             else  -> startDefaultIdle()
         }
     }
@@ -647,6 +687,217 @@ class StandardWanderer(
         }
     }
 
+
+    private fun crossingLapras(fromX: Float, toX: Float) {
+        idleAnim?.cancel()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+
+        val waveWidth = (pokemonView.width * 2.2f).toInt()
+        val waveHeight = (38 * dp).toInt()
+        val dur = 3500L
+
+        // 1. HLAVNÍ KONTEJNER
+        val waveContainer = android.widget.FrameLayout(context).apply {
+            layoutParams = ViewGroup.LayoutParams(waveWidth, waveHeight)
+            x = pokemonView.x + (pokemonView.width / 2f) - (waveWidth / 2f)
+            y = pokemonView.y + pokemonView.height - (12 * dp)
+            alpha = 0f
+            translationZ = 1f
+        }
+
+        // 2. VRSTVY (Vytvoříme efekt hloubky posunutím středů)
+
+        // Spodní tmavý stín vody
+        val deepLayer = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#1A237E")) // Hodně tmavě modrá
+            }
+            layoutParams = android.widget.FrameLayout.LayoutParams(waveWidth, (waveHeight * 0.9f).toInt()).apply {
+                gravity = android.view.Gravity.BOTTOM
+            }
+            alpha = 0.5f
+        }
+
+        // Prostřední hlavní vlna
+        val midLayer = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#0288D1"))
+                setStroke((2 * dp).toInt(), Color.WHITE)
+            }
+            layoutParams = android.widget.FrameLayout.LayoutParams((waveWidth * 0.95f).toInt(), (waveHeight * 0.8f).toInt()).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.BOTTOM
+                bottomMargin = (4 * dp).toInt()
+            }
+        }
+
+        // Horní jasná pěna (bílá elipsa posunutá dopředu)
+        val foamLayer = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#B3E5FC")) // Světle modrá/bílá
+            }
+            layoutParams = android.widget.FrameLayout.LayoutParams((waveWidth * 0.6f).toInt(), (waveHeight * 0.3f).toInt()).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.TOP
+                topMargin = (2 * dp).toInt()
+            }
+            alpha = 0.8f
+        }
+
+        waveContainer.addView(deepLayer)
+        waveContainer.addView(midLayer)
+        waveContainer.addView(foamLayer)
+        parent.addView(waveContainer)
+
+        // 3. KOMPLEXNÍ PULZOVÁNÍ (Každá vrstva jinak, aby se to "mlelo")
+        val p1 = ObjectAnimator.ofFloat(midLayer, "scaleX", 1f, 1.05f, 1f).apply { duration = 1200; repeatCount = -1; start() }
+        val p2 = ObjectAnimator.ofFloat(foamLayer, "translationX", -10f * dp, 10f * dp).apply {
+            duration = 1500; repeatCount = -1; repeatMode = ValueAnimator.REVERSE; start()
+        }
+
+        // --- ANIMACE STARTU (Výskok na vlnu) ---
+        val startAnim = AnimatorSet().apply {
+            playTogether(
+                ObjectAnimator.ofFloat(waveContainer, "alpha", 0f, 1f),
+                ObjectAnimator.ofFloat(waveContainer, "scaleY", 0.2f, 1f),
+                ObjectAnimator.ofFloat(pokemonView, "translationY", targetTranslationY, targetTranslationY - 50f * dp),
+                ObjectAnimator.ofFloat(pokemonView, "rotation", 0f, if (toX > fromX) -15f else 15f)
+            )
+            duration = 700
+        }
+
+        startAnim.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                if (!running) return
+                facingRight = toX > fromX
+                applyFacing(facingRight)
+
+                // --- SURFING (Sinusový let přes bar) ---
+                ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = dur
+                    interpolator = AccelerateDecelerateInterpolator()
+                    addUpdateListener { anim ->
+                        val p = anim.animatedValue as Float
+                        val currentX = fromX + (toX - fromX) * p
+
+                        pokemonView.x = currentX
+                        val angle = p * kotlin.math.PI.toFloat()
+                        val heightArc = kotlin.math.sin(angle.toDouble()).toFloat() * 75f * dp
+
+                        pokemonView.translationY = (targetTranslationY - 50f * dp) - heightArc
+                        waveContainer.x = currentX + (pokemonView.width / 2f) - (waveWidth / 2f)
+                        waveContainer.y = pokemonView.y + pokemonView.height - (15 * dp)
+
+                        pokemonView.rotation = kotlin.math.cos(angle.toDouble()).toFloat() * (if (facingRight) -20f else 20f)
+                    }
+                    addListener(object : AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(a: Animator) {
+                            p1.cancel(); p2.cancel()
+                            pokemonView.animate().rotation(0f).translationY(targetTranslationY).setDuration(600).start()
+                            waveContainer.animate().alpha(0f).scaleX(0.5f).setDuration(600).withEndAction {
+                                parent.removeView(waveContainer)
+                                if (running) {
+                                    startIdleAnimation()
+                                    scheduleStep(Random.nextLong(2000, 4000))
+                                }
+                            }.start()
+                        }
+                    })
+                    start()
+                }
+            }
+        })
+        startAnim.start()
+    }
+
+
+    private fun scheduleLaprasSinging() {
+        // Pokud postava neběží nebo to není Lapras, ukončíme smyčku
+        if (!running || pokemonId != "131") return
+
+        handler.postDelayed({
+            if (running && pokemonId == "131") {
+                spawnSingingNotes() // Volá tu tvoji opravenou funkci s notami
+                scheduleLaprasSinging() // Naplánuje další písničku
+            }
+        }, Random.nextLong(6000, 12000)) // Zazpívá každých 6 až 12 vteřin
+    }
+
+    private fun spawnSingingNotes() {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val cx = pokemonView.x + pokemonView.width / 2f
+        val cy = pokemonView.y + (20 * dp)
+
+        // Lapras se při zpěvu trochu nafoukne (efekt nádechu)
+        ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.1f, baseScale).apply {
+            duration = 1000
+            start()
+        }
+
+        repeat(3) { i ->
+            handler.postDelayed({
+                if (!running) return@postDelayed
+
+                val note = TextView(context).apply {
+                    text = if (i % 2 == 0) "♪" else "♫"
+                    textSize = 22f
+                    setTextColor(Color.parseColor("#E1F5FE"))
+                    setShadowLayer(4f, 0f, 0f, Color.WHITE)
+                    x = cx
+                    y = cy
+                    alpha = 0f
+                }
+                parent.addView(note)
+
+                // ValueAnimator s explicitní cestou ke kotlin.math
+                val anim = ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = 2500
+                    addUpdateListener { a ->
+                        val p = a.animatedValue as Float
+
+                        // Pohyb nahoru
+                        note.y = cy - (p * 120f * dp)
+
+                        // Vlnění do stran - Tady je ta oprava:
+                        val waveValue = kotlin.math.sin(p.toDouble() * kotlin.math.PI * 4.0).toFloat()
+                        note.x = cx + (waveValue * 30f * dp)
+
+                        // Zmizík a zvětšování
+                        note.alpha = if (p < 0.2f) p * 5f else 1f - p
+                        note.scaleX = 0.8f + p
+                        note.scaleY = 0.8f + p
+                    }
+                }
+                anim.addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(a: Animator) {
+                        parent.removeView(note)
+                    }
+                })
+                anim.start()
+            }, i * 600L)
+        }
+    }
+
+
+    private fun startLaprasIdle(): Animator {
+        // 1. Jemné houpání nahoru a dolů (jako na hladině)
+        val floatAnim = ObjectAnimator.ofFloat(pokemonView, "translationY",
+            targetTranslationY - 4f * dp, targetTranslationY + 4f * dp).apply {
+            duration = 2000
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+
+        // 2. Spouštění efektu zpěvu (noty)
+        scheduleLaprasSinging()
+
+        floatAnim.start()
+        return floatAnim
+    }
+
+
     private fun startPorygonIdle(): Animator {
         val levitate = ObjectAnimator.ofFloat(pokemonView, "translationY",
             targetTranslationY - 6f * dp, targetTranslationY + 6f * dp).apply {
@@ -700,7 +951,444 @@ class StandardWanderer(
         glitch.start()
     }
 
+    private fun startCharmeleonIdle(): Animator {
+        // 1. Dýchání a postoj (mírné naklánění a změna měřítka)
+        val breath = ObjectAnimator.ofPropertyValuesHolder(
+            pokemonView,
+            PropertyValuesHolder.ofFloat("scaleY", baseScale, baseScale * 1.03f),
+            PropertyValuesHolder.ofFloat("rotation", 0f, 3f)
+        ).apply {
+            duration = 1200
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            interpolator = AccelerateDecelerateInterpolator()
+        }
 
+        // 2. Naplánování efektů (oheň/kouř)
+        scheduleCharmeleonEffects()
+
+        breath.start()
+        return breath
+    }
+
+    private fun scheduleCharmeleonEffects() {
+        if (!running || pokemonId != "5") return // 5 = Charmeleon
+
+        handler.postDelayed({
+            if (running && pokemonId == "5") {
+                spawnCharmeleonSmoke()
+                scheduleCharmeleonEffects()
+            }
+        }, Random.nextLong(4000, 8000))
+    }
+
+    private fun spawnCharmeleonSmoke() {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+
+        // Pozice u tlamy (odhadem podle směru pohledu)
+        val offsetX = if (facingRight) (pokemonView.width * 0.7f) else (pokemonView.width * 0.3f)
+        val startX = pokemonView.x + offsetX
+        val startY = pokemonView.y + (pokemonView.height * 0.4f)
+
+        repeat(2) { i ->
+            handler.postDelayed({
+                if (!running) return@postDelayed
+
+                val smoke = View(context).apply {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(Color.LTGRAY)
+                    }
+                    layoutParams = android.widget.FrameLayout.LayoutParams((8 * dp).toInt(), (8 * dp).toInt())
+                    x = startX
+                    y = startY
+                    alpha = 0.6f
+                }
+                parent.addView(smoke)
+
+                smoke.animate()
+                    .translationYBy(-60f * dp)
+                    .translationXBy(if (facingRight) 20f * dp else -20f * dp)
+                    .alpha(0f)
+                    .scaleX(3f)
+                    .scaleY(3f)
+                    .setDuration(1500)
+                    .withEndAction { parent.removeView(smoke) }
+                    .start()
+            }, i * 300L)
+        }
+    }
+
+    private fun crossingCharmeleon(fromX: Float, toX: Float) {
+        idleAnim?.cancel()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val dur = 850L // Rychlejší, agresivnější pohyb
+
+        facingRight = toX > fromX
+        applyFacing(facingRight)
+
+        // --- 1. PŘÍPRAVA (Anticipace) ---
+        // Charmeleon se přikrčí a mírně zčervená (nabíjení)
+        val prepare = AnimatorSet().apply {
+            playTogether(
+                ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 0.8f),
+                ObjectAnimator.ofFloat(pokemonView, "scaleX", if(facingRight) baseScale else -baseScale, if(facingRight) baseScale * 1.2f else -baseScale * 1.2f),
+                ValueAnimator.ofObject(ArgbEvaluator(), Color.WHITE, Color.parseColor("#FFAB91")).apply {
+                    addUpdateListener { pokemonView.setColorFilter(it.animatedValue as Int) }
+                }
+            )
+            duration = 300
+        }
+
+        prepare.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                if (!running) return
+
+                // --- 2. SAMOTNÝ VÝPAD ---
+                pokemonView.animate()
+                    .x(toX)
+                    .scaleY(baseScale)
+                    .scaleX(if(facingRight) baseScale else -baseScale)
+                    .setDuration(dur)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .setUpdateListener {
+                        // Spawnování ohnivých stop během pohybu
+                        if (Random.nextInt(100) > 70) {
+                            spawnFireParticle(
+                                pokemonView.x + (pokemonView.width / 2f),
+                                pokemonView.y + (pokemonView.height * 0.8f)
+                            )
+                        }
+                    }
+                    .withEndAction {
+                        // --- 3. DOJEZD ---
+                        pokemonView.clearColorFilter()
+                        if (running) {
+                            startIdleAnimation()
+                            scheduleStep(Random.nextLong(2000, 4500))
+                        }
+                    }
+                    .start()
+            }
+        })
+        prepare.start()
+    }
+
+    /**
+     * Pomocná funkce pro vytvoření efektu ohně za ocasem/nohama
+     */
+    private fun spawnFireParticle(tx: Float, ty: Float) {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val pSize = (Random.nextInt(8, 16) * dp).toInt()
+
+        val particle = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                colors = intArrayOf(Color.parseColor("#FFD54F"), Color.parseColor("#F44336"), Color.TRANSPARENT)
+                gradientType = GradientDrawable.RADIAL_GRADIENT
+                gradientRadius = pSize / 2f
+            }
+            layoutParams = FrameLayout.LayoutParams(pSize, pSize)
+            x = tx - (pSize / 2f)
+            y = ty - (pSize / 2f)
+            alpha = 0.8f
+        }
+
+        parent.addView(particle)
+
+        particle.animate()
+            .scaleX(0.2f)
+            .scaleY(0.2f)
+            .alpha(0f)
+            .translationYBy(Random.nextInt(-20, 0) * dp)
+            .setDuration(500)
+            .withEndAction { parent.removeView(particle) }
+            .start()
+    }
+
+    private fun charmeleonTapReaction() {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+
+        // Zastavit veškeré plánované akce, aby se animace netloukly
+        handler.removeCallbacksAndMessages(null)
+        moveAnim?.cancel()
+        wobbleAnim?.cancel()
+        idleAnim?.cancel()
+
+        // 1. DASHBOARD SHAKE (Agresivní otřes celé obrazovky)
+        val shake = ObjectAnimator.ofFloat(parent, "translationX", 0f, -20f * dp, 20f * dp, -15f * dp, 15f * dp, 0f).apply {
+            duration = 400
+        }
+
+        // 2. VĚTŠÍ SLASH OVERLAY (Zvětšeno na 2.5x šířku pokémona)
+        val slashWidth = (pokemonView.width * 2.5f).toInt()
+        val slashHeight = (pokemonView.height * 2.5f).toInt()
+
+        val slashView = object : View(context) {
+            init { setLayerType(LAYER_TYPE_SOFTWARE, null) }
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.RED
+                strokeWidth = 8f * dp // Silnější čáry
+                strokeCap = Paint.Cap.ROUND
+                style = Paint.Style.STROKE
+                setShadowLayer(30f, 0f, 0f, Color.parseColor("#FF0000")) // Brutální záře
+            }
+            override fun onDraw(canvas: Canvas) {
+                val w = width.toFloat(); val h = height.toFloat()
+                // Rozmáchlejší diagonální řezy
+                canvas.drawLine(w * 0.1f, h * 0.2f, w * 0.6f, h * 0.9f, paint)
+                canvas.drawLine(w * 0.3f, h * 0.1f, w * 0.8f, h * 0.8f, paint)
+                canvas.drawLine(w * 0.5f, h * 0.2f, w * 0.9f, h * 0.7f, paint)
+            }
+        }.apply {
+            layoutParams = ViewGroup.LayoutParams(slashWidth, slashHeight)
+            // Vycentrování na Charmeleona
+            x = pokemonView.x + (pokemonView.width / 2f) - (slashWidth / 2f)
+            y = pokemonView.y + (pokemonView.height / 2f) - (slashHeight / 2f)
+            alpha = 0f
+            translationZ = 100f
+        }
+        parent.addView(slashView)
+
+        // 3. ANIMACE ÚTOKU
+        val attackSet = AnimatorSet().apply {
+            playTogether(
+                shake,
+                // Charmeleon se prudce vyřítí vpřed (Scale)
+                ObjectAnimator.ofFloat(pokemonView, "scaleX", pokemonView.scaleX, pokemonView.scaleX * 1.5f, pokemonView.scaleX),
+                ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.5f, baseScale),
+
+                // Postupné zrudnutí a návrat (vydrží déle)
+                ValueAnimator.ofObject(ArgbEvaluator(), Color.WHITE, Color.RED, Color.RED, Color.WHITE).apply {
+                    duration = 600
+                    addUpdateListener { pokemonView.setColorFilter(it.animatedValue as Int, PorterDuff.Mode.MULTIPLY) }
+                },
+
+                // Slash efekty: rychlé bliknutí
+                ObjectAnimator.ofFloat(slashView, "alpha", 0f, 1f, 1f, 0f).apply {
+                    duration = 450
+                },
+                ObjectAnimator.ofFloat(slashView, "scaleX", 0.8f, 1.2f).apply { duration = 450 },
+                ObjectAnimator.ofFloat(slashView, "scaleY", 0.8f, 1.2f).apply { duration = 450 }
+            )
+        }
+
+        attackSet.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(a: Animator) {
+                parent.removeView(slashView)
+                pokemonView.clearColorFilter()
+
+                // Po útoku ještě vyprskne jiskry
+                spawnEmbers()
+
+                if (running) {
+                    startWobble()
+                    startIdleAnimation()
+                    // Po takovém útoku chvíli stojí (vydýchává to)
+                    scheduleStep(Random.nextLong(3000, 5000))
+                }
+            }
+        })
+
+        attackSet.start()
+    }
+
+
+    private fun spawnEmbers() {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        // Jiskry letí z místa, kde má Charmeleon tlamu (přibližně horní třetina)
+        val cx = pokemonView.x + pokemonView.width / 2f
+        val cy = pokemonView.y + (20 * dp)
+
+        repeat(5) { i ->
+            val ember = View(context).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    // Střídáme barvy ohně
+                    setColor(if (i % 2 == 0) Color.parseColor("#FFD54F") else Color.parseColor("#FF5722"))
+                }
+                layoutParams = ViewGroup.LayoutParams((5 * dp).toInt(), (5 * dp).toInt())
+                x = cx; y = cy; alpha = 1f
+            }
+            parent.addView(ember)
+
+            ember.animate()
+                .translationXBy((Random.nextFloat() - 0.5f) * 120 * dp)
+                .translationYBy(-(Random.nextFloat() * 80 * dp))
+                .alpha(0f)
+                .scaleX(0.2f).scaleY(0.2f)
+                .setDuration(Random.nextLong(600, 1000))
+                .withEndAction { parent.removeView(ember) }
+                .start()
+        }
+    }
+
+    private fun startDugtrioIdle(): Animator {
+        // Dugtrio se mírně vlní (simulace pohybu tří hlav)
+        val idle = ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 0.92f, baseScale).apply {
+            duration = 1200
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+        scheduleDugtrioDust()
+        idle.start()
+        return idle
+    }
+
+    private fun scheduleDugtrioDust() {
+        if (!running || pokemonId != "051") return
+        handler.postDelayed({
+            if (running && pokemonId == "051") {
+                spawnDustCloud() // Prach u základny
+                scheduleDugtrioDust()
+            }
+        }, Random.nextLong(2000, 4000))
+    }
+
+    private fun spawnDustCloud() {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val cx = pokemonView.x + pokemonView.width / 2f
+        val cy = pokemonView.y + pokemonView.height - (5 * dp)
+
+        repeat(3) {
+            val dust = View(context).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.parseColor("#A1887F")) // Hnědá barva země
+                }
+                layoutParams = ViewGroup.LayoutParams((12 * dp).toInt(), (8 * dp).toInt())
+                x = cx + (Random.nextFloat() - 0.5f) * 40 * dp
+                y = cy
+                alpha = 0.6f
+            }
+            parent.addView(dust)
+            dust.animate()
+                .translationYBy(Random.nextFloat() * -15 * dp)
+                .alpha(0f).scaleX(1.5f).scaleY(1.5f)
+                .setDuration(800).withEndAction { parent.removeView(dust) }.start()
+        }
+    }
+
+    private fun crossingDugtrio(fromX: Float, toX: Float) {
+        idleAnim?.cancel()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val dur = 1300L
+
+        // 1. Zaleze pod zem
+        pokemonView.animate()
+            .translationY(targetTranslationY + 40 * dp)
+            .setDuration(300)
+            .setInterpolator(AccelerateInterpolator())
+            .withEndAction {
+                facingRight = toX > fromX
+                applyFacing(facingRight)
+
+                // 2. Pohyb pod zemí s prachem
+                val moveAnim = ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = dur
+                    addUpdateListener { anim ->
+                        val p = anim.animatedValue as Float
+                        pokemonView.x = fromX + (toX - fromX) * p
+
+                        // Efekt hlíny při pohybu
+                        if (anim.currentPlayTime % 100 < 20) {
+                            spawnDirtKickup(pokemonView.x + pokemonView.width/2f, targetTranslationY + pokemonView.height)
+                        }
+                    }
+                    addListener(object : AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(a: Animator) {
+                            // 3. Vyleze ven
+                            pokemonView.animate()
+                                .translationY(targetTranslationY)
+                                .setDuration(300)
+                                .setInterpolator(OvershootInterpolator())
+                                .withEndAction {
+                                    if (running) {
+                                        startIdleAnimation()
+                                        scheduleStep(Random.nextLong(1000, 2500))
+                                    }
+                                }.start()
+                        }
+                    })
+                }
+                moveAnim.start()
+            }.start()
+    }
+
+    private fun spawnDirtKickup(tx: Float, ty: Float) {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val dirt = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#795548"))
+            }
+            layoutParams = ViewGroup.LayoutParams((8 * dp).toInt(), (8 * dp).toInt())
+            x = tx; y = ty - (10 * dp)
+        }
+        parent.addView(dirt, 0)
+        dirt.animate().translationYBy(-20 * dp).translationXBy((Random.nextFloat()-0.5f)*30*dp)
+            .alpha(0f).setDuration(400).withEndAction { parent.removeView(dirt) }.start()
+    }
+
+
+    private fun dugtrioTapReaction() {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        handler.removeCallbacksAndMessages(null)
+        moveAnim?.cancel()
+        wobbleAnim?.cancel()
+
+        // 1. PŘÍPRAVA (Dugtrio se naštvaně klepe)
+        val charge = ObjectAnimator.ofFloat(pokemonView, "translationX", -2 * dp, 2 * dp).apply {
+            duration = 50; repeatCount = 10
+        }
+
+        // 2. ZEMĚTŘESENÍ
+        val shake = ObjectAnimator.ofFloat(parent, "translationY", 0f, 15f * dp, -15f * dp, 10f * dp, -10f * dp, 0f).apply {
+            duration = 500
+        }
+
+        // 3. ROCK BLAST (Vylétající kameny)
+        val rockAction = {
+            repeat(6) {
+                val rock = View(context).apply {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        setColor(Color.DKGRAY)
+                        cornerRadius = 4 * dp
+                    }
+                    layoutParams = ViewGroup.LayoutParams((15 * dp).toInt(), (15 * dp).toInt())
+                    x = pokemonView.x + pokemonView.width / 2f
+                    y = pokemonView.y + pokemonView.height
+                    rotation = Random.nextFloat() * 360f
+                }
+                parent.addView(rock)
+                rock.animate()
+                    .translationYBy(-(Random.nextFloat() * 150 * dp))
+                    .translationXBy((Random.nextFloat() - 0.5f) * 200 * dp)
+                    .rotationBy(Random.nextFloat() * 720f)
+                    .alpha(0f).setDuration(700)
+                    .withEndAction { parent.removeView(rock) }.start()
+            }
+        }
+
+        AnimatorSet().apply {
+            play(charge).before(shake)
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationStart(a: Animator) {
+                    // Spustit kameny přesně při dopadu zemětřesení
+                    handler.postDelayed({ rockAction() }, 500)
+                }
+                override fun onAnimationEnd(a: Animator) {
+                    if (running) {
+                        startWobble()
+                        startIdleAnimation()
+                        scheduleStep(Random.nextLong(2000, 4000))
+                    }
+                }
+            })
+            start()
+        }
+    }
 
     private fun startMewtwoIdle(): Animator =
         ObjectAnimator.ofFloat(pokemonView, "translationY",
@@ -820,6 +1508,7 @@ class StandardWanderer(
     private fun playCrossingAnimation(fromX: Float, toX: Float) {
         when (pokemonId) {
             "050" -> crossingDiglett(fromX, toX)
+            "051" -> crossingDugtrio(fromX, toX)
             "094" -> crossingGengar(fromX, toX)
             "025" -> crossingPikachu(fromX, toX)
             "133" -> crossingEevee(fromX, toX)
@@ -830,7 +1519,10 @@ class StandardWanderer(
             "093" -> crossingHaunter(fromX, toX)
             "137" -> crossingPorygon(fromX, toX)
             "115" -> crossingKangaskhan(fromX, toX)
+            "131" -> crossingLapras(fromX, toX)
+            "132" -> crossingDitto(fromX, toX)
             "006" -> crossingCharizard(fromX, toX)
+            "005" -> crossingCharmeleon(fromX,toX)
             "150" -> crossingMewtwo(fromX, toX)
             "151" -> crossingMew(fromX, toX)
             else  -> defaultCrossing(fromX, toX)
@@ -1260,6 +1952,134 @@ class StandardWanderer(
         ObjectAnimator.ofFloat(v, "translationX", 0f, -9f * dp, 9f * dp, -6f * dp, 6f * dp, -3f * dp, 3f * dp, 0f).apply {
             duration = 400; interpolator = LinearInterpolator(); start()
         }
+    }
+
+
+    private fun startDittoIdle(): Animator {
+        // Ditto se plynule roztahuje do stran a zase smršťuje
+        val stretch = ObjectAnimator.ofPropertyValuesHolder(
+            pokemonView,
+            PropertyValuesHolder.ofFloat("scaleX", baseScale * 1.1f, baseScale * 0.9f, baseScale * 1.1f),
+            PropertyValuesHolder.ofFloat("scaleY", baseScale * 0.9f, baseScale * 1.1f, baseScale * 0.9f)
+        ).apply {
+            duration = 2000
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+
+        scheduleDittoSlimeDrip()
+        stretch.start()
+        return stretch
+    }
+
+    private fun scheduleDittoSlimeDrip() {
+        if (!running || pokemonId != "132") return
+        handler.postDelayed({
+            if (running && pokemonId == "132") {
+                spawnSlimeBubble()
+                scheduleDittoSlimeDrip()
+            }
+        }, Random.nextLong(2500, 5000))
+    }
+
+    private fun spawnSlimeBubble() {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val bubble = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#EA91E5")) // Ditto růžová
+            }
+            layoutParams = ViewGroup.LayoutParams((6 * dp).toInt(), (6 * dp).toInt())
+            x = pokemonView.x + (Random.nextFloat() * pokemonView.width)
+            y = pokemonView.y + pokemonView.height - (10 * dp)
+            alpha = 0.8f
+        }
+        parent.addView(bubble)
+        bubble.animate()
+            .translationYBy(15 * dp)
+            .scaleX(1.5f).scaleY(0.2f)
+            .alpha(0f)
+            .setDuration(1000)
+            .withEndAction { parent.removeView(bubble) }.start()
+    }
+
+
+    private fun crossingDitto(fromX: Float, toX: Float) {
+        idleAnim?.cancel()
+        val dur = 1500L
+
+        // 1. Splácnutí před startem
+        pokemonView.animate()
+            .scaleY(baseScale * 0.4f)
+            .scaleX(baseScale * 1.5f)
+            .setDuration(300)
+            .withEndAction {
+                facingRight = toX > fromX
+                // 2. Klouzavý pohyb
+                val moveAnim = ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = dur
+                    interpolator = AccelerateDecelerateInterpolator()
+                    addUpdateListener { anim ->
+                        val p = anim.animatedValue as Float
+                        pokemonView.x = fromX + (toX - fromX) * p
+
+                        // Jemné vlnění horní části během pohybu
+                        pokemonView.scaleY = baseScale * (0.4f + sin(p * PI.toFloat() * 5f) * 0.1f)
+                    }
+                    addListener(object : AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(a: Animator) {
+                            // 3. Narovnání se zpět
+                            pokemonView.animate()
+                                .scaleX(baseScale).scaleY(baseScale)
+                                .setDuration(300)
+                                .withEndAction {
+                                    if (running) {
+                                        startIdleAnimation()
+                                        scheduleStep(Random.nextLong(1000, 3000))
+                                    }
+                                }.start()
+                        }
+                    })
+                }
+                moveAnim.start()
+            }.start()
+    }
+
+    private fun dittoTapReaction() {
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        handler.removeCallbacksAndMessages(null)
+        moveAnim?.cancel()
+        wobbleAnim?.cancel()
+
+        // Animace pokusu o transformaci
+        val transform = AnimatorSet().apply {
+            playTogether(
+                // Zbělá jako při transformaci
+                ValueAnimator.ofObject(ArgbEvaluator(), Color.WHITE, Color.parseColor("#EA91E5")).apply {
+                    duration = 600
+                    addUpdateListener { pokemonView.setColorFilter(it.animatedValue as Int, PorterDuff.Mode.SRC_ATOP) }
+                },
+                // Změna tvaru (vyskočení a deformace)
+                ObjectAnimator.ofFloat(pokemonView, "translationY", targetTranslationY, targetTranslationY - 40 * dp, targetTranslationY).apply {
+                    duration = 500
+                },
+                ObjectAnimator.ofFloat(pokemonView, "scaleX", baseScale, baseScale * 0.5f, baseScale * 1.4f, baseScale).apply {
+                    duration = 600
+                }
+            )
+        }
+
+        transform.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(a: Animator) {
+                pokemonView.clearColorFilter()
+                if (running) {
+                    startWobble()
+                    startIdleAnimation()
+                    scheduleStep(Random.nextLong(2000, 4000))
+                }
+            }
+        })
+        transform.start()
     }
 
     private fun crossingMew(fromX: Float, toX: Float) {

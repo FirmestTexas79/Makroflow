@@ -159,6 +159,34 @@ object BattleFactory {
     fun attackThunderbolt()  = Move("THUNDERBOLT",   PokemonType.ELECTRIC, 90, 100, 15)
     fun attackThunder()      = Move("THUNDER",       PokemonType.ELECTRIC, 110, 70, 10)
 
+
+    // V BattleEngine.kt -> objekt BattleFactory
+
+    // --- NORMAL MOVES ---
+    fun attackScratch()    = Move("SCRATCH",    PokemonType.NORMAL, 40, 100, 35)
+    fun attackSlash()      = Move("SLASH",      PokemonType.NORMAL, 70, 100, 20)
+    fun attackGrowl()      = Move("GROWL",      PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
+    fun attackSmokescreen() = Move("SMOKESCREEN", PokemonType.NORMAL,  0, 100, 20)
+    fun attackScaryFace()  = Move("SCARY FACE",  PokemonType.NORMAL,  0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
+
+    // --- FIRE MOVES ---
+    fun attackEmber()        = Move("EMBER",        PokemonType.FIRE, 40, 100, 25)
+    fun attackFireFang()     = Move("FIRE FANG",     PokemonType.FIRE, 65,  95, 15)
+    fun attackFlamethrower() = Move("FLAMETHROWER", PokemonType.FIRE, 90, 100, 15)
+    fun attackFireBlast()    = Move("FIRE BLAST",    PokemonType.FIRE, 110, 85, 5)
+
+    // --- FLYING & DRAGON MOVES ---
+    fun attackWingAttack() = Move("WING ATTACK", PokemonType.FLYING, 60, 100, 35)
+    fun attackDragonClaw() = Move("DRAGON CLAW", PokemonType.FLYING, 80, 100, 15)
+
+    // --- GROUND MOVES ---
+    fun attackMudSlap()    = Move("MUD-SLAP",    PokemonType.GROUND, 20, 100, 10)
+    fun attackMagnitude()  = Move("MAGNITUDE",   PokemonType.GROUND, 50, 100, 30)
+    fun attackDig()        = Move("DIG",         PokemonType.GROUND, 80, 100, 10)
+    fun attackEarthquake() = Move("EARTHQUAKE",  PokemonType.GROUND, 100, 100, 10)
+    fun attackSandAttack() = Move("SAND ATTACK", PokemonType.GROUND,  0, 100, 15, statEffect = StatEffect.LOWER_ENEMY_ATK)
+
+
     // --- 🐛 CATERPIE SHABLONY S PARAMETREM LEVEL ---
     fun createCaterpie(level: Int = 1) = Pokemon(
         name = "CATERPIE", level = level, maxHp = 22, attack = 6, defense = 7, speed = 9,
@@ -188,13 +216,25 @@ object BattleFactory {
 
     // ── COMMON ────────────────────────────────────────────────────────
 
-    fun createDiglett() = Pokemon(
-        name = "DIGLETT", level = 5, maxHp = 20, attack = 7, defense = 5, speed = 14,
-        moves = listOf(
-            Move("SCRATCH",  PokemonType.NORMAL, 35, 100, 35),
-            Move("GROWL",    PokemonType.NORMAL,  0, 100, 40),
-            Move("SAND ATK", PokemonType.GROUND,  0,  85, 15)
-        )
+    // --- 🪨 DIGLETT LINE ---
+    fun createDiglett(level: Int = 5) = Pokemon(
+        name = "DIGLETT",
+        level = level,
+        maxHp = 20,
+        attack = 10,  // Zvýšen útok pro agresivnější gameplay
+        defense = 5,
+        speed = 14,
+        moves = mutableListOf(attackScratch(), attackSandAttack(), attackMudSlap())
+    )
+
+    fun createDugtrio(level: Int = 10) = Pokemon(
+        name = "DUGTRIO",
+        level = level,
+        maxHp = 45,
+        attack = 22, // Pořádná síla
+        defense = 12,
+        speed = 25,  // Velmi rychlý
+        moves = mutableListOf(attackMagnitude(), attackDig(), attackSlash(), attackSandAttack())
     )
 
     fun createPikachu() = Pokemon(
@@ -267,6 +307,21 @@ object BattleFactory {
         )
     )
 
+    fun createCharmeleon() = Pokemon(
+        name = "CHARMELEON",
+        level = 16,
+        maxHp = 58,
+        attack = 18,
+        defense = 14,
+        speed = 20,
+        moves = listOf(
+            Move("FLAMETHROWER", PokemonType.FIRE,   90, 100, 15),
+            Move("SLASH",        PokemonType.NORMAL, 70, 100, 20),
+            Move("FIRE FANG",    PokemonType.FIRE,   65,  95, 15),
+            Move("SCARY FACE",   PokemonType.NORMAL,  0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
+        )
+    )
+
     // ── EPIC ──────────────────────────────────────────────────────────
 
 
@@ -318,6 +373,34 @@ object BattleFactory {
         )
     )
 
+    fun createLapras(level: Int = 15) = Pokemon(
+        name = "LAPRAS",
+        level = level,
+        maxHp = 55, // Vysoké základní HP
+        attack = 15,
+        defense = 14,
+        speed = 12,
+        moves = listOf(
+            Move("WATER GUN", PokemonType.WATER, 40, 100, 25),
+            Move("BODY SLAM", PokemonType.NORMAL, 85, 85, 15),
+            Move("SING",      PokemonType.NORMAL,  0,  55, 15), // Uspávací útok (v budoucnu můžeš přidat efekt)
+            Move("HYDRO PUMP", PokemonType.WATER, 110, 80, 5)
+        )
+    )
+
+
+    fun createDitto(level: Int = 10) = Pokemon(
+        name = "DITTO",
+        level = level,
+        maxHp = 48,
+        attack = 15,
+        defense = 15,
+        speed = 15,
+        moves = listOf(
+            Move("TRANSFORM", PokemonType.NORMAL, 0, 100, 10)
+        )
+    )
+
     // ── LEGENDARY ─────────────────────────────────────────────────────
 
     fun createCharizard() = Pokemon(
@@ -356,6 +439,8 @@ object BattleFactory {
     const val GENGAR_CATCH_PENALTY   = 0.7f   // těžší chytit
     const val MEWTWO_CATCH_PENALTY   = 0.4f   // velmi těžké
     const val CHARIZARD_CATCH_PENALTY = 0.55f
+
+    const val CHARMELEON_CATCH_PENALTY = 0.75f
     const val SNORLAX_CATCH_PENALTY  = 0.6f
     const val MEW_CATCH_PENALTY      = 0.3f   // nejtěžší
 
@@ -366,6 +451,7 @@ object BattleFactory {
         "CHARIZARD" -> CHARIZARD_CATCH_PENALTY
         "SNORLAX"   -> SNORLAX_CATCH_PENALTY
         "MEW"       -> MEW_CATCH_PENALTY
+        "CHARMELEON"->CHARMELEON_CATCH_PENALTY
         else        -> 1.0f
     }
 
@@ -378,6 +464,7 @@ object BattleFactory {
 
         "BULBASAUR" -> "001"
         "CHARMANDER"-> "004"
+        "CHARMELEON"-> "005"
         "CHARIZARD" -> "006"
         "SQUIRTLE"  -> "007"
         "CATERPIE"  -> "010" // ✅ Doplněno
@@ -386,10 +473,13 @@ object BattleFactory {
         "PIKACHU"   -> "025"
         "RAICHU"    -> "026"
         "DIGLETT"   -> "050"
+        "DUGTRIO"  -> "051"
         "GASTLY"    -> "092"
         "HAUNTER"   -> "093"
         "GENGAR"    -> "094"
-        "KANGASKHAN" -> "115"
+        "KANGASKHAN"-> "115"
+        "LAPRAS"    -> "131"
+        "DITTO"     -> "132"
         "EEVEE"     -> "133"
         "PORYGON"   -> "137"
         "SNORLAX"   -> "143"
@@ -400,7 +490,6 @@ object BattleFactory {
 
     /** Vrátí webName pro načítání sprite z pokemondb.net */
     fun webName(pokemon: Pokemon): String = when (pokemon.name) {
-        // ✅ TOTO TI ZDE CHYBĚLO A ROZBÍJELO TO CATERPIE!
         "CATERPIE"   -> "caterpie"
         "METAPOD"    -> "metapod"
         "BUTTERFREE" -> "butterfree"
@@ -408,16 +497,20 @@ object BattleFactory {
         "PORYGON" -> "porygon"
 
         "DIGLETT"   -> "diglett"
+        "DUGTRIO"  -> "dugtrio"
         "PIKACHU"   -> "pikachu"
         "RAICHU"    -> "raichu"
         "EEVEE"     -> "eevee"
         "BULBASAUR" -> "bulbasaur"
         "SQUIRTLE"  -> "squirtle"
         "CHARMANDER"-> "charmander"
-        "GASTLY"   -> "gastly"
+        "CHARMELEON" -> "charmeleon"
+        "GASTLY"    -> "gastly"
         "HAUNTER"   -> "haunter"
         "GENGAR"    -> "gengar"
-        "KANGASKHAN" -> "kangaskhan"
+        "KANGASKHAN"-> "kangaskhan"
+        "LAPRAS"    -> "lapras"
+        "DITTO"     -> "ditto"
         "SNORLAX"   -> "snorlax"
         "CHARIZARD" -> "charizard"
         "MEWTWO"    -> "mewtwo"

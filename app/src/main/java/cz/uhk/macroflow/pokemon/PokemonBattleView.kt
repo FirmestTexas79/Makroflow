@@ -216,10 +216,13 @@ class PokemonBattleView @JvmOverloads constructor(
         "BULBASAUR"  -> 28f
         "SQUIRTLE"   -> 26f
         "CHARMANDER" -> 28f
+        "CHARMELEON" -> 30f
         "PIKACHU"    -> 24f
         "RAICHU"     -> 30f
+        "DITTO"      -> 36f
         "EEVEE"      -> 24f
         "DIGLETT"    -> 22f
+        "DUGTRIO"    -> 30f
         else         -> 28f
     }
 
@@ -523,12 +526,16 @@ class PokemonBattleView @JvmOverloads constructor(
             "011" -> BattleFactory.createMetapod()
             "012" -> BattleFactory.createButterfree()
             "050" -> BattleFactory.createDiglett()
+            "051" -> BattleFactory.createDugtrio()
             "025" -> BattleFactory.createPikachu()
             "026" -> BattleFactory.createRaichu()
             "133" -> BattleFactory.createEevee()
+            "132" -> BattleFactory.createDitto()
+            "131" -> BattleFactory.createLapras()
             "001" -> BattleFactory.createBulbasaur()
             "007" -> BattleFactory.createSquirtle()
             "004" -> BattleFactory.createCharmander()
+            "005" -> BattleFactory.createCharmeleon()
             "092" -> BattleFactory.createGastly()
             "093" -> BattleFactory.createHaunter()
             "094" -> BattleFactory.createGengar()
@@ -683,11 +690,12 @@ class PokemonBattleView @JvmOverloads constructor(
         invalidate()
 
         val runAwayChance = when (gs.enemy.name) {
-            "MEWTWO", "MEW"                -> 0.40f
-            "CHARIZARD"                    -> 0.25f
-            "SNORLAX", "HAUNTER", "GENGAR" -> 0.15f
-            "KANGASKHAN"                   -> 0.20f
-            else                           -> 0.08f
+            "MEWTWO", "MEW"                               -> 0.40f
+            "CHARIZARD"                                   -> 0.25f
+            "SNORLAX", "HAUNTER", "GENGAR", "CHARMELEON"  -> 0.15f
+            "KANGASKHAN"                                  -> 0.20f
+            "LAPRAS"                                      -> 0.30f
+            else                                          -> 0.08f
         }
 
         busy = false

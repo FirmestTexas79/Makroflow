@@ -24,7 +24,8 @@
             android:layout_alignParentTop="true"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="50dp"
-            android:background="#44FF0000" />
+            android:background="#44FF0000"
+            />
 
         <View
             android:id="@+id/hotspotPokedex"
