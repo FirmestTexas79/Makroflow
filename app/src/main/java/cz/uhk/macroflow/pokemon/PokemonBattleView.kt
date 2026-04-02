@@ -77,10 +77,10 @@ class PokemonBattleView @JvmOverloads constructor(
         // 1. Získání preferencí
         val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
 
-        // Zkusíme nejdřív získat unikátní ID z databáze (pokud ho tam ukládáš jako Int)
+        // ✅ Jednotné Int ID — vždy ukládáme i čteme jako Int
         val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
 
-        // ZÁLOŽNÍ PLÁN: Pokud nemáme unikátní ID z DB, zkusíme String ID (např. "026")
+        // ZÁLOŽNÍ PLÁN: pokud DB ID chybí, použijeme String pokémon ID (např. "026")
         val backupPokemonId = prefs.getString("currentOnBarId", null)
 
         Thread {
@@ -491,11 +491,12 @@ class PokemonBattleView @JvmOverloads constructor(
                                 val levelBonus = gs.enemy.level * 3
                                 val totalBattleXp = baseScore + levelBonus
 
-                                handler.post {
-                                    // ✅ Okamžitý přepis do UI a uložení do Cloudu přes MainActivity!
-                                    (context as? cz.uhk.macroflow.common.MainActivity)?.addXpToActivePokemonRealTime(totalBattleXp)
+                                // ✅ Uložíme XP přímo do DB — nepotřebujeme MainActivity
+                                // BattleView běží v PokemonMapActivity, ne v MainActivity!
+                                awardXpToActivePokemon(totalBattleXp)
 
-                                    // Počkáme 2 vteřiny, než se dočte text o porážce a pak teprve dialog zavřeme
+                                handler.post {
+                                    // Počkáme 2 vteřiny než se dočte text o porážce
                                     handler.postDelayed({
                                         onCaught?.invoke()
                                     }, 2000)
@@ -740,24 +741,67 @@ class PokemonBattleView @JvmOverloads constructor(
 
             val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
             val isAcquired = prefs.getBoolean("pokemonAcquired", false)
-            val activeOnBarId = prefs.getString("currentOnBarId", null)
-
-            if (isAcquired && activeOnBarId != null) {
-                val xpReward = when (SpawnManager.allEntries.find { it.id == pId }?.rarity) {
-                    Rarity.COMMON -> 20
-                    Rarity.RARE -> 50
-                    Rarity.EPIC -> 100
-                    Rarity.LEGENDARY -> 250
-                    Rarity.MYTHIC -> 250
-                    else -> 20
-                }
-                db.pokemonXpDao().addXp(activeOnBarId, xpReward)
-            }
 
             handler.post {
                 setText("CAUGHT ${gs.enemy.name.take(7)}!", "")
                 busy = false
+
+                // ✅ XP za chycení — přímo do DB, bez závislosti na MainActivity
+                if (isAcquired) {
+                    val xpReward = when (SpawnManager.allEntries.find { it.id == pId }?.rarity) {
+                        Rarity.COMMON    -> 20
+                        Rarity.RARE      -> 50
+                        Rarity.EPIC      -> 100
+                        Rarity.LEGENDARY -> 250
+                        Rarity.MYTHIC    -> 250
+                        else             -> 20
+                    }
+                    awardXpToActivePokemon(xpReward)
+                }
+
                 pendingAction = { onCaught?.invoke() }
+            }
+        }.start()
+    }
+
+    /**
+     * Udělí XP aktivnímu pokémonovi přímo z BattleView.
+     * Funguje v jakémkoli Activity kontextu (PokemonMapActivity i MainActivity).
+     * Zobrazí Toast s výsledkem a nahraje do Firebase pokud je uživatel přihlášen.
+     */
+    private fun awardXpToActivePokemon(xpAmount: Int) {
+        val prefs = context.getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE)
+        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
+        if (activeCapturedId == -1) return
+
+        Thread {
+            val localDb = AppDatabase.getDatabase(context)
+            val pokemon = localDb.capturedPokemonDao().getPokemonById(activeCapturedId)
+                ?: return@Thread
+
+            val oldLevel = pokemon.level
+            pokemon.xp += xpAmount
+            pokemon.level = PokemonLevelCalc.levelFromXp(pokemon.xp)
+
+            localDb.capturedPokemonDao().updatePokemon(pokemon)
+
+            if (FirebaseRepository.isLoggedIn) {
+                try {
+                    kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                        FirebaseRepository.uploadCapturedPokemon(pokemon)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("XP_AWARD", "Firebase upload failed: ${e.message}")
+                }
+            }
+
+            handler.post {
+                val levelMsg = if (pokemon.level > oldLevel) " 🎊 Level up! Lv.${pokemon.level}!" else ""
+                android.widget.Toast.makeText(
+                    context,
+                    "⭐ ${pokemon.name} získal $xpAmount XP!$levelMsg",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
             }
         }.start()
     }

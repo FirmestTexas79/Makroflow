@@ -381,7 +381,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (today != lastDay) {
             lifecycleScope.launch(Dispatchers.IO) {
                 val db = AppDatabase.getDatabase(this@MainActivity)
-                val pokemon = db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
+                val pokemon = db.capturedPokemonDao().getPokemonById(activeCapturedId)
 
                 if (pokemon != null) {
                     pokemon.xp += 20
@@ -427,7 +427,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(this@MainActivity)
-            val pokemon = db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
+            val pokemon = db.capturedPokemonDao().getPokemonById(activeCapturedId)
 
             if (pokemon != null) {
                 val oldLevel = pokemon.level

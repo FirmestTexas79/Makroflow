@@ -47,9 +47,8 @@ import cz.uhk.macroflow.data.UserProfileEntity
 import cz.uhk.macroflow.pokemon.EvolutionDialog
 import cz.uhk.macroflow.pokemon.PokedexStatusEntity
 import cz.uhk.macroflow.pokemon.PokemonLevelCalc
-import cz.uhk.macroflow.pokemon.PokemonXpEntity
 import cz.uhk.macroflow.pokemon.PokemonGrowthManager
-import cz.uhk.macroflow.pokemon.XpRewards
+import cz.uhk.macroflow.pokemon.PokemonXpEngine
 
 class DashboardFragment : Fragment() {
 
@@ -262,23 +261,12 @@ class DashboardFragment : Fragment() {
                     .show()
             }
 
-            // Pokémon XP logika (beze změny, tak jak ti fungovala)
+            // ✅ Pokémon XP za check-in — přes nový systém (PokemonXpEngine)
             lifecycleScope.launch(Dispatchers.IO) {
-                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                val prefs = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                val activeId = prefs.getString("currentOnBarId", "050") ?: "050"
-                val xpEntity = db.pokemonXpDao().getXp(activeId) ?: PokemonXpEntity(activeId)
-
-                if (xpEntity.lastDailyRewardDate != todayStr) {
-                    db.pokemonXpDao().setXp(xpEntity.copy(lastDailyRewardDate = todayStr))
+                val xp = PokemonXpEngine.tryAwardGoalXp(requireContext(), PokemonXpEngine.XpGoal.CHECK_IN)
+                if (xp > 0) {
                     withContext(Dispatchers.Main) {
-                        (activity as? MainActivity)?.addXpToActivePokemonRealTime(XpRewards.CHECK_IN)
-                    }
-                    if (FirebaseRepository.isLoggedIn) {
-                        val updatedXp = db.pokemonXpDao().getXp(activeId)
-                        if (updatedXp != null) {
-                            FirebaseRepository.uploadPokedexStatus(activeId)
-                        }
+                        (activity as? MainActivity)?.addXpToActivePokemonRealTime(xp)
                     }
                 }
             }
