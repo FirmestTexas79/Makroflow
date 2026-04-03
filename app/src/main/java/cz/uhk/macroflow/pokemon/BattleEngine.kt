@@ -5,7 +5,7 @@ import kotlin.math.max
 import kotlin.random.Random
 
 enum class PokemonType {
-    NORMAL, FIRE, WATER, GRASS, ELECTRIC, BUG, FLYING, GHOST, GROUND, PSYCHIC
+    NORMAL, FIRE, WATER, GRASS, ELECTRIC, BUG, FLYING, GHOST, GROUND, PSYCHIC, DRAGON, POISON
 }
 
 // Uprav Move, aby využíval PokemonType místo String
@@ -57,12 +57,13 @@ data class BattleState(
 object BattleEngine {
 
     fun initializeStatsForLevel(basePokemon: Pokemon, targetLevel: Int): Pokemon {
-        val statMultiplier = 1.0f + (targetLevel - 1) * 0.10f
+        // Vzorec pro HP: ((2 * Base * Level) / 100) + Level + 10
+        val newMaxHp = ((2 * basePokemon.maxHp * targetLevel) / 100) + targetLevel + 10
 
-        val newMaxHp = (basePokemon.maxHp * statMultiplier).toInt()
-        val newAttack = (basePokemon.attack * statMultiplier).toInt()
-        val newDefense = (basePokemon.defense * statMultiplier).toInt()
-        val newSpeed = (basePokemon.speed * statMultiplier).toInt()
+        // Vzorec pro ostatní: ((2 * Base * Level) / 100) + 5
+        val newAttack  = ((2 * basePokemon.attack * targetLevel) / 100) + 5
+        val newDefense = ((2 * basePokemon.defense * targetLevel) / 100) + 5
+        val newSpeed   = ((2 * basePokemon.speed * targetLevel) / 100) + 5
 
         return basePokemon.copy(
             level = targetLevel,
@@ -186,6 +187,92 @@ object BattleFactory {
     fun attackEarthquake() = Move("EARTHQUAKE",  PokemonType.GROUND, 100, 100, 10)
     fun attackSandAttack() = Move("SAND ATTACK", PokemonType.GROUND,  0, 100, 15, statEffect = StatEffect.LOWER_ENEMY_ATK)
 
+    fun attackVineWhip()    = Move("VINE WHIP",    PokemonType.GRASS,  45, 100, 25)
+    fun attackRazorLeaf()   = Move("RAZOR LEAF",   PokemonType.GRASS,  55,  95, 25)
+    fun attackSolarBeam()   = Move("SOLAR BEAM",   PokemonType.GRASS, 120, 100, 10)
+    fun attackSleepPowder() = Move("SLEEP POWDER", PokemonType.GRASS,   0,  75, 20) // Status útok
+    fun attackSeedBomb()    = Move("SEED BOMB",    PokemonType.GRASS,  80, 100, 15)
+
+
+    fun attackTailWhip()    = Move("TAIL WHIP",    PokemonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
+    fun attackWaterGun()    = Move("WATER GUN",    PokemonType.WATER,   40, 100, 25)
+    fun attackBite()        = Move("BITE",         PokemonType.NORMAL,  60, 100, 25)
+    fun attackWaterPulse()  = Move("WATER PULSE",  PokemonType.WATER,   60, 100, 20)
+    fun attackHydroPump()   = Move("HYDRO PUMP",   PokemonType.WATER,  110,  80,  5)
+
+    fun attackPoisonSting() = Move("POISON STING", PokemonType.BUG, 15, 100, 35)
+    fun attackFuryAttack()  = Move("FURY ATTACK",  PokemonType.NORMAL, 15, 85, 20)
+    fun attackTwineedle()   = Move("TWINEEDLE",    PokemonType.BUG, 25, 100, 20)
+    fun attackPinMissile()  = Move("PIN MISSILE",  PokemonType.BUG, 25, 95, 20)
+
+    fun attackAirSlash()    = Move("AIR SLASH",     PokemonType.FLYING, 75,  95, 15)
+    fun attackHurricane()   = Move("HURRICANE",     PokemonType.FLYING, 110, 70, 10)
+
+    fun attackHyperFang()  = Move("HYPER FANG",  PokemonType.NORMAL, 80,  90, 15)
+    fun attackSuperFang()  = Move("SUPER FANG",  PokemonType.NORMAL, 1,   90, 10) // V engine by měl brát 50% HP
+    fun attackCrunch()     = Move("CRUNCH",      PokemonType.NORMAL, 80, 100, 15)
+    fun attackPeck()       = Move("PECK",         PokemonType.FLYING, 35, 100, 35)
+    fun attackDrillPeck()  = Move("DRILL PECK",   PokemonType.FLYING, 80, 100, 20)
+    fun attackAcid()       = Move("ACID",         PokemonType.POISON, 40, 100, 30)
+    fun attackLeer()       = Move("LEER",         PokemonType.NORMAL,  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
+    fun attackSludgeBomb() = Move("SLUDGE BOMB",   PokemonType.POISON, 90, 100, 10)
+    // ── COMMON ────────────────────────────────────────────────────────
+
+    // --- 🌿 BULBASAUR RODINA ---
+
+    fun createBulbasaur() = Pokemon(
+        name = "BULBASAUR", level = 1,
+        maxHp = 45, attack = 49, defense = 49, speed = 45,
+        moves = listOf(attackTackle(), attackGrowl())
+    )
+
+    fun createIvysaur() = Pokemon(
+        name = "IVYSAUR", level = 1,
+        maxHp = 60, attack = 62, defense = 63, speed = 60,
+        moves = listOf(attackTackle(), attackGrowl(), attackVineWhip())
+    )
+
+    fun createVenusaur() = Pokemon(
+        name = "VENUSAUR", level = 1,
+        maxHp = 80, attack = 82, defense = 83, speed = 80,
+        moves = listOf(attackVineWhip(), attackRazorLeaf(), attackSleepPowder())
+    )
+
+    fun createSquirtle() = Pokemon(
+        name = "SQUIRTLE", level = 1,
+        maxHp = 44, attack = 48, defense = 65, speed = 43,
+        moves = listOf(attackTackle(), attackTailWhip())
+    )
+
+    fun createWartortle() = Pokemon(
+        name = "WARTORTLE", level = 1,
+        maxHp = 59, attack = 63, defense = 80, speed = 58,
+        moves = listOf(attackTackle(), attackTailWhip(), attackWaterGun())
+    )
+
+    fun createBlastoise() = Pokemon(
+        name = "BLASTOISE", level = 1,
+        maxHp = 79, attack = 83, defense = 100, speed = 78,
+        moves = listOf(attackWaterGun(), attackBite(), attackWaterPulse())
+    )
+
+    fun createCharmander() = Pokemon(
+        name = "CHARMANDER", level = 1,
+        maxHp = 39, attack = 52, defense = 43, speed = 65,
+        moves = listOf(attackScratch(), attackGrowl())
+    )
+
+    fun createCharmeleon() = Pokemon(
+        name = "CHARMELEON", level = 1,
+        maxHp = 58, attack = 64, defense = 58, speed = 80,
+        moves = listOf(attackScratch(), attackGrowl(), attackEmber())
+    )
+
+    fun createCharizard() = Pokemon(
+        name = "CHARIZARD", level = 1,
+        maxHp = 78, attack = 84, defense = 78, speed = 100,
+        moves = listOf(attackEmber(), attackWingAttack(), attackDragonClaw())
+    )
 
     // --- 🐛 CATERPIE SHABLONY S PARAMETREM LEVEL ---
     fun createCaterpie(level: Int = 1) = Pokemon(
@@ -203,6 +290,80 @@ object BattleFactory {
         moves = mutableListOf(attackGust(), attackHarden())
     )
 
+    // --- 🐛 WEEDLE RODINA ---
+    fun createWeedle() = Pokemon(
+        name = "WEEDLE", level = 1,
+        maxHp = 40, attack = 35, defense = 30, speed = 50,
+        moves = listOf(attackPoisonSting(), attackStringShot())
+    )
+    fun createKakuna() = Pokemon(
+        name = "KAKUNA", level = 1,
+        maxHp = 45, attack = 25, defense = 50, speed = 35,
+        moves = listOf(attackHarden())
+    )
+    fun createBeedrill() = Pokemon(
+        name = "BEEDRILL", level = 1,
+        maxHp = 65, attack = 90, defense = 40, speed = 75,
+        moves = listOf(attackFuryAttack(), attackTwineedle())
+    )
+
+    fun createPidgey() = Pokemon(
+        name = "PIDGEY", level = 1,
+        maxHp = 40, attack = 45, defense = 40, speed = 56,
+        moves = listOf(attackTackle(), attackSandAttack())
+    )
+
+    fun createPidgeotto() = Pokemon(
+        name = "PIDGEOTTO", level = 1,
+        maxHp = 63, attack = 60, defense = 55, speed = 71,
+        moves = listOf(attackTackle(), attackGust(), attackSandAttack())
+    )
+
+    fun createPidgeot() = Pokemon(
+        name = "PIDGEOT", level = 1,
+        maxHp = 83, attack = 80, defense = 75, speed = 101,
+        moves = listOf(attackGust(), attackSandAttack(), attackWingAttack(), attackDragonClaw())
+    )
+
+    // --- 🐀 RATTATA RODINA ---
+    fun createRattata() = Pokemon(
+        name = "RATTATA", level = 1,
+        maxHp = 30, attack = 56, defense = 35, speed = 72,
+        moves = listOf(attackTackle(), attackTailWhip())
+    )
+
+    fun createRaticate() = Pokemon(
+        name = "RATICATE", level = 1,
+        maxHp = 55, attack = 81, defense = 60, speed = 97,
+        moves = listOf(attackTackle(), attackQuickAttack(), attackHyperFang())
+    )
+
+    fun createSpearow() = Pokemon(
+        name = "SPEAROW", level = 1,
+        maxHp = 40, attack = 60, defense = 30, speed = 70,
+        moves = listOf(attackPeck(), attackGrowl())
+    )
+
+    fun createFearow() = Pokemon(
+        name = "FEAROW", level = 1,
+        maxHp = 65, attack = 90, defense = 65, speed = 100,
+        moves = listOf(attackPeck(), attackLeer(), attackFuryAttack())
+    )
+
+    // --- 🐍 EKANS RODINA (Poison) ---
+    fun createEkans() = Pokemon(
+        name = "EKANS", level = 1,
+        maxHp = 35, attack = 60, defense = 44, speed = 55,
+        moves = listOf(Move("WRAP", PokemonType.NORMAL, 15, 90, 20), attackPoisonSting())
+    )
+
+    fun createArbok() = Pokemon(
+        name = "ARBOK", level = 1,
+        maxHp = 60, attack = 95, defense = 69, speed = 80,
+        moves = listOf(attackBite(), attackAcid())
+    )
+
+
     // ── HRÁČŮV POKÉMON ────────────────────────────────────────────────
     fun createMew() = Pokemon(
         name = "MEW", level = 5, maxHp = 35, attack = 12, defense = 10, speed = 15,
@@ -214,7 +375,7 @@ object BattleFactory {
         )
     )
 
-    // ── COMMON ────────────────────────────────────────────────────────
+
 
     // --- 🪨 DIGLETT LINE ---
     fun createDiglett(level: Int = 5) = Pokemon(
@@ -267,35 +428,7 @@ object BattleFactory {
 
     // ── RARE ──────────────────────────────────────────────────────────
 
-    fun createBulbasaur() = Pokemon(
-        name = "BULBASAUR", level = 7, maxHp = 28, attack = 10, defense = 10, speed = 10,
-        moves = listOf(
-            Move("VINE WHIP",  PokemonType.GRASS,  45, 100, 25),
-            Move("TACKLE",     PokemonType.NORMAL, 40, 100, 35),
-            Move("GROWL",      PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
-            Move("LEECH SEED", PokemonType.GRASS,   0,  90, 10)
-        )
-    )
 
-    fun createSquirtle() = Pokemon(
-        name = "SQUIRTLE", level = 7, maxHp = 27, attack = 9, defense = 12, speed = 11,
-        moves = listOf(
-            Move("WATER GUN", PokemonType.WATER,  40, 100, 25),
-            Move("TACKLE",    PokemonType.NORMAL, 40, 100, 35),
-            Move("TAIL WHIP", PokemonType.NORMAL,  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
-            Move("BUBBLE",    PokemonType.WATER,  40, 100, 30)
-        )
-    )
-
-    fun createCharmander() = Pokemon(
-        name = "CHARMANDER", level = 7, maxHp = 26, attack = 12, defense = 8, speed = 14,
-        moves = listOf(
-            Move("EMBER",      PokemonType.FIRE,   40, 100, 25),
-            Move("SCRATCH",    PokemonType.NORMAL, 40, 100, 35),
-            Move("GROWL",      PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
-            Move("SMOKESCREEN",PokemonType.NORMAL,  0, 100, 20)
-        )
-    )
 
     fun createGastly() = Pokemon(
         name = "GASTLY", level = 7, maxHp = 22, attack = 13, defense = 5, speed = 16,
@@ -307,20 +440,7 @@ object BattleFactory {
         )
     )
 
-    fun createCharmeleon() = Pokemon(
-        name = "CHARMELEON",
-        level = 16,
-        maxHp = 58,
-        attack = 18,
-        defense = 14,
-        speed = 20,
-        moves = listOf(
-            Move("FLAMETHROWER", PokemonType.FIRE,   90, 100, 15),
-            Move("SLASH",        PokemonType.NORMAL, 70, 100, 20),
-            Move("FIRE FANG",    PokemonType.FIRE,   65,  95, 15),
-            Move("SCARY FACE",   PokemonType.NORMAL,  0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
-        )
-    )
+
 
     // ── EPIC ──────────────────────────────────────────────────────────
 
@@ -403,15 +523,6 @@ object BattleFactory {
 
     // ── LEGENDARY ─────────────────────────────────────────────────────
 
-    fun createCharizard() = Pokemon(
-        name = "CHARIZARD", level = 14, maxHp = 40, attack = 20, defense = 12, speed = 17,
-        moves = listOf(
-            Move("FLAMETHROWER", PokemonType.FIRE,   90,  85, 15),
-            Move("WING ATTACK",  PokemonType.FLYING, 60, 100, 35),
-            Move("SLASH",        PokemonType.NORMAL, 70, 100, 20),
-            Move("GROWL",        PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
-        )
-    )
 
     fun createMewtwo() = Pokemon(
         name = "MEWTWO", level = 18, maxHp = 45, attack = 24, defense = 14, speed = 22,
@@ -463,17 +574,33 @@ object BattleFactory {
 
 
         "BULBASAUR" -> "001"
+        "IVYSAUR"   -> "002"
+        "VENUSAUR"  -> "003"
         "CHARMANDER"-> "004"
         "CHARMELEON"-> "005"
         "CHARIZARD" -> "006"
         "SQUIRTLE"  -> "007"
-        "CATERPIE"  -> "010" // ✅ Doplněno
-        "METAPOD"   -> "011" // ✅ Doplněno
-        "BUTTERFREE"-> "012" // ✅ Doplněno
+        "WARTORTLE" -> "008"
+        "BLASTOISE" -> "009"
+        "CATERPIE"  -> "010"
+        "METAPOD"   -> "011"
+        "BUTTERFREE"-> "012"
+        "WEEDLE"    -> "013"
+        "KAKUNA"    -> "014"
+        "BEEDRILL"  -> "015"
+        "PIDGEY"    -> "016"
+        "PIDGEOTTO" -> "017"
+        "PIDGEOT"   -> "018"
+        "RATTATA"   -> "019"
+        "RATTICATE" -> "020"
+        "SPEAROW"   -> "021"
+        "FEAROW"    -> "022"
+        "EKANS"     -> "023"
+        "ARBOK"     -> "024"
         "PIKACHU"   -> "025"
         "RAICHU"    -> "026"
         "DIGLETT"   -> "050"
-        "DUGTRIO"  -> "051"
+        "DUGTRIO"   -> "051"
         "GASTLY"    -> "092"
         "HAUNTER"   -> "093"
         "GENGAR"    -> "094"
@@ -490,21 +617,42 @@ object BattleFactory {
 
     /** Vrátí webName pro načítání sprite z pokemondb.net */
     fun webName(pokemon: Pokemon): String = when (pokemon.name) {
+
+        "BULBASAUR"  -> "bulbasaur"
+        "IVYSAUR"    -> "ivysaur"
+        "VENUSAUR"   -> "venusaur"
+        "CHARMANDER" -> "charmander"
+        "CHARMELEON" -> "charmeleon"
+        "CHARIZARD"  -> "charizard"
+        "SQUIRTLE"   -> "squirtle"
+        "WARTORTLE"  -> "wartortle"
+        "BLASTOISE"  -> "blastoise"
         "CATERPIE"   -> "caterpie"
         "METAPOD"    -> "metapod"
         "BUTTERFREE" -> "butterfree"
+        "WEEDLE"     -> "weedle"
+        "KAKUNA"     -> "kakuna"
+        "BEEDRILL"   -> "beedrill"
+        "PIDGEY"     -> "pidgey"
+        "PIDGEOTTO"  -> "pidgeotto"
+        "PIDGEOT"    -> "pidgeot"
+        "RATTATA"    -> "rattata"
+        "RATTICATE"  -> "raticate"
+        "SPEAROW"    -> "spearow"
+        "FEAROW"     -> "fearow"
+        "EKANS"      -> "ekans"
+        "ARBOK"      -> "arbok"
 
-        "PORYGON" -> "porygon"
 
-        "DIGLETT"   -> "diglett"
-        "DUGTRIO"  -> "dugtrio"
-        "PIKACHU"   -> "pikachu"
-        "RAICHU"    -> "raichu"
-        "EEVEE"     -> "eevee"
-        "BULBASAUR" -> "bulbasaur"
-        "SQUIRTLE"  -> "squirtle"
-        "CHARMANDER"-> "charmander"
-        "CHARMELEON" -> "charmeleon"
+        "PORYGON"    -> "porygon"
+
+        "DIGLETT"    -> "diglett"
+        "DUGTRIO"    -> "dugtrio"
+        "PIKACHU"    -> "pikachu"
+        "RAICHU"     -> "raichu"
+        "EEVEE"      -> "eevee"
+
+
         "GASTLY"    -> "gastly"
         "HAUNTER"   -> "haunter"
         "GENGAR"    -> "gengar"
@@ -512,7 +660,7 @@ object BattleFactory {
         "LAPRAS"    -> "lapras"
         "DITTO"     -> "ditto"
         "SNORLAX"   -> "snorlax"
-        "CHARIZARD" -> "charizard"
+
         "MEWTWO"    -> "mewtwo"
         "MEW"       -> "mew"
         else        -> "missingno"

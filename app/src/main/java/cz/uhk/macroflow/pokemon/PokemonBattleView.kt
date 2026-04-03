@@ -209,6 +209,8 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun enemySpriteHeight(): Float = when (gs.enemy.name) {
         "CATERPIE"   -> 24f
+        "IVYSAUR"    -> 26f
+        "VENOSAUR"   -> 30f
         "METAPOD"    -> 24f
         "BUTTERFREE" -> 32f
         "SNORLAX"    -> 42f
@@ -529,26 +531,46 @@ class PokemonBattleView @JvmOverloads constructor(
     // ✅ TATO METODA TI CHYBĚLA A VYŘEŠÍ ČERVENOU CHYBU ZE SCREENSHOTU!
     private fun createPlayerPokemon(id: String, level: Int): Pokemon {
         val base = when (id) {
+            "001" -> BattleFactory.createBulbasaur()
+            "002" -> BattleFactory.createIvysaur()
+            "003" -> BattleFactory.createVenusaur()
+            "004" -> BattleFactory.createCharmander()
+            "005" -> BattleFactory.createCharmeleon()
+            "006" -> BattleFactory.createCharizard()
+            "007" -> BattleFactory.createSquirtle()
+            "008" -> BattleFactory.createWartortle()
+            "009" -> BattleFactory.createBlastoise()
             "010" -> BattleFactory.createCaterpie()
             "011" -> BattleFactory.createMetapod()
             "012" -> BattleFactory.createButterfree()
-            "050" -> BattleFactory.createDiglett()
-            "051" -> BattleFactory.createDugtrio()
+            "013" -> BattleFactory.createWeedle()
+            "014" -> BattleFactory.createKakuna()
+            "015" -> BattleFactory.createBeedrill()
+            "016" -> BattleFactory.createPidgey()
+            "017" -> BattleFactory.createPidgeotto()
+            "018" -> BattleFactory.createPidgeot()
+            "019" -> BattleFactory.createRattata()
+            "020" -> BattleFactory.createRaticate()
+            "021" -> BattleFactory.createSpearow()
+            "022" -> BattleFactory.createFearow()
+            "023" -> BattleFactory.createEkans()
+            "024" -> BattleFactory.createArbok()
             "025" -> BattleFactory.createPikachu()
             "026" -> BattleFactory.createRaichu()
+
+            "050" -> BattleFactory.createDiglett()
+            "051" -> BattleFactory.createDugtrio()
+
             "133" -> BattleFactory.createEevee()
             "132" -> BattleFactory.createDitto()
             "131" -> BattleFactory.createLapras()
-            "001" -> BattleFactory.createBulbasaur()
-            "007" -> BattleFactory.createSquirtle()
-            "004" -> BattleFactory.createCharmander()
-            "005" -> BattleFactory.createCharmeleon()
+
             "092" -> BattleFactory.createGastly()
             "093" -> BattleFactory.createHaunter()
             "094" -> BattleFactory.createGengar()
             "115" -> BattleFactory.createKangaskhan()
             "143" -> BattleFactory.createSnorlax()
-            "006" -> BattleFactory.createCharizard()
+
             "150" -> BattleFactory.createMewtwo()
             else -> BattleFactory.createCaterpie() // ✅ Změněno z Mew na Caterpie jako bezpečný fallback!
         }

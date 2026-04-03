@@ -81,13 +81,29 @@ class PokedexFragment : Fragment() {
                 // (Tyhle IDs odpovídají tomu, co máš v tom velkém poli Triple v AppDatabase)
                 val definedIds = listOf(
                     "001", // Bulbasaur
+                    "002", // Ivysaur
+                    "003", // Venusaur
                     "004", // Charmander
                     "005", // Charmeleon
                     "006", // Charizard
                     "007", // Squirtle
+                    "008", // Wartortle
+                    "009", // Blastoise
                     "010", // Caterpie
                     "011", // Metapod (Evoluce)
                     "012", // Butterfree (Evoluce)
+                    "013", // Weedle
+                    "014", // Kakuna (Evoluce)
+                    "015", // Beedrill (Evoluce)
+                    "016", // Pidgey
+                    "017", // Pidgeotto (Evoluce)
+                    "018", // Pidgeot (Evoluce)
+                    "019", // Rattata
+                    "020", // Raticate (Evoluce)
+                    "021", // Spearow
+                    "022", // Fearow
+                    "023", // Ekans
+                    "024", // Arbok
                     "025", // Pikachu
                     "026", // Raichu (Evoluce)
                     "050", // Diglett
@@ -123,16 +139,41 @@ class PokedexFragment : Fragment() {
     }
 
     private fun getFallbackHint(id: String): String = when (id) {
-        "010" -> "Hledej v trávě u Dashboardu. Caterpie je nenápadná, ale s poctivým zapisováním Maker ji jistě objevíš!"
-        "007" -> "Cítíš sucho v krku? Vodní Pokémoni se k tvému Dashboardu nepřiblíží, dokud pořádně nehydratuješ a nesplníš dnešní cíl vody!"
-        "092", "093", "094" -> "Někteří Pokémoni nesnáší slunce. Zkusil jsi někdy večerní trénink? Říká se, že po 19:00 můžeš narazit na staré duchy."
-        "143" -> "Tento Pokémon tvrdě spí. Probudit ho dokáže jen poctivá ranní rutina. Zkus zapsat svůj spánek a váhu 7 dní v kuse!"
-        "005" -> "Já tuhle špeluňu podpálím."
-        "51" -> "Tři shity jdou, v řadě za sebou (Tomáš, Sam a Vítek)"
+        // --- STARTÉŘI (001 - 009) ---
+        "001", "002", "003" -> "Tito travní Pokémoni milují čistou stravu. Zkus dnes zapsat aspoň jedno jídlo bohaté na vlákninu a zeleninu, aby se ukázali!"
+        "004" -> "Žár Charmandera pocítíš, jen když se pořádně zapotíš. Zapiš svůj dnešní trénink a sleduj, jestli se někde neobjeví plamínek."
+        "005" -> "Já tuhle špeluňu podpálím. (Ale jen pokud dneska pořádně mákneš!)"
         "006" -> "Žhnoucí plameny Charizarda spatří jen opravdoví dříči. Pokračuj v konzistentním zapisování tréninků a budování návyků aspoň 14 dní."
-        "131" -> "Pluje si životem a nenechá se ničím rozhodit, zkus udržet vodu po dobu 7 dní."
-        "137" -> "Data, data a zase data, býval jsem studentem Statistiky"
+        "007" -> "Cítíš sucho v krku? Vodní Pokémoni se k tvému Dashboardu nepřiblíží, dokud pořádně nehydratuješ a nesplníš dnešní cíl vody!"
+        "008", "009" -> "Hluboké vody vyžadují disciplínu. Udržuj svůj pitný režim na 100 % po dobu 3 dnů a Blastoise tě možná poctí návštěvou."
+
+        // --- HMYZ (010 - 015) ---
+        "010", "011", "012" -> "Hledej v trávě u Dashboardu. Caterpie je nenápadná, ale s poctivým zapisováním Maker ji jistě objevíš!"
+        "013", "014", "015" -> "Hmyzí Pokémoni milují ranní rosu. Zkus zapsat svou snídani před 8:00 ráno a uvidíš, jestli se v trávě něco nepohne!"
+
+        // --- PTÁCI (016 - 018) ---
+        "016", "017", "018" -> "Pidgey monitoruje tvou rychlost. Tohoto létače přilákáš jen tak, že tvůj průměrný denní počet kroků neklesne pod 6 000 po dobu 3 dnů."
+        "019", "020" -> "Rattata je rychlá a neustále něco kouše. Zkus dnes zapsat 3 zdravé snacky (ovoce nebo ořechy) místo sladkostí, abys ji zahnal do pasti!"
+        "021", "022" -> "Spearow je velmi teritoriální. Ukáže se ti jen tehdy, pokud dnes v rámci svého tréninku navštívíš aspoň jedno nové místo (novou trasu na procházku)!"
+        "023", "024" -> "Ekans se plazí tiše v trávě. Vyžaduje trpělivost – zkus dnes vydržet bez cheat-mealu a zapiš poctivě všechna jídla dne."
+
+        // --- ELEKTRICKÁ RODINA (025 - 026) ---
+        "025", "026" -> "Elektřina vyžaduje energii. Zkus dneska dodržet svůj kalorický cíl (nebuď v přílišném deficitu), aby měl Pikachu kde dobít baterky!"
+
+        // --- ZEMNÍ A OSTATNÍ (050 - 137) ---
+        "050" -> "Diglett se skrývá pod povrchem tvé rutiny. Zkus zapsat svou váhu hned po probuzení, abys ho vyhrabal ze země."
+        "051" -> "Tři shity jdou, v řadě za sebou (Tomáš, Sam a Vítek). Chytit je můžeš jen poctivým skupinovým tréninkem!"
+        "092", "093", "094" -> "Někteří Pokémoni nesnáší slunce. Zkusil jsi někdy večerní trénink? Říká se, že po 19:00 můžeš narazit na staré duchy."
+        "115" -> "Kangaskhan chrání své mladé, stejně jako ty musíš chránit své svaly. Zapiš dnes dostatečný příjem bílkovin!"
+        "131" -> "Pluje si životem a nenechá se ničím rozhodit. Zkus udržet cíl vody na 100 % po dobu 7 dní v kuse."
+        "132" -> "Ditto se dokáže přizpůsobit čemukoliv. Zkus dnes zapsat jídlo, které jsi v aplikaci ještě nikdy neměl – miluje pestrost!"
+        "133" -> "Eevee je symbolem potenciálu. Ukaž svou všestrannost a zapiš dnes trénink i meditaci nebo spánek."
+        "137" -> "Data, data a zase data. Býval jsem studentem Statistiky a vím, že bez zápisu Maker se Porygon v kódu neobjeví."
+
+        // --- OBŘI A LEGENDY (143 - 151) ---
+        "143" -> "Tento Pokémon tvrdě spí. Probudit ho dokáže jen poctivá ranní rutina. Zkus zapsat svůj spánek a váhu 7 dní v kuse!"
         "150", "151" -> "Tajemná psychická energie pulzuje kdesi v nedohlednu. Získá ji jen ten, kdo se stane mistrem dlouhodobé disciplíny v MakroFlow."
+
         else -> "Zapiš trénink, udržuj disciplínu a vyraz ho hledat!"
     }
 
@@ -156,7 +197,17 @@ class PokedexFragment : Fragment() {
         tvDetailMacro.text = if (isUnlocked) {
             pokemon.macroDesc
         } else {
-            if (pokemon.unlockedHint.isNotEmpty()) pokemon.unlockedHint else "Tento Pokémon ještě nebyl chycen. Zapiš trénink a vyraz ho hledat!"
+            // Pokud NENÍ chycený, ukaž fitness radu (hint)
+            // Nejdřív zkusíme, jestli máme specifickou radu v getFallbackHint
+            val hint = getFallbackHint(pokemon.pokedexId)
+
+            // Pokud getFallbackHint vrátí obecný "else" (Zapiš trénink...),
+            // zkontrolujeme, jestli není něco přímo v DB entitě (unlockedHint)
+            if (hint.startsWith("Zapiš trénink") && pokemon.unlockedHint.isNotEmpty()) {
+                pokemon.unlockedHint
+            } else {
+                hint
+            }
         }
 
 
