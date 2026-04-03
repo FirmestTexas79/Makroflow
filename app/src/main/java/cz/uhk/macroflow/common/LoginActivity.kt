@@ -1,6 +1,5 @@
 package cz.uhk.macroflow.common
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -14,8 +13,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.data.FirebaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,27 +27,18 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-
-        setContentView(R.layout.activity_login)
-
+        // 1. OKAMŽITÁ KONTROLA PŘIHLÁŠENÍ (Před nastavením layoutu)
         auth = FirebaseAuth.getInstance()
-
-        // ✅ OPRAVA: Pokud je uživatel už přihlášen, zkusíme stáhnout data ze serveru a až pak jdeme dál
         if (auth.currentUser != null) {
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    FirebaseRepository.syncCloudDataToLocal(applicationContext)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                withContext(Dispatchers.Main) {
-                    goToMain()
-                }
-            }
+            // Uživatel už je v systému, nebudeme mu kreslit Login, rovnou synchronizujeme a jdeme do Main
+            startAutoLogin()
             return
         }
+
+        // 2. NASTAVENÍ UI (Tento kód proběhne, jen když uživatel NENÍ přihlášen)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        setContentView(R.layout.activity_login)
 
         findViewById<View>(R.id.btnGoogleSignIn).setOnClickListener {
             startGoogleSignIn()
@@ -59,7 +49,21 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    private fun startAutoLogin() {
+        // 1. Okamžitě do Main (žádné čekání)
+        goToMain()
+
+        // 2. Sync ať si běží na pozadí, klidně ať si přemazává DB,
+        // MainActivity si s tím teď díky Handleru poradí (počká si).
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                FirebaseRepository.syncCloudDataToLocal(applicationContext)
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
     private fun startGoogleSignIn() {
+        // ID token je tvůj Client ID pro Web Application z Google Console
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken("324719841390-sibsmtkcjfknjilqtq2hgi8cdtql35d8.apps.googleusercontent.com")
             .requestEmail()
@@ -75,7 +79,7 @@ class LoginActivity : AppCompatActivity() {
             val task = GoogleSignIn.getSignedInAccountFromIntent(data)
             try {
                 val account = task.getResult(ApiException::class.java)
-                firebaseAuthWithGoogle(account.idToken!!)
+                firebaseAuthWithGoogle(account?.idToken ?: return)
             } catch (e: ApiException) {
                 Toast.makeText(this, "Google Sign-In selhal: ${e.message}", Toast.LENGTH_SHORT).show()
             }
@@ -89,14 +93,14 @@ class LoginActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     try {
                         withContext(Dispatchers.IO) {
-                            // ✅ OPRAVA: Zjišťujeme, jestli máme v cloudu VŮBEC nějaký profil. Pokud ne, až tehdy je to nový uživatel.
+                            // Rozhodneme, zda stahujeme (starý uživatel) nebo nahráváme (nový uživatel)
                             val cloudProfileExists = FirebaseRepository.downloadProfile() != null
 
                             if (cloudProfileExists) {
-                                // Máme data na serveru, stáhneme je do nově nainstalovaného telefonu
+                                // Obnova dat ze serveru (včetně tvého nového Power/Kardio plánu)
                                 FirebaseRepository.syncCloudDataToLocal(applicationContext)
                             } else {
-                                // Na serveru nic není, nahrajeme tam lokální výchozí data z telefonu
+                                // První spuštění -> pošleme výchozí data z telefonu na server
                                 FirebaseRepository.syncLocalDataToCloud(applicationContext)
                             }
                         }
@@ -112,7 +116,10 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun goToMain() {
-        startActivity(Intent(this, MainActivity::class.java))
+        val intent = Intent(this, MainActivity::class.java)
+        // Tyto flagy jsou KLÍČOVÉ: vyčistí zásobník aktivit, takže "Zpět" aplikaci zavře a nevrátí na Login
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
         finish()
     }
 }

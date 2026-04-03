@@ -74,49 +74,55 @@ class PokemonBattleView @JvmOverloads constructor(
     init {
         PokemonSprites.init(context)
 
-        // 1. Získání preferencí
         val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
 
-        // ✅ Jednotné Int ID — vždy ukládáme i čteme jako Int
+        // Získáme unikátní ID řádku z DB a záložní ID druhu
         val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
-
-        // ZÁLOŽNÍ PLÁN: pokud DB ID chybí, použijeme String pokémon ID (např. "026")
-        val backupPokemonId = prefs.getString("currentOnBarId", null)
+        val backupPokemonId = prefs.getString("currentOnBarId", "050") ?: "050"
 
         Thread {
             val db = AppDatabase.getDatabase(context)
 
-            // 2. Najdeme pokémona v DB
-            val caughtPokemon = if (activeCapturedId != -1) {
-                db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
+            // 1. Pokusíme se načíst reálného pokémona z DB
+            val caughtEntity = if (activeCapturedId != -1) {
+                db.capturedPokemonDao().getPokemonById(activeCapturedId)
             } else null
 
-            // 3. Rozhodnutí o ID a Levelu (priorita: DB -> SharedPreferences -> Diglett)
-            val pId = caughtPokemon?.pokemonId ?: backupPokemonId ?: "050"
-            val playerLevel = caughtPokemon?.level ?: 1
+            // 2. Definujeme parametry hráče na základě dat z DB nebo zálohy
+            val pId = caughtEntity?.pokemonId ?: backupPokemonId
+            val playerLevel = caughtEntity?.level ?: 1
 
-            // 4. Inicializace hráče
+            // 3. Vytvoření objektu hráče se správnými staty
             val playerWithStats = createPlayerPokemon(pId, playerLevel)
 
-            // --- Zbytek logiky pro nepřítele (necháme jak je) ---
+            // 4. Inicializace nepřítele (level odvozen od hráče)
             val baseEnemy = SpawnManager.rollWildEncounter(context)
             val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
+
+            // 5. Načtení Pokéballů z inventáře
             val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
 
+            // 6. Sestavení herního stavu a aktualizace UI
             handler.post {
                 gs = BattleState(
                     player = playerWithStats,
                     enemy = enemyWithStats,
                     ballCount = currentPokeballs
                 )
+
                 handler.post(cursorTick)
+
+                // Načtení spritů pro oba bojovníky
                 loadSprite(spriteUrl(BattleFactory.webName(enemyWithStats)), isPlayer = false)
                 loadSprite(spriteUrl(BattleFactory.webName(playerWithStats)), isPlayer = true)
+
                 invalidate()
             }
         }.start()
     }
+
+
     private fun loadSprite(url: String, isPlayer: Boolean) {
         val loader  = ImageLoader(context)
         val request = ImageRequest.Builder(context)

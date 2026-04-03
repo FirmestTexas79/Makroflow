@@ -113,10 +113,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
-        drawerLayout   = findViewById(R.id.drawerLayout)
+        drawerLayout = findViewById(R.id.drawerLayout)
         navigationView = findViewById(R.id.navigationView)
-        val bottomNav     = findViewById<BottomNavigationView>(R.id.bottomNavigation)
-        val fabHome       = findViewById<FloatingActionButton>(R.id.fabHome)
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
+        val fabHome = findViewById<FloatingActionButton>(R.id.fabHome)
         val btnOpenDrawer = findViewById<ImageButton>(R.id.btnOpenDrawer)
 
         bottomNav.itemActiveIndicatorColor = null
@@ -194,8 +194,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_plan    -> replaceFragment(PlanFragment())
-                R.id.nav_snack   -> replaceFragment(SnackFragment())
+                R.id.nav_plan -> replaceFragment(PlanFragment())
+                R.id.nav_snack -> replaceFragment(SnackFragment())
                 R.id.nav_history -> replaceFragment(HistoryFragment())
                 R.id.nav_profile -> replaceFragment(ProfileFragment())
             }
@@ -254,55 +254,74 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 R.id.drawerResetAchievements -> {
                     lifecycleScope.launch(Dispatchers.IO) {
                         val db = AppDatabase.getDatabase(this@MainActivity)
-                        db.achievementDao().deleteAll() // Předpokládám, že máš v DAO tuhle metodu
+                        db.achievementDao().deleteAll()
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, "Achievementy byly smazány", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Achievementy byly smazány",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 }
 
                 R.id.drawerDisclaimer -> {
-                    // Tady můžeš zobrazit třeba AlertDialog s textem prohlášení
-                    Toast.makeText(this, "Aplikace nenahrazuje lékařskou pomoc.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Aplikace nenahrazuje lékařskou pomoc.", Toast.LENGTH_LONG)
+                        .show()
                 }
 
                 // --- SEKCE: ÚČET ---
                 R.id.drawerSignOut -> {
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        val db = AppDatabase.getDatabase(this@MainActivity)
+                    // BEZPEČNOSTNÍ POJISTKA: Zjistíme, jestli máme reálného uživatele
+                    val user = FirebaseRepository.currentUser
 
-                        // ☁️ Sync před odhlášením
-                        if (FirebaseRepository.isLoggedIn) {
-                            try {
-                                FirebaseRepository.syncLocalDataToCloud(applicationContext)
-                            } catch (e: Exception) {
-                                e.printStackTrace()
+                    if (user == null) {
+                        // Pokud Firebase v tuhle chvíli vrací null (lag při startu),
+                        // jen ho pošleme na Login, ale NEMAŽEME data (Pokémona).
+                        val intent = Intent(this@MainActivity, LoginActivity::class.java)
+                        startActivity(intent)
+                    } else {
+                        // Skutečné odhlášení - uživatel klikl na "Odhlásit se" a je prokazatelně přihlášen
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            val db = AppDatabase.getDatabase(this@MainActivity)
+
+                            // ☁️ Sync před odhlášením
+                            if (FirebaseRepository.isLoggedIn) {
+                                try {
+                                    FirebaseRepository.syncLocalDataToCloud(applicationContext)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                                FirebaseRepository.signOut()
                             }
-                            FirebaseRepository.signOut()
-                        }
 
-                        // 🛑 Zastavení běžících procesů
-                        withContext(Dispatchers.Main) {
-                            pokemonBehavior?.stop()
-                            // Pokud máš metodu stopLureSmoke() definovanou v MainActivity
-                            try { stopLureSmoke() } catch (e: Exception) {}
-                        }
+                            // 🛑 Zastavení běžících procesů
+                            withContext(Dispatchers.Main) {
+                                pokemonBehavior?.stop()
+                                try {
+                                    stopLureSmoke()
+                                } catch (e: Exception) {
+                                }
+                            }
 
-                        // 🧹 Totální očista lokálních dat
-                        db.stepsDao().deleteAll()
-                        db.clearAllTables()
+                            // 🧹 Totální očista lokálních dat (Tady už je to bezpečné, uživatel se odhlásil)
+                            db.stepsDao().deleteAll()
+                            db.clearAllTables()
 
-                        // Vymazání všech SharedPreferences
-                        getSharedPreferences("GamePrefs", MODE_PRIVATE).edit().clear().apply()
-                        getSharedPreferences("UserPrefs", MODE_PRIVATE).edit().clear().apply()
-                        getSharedPreferences("TrainingPrefs", MODE_PRIVATE).edit().clear().apply()
+                            // Vymazání všech SharedPreferences
+                            getSharedPreferences("GamePrefs", MODE_PRIVATE).edit().clear().apply()
+                            getSharedPreferences("UserPrefs", MODE_PRIVATE).edit().clear().apply()
+                            getSharedPreferences("TrainingPrefs", MODE_PRIVATE).edit().clear()
+                                .apply()
 
-                        // 🚀 Návrat na Login
-                        withContext(Dispatchers.Main) {
-                            val intent = Intent(this@MainActivity, LoginActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            startActivity(intent)
-                            finish()
+                            // 🚀 Návrat na Login
+                            withContext(Dispatchers.Main) {
+                                val intent = Intent(this@MainActivity, LoginActivity::class.java)
+                                intent.flags =
+                                    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                startActivity(intent)
+                                finish()
+                            }
                         }
                     }
                 }
@@ -313,7 +332,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         checkAchievementsDelayed()
 
         runItemSpawner()
+        updatePokemonVisibility()
     }
+
 
     override fun onResume() {
         super.onResume()
@@ -512,70 +533,75 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val ivPokemon = findViewById<ImageView>(R.id.ivDiglettBottomBar) ?: return
         val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
 
+        // Načítáme tvůj unikátní timestamp chycení
         val acquired = prefs.getBoolean("pokemonAcquired", false)
-        val pId = prefs.getString("currentOnBarId", "050") ?: "050"
-        val pName = prefs.getString("currentOnBarName", "DIGLETT") ?: "DIGLETT"
+        val activeCaughtDate = prefs.getLong("currentOnBarCaughtDate", -1L)
 
-        currentOnBarId = pId
+        Log.d("POKEMON_DEBUG", "--- UPDATE CHECK ---")
+        Log.d("POKEMON_DEBUG", "Acquired: $acquired, Timestamp: $activeCaughtDate")
 
-        if (!acquired) {
+        if (!acquired || activeCaughtDate == -1L) {
             pokemonBehavior?.stop()
             pokemonBehavior = null
             ivPokemon.visibility = View.GONE
+            lastLoadedId = "" // Resetujeme cache, aby se příště mohl načíst znovu
             return
         }
 
-        val dp = resources.displayMetrics.density
-        ivPokemon.layoutParams.width = (52 * dp).toInt()
-        ivPokemon.layoutParams.height = (52 * dp).toInt()
-        ivPokemon.requestLayout()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(this@MainActivity)
 
-        if (pId != lastLoadedId) {
-            lastLoadedId = pId
-            pokemonBehavior?.stop()
-            pokemonBehavior = null
+            // Hledáme přesně toho Gengara/Pikachua podle času chycení
+            val caught = db.capturedPokemonDao().getPokemonByCaughtDate(activeCaughtDate)
 
-            ivPokemon.visibility = View.GONE
-            ivPokemon.scaleX = 1f; ivPokemon.scaleY = 1f
-            ivPokemon.alpha = 1f; ivPokemon.rotation = 0f
+            withContext(Dispatchers.Main) {
+                if (caught != null) {
+                    // Pokémon nalezen v DB!
+                    val pId = caught.pokemonId // "094"
+                    val pName = caught.name
+                    val uniqueKey = caught.caughtDate.toString() // Použijeme datum jako unikátní ID instance
 
-            val tempPokemon = Pokemon(
-                name = pName.uppercase(),
-                level = 1,
-                maxHp = 1,
-                attack = 1,
-                defense = 1,
-                speed = 1,
-                moves = emptyList()
-            )
-            val webName = BattleFactory.webName(tempPokemon)
+                    if (uniqueKey != lastLoadedId) {
+                        Log.i("POKEMON_DEBUG", "Načítám instanci: $pName (Timestamp: $uniqueKey)")
+                        lastLoadedId = uniqueKey
 
-            val imageUrl = "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
+                        pokemonBehavior?.stop()
+                        pokemonBehavior = null
+                        ivPokemon.visibility = View.INVISIBLE
 
-            Log.d("POKEMON_IMAGE", "Načítám obrázek z: $imageUrl pro ID: $pId")
+                        // Příprava jména pro URL (převede "PIKACHU" na "pikachu")
+                        val webName = pName.lowercase().trim()
+                        val imageUrl = "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
 
-            ivPokemon.load(imageUrl) {
-                crossfade(true)
-                listener(
-                    onSuccess = { _, _ ->
-                        val wanderer = WandererFactory.create(this@MainActivity, ivPokemon, pId)
-                        pokemonBehavior = wanderer
+                        ivPokemon.load(imageUrl) {
+                            crossfade(true)
+                            listener(onSuccess = { _, _ ->
+                                // Vytvoříme Wanderera (použije staty z DB díky tomu pId a caughtDate)
+                                pokemonBehavior = WandererFactory.create(this@MainActivity, ivPokemon, pId)
+                                ivPokemon.visibility = View.VISIBLE
+                                pokemonBehavior?.start()
+                            })
+                        }
+                    } else {
+                        // Už je načtený, jen se ujistíme, že běží
                         ivPokemon.visibility = View.VISIBLE
-                        pokemonBehavior?.start()
-                    },
-                    onError = { _, _ ->
-                        Log.e("POKEMON_IMAGE", "Nepodařilo se načíst obrázek z: $imageUrl")
-                        ivPokemon.load("https://img.pokemondb.net/sprites/firered-leafgreen/normal/caterpie.png")
-                        ivPokemon.visibility = View.VISIBLE
+                        if (pokemonBehavior == null) {
+                            pokemonBehavior = WandererFactory.create(this@MainActivity, ivPokemon, pId)
+                            pokemonBehavior?.start()
+                        }
                     }
-                )
+                } else {
+                    // ⚠️ DŮLEŽITÉ: Pokémon v DB není (asi ho Sync smazal a ještě nenahrál zpět)
+                    Log.w("POKEMON_DEBUG", "Pokémon s datem $activeCaughtDate v DB zatím není. Čekám na Sync...")
+
+                    ivPokemon.visibility = View.GONE
+
+                    // Zkusíme to znovu za 3 sekundy. TADY NESMÍ BÝT prefs.edit().clear()!
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        updatePokemonVisibility()
+                    }, 3000)
+                }
             }
-
-            ivPokemon.setOnClickListener { pokemonBehavior?.onSpriteClicked() }
-
-        } else {
-            ivPokemon.visibility = View.VISIBLE
-            pokemonBehavior?.start()
         }
     }
 
@@ -729,35 +755,41 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun updateDrawerHeader() {
-        val header     = navigationView.getHeaderView(0)
-        val tvName     = header.findViewById<TextView>(R.id.tvDrawerName)
-        val tvEmail    = header.findViewById<TextView>(R.id.tvDrawerEmail)
+        val header = navigationView.getHeaderView(0)
+        val tvName = header.findViewById<TextView>(R.id.tvDrawerName)
+        val tvEmail = header.findViewById<TextView>(R.id.tvDrawerEmail)
         val tvInitials = header.findViewById<TextView>(R.id.tvAvatarInitials)
-        val btnLogin   = header.findViewById<View>(R.id.btnDrawerLogin)
-        val dotOnline  = header.findViewById<View>(R.id.viewOnlineDot)
+        val btnLogin = header.findViewById<View>(R.id.btnDrawerLogin)
+        val dotOnline = header.findViewById<View>(R.id.viewOnlineDot)
         val signOutItem = navigationView.menu.findItem(R.id.drawerSignOut)
 
         val user = FirebaseRepository.currentUser
+
         if (user != null) {
+            // Uživatel je přihlášen
             val name = user.displayName ?: "Sportovec"
-            tvName.text     = name
-            tvEmail.text    = user.email ?: ""
+            tvName.text = name
+            tvEmail.text = user.email ?: ""
             tvInitials.text = name.firstOrNull()?.uppercase() ?: "S"
-            btnLogin.visibility  = View.GONE
+            btnLogin.visibility = View.GONE
             dotOnline.visibility = View.VISIBLE
-            signOutItem?.title   = "Odhlásit se"
+            signOutItem?.title = "Odhlásit se"
         } else {
-            tvName.text     = "Sportovec"
-            tvEmail.text    = "Offline režim"
+            // Uživatel není přihlášen (nebo se Firebase ještě načítá)
+            // DŮLEŽITÉ: Tady nesmí být žádný clear SharedPreferences!
+            tvName.text = "Sportovec"
+            tvEmail.text = "Offline režim"
             tvInitials.text = "?"
-            btnLogin.visibility  = View.VISIBLE
+            btnLogin.visibility = View.VISIBLE
             dotOnline.visibility = View.GONE
-            signOutItem?.title   = "Přihlásit se"
+            signOutItem?.title = "Přihlásit se"
         }
+
         btnLogin.setOnClickListener {
             drawerLayout.closeDrawer(GravityCompat.END)
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
+            val intent = Intent(this, LoginActivity::class.java)
+            startActivity(intent)
+            // finish() // Tady finish nedávej, pokud chceš, aby se mohl vrátit
         }
     }
 

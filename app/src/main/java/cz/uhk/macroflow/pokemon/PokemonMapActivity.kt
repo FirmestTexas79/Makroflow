@@ -19,11 +19,16 @@ import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.load
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.data.AppDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -47,6 +52,9 @@ class PokemonMapActivity : AppCompatActivity() {
     private var currentTutorialStep = 0
     private var isTextAnimating = false
     private var currentFullText = ""
+
+    private lateinit var ivCompanion: ImageView
+    private lateinit var tvCompanionLabel: TextView
 
     private val spots = listOf(
         RectF(0f, 0f, 0f, 0f),
@@ -80,6 +88,9 @@ class PokemonMapActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pokemon_map)
+
+        ivCompanion = findViewById(R.id.ivCompanion)
+        tvCompanionLabel = findViewById(R.id.tvCompanionLabel)
 
         val imageLoader = ImageLoader.Builder(this)
             .components {
@@ -123,6 +134,55 @@ class PokemonMapActivity : AppCompatActivity() {
                 "POKEDEX" -> findViewById<View>(R.id.hotspotPokedex).performClick()
                 "INVENTORY" -> findViewById<View>(R.id.hotspotHome).performClick()
                 "SHOP" -> findViewById<View>(R.id.hotspotShop).performClick()
+            }
+        }
+        updateCompanionDisplay()
+    }
+
+    private fun updateCompanionDisplay() {
+        // Najdeme i podkladové kolečko
+        val companionShadow = findViewById<View>(R.id.companionShadow) ?: return
+        val ivCompanion = findViewById<ImageView>(R.id.ivCompanion) ?: return
+        val tvCompanionLabel = findViewById<TextView>(R.id.tvCompanionLabel) ?: return
+
+        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+        val isAcquired = prefs.getBoolean("pokemonAcquired", false)
+        val caughtDate = prefs.getLong("currentOnBarCaughtDate", -1L)
+
+        // Logika viditelnosti pro CELOU skupinu
+        if (!isAcquired || caughtDate == -1L) {
+            ivCompanion.visibility = View.GONE
+            tvCompanionLabel.visibility = View.GONE
+            companionShadow.visibility = View.GONE // Schováme i kolečko
+            return
+        }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(this@PokemonMapActivity)
+            val companion = db.capturedPokemonDao().getPokemonByCaughtDate(caughtDate)
+
+            withContext(Dispatchers.Main) {
+                if (companion != null) {
+                    // Zobrazíme CELOU skupinu
+                    tvCompanionLabel.visibility = View.VISIBLE
+                    ivCompanion.visibility = View.VISIBLE
+                    companionShadow.visibility = View.VISIBLE // Zobrazíme i kolečko
+
+                    // Formátování jména pro URL (pokud už nemáš hotovo)
+                    val webName = companion.name.lowercase()
+                        .replace(" ", "-").replace(".", "")
+
+                    // Načtení spritů s Coil (stále statický)
+                    ivCompanion.load("https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png") {
+                        crossfade(true)
+                        placeholder(R.drawable.ic_home)
+                    }
+                } else {
+                    // Pokud záznam v DB neexistuje, schováme vše
+                    ivCompanion.visibility = View.GONE
+                    tvCompanionLabel.visibility = View.GONE
+                    companionShadow.visibility = View.GONE
+                }
             }
         }
     }
@@ -342,5 +402,12 @@ class PokemonMapActivity : AppCompatActivity() {
             .replace(R.id.mapFragmentContainer, fragment)
             .addToBackStack(null)
             .commit()
+
+        // Nasloucháme na zavření fragmentu (návrat na mapu)
+        supportFragmentManager.addOnBackStackChangedListener {
+            if (supportFragmentManager.backStackEntryCount == 0) {
+                updateCompanionDisplay() // Refresh společníka při návratu na mapu
+            }
+        }
     }
 }

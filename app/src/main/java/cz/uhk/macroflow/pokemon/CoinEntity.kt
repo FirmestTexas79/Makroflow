@@ -72,6 +72,9 @@ interface CapturedPokemonDao {
 
     @Query("DELETE FROM captured_pokemon")
     fun deleteAllCapturedLocally()
+
+    @Query("SELECT * FROM captured_pokemon WHERE caughtDate = :timestamp LIMIT 1")
+    fun getPokemonByCaughtDate(timestamp: Long): CapturedPokemonEntity?
 }
 
 // --- 🎒 BATOH (Předměty a Bally) ---
