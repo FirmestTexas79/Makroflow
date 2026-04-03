@@ -26,9 +26,10 @@ import kotlin.concurrent.thread
         PokedexStatusEntity::class,
         SeenPokemonEntity::class,
         PokemonXpEntity::class,
-        StepsEntity::class
+        StepsEntity::class,
+        AnalyticsCacheEntity::class
     ],
-    version = 19,
+    version = 29,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -48,6 +49,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun seenPokemonDao(): SeenPokemonDao
     abstract fun pokemonXpDao(): PokemonXpDao
     abstract fun stepsDao(): StepsDao
+
+    abstract fun analyticsDao(): AnalyticsDao
 
     companion object {
         @Volatile

@@ -74,50 +74,49 @@ class PokemonBattleView @JvmOverloads constructor(
     init {
         PokemonSprites.init(context)
 
+        // 1. Získání preferencí
         val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1) // 👈 Načítáme ID konkrétního pokémona, ne globální dex ID!
+
+        // ✅ Jednotné Int ID — vždy ukládáme i čteme jako Int
+        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
+
+        // ZÁLOŽNÍ PLÁN: pokud DB ID chybí, použijeme String pokémon ID (např. "026")
+        val backupPokemonId = prefs.getString("currentOnBarId", null)
 
         Thread {
             val db = AppDatabase.getDatabase(context)
 
-            // 🔍 Získáme přesnou instanci Pokémona z batohu!
-            val caughtPokemon = db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
+            // 2. Najdeme pokémona v DB
+            val caughtPokemon = if (activeCapturedId != -1) {
+                db.capturedPokemonDao().getAllCaught().find { it.id == activeCapturedId }
+            } else null
 
-            // 🎯 Vezmeme level reálně z něj! Pokud ho nemáme, dáme fallback na 1.
+            // 3. Rozhodnutí o ID a Levelu (priorita: DB -> SharedPreferences -> Diglett)
+            val pId = caughtPokemon?.pokemonId ?: backupPokemonId ?: "050"
             val playerLevel = caughtPokemon?.level ?: 1
-            val pId = caughtPokemon?.pokemonId ?: "050"
 
+            // 4. Inicializace hráče
             val playerWithStats = createPlayerPokemon(pId, playerLevel)
 
+            // --- Zbytek logiky pro nepřítele (necháme jak je) ---
             val baseEnemy = SpawnManager.rollWildEncounter(context)
             val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
             val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
 
-            val enemyId = BattleFactory.pokedexId(enemyWithStats)
-
-            // 1. Lokální uložení, že jsme pokémona viděli
-            db.seenPokemonDao().markSeen(SeenPokemonEntity(enemyId))
-
-
-
             handler.post {
                 gs = BattleState(
-                    player    = playerWithStats,
-                    enemy     = enemyWithStats,
+                    player = playerWithStats,
+                    enemy = enemyWithStats,
                     ballCount = currentPokeballs
                 )
-
                 handler.post(cursorTick)
-
                 loadSprite(spriteUrl(BattleFactory.webName(enemyWithStats)), isPlayer = false)
                 loadSprite(spriteUrl(BattleFactory.webName(playerWithStats)), isPlayer = true)
-
                 invalidate()
             }
         }.start()
     }
-
     private fun loadSprite(url: String, isPlayer: Boolean) {
         val loader  = ImageLoader(context)
         val request = ImageRequest.Builder(context)
@@ -217,10 +216,13 @@ class PokemonBattleView @JvmOverloads constructor(
         "BULBASAUR"  -> 28f
         "SQUIRTLE"   -> 26f
         "CHARMANDER" -> 28f
+        "CHARMELEON" -> 30f
         "PIKACHU"    -> 24f
         "RAICHU"     -> 30f
+        "DITTO"      -> 36f
         "EEVEE"      -> 24f
         "DIGLETT"    -> 22f
+        "DUGTRIO"    -> 30f
         else         -> 28f
     }
 
@@ -489,11 +491,12 @@ class PokemonBattleView @JvmOverloads constructor(
                                 val levelBonus = gs.enemy.level * 3
                                 val totalBattleXp = baseScore + levelBonus
 
-                                handler.post {
-                                    // ✅ Okamžitý přepis do UI a uložení do Cloudu přes MainActivity!
-                                    (context as? cz.uhk.macroflow.common.MainActivity)?.addXpToActivePokemonRealTime(totalBattleXp)
+                                // ✅ Uložíme XP přímo do DB — nepotřebujeme MainActivity
+                                // BattleView běží v PokemonMapActivity, ne v MainActivity!
+                                awardXpToActivePokemon(totalBattleXp)
 
-                                    // Počkáme 2 vteřiny, než se dočte text o porážce a pak teprve dialog zavřeme
+                                handler.post {
+                                    // Počkáme 2 vteřiny než se dočte text o porážce
                                     handler.postDelayed({
                                         onCaught?.invoke()
                                     }, 2000)
@@ -524,12 +527,16 @@ class PokemonBattleView @JvmOverloads constructor(
             "011" -> BattleFactory.createMetapod()
             "012" -> BattleFactory.createButterfree()
             "050" -> BattleFactory.createDiglett()
+            "051" -> BattleFactory.createDugtrio()
             "025" -> BattleFactory.createPikachu()
             "026" -> BattleFactory.createRaichu()
             "133" -> BattleFactory.createEevee()
+            "132" -> BattleFactory.createDitto()
+            "131" -> BattleFactory.createLapras()
             "001" -> BattleFactory.createBulbasaur()
             "007" -> BattleFactory.createSquirtle()
             "004" -> BattleFactory.createCharmander()
+            "005" -> BattleFactory.createCharmeleon()
             "092" -> BattleFactory.createGastly()
             "093" -> BattleFactory.createHaunter()
             "094" -> BattleFactory.createGengar()
@@ -684,11 +691,12 @@ class PokemonBattleView @JvmOverloads constructor(
         invalidate()
 
         val runAwayChance = when (gs.enemy.name) {
-            "MEWTWO", "MEW"                -> 0.40f
-            "CHARIZARD"                    -> 0.25f
-            "SNORLAX", "HAUNTER", "GENGAR" -> 0.15f
-            "KANGASKHAN"                   -> 0.20f
-            else                           -> 0.08f
+            "MEWTWO", "MEW"                               -> 0.40f
+            "CHARIZARD"                                   -> 0.25f
+            "SNORLAX", "HAUNTER", "GENGAR", "CHARMELEON"  -> 0.15f
+            "KANGASKHAN"                                  -> 0.20f
+            "LAPRAS"                                      -> 0.30f
+            else                                          -> 0.08f
         }
 
         busy = false
@@ -733,24 +741,67 @@ class PokemonBattleView @JvmOverloads constructor(
 
             val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
             val isAcquired = prefs.getBoolean("pokemonAcquired", false)
-            val activeOnBarId = prefs.getString("currentOnBarId", null)
-
-            if (isAcquired && activeOnBarId != null) {
-                val xpReward = when (SpawnManager.allEntries.find { it.id == pId }?.rarity) {
-                    Rarity.COMMON -> 20
-                    Rarity.RARE -> 50
-                    Rarity.EPIC -> 100
-                    Rarity.LEGENDARY -> 250
-                    Rarity.MYTHIC -> 250
-                    else -> 20
-                }
-                db.pokemonXpDao().addXp(activeOnBarId, xpReward)
-            }
 
             handler.post {
                 setText("CAUGHT ${gs.enemy.name.take(7)}!", "")
                 busy = false
+
+                // ✅ XP za chycení — přímo do DB, bez závislosti na MainActivity
+                if (isAcquired) {
+                    val xpReward = when (SpawnManager.allEntries.find { it.id == pId }?.rarity) {
+                        Rarity.COMMON    -> 20
+                        Rarity.RARE      -> 50
+                        Rarity.EPIC      -> 100
+                        Rarity.LEGENDARY -> 250
+                        Rarity.MYTHIC    -> 250
+                        else             -> 20
+                    }
+                    awardXpToActivePokemon(xpReward)
+                }
+
                 pendingAction = { onCaught?.invoke() }
+            }
+        }.start()
+    }
+
+    /**
+     * Udělí XP aktivnímu pokémonovi přímo z BattleView.
+     * Funguje v jakémkoli Activity kontextu (PokemonMapActivity i MainActivity).
+     * Zobrazí Toast s výsledkem a nahraje do Firebase pokud je uživatel přihlášen.
+     */
+    private fun awardXpToActivePokemon(xpAmount: Int) {
+        val prefs = context.getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE)
+        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
+        if (activeCapturedId == -1) return
+
+        Thread {
+            val localDb = AppDatabase.getDatabase(context)
+            val pokemon = localDb.capturedPokemonDao().getPokemonById(activeCapturedId)
+                ?: return@Thread
+
+            val oldLevel = pokemon.level
+            pokemon.xp += xpAmount
+            pokemon.level = PokemonLevelCalc.levelFromXp(pokemon.xp)
+
+            localDb.capturedPokemonDao().updatePokemon(pokemon)
+
+            if (FirebaseRepository.isLoggedIn) {
+                try {
+                    kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                        FirebaseRepository.uploadCapturedPokemon(pokemon)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("XP_AWARD", "Firebase upload failed: ${e.message}")
+                }
+            }
+
+            handler.post {
+                val levelMsg = if (pokemon.level > oldLevel) " 🎊 Level up! Lv.${pokemon.level}!" else ""
+                android.widget.Toast.makeText(
+                    context,
+                    "⭐ ${pokemon.name} získal $xpAmount XP!$levelMsg",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
             }
         }.start()
     }

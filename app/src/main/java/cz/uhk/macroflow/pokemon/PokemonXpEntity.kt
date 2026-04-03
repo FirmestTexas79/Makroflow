@@ -87,4 +87,5 @@ object XpRewards {
     const val TRAINING_LOGGED = 4   // zalogován trénink
     const val CHECK_IN        = 8   // denní check-in rituál
     const val MACROS_HIT      = 10  // splněna všechna makra (>= 90 %)
+    const val STEPS_GOAL      = 6   // splněný denní krokový cíl
 }

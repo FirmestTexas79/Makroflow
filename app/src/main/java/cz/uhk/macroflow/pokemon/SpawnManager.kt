@@ -76,7 +76,10 @@ object SpawnManager {
         // ID, Jméno, Rarita, Seznam podmínek, Tovární funkce
         SpawnPool("010", "CATERPIE",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createCaterpie() },
 
+
         SpawnPool("050", "DIGLETT",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createDiglett() },
+        SpawnPool("051", "DUGTRIO",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createDugtrio() },
+
         SpawnPool("025", "PIKACHU",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createPikachu() },
         SpawnPool("133", "EEVEE",     Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createEevee() },
 
@@ -86,11 +89,21 @@ object SpawnManager {
 
         // 🌊 Squirtle se odemkne jen při splnění vody v Dashboardu!
         SpawnPool("007", "SQUIRTLE",  Rarity.RARE,   listOf(Conditions.WATER_GOAL_REACHED)) { BattleFactory.createSquirtle() },
+        SpawnPool("005", "CHARMELEON",Rarity.COMMON,   listOf(Conditions.ALWAYS)) { BattleFactory.createCharmeleon() },
+
+
+
+        SpawnPool("137", "PORYGON", Rarity.EPIC, listOf(Conditions.MinCheckInCount(3))) { BattleFactory.createPorygon() },
 
         SpawnPool("093", "HAUNTER",   Rarity.EPIC,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createHaunter() },
         SpawnPool("094", "GENGAR",    Rarity.EPIC,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createGengar() },
 
 
+        SpawnPool("132", "DITTO", Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createDitto() },
+
+
+        // Přidej do POOL v SpawnManager.kt (třeba pod Kangaskhana)
+        SpawnPool("131", "LAPRAS", Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createLapras() },
         SpawnPool("115", "KANGASKHAN",Rarity.EPIC,   listOf(Conditions.ALWAYS)) { BattleFactory.createKangaskhan() },
         // 💤 Snorlax se odemkne až po 7 splněných ranních check-inech
         SpawnPool("143", "SNORLAX",   Rarity.EPIC,   listOf(Conditions.MinCheckInCount(7))) { BattleFactory.createSnorlax() },

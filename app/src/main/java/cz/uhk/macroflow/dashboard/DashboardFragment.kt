@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -46,9 +47,8 @@ import cz.uhk.macroflow.data.UserProfileEntity
 import cz.uhk.macroflow.pokemon.EvolutionDialog
 import cz.uhk.macroflow.pokemon.PokedexStatusEntity
 import cz.uhk.macroflow.pokemon.PokemonLevelCalc
-import cz.uhk.macroflow.pokemon.PokemonXpEntity
 import cz.uhk.macroflow.pokemon.PokemonGrowthManager
-import cz.uhk.macroflow.pokemon.XpRewards
+import cz.uhk.macroflow.pokemon.PokemonXpEngine
 
 class DashboardFragment : Fragment() {
 
@@ -68,8 +68,8 @@ class DashboardFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val ritualOverlay = view.findViewById<MaterialCardView>(R.id.cardRitualOverlay)
-        val coachCard     = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
-        val btnSave       = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
+        val coachCard = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
+        val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
         // 👣 ✅ ŽIVÝ ODBĚR KROKŮ PŘES FLOW — Čte to, co MainActivity zapisuje
         val tvTodaySteps = view.findViewById<TextView>(R.id.tvTotalStepsCount)
@@ -84,7 +84,7 @@ class DashboardFragment : Fragment() {
 
         setupEliteToggle(view)
 
-        setupEasterEgg(view)
+        //setupEasterEgg(view)
 
         view.findViewById<MaterialCardView>(R.id.cardStartTraining).setOnClickListener {
             parentFragmentManager.beginTransaction()
@@ -112,9 +112,12 @@ class DashboardFragment : Fragment() {
                 view.findViewById<EditText>(R.id.etCheckInWeight)?.setText(weightToShow.toString())
 
                 if (todayCheckIn != null) {
-                    view.findViewById<Slider>(R.id.sliderEnergy).value = todayCheckIn.energyLevel.toFloat()
-                    view.findViewById<Slider>(R.id.sliderSleep).value = todayCheckIn.sleepQuality.toFloat()
-                    view.findViewById<Slider>(R.id.sliderHunger).value = todayCheckIn.hungerLevel.toFloat()
+                    view.findViewById<Slider>(R.id.sliderEnergy).value =
+                        todayCheckIn.energyLevel.toFloat()
+                    view.findViewById<Slider>(R.id.sliderSleep).value =
+                        todayCheckIn.sleepQuality.toFloat()
+                    view.findViewById<Slider>(R.id.sliderHunger).value =
+                        todayCheckIn.hungerLevel.toFloat()
                 }
 
                 ritualOverlay.visibility = View.VISIBLE
@@ -204,7 +207,7 @@ class DashboardFragment : Fragment() {
         val weightVal = view.findViewById<EditText>(R.id.etCheckInWeight)?.text.toString()
             .toDoubleOrNull() ?: 83.0
         val energy = view.findViewById<Slider>(R.id.sliderEnergy).value.toInt()
-        val sleep  = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
+        val sleep = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
 
         requireContext()
@@ -222,48 +225,48 @@ class DashboardFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.Main) {
             val db = AppDatabase.getDatabase(requireContext())
 
+            // 1. Zápis, Analytika a Achievementy (Vše v IO, jak to bylo)
             val newAchievements = withContext(Dispatchers.IO) {
                 db.checkInDao().insertCheckIn(checkInEntity)
-                AchievementEngine.checkAll(requireContext())
-            }
 
-            if (FirebaseRepository.isLoggedIn) {
-                withContext(Dispatchers.IO) {
+                // --- PŘIDÁNO: Výpočet a upload analytiky, aby se vytvořila tabulka ---
+                val history = db.checkInDao().getAllCheckInsSync()
+                val analyticsResult = try {
+                    cz.uhk.macroflow.analytics.BioLogicEngine.calculateFullAnalytics(history)
+                } catch (e: Exception) {
+                    null
+                }
+
+                analyticsResult?.let { db.analyticsDao().insertAnalytics(it) }
+
+                if (FirebaseRepository.isLoggedIn) {
                     try {
                         FirebaseRepository.uploadCheckIn(checkInEntity)
+                        analyticsResult?.let { FirebaseRepository.uploadAnalytics(it) }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
+                // --------------------------------------------------------------------
+
+                AchievementEngine.checkAll(requireContext())
             }
 
             refreshAllData(requireView())
-
             Toast.makeText(context, "Rituál úspěšně uložen!", Toast.LENGTH_SHORT).show()
 
+            // Tady už newAchievements bude zase fungovat normálně
             newAchievements.forEach { ach ->
-                Toast.makeText(context, "🏆 Achievement odemčen: ${ach.titleCs}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "🏆 Achievement odemčen: ${ach.titleCs}", Toast.LENGTH_LONG)
+                    .show()
             }
 
+            // ✅ Pokémon XP za check-in — přes nový systém (PokemonXpEngine)
             lifecycleScope.launch(Dispatchers.IO) {
-                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                val prefs = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                val activeId = prefs.getString("currentOnBarId", "050") ?: "050"
-
-                val xpEntity = db.pokemonXpDao().getXp(activeId) ?: PokemonXpEntity(activeId)
-
-                if (xpEntity.lastDailyRewardDate != todayStr) {
-                    db.pokemonXpDao().setXp(xpEntity.copy(lastDailyRewardDate = todayStr))
-
+                val xp = PokemonXpEngine.tryAwardGoalXp(requireContext(), PokemonXpEngine.XpGoal.CHECK_IN)
+                if (xp > 0) {
                     withContext(Dispatchers.Main) {
-                        (activity as? MainActivity)?.addXpToActivePokemonRealTime(XpRewards.CHECK_IN)
-                    }
-
-                    if (FirebaseRepository.isLoggedIn) {
-                        val updatedXp = db.pokemonXpDao().getXp(activeId)
-                        if (updatedXp != null) {
-                            FirebaseRepository.uploadPokedexStatus(activeId)
-                        }
+                        (activity as? MainActivity)?.addXpToActivePokemonRealTime(xp)
                     }
                 }
             }
@@ -299,9 +302,9 @@ class DashboardFragment : Fragment() {
         if (!::waterPill.isInitialized) return
         val fraction = if (waterGoalMl > 0) waterCurrentMl.toFloat() / waterGoalMl else 0f
         waterPill.progressFraction = fraction
-        waterPill.goalReached      = fraction >= 1f
+        waterPill.goalReached = fraction >= 1f
         waterPill.tvMain = "${waterCurrentMl} ml"
-        waterPill.tvSub  = "z ${waterGoalMl} ml · 💧"
+        waterPill.tvSub = "z ${waterGoalMl} ml · 💧"
         waterPill.invalidate()
     }
 
@@ -314,7 +317,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupWorkoutCard(view: View) {
-        val ctx  = context ?: return
+        val ctx = context ?: return
         val card = view.findViewById<MaterialCardView>(R.id.cardTodayWorkout) ?: return
         val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
         updateWorkoutCard(view)
@@ -322,7 +325,12 @@ class DashboardFragment : Fragment() {
             val existing = TrainingTimeManager.getTrainingTimeForToday(ctx)
             val initH = existing?.split(":")?.getOrNull(0)?.toIntOrNull() ?: 7
             val initM = existing?.split(":")?.getOrNull(1)?.toIntOrNull() ?: 0
-            MakroflowTimePicker.Companion.show(parentFragmentManager, initH, initM, "Čas dnešního tréninku") { h, m ->
+            MakroflowTimePicker.Companion.show(
+                parentFragmentManager,
+                initH,
+                initM,
+                "Čas dnešního tréninku"
+            ) { h, m ->
                 TrainingTimeManager.setTrainingTime(ctx, dayName, String.format("%02d:%02d", h, m))
                 updateWorkoutCard(view)
                 updateTrainingStatusUI(view, ctx)
@@ -333,7 +341,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateWorkoutCard(view: View) {
-        val ctx    = context ?: return
+        val ctx = context ?: return
         val tvTime = view.findViewById<TextView>(R.id.tvTodayWorkoutPill) ?: return
         val tvLabel = (tvTime.parent as? ViewGroup)?.getChildAt(0) as? TextView
         val timeStr = TrainingTimeManager.getTrainingTimeForToday(ctx)
@@ -342,15 +350,15 @@ class DashboardFragment : Fragment() {
             val m = timeStr.split(":")[1].toIntOrNull() ?: 0
             val endH = (h + (m + 75) / 60) % 24
             val endM = (m + 75) % 60
-            tvTime.text     = timeStr
+            tvTime.text = timeStr
             tvTime.textSize = 22f
             tvTime.setTextColor(Color.parseColor("#DDA15E"))
-            tvLabel?.text   = "%02d:%02d — %02d:%02d".format(h, m, endH, endM)
+            tvLabel?.text = "%02d:%02d — %02d:%02d".format(h, m, endH, endM)
         } else {
-            tvTime.text     = "Nastavit čas"
+            tvTime.text = "Nastavit čas"
             tvTime.textSize = 16f
             tvTime.setTextColor(Color.parseColor("#80DDA15E"))
-            tvLabel?.text   = "Dnes cvičíš v:"
+            tvLabel?.text = "Dnes cvičíš v:"
         }
     }
 
@@ -386,12 +394,12 @@ class DashboardFragment : Fragment() {
         val cTarget = (cProp * 1000).toInt()
         val pTarget = 1000 - (fTarget + cTarget)
 
-        val fatRot     = startAngle
-        val carbsRot   = startAngle - (fProp * 360f)
+        val fatRot = startAngle
+        val carbsRot = startAngle - (fProp * 360f)
         val proteinRot = carbsRot - (cProp * 360f)
 
-        pbFT.rotation = fatRot;     pbFE.rotation = fatRot
-        pbCT.rotation = carbsRot;   pbCE.rotation = carbsRot
+        pbFT.rotation = fatRot; pbFE.rotation = fatRot
+        pbCT.rotation = carbsRot; pbCE.rotation = carbsRot
         pbPT.rotation = proteinRot; pbPE.rotation = proteinRot
 
         listOf(pbFT, pbCT, pbPT).forEach { it.max = 1000 }
@@ -411,7 +419,8 @@ class DashboardFragment : Fragment() {
 
     private fun setupEliteToggle(view: View) {
         val cardEliteOptions = view.findViewById<MaterialCardView>(R.id.cardEliteOptions)
-        val switchElite = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchEliteMode)
+        val switchElite =
+            view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchEliteMode)
         val etWrist = view.findViewById<EditText>(R.id.etEliteWrist)
         val etBodyFat = view.findViewById<EditText>(R.id.etEliteBF)
         val autoDietType = view.findViewById<AutoCompleteTextView>(R.id.autoDietType)
@@ -502,11 +511,15 @@ class DashboardFragment : Fragment() {
     }
 
     /** Pomocná funkce pro konverzi textu na Double */
-    private fun itToDouble(text: Any?): Double = text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
+    private fun itToDouble(text: Any?): Double =
+        text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
 
     /** Fixuje barvy switche přímo v kódu */
     private fun applySwitchStyles(switch: com.google.android.material.switchmaterial.SwitchMaterial) {
-        val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked))
+        val states = arrayOf(
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf(-android.R.attr.state_checked)
+        )
         val trackColors = intArrayOf(Color.parseColor("#DDA15E"), Color.parseColor("#DAD7CD"))
         val thumbColors = intArrayOf(Color.parseColor("#283618"), Color.parseColor("#606C38"))
 
@@ -517,7 +530,8 @@ class DashboardFragment : Fragment() {
     /** Vizuální nastavení dropdownu pro diety */
     private fun setupDietAdapter(autoComplete: AutoCompleteTextView?) {
         val options = listOf("Vyvážená", "Low Carb", "Keto", "Vegan", "High Protein")
-        val adapter = object : ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, options) {
+        val adapter = object :
+            ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, options) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 return (super.getView(position, convertView, parent) as TextView).apply {
                     setTextColor(Color.parseColor("#283618"))
@@ -529,7 +543,11 @@ class DashboardFragment : Fragment() {
     }
 
     /** Logika přepínání Elite módu a animace karty */
-    private fun setupSwitchListener(view: View, switch: com.google.android.material.switchmaterial.SwitchMaterial, optionsCard: View) {
+    private fun setupSwitchListener(
+        view: View,
+        switch: com.google.android.material.switchmaterial.SwitchMaterial,
+        optionsCard: View
+    ) {
         switch.setOnCheckedChangeListener { _, isChecked ->
             view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
 
@@ -537,7 +555,8 @@ class DashboardFragment : Fragment() {
                 optionsCard.visibility = View.VISIBLE
                 optionsCard.alpha = 0f
                 optionsCard.animate().alpha(1f).setDuration(300).withEndAction {
-                    val scrollView = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.dashboardScrollView)
+                    val scrollView =
+                        view.findViewById<androidx.core.widget.NestedScrollView>(R.id.dashboardScrollView)
                     scrollView?.post { scrollView.smoothScrollTo(0, optionsCard.bottom) }
                 }.start()
             } else {
@@ -550,7 +569,10 @@ class DashboardFragment : Fragment() {
     }
 
     /** Hlavní funkce pro ukládání do DB a synchronizaci s UI */
-    private fun saveEliteField(shouldRefreshUI: Boolean, updateBlock: (UserProfileEntity) -> UserProfileEntity) {
+    private fun saveEliteField(
+        shouldRefreshUI: Boolean,
+        updateBlock: (UserProfileEntity) -> UserProfileEntity
+    ) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(requireContext())
             val currentProfile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
@@ -559,7 +581,10 @@ class DashboardFragment : Fragment() {
             db.userProfileDao().saveProfile(updatedProfile)
 
             if (FirebaseRepository.isLoggedIn) {
-                try { FirebaseRepository.uploadProfile(updatedProfile) } catch (e: Exception) {}
+                try {
+                    FirebaseRepository.uploadProfile(updatedProfile)
+                } catch (e: Exception) {
+                }
             }
 
             withContext(Dispatchers.Main) {
@@ -568,34 +593,6 @@ class DashboardFragment : Fragment() {
                     refreshAllData(requireView())
                 }
             }
-        }
-    }
-
-    private fun setupEasterEgg(view: View) {
-        val fab = activity?.findViewById<View>(R.id.fabHome) ?: return
-        var holdStart = 0L
-        val HOLD_MS = 5000L
-
-        fab.setOnTouchListener { v, event ->
-            val handled = v.onTouchEvent(event)
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    holdStart = System.currentTimeMillis()
-                    v.postDelayed({
-                        if (holdStart > 0L && System.currentTimeMillis() - holdStart >= HOLD_MS) {
-                            holdStart = 0L
-                            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                            if (isAdded) {
-                                (activity as? MainActivity)?.openPokemonBattle()
-                            }
-                        }
-                    }, HOLD_MS)
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    holdStart = 0L
-                }
-            }
-            handled
         }
     }
 }

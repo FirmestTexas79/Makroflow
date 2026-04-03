@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
-private const val BAZALNI_KROKY = 5000
+private const val BAZALNI_KROKY = 6000 // Prvních 6000 kroků je v základu (activityMultiplier)
 
 object MacroFlowEngine {
 
@@ -25,26 +25,27 @@ object MacroFlowEngine {
         val weight = target.weight
 
         /**
-         * 1. DYNAMICKÝ VÝDEJ Z KROKŮ
+         * 1. DYNAMICKÝ VÝDEJ Z KROKŮ (Pouze kroky nad bazál)
          */
         val burnedFromSteps = calculateCaloriesFromSteps(stepsCount, weight)
 
         /**
-         * 2. DYNAMICKÝ TERMICKÝ EFEKT (TEF)
+         * 2. DYNAMICKÝ TERMICKÝ EFEKT (TEF) - Přesný výpočet ze snědeného
          */
         val eatenP = consumedList.sumOf { it.p.toDouble() }
         val eatenS = consumedList.sumOf { it.s.toDouble() }
         val eatenT = consumedList.sumOf { it.t.toDouble() }
         val eatenCalRaw = consumedList.sumOf { it.calories.toDouble() }
 
+        // Bílkoviny pálí nejvíc (25%), sacharidy (7%), tuky téměř nic (2.5%)
         val totalTEF = (eatenP * 4 * 0.25) + (eatenS * 4 * 0.07) + (eatenT * 9 * 0.025)
         val netEatenCalories = eatenCalRaw - totalTEF
 
         /**
-         * 3. ADAPTIVNÍ NAVÝŠENÍ CÍLŮ
+         * 3. ADAPTIVNÍ NAVÝŠENÍ CÍLŮ PODLE POHYBU
          */
-        val extraCarbsFromSteps = (burnedFromSteps * 0.7) / 4.0
-        val extraFatFromSteps = (burnedFromSteps * 0.3) / 9.0
+        val extraCarbsFromSteps = (burnedFromSteps * 0.8) / 4.0
+        val extraFatFromSteps = (burnedFromSteps * 0.2) / 9.0
 
         val finalTargetCalories = target.calories + burnedFromSteps
         val finalTargetCarbs = target.carbs + extraCarbsFromSteps
@@ -69,7 +70,8 @@ object MacroFlowEngine {
     fun calculateCaloriesFromSteps(steps: Int, weight: Double): Double {
         if (steps <= BAZALNI_KROKY) return 0.0
         val extraSteps = steps - BAZALNI_KROKY
-        return extraSteps * weight * 0.00042
+        // 0.00045 kcal/kg/step pro extra aktivitu nad běžný rámec dne
+        return extraSteps * weight * 0.00045
     }
 
     fun getCoachAdvice(status: DailyStatus, checkIn: CheckInEntity?): String {
@@ -116,6 +118,7 @@ object MacroFlowEngine {
                 mealContext = mealContext
             )
             db.consumedSnackDao().insertConsumed(snack)
+
             if (FirebaseRepository.isLoggedIn) {
                 try {
                     FirebaseRepository.uploadConsumedSnack(snack)

@@ -647,6 +647,121 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="32dp"
+                app:cardCornerRadius="28dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/brand_dark_alpha5"
+                app:cardBackgroundColor="@color/brand_cream">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="BIOLOGIC PROJEKCE"
+                                android:textColor="@color/brand_dark"
+                                android:textSize="13sp"
+                                android:fontFamily="sans-serif-black"
+                                android:letterSpacing="0.1" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="7 DNÍ HISTORIE • 7 DNÍ PREDIKCE"
+                                android:textColor="@color/brand_dark"
+                                android:alpha="0.4"
+                                android:textSize="9sp"
+                                android:letterSpacing="0.05" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvCurrentTrendTag"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:background="@drawable/bg_pill_primary"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="6dp"
+                            android:text="STABILNÍ"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </RelativeLayout>
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="260dp"
+                        android:layout_marginTop="24dp">
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="@android:color/transparent">
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:orientation="horizontal">
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_weight="7.5"
+                                    android:background="@color/brand_dark_alpha5" />
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_weight="6"
+                                    android:background="@android:color/transparent" />
+                            </LinearLayout>
+                        </androidx.cardview.widget.CardView>
+
+                        <com.github.mikephil.charting.charts.LineChart
+                            android:id="@+id/historyChart"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+                        <View android:layout_width="6dp" android:layout_height="6dp"
+                            android:background="@drawable/shape_circle_primary" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp" android:text="Realita"
+                            android:textSize="11sp" android:textColor="@color/brand_dark" android:alpha="0.6"/>
+
+                        <View android:layout_width="6dp" android:layout_height="6dp"
+                            android:layout_marginStart="24dp"
+                            android:background="@drawable/shape_circle_accent" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp" android:text="BioLogic™ Predikce"
+                            android:textSize="11sp" android:textColor="@color/brand_dark" android:alpha="0.6"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

@@ -39,6 +39,7 @@ import java.util.Locale
 class ProfileFragment : Fragment() {
 
     private var selectedMultiplier: Float = 1.2f
+    private var selectedGoal: String = "MAINTAIN" // ✅ Logika stavu cíle
     private var isExpanded = false
 
     private lateinit var circleContainer: FrameLayout
@@ -50,15 +51,21 @@ class ProfileFragment : Fragment() {
     private lateinit var iconsCenter: List<ImageView>
     private lateinit var partsCircle: List<ImageView>
 
-    // 👣 ✅ Nově přidané reference na UI prvky slideru
+    // 👣 Reference na UI prvky slideru
     private lateinit var sliderStepGoal: Slider
     private lateinit var tvStepGoalValue: TextView
+
+    // 🎯 Tlačítka pro cíle
+    private lateinit var btnCut: MaterialButton
+    private lateinit var btnMaintain: MaterialButton
+    private lateinit var btnBulk: MaterialButton
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.activity_setup, container, false)
 
+        // Inicializace polí
         etWeight = view.findViewById(R.id.etWeight)
         etHeight = view.findViewById(R.id.etHeight)
         etAge    = view.findViewById(R.id.etAge)
@@ -66,7 +73,16 @@ class ProfileFragment : Fragment() {
         tvDesc = view.findViewById(R.id.tvLifestyleDesc)
         circleContainer = view.findViewById(R.id.circleLifestyle)
 
-        // 👣 ✅ Inicializace posuvníku a sledování změn (živý text v UI)
+        // 🎯 Cíle (Tlačítka)
+        btnCut = view.findViewById(R.id.btnCut)
+        btnMaintain = view.findViewById(R.id.btnMaintain)
+        btnBulk = view.findViewById(R.id.btnBulk)
+
+        btnCut.setOnClickListener { selectGoal("CUT") }
+        btnMaintain.setOnClickListener { selectGoal("MAINTAIN") }
+        btnBulk.setOnClickListener { selectGoal("BULK") }
+
+        // 👣 Slider kroků
         sliderStepGoal = view.findViewById(R.id.sliderStepGoal)
         tvStepGoalValue = view.findViewById(R.id.tvStepGoalValue)
 
@@ -74,6 +90,7 @@ class ProfileFragment : Fragment() {
             tvStepGoalValue.text = "${value.toInt()} kroků"
         }
 
+        // Lifestyle vizuály
         iconsCenter = listOf(
             view.findViewById(R.id.iconCenterLow),
             view.findViewById(R.id.iconCenterMed),
@@ -89,73 +106,71 @@ class ProfileFragment : Fragment() {
 
         tvDesc.visibility = View.INVISIBLE
 
-        // Lifestyle výběr
-        view.findViewById<View>(R.id.clickLezerni).setOnClickListener {
-            selectMode(1.2f, "Ležérní - Minimum pohybu")
-        }
-        view.findViewById<View>(R.id.clickAktivni).setOnClickListener {
-            selectMode(1.4f, "Aktivní - Práce v pohybu")
-        }
-        view.findViewById<View>(R.id.clickSportovec).setOnClickListener {
-            selectMode(1.6f, "Sportovec - Těžké tréninky")
-        }
+        // Lifestyle Click Listenery
+        view.findViewById<View>(R.id.clickLezerni).setOnClickListener { selectMode(1.2f, "Ležérní - Minimum pohybu") }
+        view.findViewById<View>(R.id.clickAktivni).setOnClickListener { selectMode(1.4f, "Aktivní - Práce v pohybu") }
+        view.findViewById<View>(R.id.clickSportovec).setOnClickListener { selectMode(1.6f, "Sportovec - Těžké tréninky") }
 
-        view.findViewById<View>(R.id.setupMainLayout).setOnClickListener {
-            if (isExpanded) shrinkCircle()
-        }
+        view.findViewById<View>(R.id.setupMainLayout).setOnClickListener { if (isExpanded) shrinkCircle() }
+        view.findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveAllData() }
+        view.findViewById<MaterialCardView>(R.id.cardOptionalMetrics).setOnClickListener { showMetricsBottomSheet() }
 
-        view.findViewById<MaterialButton>(R.id.btnSave).setOnClickListener {
-            saveAllData()
-        }
-
-        view.findViewById<MaterialCardView>(R.id.cardOptionalMetrics).setOnClickListener {
-            showMetricsBottomSheet()
-        }
-
-        // --- Uživatelský účet ---
         setupAccountSection(view)
 
         return view
     }
 
+    // --- LOGIKA PRO CÍLE ---
+    private fun selectGoal(goal: String) {
+        selectedGoal = goal
+        updateGoalVisuals()
+    }
+
+    private fun updateGoalVisuals() {
+        val activeColor = Color.parseColor("#606C38")
+        val inactiveColor = Color.parseColor("#FEFAE0")
+        val activeText = Color.WHITE
+        val inactiveText = Color.parseColor("#283618")
+
+        val buttons = mapOf("CUT" to btnCut, "MAINTAIN" to btnMaintain, "BULK" to btnBulk)
+        buttons.forEach { (key, btn) ->
+            if (key == selectedGoal) {
+                btn.backgroundTintList = ColorStateList.valueOf(activeColor)
+                btn.setTextColor(activeText)
+            } else {
+                btn.backgroundTintList = ColorStateList.valueOf(inactiveColor)
+                btn.setTextColor(inactiveText)
+            }
+        }
+    }
+
     private fun setupAccountSection(view: View) {
         val tvEmail    = view.findViewById<TextView>(R.id.tvUserEmail)
         val btnSignOut = view.findViewById<MaterialButton>(R.id.btnSignOut)
-
         val user = FirebaseRepository.currentUser
+
         if (user != null) {
-            tvEmail?.text              = user.email ?: user.displayName ?: "Přihlášený uživatel"
-            btnSignOut?.text           = "Odhlásit se"
-            btnSignOut?.backgroundTintList = ColorStateList.valueOf(
-                Color.parseColor("#BC6C25")
-            )
+            tvEmail?.text = user.email ?: user.displayName ?: "Přihlášený uživatel"
+            btnSignOut?.text = "Odhlásit se"
+            btnSignOut?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#BC6C25"))
         } else {
-            tvEmail?.text    = "Offline režim — data se neukládají do cloudu"
+            tvEmail?.text = "Offline režim — data se neukládají do cloudu"
             btnSignOut?.text = "Přihlásit se"
-            btnSignOut?.backgroundTintList = ColorStateList.valueOf(
-                Color.parseColor("#283618")
-            )
+            btnSignOut?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#283618"))
         }
 
         btnSignOut?.setOnClickListener {
-            if (FirebaseRepository.isLoggedIn) {
-                FirebaseRepository.signOut()
-            }
+            if (FirebaseRepository.isLoggedIn) FirebaseRepository.signOut()
             startActivity(Intent(requireContext(), LoginActivity::class.java))
             requireActivity().finish()
         }
     }
 
-    // ----------------------------------------------------------------
-    // Načtení dat (DB → fallback SharedPrefs)
-    // ----------------------------------------------------------------
+    // --- NAČÍTÁNÍ (včetně nového cíle a Firebase sync) ---
     private fun loadUserData() {
         lifecycleScope.launch {
             val db = AppDatabase.getDatabase(requireContext())
-
-            val profile = withContext(Dispatchers.IO) {
-                db.userProfileDao().getProfileSync()
-            }
+            val profile = withContext(Dispatchers.IO) { db.userProfileDao().getProfileSync() }
 
             val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             val currentWeight = withContext(Dispatchers.IO) {
@@ -168,23 +183,24 @@ class ProfileFragment : Fragment() {
                 etWeight.setText((currentWeight ?: profile.weight).toString())
                 etHeight.setText(profile.height.toString())
                 etAge.setText(profile.age.toString())
-                toggleGender.check(
-                    if (profile.gender == "male") R.id.btnMale else R.id.btnFemale
-                )
+                toggleGender.check(if (profile.gender == "male") R.id.btnMale else R.id.btnFemale)
                 selectedMultiplier = profile.activityMultiplier
-
-                // 👣 ✅ Načtení hodnoty kroků z DB do slideru
                 sliderStepGoal.value = profile.stepGoal.toFloat()
                 tvStepGoalValue.text = "${profile.stepGoal} kroků"
+
+                // ✅ Načtení cíle z DB a aktualizace UI
+                selectedGoal = profile.goal
+                updateGoalVisuals()
             } else {
-                val prefs = requireContext()
-                    .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+                // Fallback SharedPrefs
+                val prefs = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
                 etWeight.setText((currentWeight ?: prefs.getString("weightAkt", "83")?.toDoubleOrNull() ?: 83.0).toString())
                 etHeight.setText(prefs.getString("height", "175"))
                 etAge.setText(prefs.getString("age", "22"))
-                val gender = prefs.getString("gender", "male")
-                toggleGender.check(if (gender == "male") R.id.btnMale else R.id.btnFemale)
+                toggleGender.check(if (prefs.getString("gender", "male") == "male") R.id.btnMale else R.id.btnFemale)
                 selectedMultiplier = prefs.getFloat("multiplier", 1.2f)
+                selectedGoal = "MAINTAIN"
+                updateGoalVisuals()
             }
 
             val colorDark = Color.parseColor("#283618")
@@ -193,14 +209,12 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // ----------------------------------------------------------------
-    // Uložení profilu — Room + SharedPrefs + Firebase
-    // ----------------------------------------------------------------
+    // --- UKLÁDÁNÍ (Zahrnuje goal do Firebase i Room) ---
     private fun saveAllData() {
         val weight = etWeight.text.toString().toDoubleOrNull()
         val height = etHeight.text.toString().toDoubleOrNull()
         val age    = etAge.text.toString().toIntOrNull()
-        val stepGoal = sliderStepGoal.value.toInt() // 👣 ✅ Vytažení dat z posuvníku
+        val stepGoal = sliderStepGoal.value.toInt()
 
         if (weight == null || height == null || age == null) {
             Toast.makeText(context, "Doplň prosím všechny údaje", Toast.LENGTH_SHORT).show()
@@ -209,99 +223,88 @@ class ProfileFragment : Fragment() {
 
         val gender = if (toggleGender.checkedButtonId == R.id.btnMale) "male" else "female"
 
-        val profileEntity = UserProfileEntity(
-            id = 1,
-            weight = weight,
-            height = height,
-            age = age,
-            gender = gender,
-            activityMultiplier = selectedMultiplier,
-            stepGoal = stepGoal // 👣 ✅ Skutečné uložení do databázového modelu
-        )
-
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // 1. Ulož lokálně do Room
-            db.userProfileDao().saveProfile(profileEntity)
+            // 1. Získáme aktuální profil (včetně dat z architekta)
+            val currentProfile = db.userProfileDao().getProfileSync() ?: return@launch
 
-            // 2. Synchronizuj SharedPrefs (weightAkt pro MacroCalculator)
-            requireContext()
-                .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+            // 2. Vytvoříme kopii pomocí .copy() - přepíšeme jen to, co vidíme v tomto UI
+            // Ostatní hodnoty (BF%, dieta, zápěstí) zůstanou v objektu netknuté
+            val profileToSave = currentProfile.copy(
+                weight = weight,
+                height = height,
+                age = age,
+                gender = gender,
+                activityMultiplier = selectedMultiplier,
+                stepGoal = stepGoal,
+                goal = selectedGoal
+            )
+
+            // 3. Uložíme aktualizovaný profil zpět do DB
+            db.userProfileDao().saveProfile(profileToSave)
+
+            requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
                 .edit().putString("weightAkt", weight.toString()).apply()
 
-            // 3. Nahraj do Firebase (jen pokud je přihlášen)
+            // 4. Synchronizace na Firebase (posíláme kompletní objekt s architektem)
             if (FirebaseRepository.isLoggedIn) {
                 try {
-                    FirebaseRepository.uploadProfile(profileEntity)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                    FirebaseRepository.uploadProfile(profileToSave)
+                } catch (e: Exception) { e.printStackTrace() }
             }
 
             withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    context,
-                    if (FirebaseRepository.isLoggedIn)
-                        "Profil uložen a synchronizován ☁️"
-                    else
-                        "Profil uložen lokálně 💪",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, if (FirebaseRepository.isLoggedIn) "Synchronizováno ☁️" else "Uloženo lokálně 💪", Toast.LENGTH_SHORT).show()
                 if (isExpanded) shrinkCircle()
             }
         }
     }
 
+    // --- METRIKY (Původní logika zůstává) ---
     private fun showMetricsBottomSheet() {
-        val dialog    = BottomSheetDialog(requireContext())
+        val dialog = BottomSheetDialog(requireContext())
         val sheetView = layoutInflater.inflate(R.layout.layout_metrics_sheet, null)
         dialog.setContentView(sheetView)
 
-        val sdf      = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val calendar = Calendar.getInstance()
-        val today    = Calendar.getInstance()
-
-        val tvDate  = sheetView.findViewById<TextView>(R.id.tvSelectedDate)
+        val today = Calendar.getInstance()
+        val tvDate = sheetView.findViewById<TextView>(R.id.tvSelectedDate)
         val btnPrev = sheetView.findViewById<ImageButton>(R.id.btnPrevDay)
         val btnNext = sheetView.findViewById<ImageButton>(R.id.btnNextDay)
 
         fun refreshSheet() {
             val dateKey = sdf.format(calendar.time)
-            val isToday = dateKey == sdf.format(today.time)
-            tvDate.text = if (isToday) "Dnes" else dateKey
-
-            btnNext.isEnabled = !isToday && calendar.before(today)
+            tvDate.text = if (dateKey == sdf.format(today.time)) "Dnes" else dateKey
+            btnNext.isEnabled = ! (dateKey == sdf.format(today.time))
             btnNext.alpha = if (btnNext.isEnabled) 1.0f else 0.3f
 
             lifecycleScope.launch {
                 val db = AppDatabase.getDatabase(requireContext())
-                val metrics = withContext(Dispatchers.IO) {
-                    db.bodyMetricsDao().getByDateSync(dateKey)
-                }
-                sheetView.findViewById<EditText>(R.id.etNeck).setText(if (metrics?.neck != null && metrics.neck > 0) metrics.neck.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etChest).setText(if (metrics?.chest != null && metrics.chest > 0) metrics.chest.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etBicep).setText(if (metrics?.bicep != null && metrics.bicep > 0) metrics.bicep.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etForearm).setText(if (metrics?.forearm != null && metrics.forearm > 0) metrics.forearm.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etWaist).setText(if (metrics?.waist != null && metrics.waist > 0) metrics.waist.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etAbdomen).setText(if (metrics?.abdomen != null && metrics.abdomen > 0) metrics.abdomen.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etThigh).setText(if (metrics?.thigh != null && metrics.thigh > 0) metrics.thigh.toString() else "")
-                sheetView.findViewById<EditText>(R.id.etCalf).setText(if (metrics?.calf != null && metrics.calf > 0) metrics.calf.toString() else "")
+                val m = withContext(Dispatchers.IO) { db.bodyMetricsDao().getByDateSync(dateKey) }
+                sheetView.findViewById<EditText>(R.id.etNeck).setText(m?.neck?.takeIf { it > 0 }?.toString() ?: "")
+                sheetView.findViewById<EditText>(R.id.etChest).setText(m?.chest?.takeIf { it > 0 }?.toString() ?: "")
+                sheetView.findViewById<EditText>(R.id.etBicep).setText(m?.bicep?.takeIf { it > 0 }?.toString() ?: "")
+                sheetView.findViewById<EditText>(R.id.etForearm).setText(m?.forearm?.takeIf { it > 0 }?.toString() ?: "")
+                sheetView.findViewById<EditText>(R.id.etWaist).setText(m?.waist?.takeIf { it > 0 }?.toString() ?: "")
+                sheetView.findViewById<EditText>(R.id.etAbdomen).setText(m?.abdomen?.takeIf { it > 0 }?.toString() ?: "")
+                sheetView.findViewById<EditText>(R.id.etThigh).setText(m?.thigh?.takeIf { it > 0 }?.toString() ?: "")
+                sheetView.findViewById<EditText>(R.id.etCalf).setText(m?.calf?.takeIf { it > 0 }?.toString() ?: "")
             }
         }
 
         refreshSheet()
-
         btnPrev.setOnClickListener { calendar.add(Calendar.DAY_OF_YEAR, -1); refreshSheet() }
+
         btnNext.setOnClickListener {
+
             if (calendar.before(today)) { calendar.add(Calendar.DAY_OF_YEAR, 1); refreshSheet() }
+
         }
-
         sheetView.findViewById<Button>(R.id.btnConfirmMetrics).setOnClickListener {
-            val dateKey = sdf.format(calendar.time)
-
-            val metricsEntity = BodyMetricsEntity(
-                date = dateKey,
+            val metrics = BodyMetricsEntity(
+                date = sdf.format(calendar.time),
                 neck = sheetView.findViewById<EditText>(R.id.etNeck).text.toString().toFloatOrNull() ?: 0f,
                 chest = sheetView.findViewById<EditText>(R.id.etChest).text.toString().toFloatOrNull() ?: 0f,
                 bicep = sheetView.findViewById<EditText>(R.id.etBicep).text.toString().toFloatOrNull() ?: 0f,
@@ -311,61 +314,38 @@ class ProfileFragment : Fragment() {
                 thigh = sheetView.findViewById<EditText>(R.id.etThigh).text.toString().toFloatOrNull() ?: 0f,
                 calf = sheetView.findViewById<EditText>(R.id.etCalf).text.toString().toFloatOrNull() ?: 0f
             )
-
             lifecycleScope.launch(Dispatchers.IO) {
                 val db = AppDatabase.getDatabase(requireContext())
-                db.bodyMetricsDao().save(metricsEntity)
-
-                if (FirebaseRepository.isLoggedIn) {
-                    try {
-                        FirebaseRepository.uploadBodyMetrics(metricsEntity)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Uloženo!", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                }
+                db.bodyMetricsDao().save(metrics)
+                if (FirebaseRepository.isLoggedIn) FirebaseRepository.uploadBodyMetrics(metrics)
+                withContext(Dispatchers.Main) { Toast.makeText(context, "Uloženo!", Toast.LENGTH_SHORT).show(); dialog.dismiss() }
             }
         }
         dialog.show()
     }
 
+    // --- ANIMACE A LIFESTYLE ---
     private fun selectMode(multiplier: Float, description: String) {
         selectedMultiplier = multiplier
         updateCircleVisuals(multiplier)
-
         if (!isExpanded) {
             isExpanded = true
-            circleContainer.animate()
-                .scaleX(1.15f).scaleY(1.15f).translationY(0f).setDuration(450).start()
-            tvDesc.text = description
-            tvDesc.visibility = View.VISIBLE
-            tvDesc.alpha = 0f
-            tvDesc.animate().alpha(1f).translationY(0f).setDuration(450).start()
-        } else {
-            tvDesc.text = description
-        }
+            circleContainer.animate().scaleX(1.15f).scaleY(1.15f).setDuration(450).start()
+            tvDesc.apply { text = description; visibility = View.VISIBLE; alpha = 0f; animate().alpha(1f).setDuration(450).start() }
+        } else tvDesc.text = description
     }
 
     private fun updateCircleVisuals(m: Float) {
         listOf(1.2f, 1.4f, 1.6f).forEachIndexed { index, value ->
-            val selected = value == m
-            partsCircle[index].animate().alpha(if (selected) 1.0f else 0.2f).setDuration(300).start()
-            iconsCenter[index].animate()
-                .alpha(if (selected) 1.0f else 0.0f)
-                .scaleX(if (selected) 1.1f else 0.8f)
-                .scaleY(if (selected) 1.1f else 0.8f)
-                .setDuration(300).start()
+            val sel = (value == m)
+            partsCircle[index].animate().alpha(if (sel) 1.0f else 0.2f).setDuration(300).start()
+            iconsCenter[index].animate().alpha(if (sel) 1.0f else 0.0f).scaleX(if (sel) 1.1f else 0.8f).scaleY(if (sel) 1.1f else 0.8f).setDuration(300).start()
         }
     }
 
     private fun shrinkCircle() {
         isExpanded = false
-        circleContainer.animate().scaleX(1.0f).scaleY(1.0f).translationY(0f).setDuration(300).start()
-        tvDesc.animate().alpha(0f).translationY(0f).setDuration(300)
-            .withEndAction { tvDesc.visibility = View.INVISIBLE }.start()
+        circleContainer.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).start()
+        tvDesc.animate().alpha(0f).setDuration(300).withEndAction { tvDesc.visibility = View.INVISIBLE }.start()
     }
 }

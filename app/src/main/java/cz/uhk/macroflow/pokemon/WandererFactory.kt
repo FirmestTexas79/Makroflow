@@ -27,15 +27,23 @@ object WandererFactory {
         // --- RARE ─────────────────────────────────────────────────────
         WandererConfig("001", 1.8f, { ctx, view, sc -> StandardWanderer(ctx, view, "001", sc) }) { SmokeTransitionEffect(false) },
         WandererConfig("004", 1.8f, { ctx, view, sc -> StandardWanderer(ctx, view, "004", sc) }) { SmokeTransitionEffect(false) },
+        WandererConfig("005", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "005", sc) }) { SmokeTransitionEffect(false) },
+
+        WandererConfig("132", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "132", sc) }) { SmokeTransitionEffect(false) },
+
+
         WandererConfig("007", 1.8f, { ctx, view, sc -> StandardWanderer(ctx, view, "007", sc) }) { SmokeTransitionEffect(false) },
         WandererConfig("092", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "092", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
+        WandererConfig("051", 3.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "051", sc, DigTransitionEffect()) }) { DigTransitionEffect() },
 
         // --- EPIC ─────────────────────────────────────────────────────
+        WandererConfig("137", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "137", sc, StandardWanderer.PixelTransitionEffect()) }) { StandardWanderer.PixelTransitionEffect() },
         WandererConfig("093", 1.6f, { ctx, view, sc -> StandardWanderer(ctx, view, "093", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
         WandererConfig("094", 1.5f, { ctx, view, sc -> StandardWanderer(ctx, view, "094", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
         WandererConfig("143", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "143", sc) }) { SmokeTransitionEffect(false) },
         WandererConfig("115", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "115", sc, HeavyTransitionEffect()) }) { HeavyTransitionEffect() }, // 🦖 Tady je tvůj Kangaskhan!
         WandererConfig("026", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "026", sc) }) { SmokeTransitionEffect(false) },
+        WandererConfig("131", 2.3f, { ctx, view, sc -> StandardWanderer(ctx, view, "131", sc) }) { SmokeTransitionEffect(false) },
 
         // --- LEGENDARY ────────────────────────────────────────────────
         WandererConfig("006", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "006", sc) }) { SmokeTransitionEffect(false) },

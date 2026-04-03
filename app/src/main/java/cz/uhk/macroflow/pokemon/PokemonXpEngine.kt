@@ -1,108 +1,116 @@
 package cz.uhk.macroflow.pokemon
 
 import android.content.Context
-import android.util.Log
 import cz.uhk.macroflow.data.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * PokemonXpEngine — pomocník pro udělení XP aktivnímu pokémonovi za splněné denní cíle.
+ *
+ * ⚠️ DŮLEŽITÉ: Základní denní XP (+20 za otevření aplikace každý den) řeší přímo
+ * MainActivity.awardDailyXp(). Tato třída slouží pro DODATEČNÉ odměny z různých fragmentů
+ * (makra, voda, kroky, jídla, check-in).
+ *
+ * Typické použití:
+ *   val xp = PokemonXpEngine.tryAwardGoalXp(context, XpGoal.MACROS_HIT)
+ *   if (xp > 0) (activity as? MainActivity)?.addXpToActivePokemonRealTime(xp)
+ */
 object PokemonXpEngine {
 
     private val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-    data class XpResult(
-        val awardedXp: Int,
-        val shouldEvolve: Boolean = false,
-        val evolutionData: EvolutionRequest? = null
-    )
+    /** Typy odměn, které lze udělit z různých míst v aplikaci */
+    enum class XpGoal(val key: String, val xp: Int, val label: String) {
+        MACROS_HIT    ("macros",   XpRewards.MACROS_HIT,      "splněná makra"),
+        CHECK_IN      ("checkin",  XpRewards.CHECK_IN,        "ranní check-in"),
+        WATER_GOAL    ("water",    XpRewards.WATER_GOAL,      "vodní cíl"),
+        TRAINING_DONE ("training", XpRewards.TRAINING_LOGGED, "trénink"),
+        FOOD_LOGGED   ("food",     XpRewards.LOGGED_FOOD,     "zalogovaná jídla"),
+        STEPS_GOAL    ("steps",    XpRewards.STEPS_GOAL,      "denní kroky")
+    }
 
-    data class EvolutionRequest(
-        val capturedId: Long, // 🔥 Opraveno na Long (protože caughtDate je Long)
-        val oldId: String,
-        val newId: String,
-        val moveToLearn: Move?
-    )
+    /**
+     * Udělí XP za splněný cíl — ale jen jednou za den (ochrana proti duplicitám).
+     *
+     * @return Množství XP k přidání. Vrátí 0 pokud:
+     *  - pokémon není aktivní na liště
+     *  - tato odměna už byla dnes udělena
+     *
+     * Po obdržení nenulové hodnoty zavolej:
+     *   (activity as? MainActivity)?.addXpToActivePokemonRealTime(xp)
+     */
+    suspend fun tryAwardGoalXp(context: Context, goal: XpGoal): Int = withContext(Dispatchers.IO) {
+        val today = sdf.format(Date())
+        val prefs = context.getSharedPreferences("PokemonXpPrefs", Context.MODE_PRIVATE)
+        val gamePrefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
 
-    // ✅ HLAVNÍ METODA: Zkontroluje denní aktivity a přidá XP aktivnímu Pokémonovi
-    suspend fun checkAndAwardDailyXp(context: Context): XpResult = withContext(Dispatchers.IO) {
+        // Pokud není aktivní pokémon, nevyplácíme nic
+        val activeCapturedId = gamePrefs.getInt("currentOnBarCapturedId", -1)
+        if (!gamePrefs.getBoolean("pokemonAcquired", false) || activeCapturedId == -1) {
+            return@withContext 0
+        }
+
+        // Klíč je unikátní per-pokémon per-den, aby se různí pokémoni nepřebíjeli
+        val dayKey = "${goal.key}_${activeCapturedId}_$today"
+        if (prefs.getString(dayKey, "") == today) {
+            return@withContext 0  // Už bylo uděleno dnes
+        }
+
+        // Označíme jako uděleno
+        prefs.edit().putString(dayKey, today).apply()
+        return@withContext goal.xp
+    }
+
+    /**
+     * Zkontroluje splněné cíle a udělí XP (používá se při refresh DashboardFragmentu).
+     * Obsahuje vlastní podmínky splnění (počítá jídla, check-in atd. z DB).
+     *
+     * @return Celkové XP přidané v tomto volání (0 = nic nového)
+     */
+    suspend fun checkAndAwardDailyGoals(context: Context): Int = withContext(Dispatchers.IO) {
         val today = sdf.format(Date())
         val db = AppDatabase.getDatabase(context)
-
         val gamePrefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val activeCapturedId = gamePrefs.getLong("currentOnBarCapturedId", -1L) // 🔥 Opraveno na getLong
 
-        if (!gamePrefs.getBoolean("pokemonAcquired", false) || activeCapturedId == -1L) {
-            return@withContext XpResult(0)
+        val activeCapturedId = gamePrefs.getInt("currentOnBarCapturedId", -1)
+        if (!gamePrefs.getBoolean("pokemonAcquired", false) || activeCapturedId == -1) {
+            return@withContext 0
         }
 
-        // Vytáhneme konkrétního Pokémona z batohu pomocí caughtDate (activeCapturedId)
-        val activePokemon = db.capturedPokemonDao().getAllCaught().find { it.caughtDate == activeCapturedId } // 🔥 Opraveno na caughtDate
-            ?: return@withContext XpResult(0)
-
-        val prefs = context.getSharedPreferences("PokemonXpPrefs", Context.MODE_PRIVATE)
         var totalAwarded = 0
+        val xpPrefs = context.getSharedPreferences("PokemonXpPrefs", Context.MODE_PRIVATE)
 
-        // 1. Odměna za otevření aplikace
-        val lastOpenKey = "last_open_${activePokemon.caughtDate}" // 🔥 Opraveno na caughtDate
-        if (prefs.getString(lastOpenKey, "") != today) {
-            totalAwarded += XpRewards.DAILY_OPEN
-            prefs.edit().putString(lastOpenKey, today).apply()
+        fun alreadyAwarded(goal: XpGoal): Boolean {
+            val dayKey = "${goal.key}_${activeCapturedId}_$today"
+            return xpPrefs.getString(dayKey, "") == today
         }
 
-        // 2. Odměna za ranní Check-in
-        val lastCheckInKey = "last_checkin_${activePokemon.caughtDate}" // 🔥 Opraveno na caughtDate
-        if (prefs.getString(lastCheckInKey, "") != today) {
+        fun markAwarded(goal: XpGoal) {
+            val dayKey = "${goal.key}_${activeCapturedId}_$today"
+            xpPrefs.edit().putString(dayKey, today).apply()
+        }
+
+        // 1. Check-in
+        if (!alreadyAwarded(XpGoal.CHECK_IN)) {
             val checkIn = db.checkInDao().getCheckInByDateSync(today)
             if (checkIn != null) {
                 totalAwarded += XpRewards.CHECK_IN
-                prefs.edit().putString(lastCheckInKey, today).apply()
+                markAwarded(XpGoal.CHECK_IN)
             }
         }
 
-        // 3. Odměna za poctivé zapisování jídel (aspoň 3 jídla)
-        val lastFoodKey = "last_food_${activePokemon.caughtDate}" // 🔥 Opraveno na caughtDate
-        if (prefs.getString(lastFoodKey, "") != today) {
+        // 2. Zalogovaná jídla (aspoň 3)
+        if (!alreadyAwarded(XpGoal.FOOD_LOGGED)) {
             val foodCount = db.consumedSnackDao().getAllConsumedSync().count { it.date == today }
             if (foodCount >= 3) {
                 totalAwarded += XpRewards.LOGGED_FOOD
-                prefs.edit().putString(lastFoodKey, today).apply()
+                markAwarded(XpGoal.FOOD_LOGGED)
             }
         }
 
-        if (totalAwarded == 0) return@withContext XpResult(0)
-
-        // ✅ Připíšeme XP do instance v batohu
-        activePokemon.xp += totalAwarded
-
-        // Přepočítáme nový level
-        val newLevel = PokemonLevelCalc.levelFromXp(activePokemon.xp)
-        val leveledUp = newLevel > activePokemon.level
-        activePokemon.level = newLevel
-
-        // Uložíme aktualizovaného Pokémona do DB
-        db.capturedPokemonDao().updatePokemon(activePokemon)
-
-        // 🔍 Zkontrolujeme pravidla evoluce ze statického Pokédexu
-        val pokedexRule = db.pokedexEntryDao().getEntry(activePokemon.pokemonId)
-
-        if (pokedexRule != null && pokedexRule.evolveLevel > 0 && activePokemon.level >= pokedexRule.evolveLevel && pokedexRule.evolveToId.isNotEmpty()) {
-
-            val nextMove = PokemonGrowthManager.getNewMoveForLevel(pokedexRule.evolveToId, pokedexRule.evolveLevel)
-
-            return@withContext XpResult(
-                awardedXp = totalAwarded,
-                shouldEvolve = leveledUp,
-                evolutionData = EvolutionRequest(
-                    capturedId = activePokemon.caughtDate, // 🔥 Opraveno na caughtDate
-                    oldId = activePokemon.pokemonId,
-                    newId = pokedexRule.evolveToId,
-                    moveToLearn = nextMove
-                )
-            )
-        }
-
-        return@withContext XpResult(totalAwarded)
+        return@withContext totalAwarded
     }
 }

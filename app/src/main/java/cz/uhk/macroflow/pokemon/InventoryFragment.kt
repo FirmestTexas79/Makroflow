@@ -131,7 +131,7 @@ class InventoryFragment : Fragment() {
             holder.btnPin.setOnClickListener {
                 requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                     .putBoolean("pokemonAcquired", true)
-                    .putInt("currentOnBarCapturedId", item.id)
+                    .putInt("currentOnBarCapturedId", item.id)   // ✅ Int — item.id je autoGenerate Int
                     .putString("currentOnBarId", item.pokemonId)
                     .putString("currentOnBarName", item.name.uppercase())
                     .apply()
@@ -143,7 +143,7 @@ class InventoryFragment : Fragment() {
             holder.btnUnpin.setOnClickListener {
                 requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                     .putBoolean("pokemonAcquired", false)
-                    .putInt("currentOnBarCapturedId", -1)
+                    .putInt("currentOnBarCapturedId", -1)        // ✅ Int reset
                     .apply()
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
                 loadData()
