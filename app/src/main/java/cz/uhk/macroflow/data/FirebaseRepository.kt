@@ -415,7 +415,12 @@ object FirebaseRepository {
 
         val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
         val days  = listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
-        uploadTrainingPlan(days.associateWith { prefs.getString("type_$it", "rest") ?: "rest" })
+        val planMap = mutableMapOf<String, String>()
+        days.forEach { day ->
+            planMap["type_$day"] = prefs.getString("type_$day", "rest") ?: "rest"
+            prefs.getString("time_$day", null)?.let { planMap["time_$day"] = it }
+        }
+        uploadTrainingPlan(planMap)
 
         localDb.checkInDao().getAllCheckInsSync().forEach      { uploadCheckIn(it) }
         localDb.bodyMetricsDao().getAllSync().forEach          { uploadBodyMetrics(it) }
@@ -465,7 +470,15 @@ object FirebaseRepository {
             profile?.let { localDb.userProfileDao().saveProfile(it) }
             if (plan.isNotEmpty()) {
                 context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE).edit().apply {
-                    plan.forEach { (day, type) -> putString("type_$day", type) }
+                    plan.forEach { (key, value) ->
+                        // Nový formát: klíče jsou "type_Monday", "time_Monday"
+                        // Starý formát (zpětná kompatibilita): klíče jsou "Monday"
+                        if (key.startsWith("type_") || key.startsWith("time_")) {
+                            putString(key, value)
+                        } else {
+                            putString("type_$key", value)
+                        }
+                    }
                     apply()
                 }
             }
