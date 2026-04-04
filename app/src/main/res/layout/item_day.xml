@@ -160,6 +160,7 @@
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
+        <!-- Čas tréninku / kardia (společný) -->
         <TextView
             android:id="@+id/tvTrainingTimePill"
             android:layout_width="wrap_content"
@@ -177,8 +178,51 @@
             android:focusable="true"
             android:visibility="gone"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/toggleGroup"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintTop_toBottomOf="@id/toggleGroup" />
+
+        <!-- Kardio: délka + tempo (pouze kardio mód) -->
+        <LinearLayout
+            android:id="@+id/llKardioExtras"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:layout_marginStart="4dp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvTrainingTimePill"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <TextView
+                android:id="@+id/tvKardioDurationPill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⏱ Délka"
+                android:textColor="#2E86AB"
+                android:textSize="11sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="5dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#1A2E86AB"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/tvKardioSpeedPill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🏃 Tempo"
+                android:textColor="#7B2D8B"
+                android:textSize="11sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="5dp"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#1A7B2D8B"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -2,6 +2,7 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/coordinatorPlan"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/brand_cream">
@@ -116,6 +117,48 @@
                     app:layout_constraintTop_toBottomOf="@id/tvTitle" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <!-- POWER / KARDIO mode toggle -->
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleModeGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                app:selectionRequired="true"
+                app:singleSelection="true"
+                app:checkedButton="@+id/btnModePower">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModePower"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="⚡ POWER"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:paddingHorizontal="28dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:cornerRadius="20dp"
+                    app:strokeColor="@color/brand_dark_alpha20" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModeKardio"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="🏃 KARDIO"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:paddingHorizontal="28dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:cornerRadius="20dp"
+                    app:strokeColor="@color/brand_dark_alpha20" />
+
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <!-- Stat cards -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -134,7 +177,7 @@
                     app:cardElevation="0dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
                         <TextView android:id="@+id/tvStatPushCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/brand_cream" android:textSize="26sp" android:fontFamily="sans-serif-black" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PUSH" android:textColor="@color/brand_cream" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
+                        <TextView android:id="@+id/tvStatPushLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PUSH" android:textColor="@color/brand_cream" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -149,7 +192,7 @@
                     app:cardElevation="0dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
                         <TextView android:id="@+id/tvStatPullCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/brand_cream" android:textSize="26sp" android:fontFamily="sans-serif-black" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PULL" android:textColor="@color/brand_cream" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
+                        <TextView android:id="@+id/tvStatPullLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PULL" android:textColor="@color/brand_cream" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -164,7 +207,7 @@
                     app:cardElevation="0dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
                         <TextView android:id="@+id/tvStatLegsCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/brand_cream" android:textSize="26sp" android:fontFamily="sans-serif-black" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LEGS" android:textColor="@color/brand_cream" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
+                        <TextView android:id="@+id/tvStatLegsLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LEGS" android:textColor="@color/brand_cream" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -206,6 +249,7 @@
                 android:overScrollMode="never" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTip"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="24dp"
@@ -222,11 +266,11 @@
                     android:gravity="center_vertical">
                     <TextView android:layout_width="36dp" android:layout_height="wrap_content" android:text="💡" android:textSize="22sp" android:gravity="center" />
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="12dp" android:orientation="vertical">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/tip_macros_adapt_title" android:textColor="@color/brand_accent_warm" android:textSize="13sp" android:textStyle="bold" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/tip_push_desc" android:textColor="@color/brand_cream" android:textSize="12sp" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/tip_pull_desc" android:textColor="@color/brand_cream" android:textSize="12sp" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/tip_legs_desc" android:textColor="@color/brand_cream" android:textSize="12sp" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/tip_off_desc" android:textColor="@color/brand_cream" android:textSize="12sp" android:alpha="0.8" />
+                        <TextView android:id="@+id/tvTipTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/tip_macros_adapt_title" android:textColor="@color/brand_accent_warm" android:textSize="13sp" android:textStyle="bold" />
+                        <TextView android:id="@+id/tvTipLine1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/tip_push_desc" android:textColor="@color/brand_cream" android:textSize="12sp" />
+                        <TextView android:id="@+id/tvTipLine2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/tip_pull_desc" android:textColor="@color/brand_cream" android:textSize="12sp" />
+                        <TextView android:id="@+id/tvTipLine3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/tip_legs_desc" android:textColor="@color/brand_cream" android:textSize="12sp" />
+                        <TextView android:id="@+id/tvTipLine4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="@string/tip_off_desc" android:textColor="@color/brand_cream" android:textSize="12sp" android:alpha="0.8" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

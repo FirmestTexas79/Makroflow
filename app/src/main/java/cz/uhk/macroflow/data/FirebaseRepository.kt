@@ -77,7 +77,7 @@ object FirebaseRepository {
 
     suspend fun uploadTrainingPlan(plan: Map<String, String>) {
         if (!isLoggedIn) return
-        userDoc().collection("data").document("training_plan").set(plan, SetOptions.merge()).await()
+        userDoc().collection("data").document("training_plan").set(plan).await()
     }
 
     suspend fun downloadTrainingPlan(): Map<String, String> {
@@ -417,8 +417,12 @@ object FirebaseRepository {
         val days  = listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
         val planMap = mutableMapOf<String, String>()
         days.forEach { day ->
-            planMap["type_$day"] = prefs.getString("type_$day", "rest") ?: "rest"
-            prefs.getString("time_$day", null)?.let { planMap["time_$day"] = it }
+            planMap["type_$day"]         = prefs.getString("type_$day", "rest") ?: "rest"
+            prefs.getString("time_$day", null)?.let          { planMap["time_$day"] = it }
+            planMap["kardio_type_$day"]  = prefs.getString("kardio_type_$day", "rest") ?: "rest"
+            prefs.getString("time_kardio_$day", null)?.let   { planMap["time_kardio_$day"] = it }
+            prefs.getString("kardio_duration_$day", null)?.let { planMap["kardio_duration_$day"] = it }
+            prefs.getString("kardio_speed_$day", null)?.let    { planMap["kardio_speed_$day"] = it }
         }
         uploadTrainingPlan(planMap)
 
@@ -471,9 +475,9 @@ object FirebaseRepository {
             if (plan.isNotEmpty()) {
                 context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE).edit().apply {
                     plan.forEach { (key, value) ->
-                        // Nový formát: klíče jsou "type_Monday", "time_Monday"
-                        // Starý formát (zpětná kompatibilita): klíče jsou "Monday"
-                        if (key.startsWith("type_") || key.startsWith("time_")) {
+                        // Nový formát: type_*, time_*, kardio_*
+                        // Starý formát (zpětná kompatibilita): plain day name
+                        if (key.startsWith("type_") || key.startsWith("time_") || key.startsWith("kardio_")) {
                             putString(key, value)
                         } else {
                             putString("type_$key", value)
