@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_kardio_dialog"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="36dp">
+
+    <!-- Drag handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="#40DDE5B6" />
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tvDialogTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Délka tréninku"
+        android:textColor="#DDE5B6"
+        android:textSize="22sp"
+        android:fontFamily="sans-serif-black"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Day label -->
+    <TextView
+        android:id="@+id/tvDialogSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Pondělí"
+        android:textColor="#60DDE5B6"
+        android:textSize="13sp"
+        android:layout_marginBottom="28dp" />
+
+    <!-- Input row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="#20DDE5B6"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="4dp"
+        android:layout_marginBottom="28dp">
+
+        <EditText
+            android:id="@+id/etInput"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:textColor="#DDE5B6"
+            android:textSize="32sp"
+            android:fontFamily="sans-serif-black"
+            android:background="@null"
+            android:inputType="numberDecimal"
+            android:hint="0"
+            android:textColorHint="#30DDE5B6"
+            android:gravity="center_vertical"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/tvUnit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="min"
+            android:textColor="#60DDE5B6"
+            android:textSize="16sp"
+            android:layout_marginStart="12dp" />
+
+    </LinearLayout>
+
+    <!-- Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDialogCancel"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="Zrušit"
+            android:textColor="#60DDE5B6"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:layout_marginEnd="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDialogSave"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="Uložit"
+            android:textColor="#DDE5B6"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingHorizontal="28dp"
+            app:backgroundTint="#606C38"
+            app:cornerRadius="22dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

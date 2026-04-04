@@ -237,7 +237,7 @@
                 android:layout_marginTop="28dp"
                 android:layout_marginBottom="12dp">
                 <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginHorizontal="12dp" android:text="@string/label_setup_days" android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.14" />
+                <TextView android:id="@+id/tvLabelSetupDays" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginHorizontal="12dp" android:text="@string/label_setup_days" android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.14" />
                 <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
             </LinearLayout>
 

@@ -23,13 +23,26 @@ object TrainingTimeManager {
     // ── Čtení / zápis ────────────────────────────────────────────────
     fun getTrainingTime(context: Context, dayEnglish: String): String? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString("time_$dayEnglish", null)
+            .getString("power_time_$dayEnglish", null)
 
     fun setTrainingTime(context: Context, dayEnglish: String, time: String?) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().apply {
-                if (time != null) putString("time_$dayEnglish", time)
-                else remove("time_$dayEnglish")
+                if (time != null) putString("power_time_$dayEnglish", time)
+                else remove("power_time_$dayEnglish")
+                apply()
+            }
+    }
+
+    fun getKardioTime(context: Context, dayEnglish: String): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString("kardio_time_$dayEnglish", null)
+
+    fun setKardioTime(context: Context, dayEnglish: String, time: String?) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().apply {
+                if (time != null) putString("kardio_time_$dayEnglish", time)
+                else remove("kardio_time_$dayEnglish")
                 apply()
             }
     }
