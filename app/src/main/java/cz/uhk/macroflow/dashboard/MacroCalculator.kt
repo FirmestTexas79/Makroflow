@@ -26,7 +26,9 @@ object MacroCalculator {
         val trainingPrefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
         val sdf = SimpleDateFormat("EEEE", Locale.ENGLISH)
         val dayName = sdf.format(date)
-        val trainingType = trainingPrefs.getString("type_$dayName", "rest")?.lowercase() ?: "rest"
+
+        val strengthType = trainingPrefs.getString("type_$dayName", "rest")?.lowercase() ?: "rest"
+        val kardioType = trainingPrefs.getString("kardio_type_$dayName", "rest")?.lowercase() ?: "rest"
 
         val profile: UserProfileEntity? = runBlocking {
             AppDatabase.getDatabase(context).userProfileDao().getProfileSync()
@@ -40,91 +42,96 @@ object MacroCalculator {
         val wrist = profile?.lastWristMeasurement ?: 15.0
         val bodyFat = profile?.bodyFatPercentage ?: 12.0
         val goal = profile?.goal?.uppercase() ?: "MAINTAIN"
+        val dietType = (profile?.dietType ?: "BALANCED").normalizeDiet()
 
-        // 1. VÝPOČET BAZÁLNÍHO METABOLISMU (BMR)
+        // 1. BAZÁLNÍ METABOLISMUS (BMR) - Katch-McArdle je pro 13% BF přesný
         val bmr = if (isElite) {
-            // Katch-McArdle (Elite) - přesnější pro sportovce s nízkým body fat
             EliteMetabolicEngine.calculateEliteBMR(weight, bodyFat)
         } else {
-            // Mifflin-St Jeor (Normal) - standardní lékařský vzorec
             var miffBmr = (10 * weight) + (6.25 * height) - (5 * age)
             if (gender == "female") miffBmr -= 161.0 else miffBmr += 5.0
             miffBmr
         }
 
-        // 2. VÝPOČET TDEE (CELKOVÝ VÝDEJ)
-        val rawMult = (profile?.activityMultiplier ?: 1.2f).toDouble()
-        val activityMultiplier = if (isElite) (rawMult * 0.85).coerceAtLeast(1.2) else rawMult
-        val maintenanceKcal = bmr * activityMultiplier
+        // 2. TDEE (PASIVNÍ VÝDEJ)
+        // OPRAVA: U Elite módu musíme být s multiplierem opatrnější, pokud tréninky sčítáme extra
+        val activityMultiplier = if (isElite) 1.2 else (profile?.activityMultiplier ?: 1.2f).toDouble()
 
-        // APLIKACE CÍLE (GOAL BRANCHING)
+        // Aplikace TEF (Termický efekt diety) - upraveno, aby neházelo extrémy
+        val dietModifier = EliteMetabolicEngine.getDietaryTEFModifier(dietType)
+        val maintenanceKcal = (bmr * activityMultiplier) * (1.0 + dietModifier)
+
+        // 3. APLIKACE CÍLE
         var targetCalories = when (goal) {
-            "CUT" -> maintenanceKcal * 0.85 // Zdravotně bezpečný deficit 15%
-            "BULK" -> maintenanceKcal * 1.10 // Čisté nabírání (lean bulk) + 10%
-            else -> maintenanceKcal // Udržování (maintenance)
+            "CUT" -> maintenanceKcal * 0.85
+            "BULK" -> maintenanceKcal + 250.0 // Čistý bulk = +250 kcal, ne procentuální snowball
+            else -> maintenanceKcal
         }
 
-        // Přidání tréninkového výdeje (dynamicky podle váhy)
-        targetCalories += when {
-            trainingType.contains("legs") -> weight * 5.8
-            trainingType.contains("pull") -> weight * 3.8
-            trainingType.contains("push") -> weight * 3.3
+        // 4. VÝPOČET TRÉNINKOVÉHO VÝDEJE
+        var exerciseExpenditure = 0.0
+
+        // Silový trénink
+        exerciseExpenditure += when {
+            strengthType.contains("legs") -> weight * 4.5  // Sníženo z 5.8
+            strengthType.contains("pull") -> weight * 3.0  // Sníženo z 3.8
+            strengthType.contains("push") -> weight * 2.5  // Sníženo z 3.3
             else -> 0.0
         }
 
-        // 3. DISTRIBUCE MAKER (DOKTORSKÁ PŘESNOST)
-        val carbSens = EliteMetabolicEngine.getCarbSensitivity(wrist, height)
-        var pPerKg: Double
-        var fPerKg: Double
+        // Kardio (Švihadlo/Běh)
+        if (kardioType != "rest") {
+            val duration = trainingPrefs.getString("kardio_duration_$dayName", "0")?.toDoubleOrNull() ?: 0.0
 
+            exerciseExpenditure += when (kardioType) {
+                "run" -> {
+                    val speed = trainingPrefs.getString("kardio_speed_$dayName", "8.0")?.toDoubleOrNull() ?: 8.0
+                    (0.95 * weight) * (duration / 60.0) * speed // Realističtější běh
+                }
+                "rope" -> {
+                    val jumps = trainingPrefs.getString("kardio_jumps_$dayName", "0")?.toDoubleOrNull() ?: 0.0
+                    if (jumps > 0) {
+                        // OPRAVA: 6000 skoků = cca 400-500 kcal pro 76kg, ne 1000.
+                        (jumps * 0.07) * (weight / 75.0)
+                    } else {
+                        (8.0 * weight) * (duration / 60.0) // MET 8 pro lehké švihadlo
+                    }
+                }
+                else -> 0.0
+            }
+        }
+
+        // Finální přičtení tréninku (zastropováno)
+        targetCalories += exerciseExpenditure
+
+        // 5. DISTRIBUCE MAKER
+        val carbSens = EliteMetabolicEngine.getCarbSensitivity(wrist, height)
+        var pPerKg = if (goal == "CUT") 2.4 else 2.1 // V bulku stačí 2.1g
+        var fPerKg = 0.9 // Stabilní tuky pro hormony
+
+        // Úpravy podle diety (pokud je specifická)
         if (isElite) {
-            // ELITE VĚTEV - Vyšší nároky na bílkoviny pro ochranu svalové hmoty
-            val diet = (profile?.dietType ?: "BALANCED").normalizeDiet()
             when {
-                diet.contains("KETO") -> { pPerKg = 2.1; fPerKg = 2.3 }
-                diet.contains("LOW_CARB") -> { pPerKg = 2.5; fPerKg = 1.3 }
-                diet.contains("HIGH_PROTEIN") -> { pPerKg = 2.9; fPerKg = 0.8 }
-                else -> { pPerKg = 2.4; fPerKg = 1.0 }
+                dietType.contains("KETO") -> { pPerKg = 2.0; fPerKg = 2.0 }
+                dietType.contains("HIGH_PROTEIN") -> { pPerKg = 2.7; fPerKg = 0.7 }
             }
-        } else {
-            // NORMAL VĚTEV - Standardní sportovní výživa
-            pPerKg = when(goal) {
-                "CUT" -> 2.2 // Vyšší v dietě kvůli sytosti a svalům
-                "BULK" -> 1.9 // V objemu stačí méně díky dostatku energie
-                else -> 2.0
-            }
-            fPerKg = if (carbSens > 1.0) 0.85 else 1.05 // Úprava podle somatotypu (zápěstí)
         }
 
         var protein = weight * pPerKg
         var fat = weight * fPerKg
+
+        // Zbytek do sacharidů
         var carbs = (targetCalories - (protein * 4) - (fat * 9)) / 4
 
-        // 4. PREVENCE SNOWBALL EFEKTU & BIOLOGICKÉ STROPY
-        val maxCarbCap = if (goal == "BULK") weight * 7.5 else weight * 5.5
-        val minFatCap = weight * 0.75 // Nikdy neklesnout pod 0.75g tuku/kg (hormony!)
-
-        // Pokud sacharidy přetečou strop, zbytek jde do tuků
-        if (carbs > maxCarbCap) {
-            val overflow = (carbs - maxCarbCap) * 4
-            carbs = maxCarbCap
-            fat += (overflow / 9)
-        }
-
-        // Pokud tuky klesnou pod minimum, sebereme sacharidy
-        if (fat < minFatCap) {
-            val deficitFat = (minFatCap - fat) * 9
-            fat = minFatCap
-            carbs -= (deficitFat / 4)
-        }
-
-        // Finální doladění Elite Inzulínové senzitivity
+        // 6. POJISTKY A INZULÍNOVÁ SENZITIVITA
         if (isElite) {
             val originalCarbs = carbs
-            carbs *= carbSens
-            fat += ((originalCarbs - carbs) * 4) / 9
+            carbs *= carbSens // Tady ti tvých 15cm zápěstí (poměr 11.6) přidá 10% sacharidů
+            val diffKcal = (originalCarbs - carbs) * 4
+            fat += (diffKcal / 9)
         }
 
+        // Finální srovnání kalorií
         val finalCalories = (protein * 4) + (carbs * 4) + (fat * 9)
 
         return MacroResult(
@@ -133,7 +140,7 @@ object MacroCalculator {
             carbs = carbs,
             fat = fat,
             water = (weight * 0.04) + (if (finalCalories > 3000) 1.0 else 0.0),
-            trainingType = trainingType.uppercase(),
+            trainingType = strengthType.uppercase(),
             weight = weight,
             isEliteMode = isElite
         )

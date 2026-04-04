@@ -2,7 +2,6 @@ package cz.uhk.macroflow.training
 
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
-import android.app.AlertDialog
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -12,7 +11,6 @@ import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -51,11 +49,13 @@ class PlanFragment : Fragment() {
 
     private var isKardioMode = false
 
-    private val colorPowerBg  = Color.parseColor("#DDE5B6")
-    private val colorKardioBg = Color.parseColor("#1A2510")
-    private val colorRun      = Color.parseColor("#2E86AB")
-    private val colorRope     = Color.parseColor("#7B2D8B")
-    private val colorBike     = Color.parseColor("#E76F51")
+    private val colorPowerBg   = Color.parseColor("#FEFAE0")
+    private val colorKardioBg  = Color.parseColor("#1A2510")
+    private val colorRun       = Color.parseColor("#2E86AB")
+    private val colorRope      = Color.parseColor("#7B2D8B")
+    private val colorBike      = Color.parseColor("#E76F51")
+    private val colorCream     = Color.parseColor("#FEFAE0")
+    private val colorDarkGreen = Color.parseColor("#283618")
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -103,18 +103,19 @@ class PlanFragment : Fragment() {
             }
         }
 
-        // Steps counter
+        // Krokoměr a kalorie
         val tvTotalSteps  = view.findViewById<TextView>(R.id.tvTotalStepsCount)
         val tvFatLabel    = view.findViewById<TextView>(R.id.tvFatBurnedLabel)
         val tvEmoji       = view.findViewById<TextView>(R.id.tvStepsEmoji)
         val llStepsCounter = view.findViewById<LinearLayout>(R.id.llStepsCounter)
-        val db            = AppDatabase.getDatabase(requireContext())
-        val todayStr      = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        val db = AppDatabase.getDatabase(requireContext())
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
         viewLifecycleOwner.lifecycleScope.launch {
             val profile    = withContext(Dispatchers.IO) { db.userProfileDao().getProfileSync() }
             val stepGoal   = profile?.stepGoal ?: 6000
-            val userWeight = profile?.weight ?: 83.0
+            val userWeight = profile?.weight ?: 75.0
             db.stepsDao().getStepsForDateFlow(todayStr).collect { stepsEntity ->
                 val stepsToday    = stepsEntity?.count ?: 0
                 val isGoalReached = stepsToday >= stepGoal
@@ -128,7 +129,7 @@ class PlanFragment : Fragment() {
                 } else {
                     tvFatLabel?.text = String.format(Locale.getDefault(), "🎉 %.1fg TUKU! CÍL SPLNĚN", fatBurnedGrams)
                     tvEmoji?.text = "🎉"
-                    tvFatLabel?.setTextColor(Color.parseColor("#283618"))
+                    tvFatLabel?.setTextColor(colorDarkGreen)
                     llStepsCounter?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#20BC6C25"))
                 }
             }
@@ -139,6 +140,15 @@ class PlanFragment : Fragment() {
         val targetBg = if (toKardio) colorKardioBg else colorPowerBg
         val root = view.findViewById<View>(R.id.coordinatorPlan) ?: view
 
+        // Základní barvy textu podle módu (na pozadí fragmentu)
+        val titleTextColor = if (toKardio) colorCream else colorDarkGreen
+        val subTitleTextColor = if (toKardio) Color.parseColor("#B0DDE5B6") else Color.parseColor("#80283618")
+
+        // Pomocné barvy pro vnitřky boxů
+        val colorTextOnDark = Color.WHITE
+        val colorTextOnLight = colorDarkGreen
+
+        // 1. Animace pozadí fragmentu
         if (animated) {
             val fromBg = if (toKardio) colorPowerBg else colorKardioBg
             ValueAnimator.ofObject(ArgbEvaluator(), fromBg, targetBg).apply {
@@ -150,10 +160,94 @@ class PlanFragment : Fragment() {
             root.setBackgroundColor(targetBg)
         }
 
-        // Stat labels
-        view.findViewById<TextView>(R.id.tvStatPushLabel)?.text = if (toKardio) "BĚH"  else "PUSH"
-        view.findViewById<TextView>(R.id.tvStatPullLabel)?.text = if (toKardio) "ŠVIH" else "PULL"
-        view.findViewById<TextView>(R.id.tvStatLegsLabel)?.text = if (toKardio) "KOLO" else "LEGS"
+        // 2. Hlavní texty a step counter
+        view.findViewById<TextView>(R.id.tvTitle)?.setTextColor(titleTextColor)
+        view.findViewById<TextView>(R.id.tvSubtitle)?.setTextColor(subTitleTextColor)
+        view.findViewById<TextView>(R.id.tvTotalStepsCount)?.setTextColor(titleTextColor)
+
+        // 3. Logika pro statistiky (barevné čtverce)
+        if (toKardio) {
+            // --- KARDIO MODE ---
+            // Všechny boxy v Kardio mají barevné nebo tmavé pozadí -> bílý text uvnitř
+
+            // PUSH (BĚH) - Modrá
+            view.findViewById<MaterialCardView>(R.id.cardStatPush)?.setCardBackgroundColor(colorRun)
+            view.findViewById<TextView>(R.id.tvStatPushCount)?.setTextColor(colorTextOnDark)
+            view.findViewById<TextView>(R.id.tvStatPushLabel)?.apply {
+                text = "BĚH"
+                setTextColor(colorTextOnDark)
+            }
+
+            // PULL (ŠVIH) - Fialová
+            view.findViewById<MaterialCardView>(R.id.cardStatPull)?.setCardBackgroundColor(colorRope)
+            view.findViewById<TextView>(R.id.tvStatPullCount)?.setTextColor(colorTextOnDark)
+            view.findViewById<TextView>(R.id.tvStatPullLabel)?.apply {
+                text = "ŠVIH"
+                setTextColor(colorTextOnDark)
+            }
+
+            // LEGS (KOLO) - Oranžová
+            view.findViewById<MaterialCardView>(R.id.cardStatLegs)?.setCardBackgroundColor(colorBike)
+            view.findViewById<TextView>(R.id.tvStatLegsCount)?.setTextColor(colorTextOnDark)
+            view.findViewById<TextView>(R.id.tvStatLegsLabel)?.apply {
+                text = "KOLO"
+                setTextColor(colorTextOnDark)
+            }
+
+            // REST - Tmavě zelená (v kardio módu chceme, aby REST box ladil s tmavým tématem)
+            view.findViewById<MaterialCardView>(R.id.cardStatRest)?.setCardBackgroundColor(colorDarkGreen)
+            view.findViewById<TextView>(R.id.tvStatRestCount)?.setTextColor(colorTextOnDark)
+            // V XML u restu label nemá ID a je to přímý potomek LinearLayoutu,
+            // tak najdeme druhý TextView v tom layoutu:
+            val restLayout = view.findViewById<MaterialCardView>(R.id.cardStatRest)?.getChildAt(0) as? LinearLayout
+            (restLayout?.getChildAt(1) as? TextView)?.setTextColor(colorTextOnDark)
+
+        } else {
+            // --- POWER MODE ---
+            // Obnova původních barev pro Power mód
+
+            // PUSH - Tmavě zelený box
+            view.findViewById<MaterialCardView>(R.id.cardStatPush)?.setCardBackgroundColor(colorDarkGreen)
+            view.findViewById<TextView>(R.id.tvStatPushCount)?.setTextColor(colorTextOnDark)
+            view.findViewById<TextView>(R.id.tvStatPushLabel)?.apply {
+                text = "PUSH"
+                setTextColor(colorTextOnDark)
+            }
+
+            // PULL - Světle hnědý/oranžový box (brand_accent_warm)
+            view.findViewById<MaterialCardView>(R.id.cardStatPull)?.setCardBackgroundColor(Color.parseColor("#DDA15E"))
+            view.findViewById<TextView>(R.id.tvStatPullCount)?.setTextColor(colorTextOnDark) // na této oranžové je bílá ok
+            view.findViewById<TextView>(R.id.tvStatPullLabel)?.apply {
+                text = "PULL"
+                setTextColor(colorTextOnDark)
+            }
+
+            // LEGS - Tmavší hnědá (brand_accent_deep)
+            view.findViewById<MaterialCardView>(R.id.cardStatLegs)?.setCardBackgroundColor(Color.parseColor("#BC6C25"))
+            view.findViewById<TextView>(R.id.tvStatLegsCount)?.setTextColor(colorTextOnDark)
+            view.findViewById<TextView>(R.id.tvStatLegsLabel)?.apply {
+                text = "LEGS"
+                setTextColor(colorTextOnDark)
+            }
+
+            // REST - Krémový box s borderem
+            view.findViewById<MaterialCardView>(R.id.cardStatRest)?.setCardBackgroundColor(colorCream)
+            view.findViewById<TextView>(R.id.tvStatRestCount)?.setTextColor(colorTextOnLight)
+            val restLayout = view.findViewById<MaterialCardView>(R.id.cardStatRest)?.getChildAt(0) as? LinearLayout
+            (restLayout?.getChildAt(1) as? TextView)?.setTextColor(colorDarkGreen)
+        }
+
+        // 4. Přepínač módů (Toggle Group)
+        val btnPower = view.findViewById<MaterialButton>(R.id.btnModePower)
+        val btnKardio = view.findViewById<MaterialButton>(R.id.btnModeKardio)
+
+        if (toKardio) {
+            btnPower?.setTextColor(Color.parseColor("#80DDE5B6"))
+            btnKardio?.setTextColor(colorCream)
+        } else {
+            btnPower?.setTextColor(colorDarkGreen)
+            btnKardio?.setTextColor(Color.parseColor("#80283618"))
+        }
     }
 
     private fun updateStats(view: View) {
@@ -162,6 +256,7 @@ class PlanFragment : Fragment() {
         val typeA  = if (isKardioMode) "run"  else "push"
         val typeB  = if (isKardioMode) "rope" else "pull"
         val typeC  = if (isKardioMode) "bike" else "legs"
+
         daysMap.forEach { (key, _, _) ->
             when (trainingPrefs.getString("$prefix$key", "rest")?.lowercase()) {
                 typeA -> a++
@@ -175,8 +270,6 @@ class PlanFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvStatLegsCount)?.text = c.toString()
         view.findViewById<TextView>(R.id.tvStatRestCount)?.text = rest.toString()
     }
-
-    // ── ADAPTER ─────────────────────────────────────────────────────────────
 
     inner class TrainingPlanAdapter : RecyclerView.Adapter<TrainingPlanAdapter.PlanViewHolder>() {
 
@@ -195,6 +288,8 @@ class PlanFragment : Fragment() {
             val btnPull: MaterialButton?               = view.findViewById(R.id.btnPull)
             val btnLegs: MaterialButton?               = view.findViewById(R.id.btnLegs)
             val btnRest: MaterialButton?               = view.findViewById(R.id.btnRest)
+
+            val btnDelete: View                        = view.findViewById(R.id.btnDeleteDayData)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlanViewHolder {
@@ -206,29 +301,91 @@ class PlanFragment : Fragment() {
             val (englishName, resId, shortCz) = daysMap[position]
             holder.tvDay.text     = shortCz
             holder.tvDayFull.text = getString(resId)
+
+            applyCardTheme(holder, isKardioMode)
+
             if (isKardioMode) bindKardio(holder, englishName)
             else              bindPower(holder, englishName)
         }
 
-        // ── POWER ────────────────────────────────────────────────────────────
+        private fun applyCardTheme(holder: PlanViewHolder, isKardio: Boolean) {
+            val bgColor = if (isKardio) "#F7F9F2" else "#FAFAF5"
+            val strokeColor = if (isKardio) "#40DDE5B6" else "#20283618"
+
+            holder.card.setCardBackgroundColor(Color.parseColor(bgColor))
+            holder.card.strokeColor = Color.parseColor(strokeColor)
+            holder.card.strokeWidth = if (isKardio) 3 else 2
+            holder.divider.setBackgroundColor(Color.parseColor(if (isKardio) "#15283618" else "#20283618"))
+            holder.tvDayFull.setTextColor(Color.parseColor(if (isKardio) "#90283618" else "#80283618"))
+        }
+
+        private fun updateToggleGroupColors(vh: PlanViewHolder, selectedType: String, isKardio: Boolean) {
+            val buttons = listOf(
+                vh.btnPush to if(isKardio) "run" else "push",
+                vh.btnPull to if(isKardio) "rope" else "pull",
+                vh.btnLegs to if(isKardio) "bike" else "legs",
+                vh.btnRest to "rest"
+            )
+
+            buttons.forEach { (btn, type) ->
+                if (btn != null) {
+                    if (selectedType == type) {
+                        // Tlačítko JE vybrané
+
+                        // SPECIÁLNÍ LOGIKA PRO "REST" (OFF) V POWER MÓDU
+                        if (!isKardio && type == "rest") {
+                            btn.setTextColor(colorDarkGreen) // Tmavě zelený text
+                            btn.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT) // Průhledné pozadí
+                            btn.strokeWidth = 3 // Výraznější rámeček
+                            btn.strokeColor = ColorStateList.valueOf(colorDarkGreen)
+                        } else {
+                            // Standardní chování pro ostatní vybraná tlačítka (vyplněná barvou)
+                            btn.setTextColor(Color.WHITE)
+                            val activeColor = when(type) {
+                                "run"  -> colorRun
+                                "rope" -> colorRope
+                                "bike" -> colorBike
+                                "push" -> colorDarkGreen
+                                "pull" -> Color.parseColor("#DDA15E")
+                                "legs" -> Color.parseColor("#BC6C25")
+                                else   -> colorDarkGreen // Tohle platí pro vybraný REST v Kardio módu
+                            }
+                            btn.backgroundTintList = ColorStateList.valueOf(activeColor)
+                            btn.strokeWidth = 0
+                        }
+                    } else {
+                        // Tlačítko NENÍ vybrané
+                        btn.setTextColor(colorDarkGreen)
+                        btn.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+                        btn.strokeWidth = 2
+                        btn.strokeColor = ColorStateList.valueOf(Color.parseColor("#20283618"))
+                    }
+                }
+            }
+        }
 
         private fun bindPower(holder: PlanViewHolder, dayEnglish: String) {
-            applyCardTheme(holder, isKardio = false)
             holder.btnPush?.text = "PUSH"
             holder.btnPull?.text = "PULL"
             holder.btnLegs?.text = "LEGS"
+
+            // V Power módu vypneme doplňky - zbude jen tvTrainingTimePill
             holder.llKardioExtras?.visibility = View.GONE
 
             val savedType = trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest"
             holder.toggleGroup.clearOnButtonCheckedListeners()
+
             when (savedType) {
                 "push" -> holder.toggleGroup.check(R.id.btnPush)
                 "pull" -> holder.toggleGroup.check(R.id.btnPull)
                 "legs" -> holder.toggleGroup.check(R.id.btnLegs)
                 else   -> holder.toggleGroup.check(R.id.btnRest)
             }
+
             updatePowerCardVisual(holder, savedType)
+            updateToggleGroupColors(holder, savedType, false)
             updateTimePill(holder, dayEnglish, savedType, isPower = true)
+
             holder.tvTimePill?.setOnClickListener { showTimePicker(dayEnglish, holder, isPower = true) }
 
             holder.toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
@@ -242,34 +399,59 @@ class PlanFragment : Fragment() {
                 trainingPrefs.edit().putString("type_$dayEnglish", type).apply()
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 updatePowerCardVisual(holder, type)
+                updateToggleGroupColors(holder, type, false)
                 updateTimePill(holder, dayEnglish, type, isPower = true)
                 view?.let { updateStats(it) }
             }
         }
 
-        // ── KARDIO ───────────────────────────────────────────────────────────
+        private fun updateDeleteButtonVisibility(holder: PlanViewHolder, dayEnglish: String) {
+            val timeKey = "kardio_$dayEnglish"
+            val hasTime = TrainingTimeManager.getTrainingTime(requireContext(), timeKey) != null
+            val hasDuration = trainingPrefs.getString("kardio_duration_$dayEnglish", null) != null
+
+            // Pokud jsou tam jakákoliv data, ukážeme křížek
+            holder.btnDelete.visibility = if (hasTime || hasDuration) View.VISIBLE else View.INVISIBLE
+        }
 
         private fun bindKardio(holder: PlanViewHolder, dayEnglish: String) {
-            applyCardTheme(holder, isKardio = true)
             holder.btnPush?.text = "BĚH"
             holder.btnPull?.text = "ŠVIH"
             holder.btnLegs?.text = "KOLO"
 
             val savedType = trainingPrefs.getString("kardio_type_$dayEnglish", "rest") ?: "rest"
             holder.toggleGroup.clearOnButtonCheckedListeners()
+
             when (savedType) {
                 "run"  -> holder.toggleGroup.check(R.id.btnPush)
                 "rope" -> holder.toggleGroup.check(R.id.btnPull)
                 "bike" -> holder.toggleGroup.check(R.id.btnLegs)
                 else   -> holder.toggleGroup.check(R.id.btnRest)
             }
+
             updateKardioCardVisual(holder, savedType)
+            updateToggleGroupColors(holder, savedType, true)
             updateTimePill(holder, dayEnglish, savedType, isPower = false)
             updateKardioPills(holder, dayEnglish, savedType)
+            updateDeleteButtonVisibility(holder, dayEnglish)
 
-            holder.tvTimePill?.setOnClickListener    { showTimePicker(dayEnglish, holder, isPower = false) }
-            holder.tvDurationPill?.setOnClickListener { showDurationPicker(dayEnglish, holder) }
-            holder.tvSpeedPill?.setOnClickListener    { showSpeedPicker(dayEnglish, holder) }
+            holder.btnDelete.setOnClickListener {
+                trainingPrefs.edit().apply {
+                    remove("kardio_$dayEnglish")
+                    remove("kardio_duration_$dayEnglish")
+                    remove("kardio_speed_$dayEnglish")
+                    remove("kardio_jumps_$dayEnglish")
+                }.apply()
+                holder.itemView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                updateTimePill(holder, dayEnglish, savedType, isPower = false)
+                updateKardioPills(holder, dayEnglish, savedType)
+                updateDeleteButtonVisibility(holder, dayEnglish)
+                view?.let { updateStats(it) }
+            }
+
+            holder.tvTimePill?.setOnClickListener { showTimePicker(dayEnglish, holder, isPower = false) }
+            holder.tvDurationPill?.setOnClickListener { showKardioPicker(dayEnglish, holder) }
+            holder.tvSpeedPill?.setOnClickListener { showKardioPicker(dayEnglish, holder) }
 
             holder.toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
                 if (!isChecked) return@addOnButtonCheckedListener
@@ -282,31 +464,24 @@ class PlanFragment : Fragment() {
                 trainingPrefs.edit().putString("kardio_type_$dayEnglish", type).apply()
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 updateKardioCardVisual(holder, type)
+                updateToggleGroupColors(holder, type, true)
                 updateTimePill(holder, dayEnglish, type, isPower = false)
                 updateKardioPills(holder, dayEnglish, type)
+                updateDeleteButtonVisibility(holder, dayEnglish)
                 view?.let { updateStats(it) }
             }
         }
 
-        // ── VIZUÁL ───────────────────────────────────────────────────────────
+        private fun showKardioPicker(dayEnglish: String, holder: PlanViewHolder) {
+            val position = holder.adapterPosition
+            if (position == RecyclerView.NO_POSITION) return
+            val dayCz = getString(daysMap[position].second)
 
-        private fun applyCardTheme(holder: PlanViewHolder, isKardio: Boolean) {
-            if (isKardio) {
-                holder.card.setCardBackgroundColor(Color.parseColor("#1E2D14"))
-                holder.divider.setBackgroundColor(Color.parseColor("#40DDE5B6"))
-                holder.tvDayFull.setTextColor(Color.parseColor("#80DDE5B6"))
-                listOf(holder.btnRest, holder.btnPush, holder.btnPull, holder.btnLegs).forEach {
-                    it?.setTextColor(Color.parseColor("#DDE5B6"))
-                }
-            } else {
-                holder.card.setCardBackgroundColor(Color.parseColor("#FAFAF5"))
-                holder.card.strokeColor = Color.parseColor("#20283618")
-                holder.card.strokeWidth = 2
-                holder.divider.setBackgroundColor(Color.parseColor("#20283618"))
-                holder.tvDayFull.setTextColor(Color.parseColor("#80283618"))
-                listOf(holder.btnRest, holder.btnPush, holder.btnPull, holder.btnLegs).forEach {
-                    it?.setTextColor(Color.parseColor("#283618"))
-                }
+            MakroflowKardioPicker.show(parentFragmentManager, dayEnglish, dayCz) {
+                val type = trainingPrefs.getString("kardio_type_$dayEnglish", "rest") ?: "rest"
+                updateKardioPills(holder, dayEnglish, type)
+                updateDeleteButtonVisibility(holder, dayEnglish) // <--- Důležité
+                view?.let { updateStats(it) }
             }
         }
 
@@ -318,35 +493,52 @@ class PlanFragment : Fragment() {
                 "push" -> { vh.card.strokeColor = colorPush; vh.card.strokeWidth = 4; vh.accent.backgroundTintList = ColorStateList.valueOf(colorPush); vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorPush) }
                 "pull" -> { vh.card.strokeColor = colorPull; vh.card.strokeWidth = 4; vh.accent.backgroundTintList = ColorStateList.valueOf(colorPull); vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorPull) }
                 "legs" -> { vh.card.strokeColor = colorLegs; vh.card.strokeWidth = 4; vh.accent.backgroundTintList = ColorStateList.valueOf(colorLegs); vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorLegs) }
-                else   -> { vh.card.strokeColor = Color.parseColor("#20283618"); vh.card.strokeWidth = 2; vh.accent.visibility = View.GONE; vh.tvDay.setTextColor(Color.parseColor("#283618")) }
+                else   -> { vh.card.strokeColor = Color.parseColor("#20283618"); vh.card.strokeWidth = 2; vh.accent.visibility = View.GONE; vh.tvDay.setTextColor(colorDarkGreen) }
             }
         }
 
         private fun updateKardioCardVisual(vh: PlanViewHolder, type: String) {
             when (type) {
-                "run"  -> { vh.card.strokeColor = colorRun;  vh.card.strokeWidth = 4; vh.accent.backgroundTintList = ColorStateList.valueOf(colorRun);  vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorRun) }
-                "rope" -> { vh.card.strokeColor = colorRope; vh.card.strokeWidth = 4; vh.accent.backgroundTintList = ColorStateList.valueOf(colorRope); vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorRope) }
-                "bike" -> { vh.card.strokeColor = colorBike; vh.card.strokeWidth = 4; vh.accent.backgroundTintList = ColorStateList.valueOf(colorBike); vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorBike) }
-                else   -> { vh.card.strokeColor = Color.parseColor("#40DDE5B6"); vh.card.strokeWidth = 2; vh.accent.visibility = View.GONE; vh.tvDay.setTextColor(Color.parseColor("#DDE5B6")) }
+                "run"  -> { vh.card.strokeColor = colorRun;  vh.card.strokeWidth = 5; vh.accent.backgroundTintList = ColorStateList.valueOf(colorRun);  vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorRun) }
+                "rope" -> { vh.card.strokeColor = colorRope; vh.card.strokeWidth = 5; vh.accent.backgroundTintList = ColorStateList.valueOf(colorRope); vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorRope) }
+                "bike" -> { vh.card.strokeColor = colorBike; vh.card.strokeWidth = 5; vh.accent.backgroundTintList = ColorStateList.valueOf(colorBike); vh.accent.visibility = View.VISIBLE; vh.tvDay.setTextColor(colorBike) }
+                else   -> { vh.card.strokeColor = Color.parseColor("#20283618"); vh.card.strokeWidth = 2; vh.accent.visibility = View.GONE; vh.tvDay.setTextColor(colorDarkGreen) }
             }
         }
 
-        // ── PILLS ────────────────────────────────────────────────────────────
-
         private fun updateTimePill(holder: PlanViewHolder, dayEnglish: String, type: String, isPower: Boolean) {
             val pill = holder.tvTimePill ?: return
-            if (type == "rest") { pill.visibility = View.GONE; return }
+            val container = holder.itemView.findViewById<LinearLayout>(R.id.llPillsContainer)
+
+            // Pokud je rest, schováme ÚPLNĚ CELÝ kontejner i s marginy
+            if (type == "rest") {
+                container?.visibility = View.GONE
+                pill.visibility = View.GONE
+                holder.llKardioExtras?.visibility = View.GONE
+                return
+            }
+
+            // Pokud to není rest, kontejner musí být vidět
+            container?.visibility = View.VISIBLE
             pill.visibility = View.VISIBLE
-            val timeKey   = if (isPower) dayEnglish else "kardio_$dayEnglish"
+
+            // Zbytek logiky pro Kardio/Power doplňky
+            holder.llKardioExtras?.visibility = if (isPower) View.GONE else View.VISIBLE
+
+            val timeKey = if (isPower) dayEnglish else "kardio_$dayEnglish"
             val savedTime = TrainingTimeManager.getTrainingTime(requireContext(), timeKey)
-            val accent    = if (isPower) Color.parseColor("#606C38") else colorRun
+            val accentColor = if (isPower) colorDarkGreen else colorRun
+
             if (savedTime != null) {
                 pill.text = "🕐 $savedTime"
-                pill.setTextColor(accent)
-                (pill.background as? GradientDrawable)?.setColor(Color.argb(30, Color.red(accent), Color.green(accent), Color.blue(accent)))
+                pill.setTextColor(accentColor)
+                pill.backgroundTintList = ColorStateList.valueOf(
+                    Color.argb(35, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor))
+                )
             } else {
-                pill.text = "🕐 Nastavit čas"
-                pill.setTextColor(Color.argb(128, Color.red(accent), Color.green(accent), Color.blue(accent)))
+                pill.text = "🕐 ČAS"
+                pill.setTextColor(colorDarkGreen)
+                pill.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#1A283618"))
             }
         }
 
@@ -354,13 +546,18 @@ class PlanFragment : Fragment() {
             val ll = holder.llKardioExtras ?: return
             if (type == "rest") { ll.visibility = View.GONE; return }
             ll.visibility = View.VISIBLE
-            val duration = trainingPrefs.getString("kardio_duration_$dayEnglish", null)?.toIntOrNull() ?: 0
-            val speed    = trainingPrefs.getString("kardio_speed_$dayEnglish", null)?.toFloatOrNull() ?: 0f
-            holder.tvDurationPill?.text = if (duration > 0) "⏱ ${duration} min" else "⏱ Délka"
-            holder.tvSpeedPill?.text    = if (speed > 0f)   "🏃 ${String.format("%.1f", speed)} km/h" else "🏃 Tempo"
-        }
 
-        // ── PICKERS ──────────────────────────────────────────────────────────
+            val duration = trainingPrefs.getString("kardio_duration_$dayEnglish", null)?.toIntOrNull() ?: 0
+            holder.tvDurationPill?.text = if (duration > 0) "⏱ ${duration} min" else "⏱ Délka"
+
+            if (type == "rope") {
+                val jumps = trainingPrefs.getString("kardio_jumps_$dayEnglish", null)?.toIntOrNull() ?: 0
+                holder.tvSpeedPill?.text = if (jumps > 0) "🔂 $jumps skoků" else "🔂 Přeskoky"
+            } else {
+                val speed = trainingPrefs.getString("kardio_speed_$dayEnglish", null)?.toFloatOrNull() ?: 0f
+                holder.tvSpeedPill?.text = if (speed > 0f) "🏃 ${String.format("%.1f", speed)} km/h" else "🏃 Tempo"
+            }
+        }
 
         private fun showTimePicker(dayEnglish: String, holder: PlanViewHolder, isPower: Boolean) {
             val ctx     = requireContext()
@@ -369,62 +566,16 @@ class PlanFragment : Fragment() {
             val initH   = existing?.split(":")?.getOrNull(0)?.toIntOrNull() ?: 7
             val initM   = existing?.split(":")?.getOrNull(1)?.toIntOrNull() ?: 0
             val label   = if (isPower) "Čas tréninku — ${holder.tvDayFull.text}"
-                          else         "Čas kardia — ${holder.tvDayFull.text}"
-            MakroflowTimePicker.Companion.show(parentFragmentManager, initH, initM, label) { hour, minute ->
+            else         "Čas kardia — ${holder.tvDayFull.text}"
+            MakroflowTimePicker.show(parentFragmentManager, initH, initM, label) { hour, minute ->
                 val timeStr = String.format("%02d:%02d", hour, minute)
                 TrainingTimeManager.setTrainingTime(ctx, timeKey, timeStr)
                 val type = if (isPower) trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest"
-                           else         trainingPrefs.getString("kardio_type_$dayEnglish", "rest") ?: "rest"
+                else          trainingPrefs.getString("kardio_type_$dayEnglish", "rest") ?: "rest"
                 updateTimePill(holder, dayEnglish, type, isPower)
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 MakroflowNotifications.rescheduleWorkout(ctx)
             }
-        }
-
-        private fun showDurationPicker(dayEnglish: String, holder: PlanViewHolder) {
-            val ctx     = requireContext()
-            val current = trainingPrefs.getString("kardio_duration_$dayEnglish", null)?.toIntOrNull() ?: 0
-            val editText = EditText(ctx).apply {
-                inputType = android.text.InputType.TYPE_CLASS_NUMBER
-                setText(if (current > 0) current.toString() else "")
-                hint = "Počet minut"
-                setPadding(48, 32, 48, 32)
-            }
-            AlertDialog.Builder(ctx)
-                .setTitle("Délka kardia — ${holder.tvDayFull.text}")
-                .setView(editText)
-                .setPositiveButton("Uložit") { _, _ ->
-                    val minutes = editText.text.toString().toIntOrNull() ?: 0
-                    trainingPrefs.edit().putString("kardio_duration_$dayEnglish", minutes.toString()).apply()
-                    val type = trainingPrefs.getString("kardio_type_$dayEnglish", "rest") ?: "rest"
-                    updateKardioPills(holder, dayEnglish, type)
-                    holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                }
-                .setNegativeButton("Zrušit", null)
-                .show()
-        }
-
-        private fun showSpeedPicker(dayEnglish: String, holder: PlanViewHolder) {
-            val ctx     = requireContext()
-            val current = trainingPrefs.getString("kardio_speed_$dayEnglish", null)?.toFloatOrNull() ?: 0f
-            val editText = EditText(ctx).apply {
-                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-                setText(if (current > 0f) String.format("%.1f", current) else "")
-                hint = "Průměrné tempo (km/h)"
-                setPadding(48, 32, 48, 32)
-            }
-            AlertDialog.Builder(ctx)
-                .setTitle("Tempo — ${holder.tvDayFull.text}")
-                .setView(editText)
-                .setPositiveButton("Uložit") { _, _ ->
-                    val speed = editText.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-                    trainingPrefs.edit().putString("kardio_speed_$dayEnglish", speed.toString()).apply()
-                    val type = trainingPrefs.getString("kardio_type_$dayEnglish", "rest") ?: "rest"
-                    updateKardioPills(holder, dayEnglish, type)
-                    holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                }
-                .setNegativeButton("Zrušit", null)
-                .show()
         }
 
         override fun getItemCount() = daysMap.size

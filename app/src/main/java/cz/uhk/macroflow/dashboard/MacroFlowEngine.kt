@@ -16,6 +16,7 @@ private const val BAZALNI_KROKY = 6000 // Prvních 6000 kroků je v základu (ac
 object MacroFlowEngine {
 
     fun calculateDailyStatus(context: Context, consumedList: List<ConsumedSnackEntity>): DailyStatus {
+        // MacroCalculator.calculate už v sobě má započítaný silový trénink i kardio (čas/tempo/skoky)
         val target = MacroCalculator.calculate(context)
         val db = AppDatabase.getDatabase(context)
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -26,11 +27,13 @@ object MacroFlowEngine {
 
         /**
          * 1. DYNAMICKÝ VÝDEJ Z KROKŮ (Pouze kroky nad bazál)
+         * Tohle je extra pohyb nad rámec plánovaného kardia/tréninku.
          */
         val burnedFromSteps = calculateCaloriesFromSteps(stepsCount, weight)
 
         /**
          * 2. DYNAMICKÝ TERMICKÝ EFEKT (TEF) - Přesný výpočet ze snědeného
+         * Odčítáme energii, kterou tělo spotřebovalo na trávení, abychom dostali "čistý" příjem.
          */
         val eatenP = consumedList.sumOf { it.p.toDouble() }
         val eatenS = consumedList.sumOf { it.s.toDouble() }
@@ -42,11 +45,13 @@ object MacroFlowEngine {
         val netEatenCalories = eatenCalRaw - totalTEF
 
         /**
-         * 3. ADAPTIVNÍ NAVÝŠENÍ CÍLŮ PODLE POHYBU
+         * 3. ADAPTIVNÍ NAVÝŠENÍ CÍLŮ PODLE KROKŮ
+         * Přidáváme extra palivo, pokud uživatel nachodil víc, než je jeho běžný standard.
          */
         val extraCarbsFromSteps = (burnedFromSteps * 0.8) / 4.0
         val extraFatFromSteps = (burnedFromSteps * 0.2) / 9.0
 
+        // Výsledný cíl pro dnešek (Základ + Tréninky + Extra kroky)
         val finalTargetCalories = target.calories + burnedFromSteps
         val finalTargetCarbs = target.carbs + extraCarbsFromSteps
         val finalTargetFat = target.fat + extraFatFromSteps
@@ -61,7 +66,10 @@ object MacroFlowEngine {
                 carbs = finalTargetCarbs,
                 fat = finalTargetFat
             ),
-            eatenP = eatenP, eatenS = eatenS, eatenT = eatenT, eatenCal = eatenCalRaw,
+            eatenP = eatenP,
+            eatenS = eatenS,
+            eatenT = eatenT,
+            eatenCal = eatenCalRaw,
             stepsCount = stepsCount,
             stepsCalories = burnedFromSteps
         )
@@ -83,13 +91,26 @@ object MacroFlowEngine {
         val hunger = checkIn.hungerLevel
         val steps = status.stepsCount
 
+        // Zjistíme, jestli má dnes v plánu kardio
+        val trainingType = status.target.trainingType
+
         return when {
-            steps >= 12000 && status.caloriesLeft > 800 ->
-                "Dneska jsi pořádná mašina ($steps kroků)! Tvých $weight kg potřebuje dotankovat sacharidy. Navýšili jsme ti limit, tak se neboj kvalitní přílohy! 🏃‍♂️🍝"
-            hunger >= 5 -> "Pozor na vlčí hlad! Tělo $weight kg dneska potřebuje pořádný objem jídla a bílkovin. 🥩"
-            sleep <= 2 && energy >= 4 -> "Jedeš na dluh! Energie tam je, ale tělo $weight kg je po špatné noci v šoku. ☕🚫"
-            energy >= 4 && sleep >= 4 -> "Ideální konstelace! Tvých $weight kg je připraveno na rekordy. Rozbij to! 🔥"
-            else -> "Váha $weight kg v normě. Sleduj svůj hlad a drž se plánu!"
+            steps >= 15000 && status.caloriesLeft > 600 ->
+                "Dneska jsi neuvěřitelný chodec ($steps kroků)! Tvých $weight kg pálí jako zběsilé. Přidali jsme ti sacharidy, tak je pořádně využij! 🏃‍♂️🍚"
+
+            hunger >= 5 && status.caloriesLeft < 300 ->
+                "Vidím velký hlad a málo zbývajících kalorií. Zkus vsadit na velký objem zeleniny a bílkoviny, ať tělo $weight kg netrpí. 🥦"
+
+            energy <= 2 && (trainingType != "REST") ->
+                "Energie je na dně, ale máš v plánu makat. Pokud se na to cítíš, dej si před tréninkem rychlé cukry, jinak to dneska nehroť. ⚡"
+
+            sleep <= 2 && energy >= 4 ->
+                "Jedeš na kofeinový dluh! Pozor na zranění při tréninku. Tělo $weight kg po špatné noci hůře regeneruje. ☕🚫"
+
+            energy >= 4 && sleep >= 4 ->
+                "Perfektní setup! Tělo $weight kg je připravené na výkon. Ať už je to kardio nebo železo, dneska to bude tvoje! 🔥"
+
+            else -> "Váha $weight kg je v optimálním trendu. Sleduj pocit hladu a užij si dnešní den!"
         }
     }
 
@@ -115,7 +136,8 @@ object MacroFlowEngine {
                 s = s.toFloat(),
                 t = t.toFloat(),
                 calories = cal.toInt(),
-                mealContext = mealContext
+                mealContext = mealContext,
+                timestamp = System.currentTimeMillis()
             )
             db.consumedSnackDao().insertConsumed(snack)
 

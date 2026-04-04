@@ -423,6 +423,8 @@ object FirebaseRepository {
             prefs.getString("time_kardio_$day", null)?.let   { planMap["time_kardio_$day"] = it }
             prefs.getString("kardio_duration_$day", null)?.let { planMap["kardio_duration_$day"] = it }
             prefs.getString("kardio_speed_$day", null)?.let    { planMap["kardio_speed_$day"] = it }
+            prefs.getString("kardio_jumps_$day", null)?.let    { planMap["kardio_jumps_$day"] = it }
+
         }
         uploadTrainingPlan(planMap)
 
