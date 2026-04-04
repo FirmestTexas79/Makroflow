@@ -34,6 +34,11 @@
             android:title="@string/settings_title"
             android:checkable="true" />
 
+        <item
+            android:id="@+id/nav_generate_report"
+            android:icon="@drawable/ic_description"
+            android:title="Generovat Report" />
+
     </group>
 
     <group android:id="@+id/groupLegal">

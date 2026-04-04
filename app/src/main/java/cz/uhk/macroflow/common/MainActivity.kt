@@ -225,14 +225,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         btnOpenDrawer.setOnClickListener { openDrawer() }
 
         navigationView.setNavigationItemSelectedListener { item ->
-            // 1. Zavřeme menu hned po kliknutí
+
             drawerLayout.closeDrawer(GravityCompat.END)
 
             when (item.itemId) {
                 // --- SEKCE: MOJE SBÍRKA ---
                 R.id.nav_pokedex -> replaceFragment(PokedexFragment())
 
+                R.id.nav_generate_report -> {
+                    showReportSetupDialog()
+                }
+
                 R.id.nav_inventory -> replaceFragment(InventoryFragment())
+
 
                 // --- SEKCE: HLAVNÍ (PROFIL & NASTAVENÍ) ---
                 R.id.drawerProfile -> {
@@ -330,6 +335,48 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         runItemSpawner()
         updatePokemonVisibility()
+    }
+
+    private fun showReportSetupDialog() {
+        val input = android.widget.EditText(this).apply {
+            hint = "Název reportu (např. Sam - Duben)"
+            // Trocha paddingu, aby text nebyl nalepený na okrajích dialogu
+            setPadding(60, 40, 60, 40)
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Generovat PDF Report")
+            .setMessage("Vytvoří profesionální PDF dokument s tvým plánem a historií pro trenéra.")
+            .setView(input)
+            .setPositiveButton("Generovat a Sdílet") { _, _ ->
+                val name = input.text.toString().ifEmpty { "Report MakroFlow 2.0" }
+
+                lifecycleScope.launch {
+                    // Zavoláme PDF generátor (všimni si suspend funkce, proto jsme v launch)
+                    val pdfUri = cz.uhk.macroflow.common.ReportGenerator.generatePdfReport(this@MainActivity, name)
+
+                    if (pdfUri != null) {
+                        sharePdfReport(pdfUri)
+                    } else {
+                        android.widget.Toast.makeText(this@MainActivity, "Chyba při vytváření PDF!", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Zrušit", null)
+            .show()
+    }
+
+    private fun sharePdfReport(uri: android.net.Uri) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            // Klíčová změna: Nastavujeme MIME type na PDF
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_SUBJECT, "MakroFlow 2.0 - Tréninkový Report")
+            putExtra(Intent.EXTRA_STREAM, uri)
+            // Musíme povolit ostatním aplikacím (Gmail, WhatsApp) číst náš soubor
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        startActivity(Intent.createChooser(intent, "Odeslat PDF trenérovi přes..."))
     }
 
 
