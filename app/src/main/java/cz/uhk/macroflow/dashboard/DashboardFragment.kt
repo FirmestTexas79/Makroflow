@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.core.content.edit
 import androidx.core.widget.doAfterTextChanged
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.nutrition.ConsumedFoodSheet
 import cz.uhk.macroflow.data.FirebaseRepository
@@ -104,9 +105,7 @@ class DashboardFragment : Fragment() {
                     ?: withContext(Dispatchers.IO) {
                         db.checkInDao().getAllCheckInsSync().firstOrNull()?.weight
                     }
-                    ?: requireContext()
-                        .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-                        .getString("weightAkt", "83.0")?.toDoubleOrNull()
+                    ?: AppPreferences.getWeightAktSync(requireContext()).toDoubleOrNull()
                     ?: 83.0
 
                 view.findViewById<EditText>(R.id.etCheckInWeight)?.setText(weightToShow.toString())
@@ -210,9 +209,9 @@ class DashboardFragment : Fragment() {
         val sleep = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
 
-        requireContext()
-            .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-            .edit { putString("weightAkt", weightVal.toString()) }
+        lifecycleScope.launch(Dispatchers.IO) {
+            AppPreferences.setWeightAkt(requireContext(), weightVal.toString())
+        }
 
         val checkInEntity = CheckInEntity(
             date = today,
@@ -310,8 +309,7 @@ class DashboardFragment : Fragment() {
 
     private fun updateTrainingStatusUI(view: View, context: Context) {
         val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
-        val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
-        val type = prefs.getString("type_$dayName", "rest")?.uppercase() ?: "REST"
+        val type = AppPreferences.getTrainingTypeSync(context, dayName).uppercase()
         view.findViewById<TextView>(R.id.tvTrainingStatus)?.text = "DNES: $type"
         updateWorkoutCard(view)
     }

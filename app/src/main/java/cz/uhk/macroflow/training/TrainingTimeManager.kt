@@ -1,37 +1,46 @@
 package cz.uhk.macroflow.training
 
 import android.content.Context
+import cz.uhk.macroflow.data.AppDatabase
 import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * TrainingTimeManager — ukládá a čte časy tréninků per den.
+ * TrainingTimeManager — čte a ukládá tréninkový plán (typ + čas) přes Room DB.
  *
- * Klíč: "time_Monday" → "07:30"  (nebo null = nenastaveno)
- * Délka tréninku: 75 minut (1h 15min)
+ * Lokální zdroj pravdy: tabulka training_plan_entries (TrainingPlanEntity).
+ * Všechny metody jsou synchronní — AppDatabase má allowMainThreadQueries().
  *
  * Poskytuje:
- *  - getTrainingTime(day) / setTrainingTime(day, "HH:mm")
+ *  - getTrainingType(day) / setTrainingType(day, type)
+ *  - getTrainingTime(day) / setTrainingTime(day, time)
  *  - getTrainingTimeForToday()
- *  - getTrainingContext() → enum pro FoodSwipeDialog fuzzy logiku
+ *  - getMealContext() → enum pro FoodSwipeDialog fuzzy logiku
  */
 object TrainingTimeManager {
 
-    private const val PREFS = "TrainingPrefs"
     private const val DURATION_MIN = 75  // normální trénink = 1h 15min
 
-    // ── Čtení / zápis ────────────────────────────────────────────────
+    // ── Typ tréninku ─────────────────────────────────────────────────
+
+    fun getTrainingType(context: Context, dayEnglish: String): String =
+        AppDatabase.getDatabase(context).trainingPlanDao().getDay(dayEnglish)?.type ?: "rest"
+
+    fun setTrainingType(context: Context, dayEnglish: String, type: String) {
+        val dao = AppDatabase.getDatabase(context).trainingPlanDao()
+        val existing = dao.getDay(dayEnglish)
+        dao.upsert(TrainingPlanEntity(day = dayEnglish, type = type, time = existing?.time))
+    }
+
+    // ── Čas tréninku ─────────────────────────────────────────────────
+
     fun getTrainingTime(context: Context, dayEnglish: String): String? =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString("time_$dayEnglish", null)
+        AppDatabase.getDatabase(context).trainingPlanDao().getDay(dayEnglish)?.time
 
     fun setTrainingTime(context: Context, dayEnglish: String, time: String?) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().apply {
-                if (time != null) putString("time_$dayEnglish", time)
-                else remove("time_$dayEnglish")
-                apply()
-            }
+        val dao = AppDatabase.getDatabase(context).trainingPlanDao()
+        val existing = dao.getDay(dayEnglish)
+        dao.upsert(TrainingPlanEntity(day = dayEnglish, type = existing?.type ?: "rest", time = time))
     }
 
     fun getTrainingTimeForToday(context: Context): String? {
@@ -40,20 +49,19 @@ object TrainingTimeManager {
     }
 
     // ── Výpočet kontextu pro jídlo ────────────────────────────────────
+
     enum class MealContext {
-        NO_TRAINING,       // žádný trénink dnes
-        LONG_BEFORE,       // víc než 3h před
-        PRE_WORKOUT,       // 30min–3h před (PRE jídlo)
-        IMMINENT,          // méně než 30min před — lehké jídlo
-        DURING,            // probíhá trénink
-        POST_WORKOUT_EARLY,// 0–2h po tréninku (POST jídlo — kritické okno)
-        POST_WORKOUT_LATE, // 2–5h po tréninku
-        LONG_AFTER         // víc než 5h po
+        NO_TRAINING,        // žádný trénink dnes
+        LONG_BEFORE,        // víc než 3h před
+        PRE_WORKOUT,        // 30min–3h před (PRE jídlo)
+        IMMINENT,           // méně než 30min před — lehké jídlo
+        DURING,             // probíhá trénink
+        POST_WORKOUT_EARLY, // 0–2h po tréninku (POST jídlo — kritické okno)
+        POST_WORKOUT_LATE,  // 2–5h po tréninku
+        LONG_AFTER          // víc než 5h po
     }
 
-    /**
-     * Vrátí MealContext pro právě teď — pro FoodSwipeDialog
-     */
+    /** Vrátí MealContext pro právě teď — pro FoodSwipeDialog. */
     fun getMealContext(context: Context): MealContext {
         val timeStr = getTrainingTimeForToday(context) ?: return MealContext.NO_TRAINING
 
@@ -62,33 +70,29 @@ object TrainingTimeManager {
         val trainingEnd = training.clone() as Calendar
         trainingEnd.add(Calendar.MINUTE, DURATION_MIN)
 
-        val diffToStart = (training.timeInMillis - now.timeInMillis) / 60_000L  // minuty do startu
-        val diffFromEnd = (now.timeInMillis - trainingEnd.timeInMillis) / 60_000L // minuty od konce
+        val diffToStart = (training.timeInMillis - now.timeInMillis) / 60_000L
+        val diffFromEnd = (now.timeInMillis - trainingEnd.timeInMillis) / 60_000L
 
         return when {
-            diffToStart > 180  -> MealContext.LONG_BEFORE
-            diffToStart in 30..180 -> MealContext.PRE_WORKOUT
-            diffToStart in 0..29   -> MealContext.IMMINENT
+            diffToStart > 180               -> MealContext.LONG_BEFORE
+            diffToStart in 30..180          -> MealContext.PRE_WORKOUT
+            diffToStart in 0..29            -> MealContext.IMMINENT
             diffToStart < 0 && diffFromEnd < 0 -> MealContext.DURING
-            diffFromEnd in 0..120  -> MealContext.POST_WORKOUT_EARLY
-            diffFromEnd in 120..300 -> MealContext.POST_WORKOUT_LATE
-            diffFromEnd > 300      -> MealContext.LONG_AFTER
-            else                   -> MealContext.NO_TRAINING
+            diffFromEnd in 0..120           -> MealContext.POST_WORKOUT_EARLY
+            diffFromEnd in 120..300         -> MealContext.POST_WORKOUT_LATE
+            diffFromEnd > 300               -> MealContext.LONG_AFTER
+            else                            -> MealContext.NO_TRAINING
         }
     }
 
-    /**
-     * Vrátí minuty do startu tréninku (záporné = trénink začal)
-     */
+    /** Vrátí minuty do startu tréninku (záporné = trénink začal). */
     fun minutesToTraining(context: Context): Long? {
         val timeStr = getTrainingTimeForToday(context) ?: return null
         val training = parseTime(timeStr) ?: return null
         return (training.timeInMillis - System.currentTimeMillis()) / 60_000L
     }
 
-    /**
-     * Přeloží "HH:mm" na Calendar pro dnešní den
-     */
+    /** Přeloží "HH:mm" na Calendar pro dnešní den. */
     private fun parseTime(timeStr: String): Calendar? {
         return try {
             val parts = timeStr.split(":")
@@ -102,9 +106,7 @@ object TrainingTimeManager {
         } catch (_: Exception) { null }
     }
 
-    /**
-     * Formátuje minuty do lidsky čitelné podoby
-     */
+    /** Formátuje minuty do lidsky čitelné podoby. */
     fun formatCountdown(minutes: Long): String = when {
         minutes > 60  -> "${minutes / 60}h ${minutes % 60}min"
         minutes > 0   -> "${minutes}min"
@@ -112,25 +114,24 @@ object TrainingTimeManager {
         else          -> "${-minutes}min zpět"
     }
 
-    /**
-     * Popis kontextu pro trenéra na dashboardu
-     */
+    /** Popis kontextu pro trenéra na dashboardu. */
     fun getMealContextLabel(context: Context): String? {
         val timeStr = getTrainingTimeForToday(context) ?: return null
         val minutes = minutesToTraining(context) ?: return null
-        val trainingType = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString("type_${SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())}", "rest")
-            ?.uppercase() ?: "REST"
+        val trainingType = getTrainingType(
+            context,
+            SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
+        ).uppercase()
 
         return when (getMealContext(context)) {
-            MealContext.LONG_BEFORE       -> "$trainingType v $timeStr — máš čas se dobře najíst"
-            MealContext.PRE_WORKOUT       -> "$trainingType za ${formatCountdown(minutes)} — čas na PRE jídlo!"
-            MealContext.IMMINENT          -> "$trainingType za ${formatCountdown(minutes)} — jen lehké jídlo!"
-            MealContext.DURING            -> "$trainingType probíhá — hydratace!"
-            MealContext.POST_WORKOUT_EARLY-> "$trainingType hotov — kritické okno! Dej POST jídlo hned"
-            MealContext.POST_WORKOUT_LATE -> "$trainingType hotov — ${formatCountdown(-minutes)}min zpět"
-            MealContext.LONG_AFTER        -> "$trainingType byl dnes v $timeStr"
-            MealContext.NO_TRAINING       -> null
+            MealContext.LONG_BEFORE        -> "$trainingType v $timeStr — máš čas se dobře najíst"
+            MealContext.PRE_WORKOUT        -> "$trainingType za ${formatCountdown(minutes)} — čas na PRE jídlo!"
+            MealContext.IMMINENT           -> "$trainingType za ${formatCountdown(minutes)} — jen lehké jídlo!"
+            MealContext.DURING             -> "$trainingType probíhá — hydratace!"
+            MealContext.POST_WORKOUT_EARLY -> "$trainingType hotov — kritické okno! Dej POST jídlo hned"
+            MealContext.POST_WORKOUT_LATE  -> "$trainingType hotov — ${formatCountdown(-minutes)}min zpět"
+            MealContext.LONG_AFTER         -> "$trainingType byl dnes v $timeStr"
+            MealContext.NO_TRAINING        -> null
         }
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import cz.uhk.macroflow.training.TrainingPlanEntity
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import cz.uhk.macroflow.achievements.AchievementEntity
@@ -75,17 +76,37 @@ object FirebaseRepository {
 
     // ========== TRÉNINKOVÝ PLÁN ==========
 
-    suspend fun uploadTrainingPlan(plan: Map<String, String>) {
+    /**
+     * Nahraje tréninkový plán do Firestore jako zanořenou mapu:
+     * { Monday: { type: "push", time: "07:30" }, Tuesday: { type: "rest", time: null }, ... }
+     */
+    suspend fun uploadTrainingPlan(entries: List<TrainingPlanEntity>) {
         if (!isLoggedIn) return
-        userDoc().collection("data").document("training_plan").set(plan).await()
+        val data = entries.associate { entry ->
+            entry.day to mapOf("type" to entry.type, "time" to entry.time)
+        }
+        userDoc().collection("data").document("training_plan").set(data, SetOptions.merge()).await()
     }
 
-    suspend fun downloadTrainingPlan(): Map<String, String> {
-        if (!isLoggedIn) return emptyMap()
+    /**
+     * Stáhne tréninkový plán z Firestore.
+     * Zpětně kompatibilní: pokud je hodnota String (starý formát), time = null.
+     */
+    suspend fun downloadTrainingPlan(): List<TrainingPlanEntity> {
+        if (!isLoggedIn) return emptyList()
         val snap = userDoc().collection("data").document("training_plan").get().await()
-        if (!snap.exists()) return emptyMap()
-        @Suppress("UNCHECKED_CAST")
-        return snap.data as? Map<String, String> ?: emptyMap()
+        if (!snap.exists()) return emptyList()
+        return snap.data?.mapNotNull { (day, value) ->
+            when (value) {
+                is String -> TrainingPlanEntity(day = day, type = value, time = null)
+                is Map<*, *> -> TrainingPlanEntity(
+                    day  = day,
+                    type = value["type"] as? String ?: "rest",
+                    time = value["time"] as? String
+                )
+                else -> null
+            }
+        } ?: emptyList()
     }
 
     // ========== CHECK-INY ==========
@@ -413,18 +434,7 @@ object FirebaseRepository {
 
         localDb.userProfileDao().getProfileSync()?.let { uploadProfile(it) }
 
-        val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
-        val days  = listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
-        val planMap = mutableMapOf<String, String>()
-        days.forEach { day ->
-            planMap["type_$day"]         = prefs.getString("type_$day", "rest") ?: "rest"
-            prefs.getString("time_$day", null)?.let          { planMap["time_$day"] = it }
-            planMap["kardio_type_$day"]  = prefs.getString("kardio_type_$day", "rest") ?: "rest"
-            prefs.getString("time_kardio_$day", null)?.let   { planMap["time_kardio_$day"] = it }
-            prefs.getString("kardio_duration_$day", null)?.let { planMap["kardio_duration_$day"] = it }
-            prefs.getString("kardio_speed_$day", null)?.let    { planMap["kardio_speed_$day"] = it }
-        }
-        uploadTrainingPlan(planMap)
+        uploadTrainingPlan(localDb.trainingPlanDao().getAll())
 
         localDb.checkInDao().getAllCheckInsSync().forEach      { uploadCheckIn(it) }
         localDb.bodyMetricsDao().getAllSync().forEach          { uploadBodyMetrics(it) }
@@ -473,18 +483,8 @@ object FirebaseRepository {
 
             profile?.let { localDb.userProfileDao().saveProfile(it) }
             if (plan.isNotEmpty()) {
-                context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE).edit().apply {
-                    plan.forEach { (key, value) ->
-                        // Nový formát: type_*, time_*, kardio_*
-                        // Starý formát (zpětná kompatibilita): plain day name
-                        if (key.startsWith("type_") || key.startsWith("time_") || key.startsWith("kardio_")) {
-                            putString(key, value)
-                        } else {
-                            putString("type_$key", value)
-                        }
-                    }
-                    apply()
-                }
+                localDb.trainingPlanDao().deleteAll()
+                localDb.trainingPlanDao().upsertAll(plan)
             }
 
             localDb.checkInDao().deleteAllCheckInsLocally()

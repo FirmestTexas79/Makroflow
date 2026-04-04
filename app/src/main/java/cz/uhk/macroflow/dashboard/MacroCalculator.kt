@@ -2,6 +2,7 @@ package cz.uhk.macroflow.dashboard
 
 import android.content.Context
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.training.TrainingTimeManager
 import cz.uhk.macroflow.data.UserProfileEntity
 import kotlinx.coroutines.runBlocking
 import java.text.Normalizer
@@ -23,10 +24,9 @@ object MacroCalculator {
     }
 
     fun calculateForDate(context: Context, date: Date): MacroResult {
-        val trainingPrefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
         val sdf = SimpleDateFormat("EEEE", Locale.ENGLISH)
         val dayName = sdf.format(date)
-        val trainingType = trainingPrefs.getString("type_$dayName", "rest")?.lowercase() ?: "rest"
+        val trainingType = TrainingTimeManager.getTrainingType(context, dayName).lowercase()
 
         val profile: UserProfileEntity? = runBlocking {
             AppDatabase.getDatabase(context).userProfileDao().getProfileSync()

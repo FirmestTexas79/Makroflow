@@ -36,6 +36,7 @@ import coil.load
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.profile.ProfileFragment
@@ -295,14 +296,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                                 FirebaseRepository.signOut()
                             }
 
-                            // 🛑 Zastavení běžících procesů
-                            withContext(Dispatchers.Main) {
-                                pokemonBehavior?.stop()
-                                try {
-                                    stopLureSmoke()
-                                } catch (e: Exception) {
-                                }
-                            }
+                        // Vymazání všech preferencí (DataStore)
+                        AppPreferences.clearAll(this@MainActivity)
 
                             // 🧹 Totální očista lokálních dat (Tady už je to bezpečné, uživatel se odhlásil)
                             db.stepsDao().deleteAll()
@@ -392,15 +387,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun awardDailyXp() {
-        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
-        if (activeCapturedId == -1) return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val barState = AppPreferences.getActiveBarStateSync(this@MainActivity)
+            val activeCapturedId = barState.capturedId
+            if (activeCapturedId == -1) return@launch
 
-        val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
-        val lastDay = prefs.getInt("lastXpDay_$activeCapturedId", -1)
+            val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+            val lastDay = AppPreferences.getLastXpDaySync(this@MainActivity, activeCapturedId)
 
-        if (today != lastDay) {
-            lifecycleScope.launch(Dispatchers.IO) {
+            if (today != lastDay) {
                 val db = AppDatabase.getDatabase(this@MainActivity)
                 val pokemon = db.capturedPokemonDao().getPokemonById(activeCapturedId)
 
@@ -412,7 +407,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     pokemon.level = newLevel
 
                     db.capturedPokemonDao().updatePokemon(pokemon)
-                    prefs.edit().putInt("lastXpDay_$activeCapturedId", today).apply()
+                    AppPreferences.setLastXpDay(this@MainActivity, activeCapturedId, today)
 
                     if (FirebaseRepository.isLoggedIn) {
                         FirebaseRepository.uploadCapturedPokemon(pokemon)
@@ -442,11 +437,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     fun addXpToActivePokemonRealTime(xpAmount: Int) {
-        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
-        if (activeCapturedId == -1) return
-
         lifecycleScope.launch(Dispatchers.IO) {
+            val activeCapturedId = AppPreferences.getActiveBarStateSync(this@MainActivity).capturedId
+            if (activeCapturedId == -1) return@launch
             val db = AppDatabase.getDatabase(this@MainActivity)
             val pokemon = db.capturedPokemonDao().getPokemonById(activeCapturedId)
 
@@ -531,11 +524,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     fun updatePokemonVisibility() {
         val ivPokemon = findViewById<ImageView>(R.id.ivDiglettBottomBar) ?: return
-        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+        val barState = AppPreferences.getActiveBarStateSync(this)
 
-        // Načítáme tvůj unikátní timestamp chycení
-        val acquired = prefs.getBoolean("pokemonAcquired", false)
-        val activeCaughtDate = prefs.getLong("currentOnBarCaughtDate", -1L)
+        val acquired = barState.acquired
+        val activeCaughtDate = barState.caughtDate
 
         Log.d("POKEMON_DEBUG", "--- UPDATE CHECK ---")
         Log.d("POKEMON_DEBUG", "Acquired: $acquired, Timestamp: $activeCaughtDate")
@@ -561,6 +553,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     val pName = caught.name
                     val uniqueKey = caught.caughtDate.toString() // Použijeme datum jako unikátní ID instance
 
+                    currentOnBarId = pId
+
                     if (uniqueKey != lastLoadedId) {
                         Log.i("POKEMON_DEBUG", "Načítám instanci: $pName (Timestamp: $uniqueKey)")
                         lastLoadedId = uniqueKey
@@ -580,6 +574,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                                 pokemonBehavior = WandererFactory.create(this@MainActivity, ivPokemon, pId)
                                 ivPokemon.visibility = View.VISIBLE
                                 pokemonBehavior?.start()
+                                ivPokemon.setOnClickListener { pokemonBehavior?.onSpriteClicked() }
+                            }, onError = { _, _ ->
+                                Log.e("POKEMON_IMAGE", "Nepodařilo se načíst obrázek z: $imageUrl")
+                                ivPokemon.load("https://img.pokemondb.net/sprites/firered-leafgreen/normal/caterpie.png")
+                                ivPokemon.visibility = View.VISIBLE
                             })
                         }
                     } else {
@@ -606,8 +605,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     fun runItemSpawner() {
-        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-        val ghostActive = prefs.getBoolean("ghostPlateActive", false)
+        val ghostActive = AppPreferences.isGhostPlateActiveSync(this)
 
         if (ghostActive) {
             if (!isLureActive) {
@@ -623,8 +621,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         override fun run() {
             if (!isLureActive) return
 
-            val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-            val ghostActive = prefs.getBoolean("ghostPlateActive", false)
+            val ghostActive = AppPreferences.isGhostPlateActiveSync(this@MainActivity)
 
             if (ghostActive) {
                 spawnItemParticle()
@@ -696,8 +693,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     fun replaceFragment(fragment: Fragment) {
-        val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
-        val ghostActive = prefs.getBoolean("ghostPlateActive", false)
+        val ghostActive = AppPreferences.isGhostPlateActiveSync(this)
 
         if (fragment !is DashboardFragment && ghostActive) {
             stopLureSmoke()

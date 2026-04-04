@@ -8,6 +8,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import cz.uhk.macroflow.achievements.AchievementDao
 import cz.uhk.macroflow.achievements.AchievementEntity
 import cz.uhk.macroflow.pokemon.*
+import cz.uhk.macroflow.training.TrainingPlanDao
+import cz.uhk.macroflow.training.TrainingPlanEntity
 import kotlin.concurrent.thread
 
 @Database(
@@ -27,9 +29,10 @@ import kotlin.concurrent.thread
         SeenPokemonEntity::class,
         PokemonXpEntity::class,
         StepsEntity::class,
-        AnalyticsCacheEntity::class
+        AnalyticsCacheEntity::class,
+        TrainingPlanEntity::class
     ],
-    version = 29,
+    version = 30,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -49,8 +52,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun seenPokemonDao(): SeenPokemonDao
     abstract fun pokemonXpDao(): PokemonXpDao
     abstract fun stepsDao(): StepsDao
-
     abstract fun analyticsDao(): AnalyticsDao
+    abstract fun trainingPlanDao(): TrainingPlanDao
 
     companion object {
         @Volatile
