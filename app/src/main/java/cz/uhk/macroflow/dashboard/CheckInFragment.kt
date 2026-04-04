@@ -1,6 +1,5 @@
 package cz.uhk.macroflow.dashboard
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -12,11 +11,10 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
-import com.google.firebase.auth.FirebaseAuth
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.R
-import cz.uhk.macroflow.analytics.BioLogicEngine
 import cz.uhk.macroflow.data.CheckInEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,18 +32,16 @@ class CheckInFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val etWeight  = view.findViewById<EditText>(R.id.etCheckInWeight)
-        val userPrefs = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        val etWeight = view.findViewById<EditText>(R.id.etCheckInWeight)
 
-        // Načti dnešní váhu z DB, fallback na SharedPrefs
+        // Načti dnešní váhu z DB, fallback na DataStore
         lifecycleScope.launch(Dispatchers.IO) {
             val today        = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             val db           = AppDatabase.getDatabase(requireContext())
             val todayCheckIn = db.checkInDao().getCheckInByDateSync(today)
+            val fallbackWeight = AppPreferences.getWeightAktSync(requireContext())
             withContext(Dispatchers.Main) {
-                etWeight.setText(
-                    todayCheckIn?.weight?.toString() ?: userPrefs.getString("weightAkt", "83.0")
-                )
+                etWeight.setText(todayCheckIn?.weight?.toString() ?: fallbackWeight)
             }
         }
 
@@ -54,7 +50,9 @@ class CheckInFragment : Fragment() {
             val energy = view.findViewById<Slider>(R.id.sliderEnergy).value.toInt()
             val sleep  = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
             val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
-            userPrefs.edit().putString("weightAkt", weight.toString()).apply()
+            lifecycleScope.launch(Dispatchers.IO) {
+                AppPreferences.setWeightAkt(requireContext(), weight.toString())
+            }
             saveToDatabase(weight, energy, sleep, hunger)
         }
     }

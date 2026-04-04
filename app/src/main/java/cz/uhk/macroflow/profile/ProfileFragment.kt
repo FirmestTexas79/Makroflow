@@ -1,6 +1,5 @@
 package cz.uhk.macroflow.profile
 
-import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -22,6 +21,8 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.slider.Slider
+import cz.uhk.macroflow.common.AppPreferences
+import cz.uhk.macroflow.common.UserPrefsSnapshot
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.common.LoginActivity
@@ -192,13 +193,13 @@ class ProfileFragment : Fragment() {
                 selectedGoal = profile.goal
                 updateGoalVisuals()
             } else {
-                // Fallback SharedPrefs
-                val prefs = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-                etWeight.setText((currentWeight ?: prefs.getString("weightAkt", "83")?.toDoubleOrNull() ?: 83.0).toString())
-                etHeight.setText(prefs.getString("height", "175"))
-                etAge.setText(prefs.getString("age", "22"))
-                toggleGender.check(if (prefs.getString("gender", "male") == "male") R.id.btnMale else R.id.btnFemale)
-                selectedMultiplier = prefs.getFloat("multiplier", 1.2f)
+                // Fallback DataStore
+                val snapshot = AppPreferences.getUserPrefsSnapshot(requireContext())
+                etWeight.setText((currentWeight ?: snapshot.weightAkt.toDoubleOrNull() ?: 83.0).toString())
+                etHeight.setText(snapshot.height)
+                etAge.setText(snapshot.age)
+                toggleGender.check(if (snapshot.gender == "male") R.id.btnMale else R.id.btnFemale)
+                selectedMultiplier = snapshot.multiplier
                 selectedGoal = "MAINTAIN"
                 updateGoalVisuals()
             }
@@ -244,8 +245,7 @@ class ProfileFragment : Fragment() {
             // 3. Uložíme aktualizovaný profil zpět do DB
             db.userProfileDao().saveProfile(profileToSave)
 
-            requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-                .edit().putString("weightAkt", weight.toString()).apply()
+            AppPreferences.setWeightAkt(requireContext(), weight.toString())
 
             // 4. Synchronizace na Firebase (posíláme kompletní objekt s architektem)
             if (FirebaseRepository.isLoggedIn) {

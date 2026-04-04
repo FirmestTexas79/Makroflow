@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.training.TrainingTimeManager
@@ -280,8 +281,7 @@ class NotificationReceiver : BroadcastReceiver() {
     private fun handlePreWorkout(context: Context) {
         val timeStr = TrainingTimeManager.getTrainingTimeForToday(context) ?: return
         val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
-        val type = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
-            .getString("type_$dayName", "rest")?.uppercase() ?: return
+        val type = AppPreferences.getTrainingTypeSync(context, dayName).uppercase()
         if (type == "REST") return
 
         showNotification(context,
@@ -296,8 +296,7 @@ class NotificationReceiver : BroadcastReceiver() {
     // 3. POST trénink
     private fun handlePostWorkout(context: Context) {
         val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
-        val type = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
-            .getString("type_$dayName", "rest")?.uppercase() ?: return
+        val type = AppPreferences.getTrainingTypeSync(context, dayName).uppercase()
         if (type == "REST") return
 
         showNotification(context,

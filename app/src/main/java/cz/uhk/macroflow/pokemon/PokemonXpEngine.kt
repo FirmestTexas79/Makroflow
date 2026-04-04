@@ -1,6 +1,7 @@
 package cz.uhk.macroflow.pokemon
 
 import android.content.Context
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.data.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -44,23 +45,20 @@ object PokemonXpEngine {
      */
     suspend fun tryAwardGoalXp(context: Context, goal: XpGoal): Int = withContext(Dispatchers.IO) {
         val today = sdf.format(Date())
-        val prefs = context.getSharedPreferences("PokemonXpPrefs", Context.MODE_PRIVATE)
-        val gamePrefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val barState = AppPreferences.getActiveBarStateSync(context)
 
         // Pokud není aktivní pokémon, nevyplácíme nic
-        val activeCapturedId = gamePrefs.getInt("currentOnBarCapturedId", -1)
-        if (!gamePrefs.getBoolean("pokemonAcquired", false) || activeCapturedId == -1) {
-            return@withContext 0
-        }
+        if (!barState.acquired || barState.capturedId == -1) return@withContext 0
+
+        val activeCapturedId = barState.capturedId
 
         // Klíč je unikátní per-pokémon per-den, aby se různí pokémoni nepřebíjeli
-        val dayKey = "${goal.key}_${activeCapturedId}_$today"
-        if (prefs.getString(dayKey, "") == today) {
+        if (AppPreferences.isXpAwardedToday(context, goal.key, activeCapturedId, today)) {
             return@withContext 0  // Už bylo uděleno dnes
         }
 
         // Označíme jako uděleno
-        prefs.edit().putString(dayKey, today).apply()
+        AppPreferences.markXpAwarded(context, goal.key, activeCapturedId, today)
         return@withContext goal.xp
     }
 
@@ -73,25 +71,18 @@ object PokemonXpEngine {
     suspend fun checkAndAwardDailyGoals(context: Context): Int = withContext(Dispatchers.IO) {
         val today = sdf.format(Date())
         val db = AppDatabase.getDatabase(context)
-        val gamePrefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val barState = AppPreferences.getActiveBarStateSync(context)
 
-        val activeCapturedId = gamePrefs.getInt("currentOnBarCapturedId", -1)
-        if (!gamePrefs.getBoolean("pokemonAcquired", false) || activeCapturedId == -1) {
-            return@withContext 0
-        }
+        if (!barState.acquired || barState.capturedId == -1) return@withContext 0
 
+        val activeCapturedId = barState.capturedId
         var totalAwarded = 0
-        val xpPrefs = context.getSharedPreferences("PokemonXpPrefs", Context.MODE_PRIVATE)
 
-        fun alreadyAwarded(goal: XpGoal): Boolean {
-            val dayKey = "${goal.key}_${activeCapturedId}_$today"
-            return xpPrefs.getString(dayKey, "") == today
-        }
+        suspend fun alreadyAwarded(goal: XpGoal): Boolean =
+            AppPreferences.isXpAwardedToday(context, goal.key, activeCapturedId, today)
 
-        fun markAwarded(goal: XpGoal) {
-            val dayKey = "${goal.key}_${activeCapturedId}_$today"
-            xpPrefs.edit().putString(dayKey, today).apply()
-        }
+        suspend fun markAwarded(goal: XpGoal) =
+            AppPreferences.markXpAwarded(context, goal.key, activeCapturedId, today)
 
         // 1. Check-in
         if (!alreadyAwarded(XpGoal.CHECK_IN)) {

@@ -1,6 +1,5 @@
 package cz.uhk.macroflow.training
 
-import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -17,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.card.MaterialCardView
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.common.MakroflowNotifications
 import cz.uhk.macroflow.common.MakroflowTimePicker
 import cz.uhk.macroflow.R
@@ -39,10 +39,6 @@ class PlanFragment : Fragment() {
         Triple("Saturday",  R.string.day_saturday,  "SO"),
         Triple("Sunday",    R.string.day_sunday,    "NE")
     )
-
-    private val trainingPrefs by lazy {
-        requireContext().getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -68,7 +64,7 @@ class PlanFragment : Fragment() {
     private fun updateStats(view: View) {
         var push = 0; var pull = 0; var legs = 0; var rest = 0
         daysMap.forEach { (key, _, _) ->
-            when (trainingPrefs.getString("type_$key", "rest")?.lowercase()) {
+            when (AppPreferences.getTrainingTypeSync(requireContext(), key).lowercase()) {
                 "push" -> push++
                 "pull" -> pull++
                 "legs" -> legs++
@@ -84,7 +80,6 @@ class PlanFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ✅ OPRAVA: Odstraněno tvStepsGoalStatus, které v XML už není
         val tvTotalSteps = view.findViewById<TextView>(R.id.tvTotalStepsCount)
         val tvFatLabel = view.findViewById<TextView>(R.id.tvFatBurnedLabel)
         val tvEmoji = view.findViewById<TextView>(R.id.tvStepsEmoji)
@@ -94,32 +89,26 @@ class PlanFragment : Fragment() {
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
         viewLifecycleOwner.lifecycleScope.launch {
-            // Načtení profilu pro váhu a cíl
             val profile = withContext(Dispatchers.IO) {
                 db.userProfileDao().getProfileSync()
             }
             val stepGoal = profile?.stepGoal ?: 6000
             val userWeight = profile?.weight ?: 83.0
 
-            // Sledování dnešních kroků
             db.stepsDao().getStepsForDateFlow(todayStr).collect { stepsEntity ->
                 val stepsToday = stepsEntity?.count ?: 0
                 val isGoalReached = stepsToday >= stepGoal
 
-                // 1. Text kroků (např. 1200 / 6000)
                 tvTotalSteps?.text = "$stepsToday / $stepGoal"
 
-                // 2. Odborný výpočet spáleného tuku
                 val burnedCalories = MacroFlowEngine.calculateCaloriesFromSteps(stepsToday, userWeight)
                 val fatBurnedGrams = burnedCalories / 9.0
 
-                // ✅ PŘEPIS: Nastavení plamínku a tuku
                 if (!isGoalReached) {
                     tvFatLabel?.text = String.format(Locale.getDefault(), "🔥 %.1fg TUKU SPÁLENO", fatBurnedGrams)
                     tvEmoji?.text = "👟"
                     tvFatLabel?.setTextColor(Color.parseColor("#BC6C25"))
                 } else {
-                    // Bonusový text při splnění cíle
                     tvFatLabel?.text = String.format(Locale.getDefault(), "🎉 %.1fg TUKU! CÍL SPLNĚN", fatBurnedGrams)
                     tvEmoji?.text = "🎉"
                     tvFatLabel?.setTextColor(Color.parseColor("#283618"))
@@ -129,7 +118,7 @@ class PlanFragment : Fragment() {
         }
     }
 
-    // --- RECYCLERVIEW ADAPTER (Ponecháno v plné verzi) ---
+    // --- RECYCLERVIEW ADAPTER ---
 
     inner class TrainingPlanAdapter : RecyclerView.Adapter<TrainingPlanAdapter.PlanViewHolder>() {
 
@@ -152,7 +141,7 @@ class PlanFragment : Fragment() {
             holder.tvDay.text     = shortCz
             holder.tvDayFull.text = getString(resId)
 
-            val savedType = trainingPrefs.getString("type_$englishName", "rest") ?: "rest"
+            val savedType = AppPreferences.getTrainingTypeSync(requireContext(), englishName)
             holder.toggleGroup.clearOnButtonCheckedListeners()
             when (savedType) {
                 "push" -> holder.toggleGroup.check(R.id.btnPush)
@@ -173,7 +162,7 @@ class PlanFragment : Fragment() {
                     R.id.btnLegs -> "legs"
                     else         -> "rest"
                 }
-                trainingPrefs.edit().putString("type_$englishName", type).apply()
+                AppPreferences.setTrainingTypeSync(requireContext(), englishName, type)
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 updateCardVisual(holder, type)
                 updateTimePill(holder, englishName, type)
@@ -208,7 +197,7 @@ class PlanFragment : Fragment() {
             ) { hour, minute ->
                 val timeStr = String.format("%02d:%02d", hour, minute)
                 TrainingTimeManager.setTrainingTime(ctx, dayEnglish, timeStr)
-                updateTimePill(holder, dayEnglish, trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest")
+                updateTimePill(holder, dayEnglish, AppPreferences.getTrainingTypeSync(ctx, dayEnglish))
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 MakroflowNotifications.rescheduleWorkout(ctx)
             }

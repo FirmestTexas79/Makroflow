@@ -21,6 +21,7 @@ import android.widget.TextView
 import android.widget.Toast
 import coil.load
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import kotlinx.coroutines.Dispatchers
@@ -173,14 +174,8 @@ class EvolutionDialog(
                                 FirebaseRepository.uploadCapturedPokemon(activePokemon)
                             }
 
-                            // Update SharedPreferences pro widget/lištu
-                            val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                            if (prefs.getString("currentOnBarId", "") == oldId) {
-                                prefs.edit()
-                                    .putString("currentOnBarId", newId)
-                                    .putString("currentOnBarName", activePokemon.name)
-                                    .apply()
-                            }
+                            // Aktualizace DataStore po evoluci — pokud je to aktivní pokémon na liště
+                            AppPreferences.updateBarPokemonAfterEvolution(context, oldId, newId, activePokemon.name)
                         }
 
                         if (newMoveToLearn != null) {

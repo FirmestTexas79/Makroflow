@@ -3,6 +3,7 @@ package cz.uhk.macroflow.data
 import android.content.Context
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
+import cz.uhk.macroflow.common.AppPreferences
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -413,9 +414,7 @@ object FirebaseRepository {
 
         localDb.userProfileDao().getProfileSync()?.let { uploadProfile(it) }
 
-        val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
-        val days  = listOf("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
-        uploadTrainingPlan(days.associateWith { prefs.getString("type_$it", "rest") ?: "rest" })
+        uploadTrainingPlan(AppPreferences.getAllTrainingTypes(context))
 
         localDb.checkInDao().getAllCheckInsSync().forEach      { uploadCheckIn(it) }
         localDb.bodyMetricsDao().getAllSync().forEach          { uploadBodyMetrics(it) }
@@ -464,10 +463,7 @@ object FirebaseRepository {
 
             profile?.let { localDb.userProfileDao().saveProfile(it) }
             if (plan.isNotEmpty()) {
-                context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE).edit().apply {
-                    plan.forEach { (day, type) -> putString("type_$day", type) }
-                    apply()
-                }
+                AppPreferences.setAllTrainingTypes(context, plan)
             }
 
             localDb.checkInDao().deleteAllCheckInsLocally()

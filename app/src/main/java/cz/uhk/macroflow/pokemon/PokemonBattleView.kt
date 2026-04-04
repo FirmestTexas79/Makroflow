@@ -9,6 +9,7 @@ import android.view.MotionEvent
 import android.view.View
 import coil.ImageLoader
 import coil.request.ImageRequest
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import kotlinx.coroutines.Dispatchers
@@ -74,11 +75,11 @@ class PokemonBattleView @JvmOverloads constructor(
     init {
         PokemonSprites.init(context)
 
-        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-
-        // Získáme unikátní ID řádku z DB a záložní ID druhu
-        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
-        val backupPokemonId = prefs.getString("currentOnBarId", "050") ?: "050"
+        // Načteme stav aktivního pokémona z DataStore (voláme z Thread{}, tedy ne z main threadu)
+        val barState = AppPreferences.getActiveBarStateSync(context)
+        val activeCapturedId = barState.capturedId
+        // ZÁLOŽNÍ PLÁN: pokud DB ID chybí, použijeme String pokémon ID z DataStore
+        val backupPokemonId = barState.pokemonId.takeIf { barState.acquired }
 
         Thread {
             val db = AppDatabase.getDatabase(context)
@@ -767,8 +768,7 @@ class PokemonBattleView @JvmOverloads constructor(
                 }
             }
 
-            val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-            val isAcquired = prefs.getBoolean("pokemonAcquired", false)
+            val isAcquired = AppPreferences.getActiveBarStateSync(context).acquired
 
             handler.post {
                 setText("CAUGHT ${gs.enemy.name.take(7)}!", "")
@@ -798,8 +798,7 @@ class PokemonBattleView @JvmOverloads constructor(
      * Zobrazí Toast s výsledkem a nahraje do Firebase pokud je uživatel přihlášen.
      */
     private fun awardXpToActivePokemon(xpAmount: Int) {
-        val prefs = context.getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE)
-        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
+        val activeCapturedId = AppPreferences.getActiveBarStateSync(context).capturedId
         if (activeCapturedId == -1) return
 
         Thread {
