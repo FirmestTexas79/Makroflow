@@ -99,7 +99,6 @@ class InventoryFragment : Fragment() {
             val prog = PokemonLevelCalc.progressToNextLevel(item.xp)
 
             holder.tvName.text = item.name
-
             holder.tvLevel.visibility = View.VISIBLE
             holder.pbXp.visibility = View.VISIBLE
             holder.tvLevel.text = "Lv.${item.level}"
@@ -108,8 +107,10 @@ class InventoryFragment : Fragment() {
             val webName = item.name.lowercase()
                 .replace(" ", "-").replace(".", "")
                 .replace("♀", "-f").replace("♂", "-m")
+
             holder.ivSprite.load("https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png") {
-                placeholder(R.drawable.ic_home); error(R.drawable.ic_home)
+                placeholder(R.drawable.ic_home)
+                error(R.drawable.ic_home)
             }
 
             val lockIcon = if (item.isLocked) android.R.drawable.ic_lock_lock else android.R.drawable.ic_lock_idle_lock
@@ -123,7 +124,6 @@ class InventoryFragment : Fragment() {
                     if (FirebaseRepository.isLoggedIn) {
                         FirebaseRepository.uploadCapturedPokemon(item)
                     }
-
                     withContext(Dispatchers.Main) { loadData() }
                 }
             }
@@ -160,9 +160,7 @@ class InventoryFragment : Fragment() {
                         if (FirebaseRepository.isLoggedIn) {
                             try {
                                 FirebaseRepository.deleteCapturedPokemon(item.caughtDate)
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
+                            } catch (e: Exception) { e.printStackTrace() }
                         }
 
                         if (isActiveOnBar) {
@@ -172,7 +170,7 @@ class InventoryFragment : Fragment() {
                         withContext(Dispatchers.Main) {
                             (requireActivity() as? MainActivity)?.updatePokemonVisibility()
                             loadData()
-                            Toast.makeText(requireContext(), "🗑️ Pokémon smazán lokálně i v cloudu.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "🗑️ Pokémon smazán.", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -240,11 +238,8 @@ class InventoryFragment : Fragment() {
 
                             if (FirebaseRepository.isLoggedIn) {
                                 val updatedItem = db.userItemDao().getItem("lure_lamp")
-                                if (updatedItem != null) {
-                                    FirebaseRepository.uploadUserItem(updatedItem)
-                                }
+                                if (updatedItem != null) FirebaseRepository.uploadUserItem(updatedItem)
                             }
-
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(requireContext(), "👻 Spooky Plate aktivován!", Toast.LENGTH_SHORT).show()
                                 (requireActivity() as? MainActivity)?.runItemSpawner()

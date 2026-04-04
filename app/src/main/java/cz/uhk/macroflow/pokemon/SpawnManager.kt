@@ -76,22 +76,40 @@ object SpawnManager {
     // 📜 Tady budeš mít časem všech 151 Pokémonů. Přidat nového znamená jen přidat JEDEN řádek!
     private val POOL: List<SpawnPool> = listOf(
         // ID, Jméno, Rarita, Seznam podmínek, Tovární funkce
-        SpawnPool("010", "CATERPIE",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createCaterpie() },
 
+        SpawnPool("001", "BULBASAUR",  Rarity.RARE,      listOf(Conditions.ALWAYS)) { BattleFactory.createBulbasaur() },
+        SpawnPool("002", "IVYSAUR",    Rarity.EPIC,      listOf(Conditions.ALWAYS)) { BattleFactory.createIvysaur() },
+        SpawnPool("003", "VENUSAUR",   Rarity.LEGENDARY, listOf(Conditions.ALWAYS)) { BattleFactory.createVenusaur() },
+        SpawnPool("004", "CHARMANDER",Rarity.RARE,   listOf(Conditions.ALWAYS)) { BattleFactory.createCharmander() },
+        SpawnPool("005", "CHARMELEON",Rarity.EPIC,   listOf(Conditions.ALWAYS)) { BattleFactory.createCharmeleon() },
+        SpawnPool("006", "CHARIZARD", Rarity.LEGENDARY, listOf(Conditions.MinCheckInCount(14))) { BattleFactory.createCharizard() },
+        SpawnPool("007", "SQUIRTLE",   Rarity.RARE,      listOf(Conditions.ALWAYS)) { BattleFactory.createSquirtle() },
+        SpawnPool("008", "WARTORTLE",  Rarity.EPIC,      listOf(Conditions.ALWAYS)) { BattleFactory.createWartortle() },
+        SpawnPool("009", "BLASTOISE",  Rarity.LEGENDARY, listOf(Conditions.ALWAYS)) { BattleFactory.createBlastoise() },
+        SpawnPool("010", "CATERPIE",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createCaterpie() },
+        SpawnPool("011", "METAPOD",   Rarity.EPIC, listOf(Conditions.ALWAYS)) { BattleFactory.createCaterpie() },
+        SpawnPool("012", "BUTTERFREE",   Rarity.LEGENDARY, listOf(Conditions.ALWAYS)) { BattleFactory.createCaterpie() },
+        SpawnPool("013", "WEEDLE",     Rarity.COMMON,    listOf(Conditions.ALWAYS)) { BattleFactory.createWeedle() },
+        SpawnPool("014", "KAKUNA",     Rarity.RARE,  listOf(Conditions.ALWAYS)) { BattleFactory.createKakuna() },
+        SpawnPool("016", "PIDGEY",    Rarity.COMMON,    listOf(Conditions.ALWAYS)) { BattleFactory.createPidgey() },
+        SpawnPool("017", "PIDGEOTTO", Rarity.RARE,  listOf(Conditions.ALWAYS)) { BattleFactory.createPidgeotto() },
+        SpawnPool("018", "PIDGEOT",   Rarity.EPIC,      listOf(Conditions.ALWAYS)) { BattleFactory.createPidgeot() },SpawnPool("015", "BEEDRILL",   Rarity.LEGENDARY,      listOf(Conditions.ALWAYS)) { BattleFactory.createBeedrill() },
+        SpawnPool("019", "RATTATA",   Rarity.COMMON,   listOf(Conditions.ALWAYS)) { BattleFactory.createRattata() },
+        SpawnPool("020", "RATICATE",  Rarity.RARE, listOf(Conditions.ALWAYS)) { BattleFactory.createRaticate() },
+        SpawnPool("021", "SPEAROW",   Rarity.COMMON,   listOf(Conditions.ALWAYS)) { BattleFactory.createSpearow() },
+        SpawnPool("022", "FEAROW",    Rarity.RARE,     listOf(Conditions.ALWAYS)) { BattleFactory.createFearow() },
+        SpawnPool("023", "EKANS",     Rarity.COMMON,   listOf(Conditions.ALWAYS)) { BattleFactory.createEkans() },
+        SpawnPool("024", "ARBOK",     Rarity.RARE,     listOf(Conditions.ALWAYS)) { BattleFactory.createArbok() },
 
         SpawnPool("050", "DIGLETT",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createDiglett() },
-        SpawnPool("051", "DUGTRIO",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createDugtrio() },
+        SpawnPool("051", "DUGTRIO",   Rarity.EPIC, listOf(Conditions.ALWAYS)) { BattleFactory.createDugtrio() },
 
-        SpawnPool("025", "PIKACHU",   Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createPikachu() },
+        SpawnPool("025", "PIKACHU",   Rarity.RARE, listOf(Conditions.ALWAYS)) { BattleFactory.createPikachu() },
         SpawnPool("133", "EEVEE",     Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createEevee() },
 
-        SpawnPool("001", "BULBASAUR", Rarity.RARE,   listOf(Conditions.ALWAYS)) { BattleFactory.createBulbasaur() },
-        SpawnPool("004", "CHARMANDER",Rarity.RARE,   listOf(Conditions.ALWAYS)) { BattleFactory.createCharmander() },
         SpawnPool("092", "GASTLY",    Rarity.RARE,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createGastly() },
 
         // 🌊 Squirtle se odemkne jen při splnění vody v Dashboardu!
-        SpawnPool("007", "SQUIRTLE",  Rarity.RARE,   listOf(Conditions.WATER_GOAL_REACHED)) { BattleFactory.createSquirtle() },
-        SpawnPool("005", "CHARMELEON",Rarity.COMMON,   listOf(Conditions.ALWAYS)) { BattleFactory.createCharmeleon() },
 
 
 
@@ -101,16 +119,15 @@ object SpawnManager {
         SpawnPool("094", "GENGAR",    Rarity.EPIC,   listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createGengar() },
 
 
-        SpawnPool("132", "DITTO", Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createDitto() },
+        SpawnPool("132", "DITTO", Rarity.LEGENDARY, listOf(Conditions.ALWAYS)) { BattleFactory.createDitto() },
 
 
         // Přidej do POOL v SpawnManager.kt (třeba pod Kangaskhana)
-        SpawnPool("131", "LAPRAS", Rarity.COMMON, listOf(Conditions.ALWAYS)) { BattleFactory.createLapras() },
+        SpawnPool("131", "LAPRAS", Rarity.EPIC, listOf(Conditions.ALWAYS)) { BattleFactory.createLapras() },
         SpawnPool("115", "KANGASKHAN",Rarity.EPIC,   listOf(Conditions.ALWAYS)) { BattleFactory.createKangaskhan() },
         // 💤 Snorlax se odemkne až po 7 splněných ranních check-inech
         SpawnPool("143", "SNORLAX",   Rarity.EPIC,   listOf(Conditions.MinCheckInCount(7))) { BattleFactory.createSnorlax() },
 
-        SpawnPool("006", "CHARIZARD", Rarity.LEGENDARY, listOf(Conditions.MinCheckInCount(14))) { BattleFactory.createCharizard() },
         SpawnPool("150", "MEWTWO",    Rarity.LEGENDARY, listOf(Conditions.MinCheckInCount(30))) { BattleFactory.createMewtwo() },
 
         SpawnPool("151", "MEW",       Rarity.MYTHIC, listOf(Conditions.MinCheckInCount(50))) { BattleFactory.createWildMew() }
