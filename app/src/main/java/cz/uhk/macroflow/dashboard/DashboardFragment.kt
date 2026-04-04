@@ -186,7 +186,7 @@ class DashboardFragment : Fragment() {
             val db = AppDatabase.getDatabase(context)
 
             val consumedList = withContext(Dispatchers.IO) {
-                db.consumedSnackDao().getConsumedByDate(today).first()
+                db.consumedSnackDao().getConsumedByDateSync(today)
             }
             val checkIn = withContext(Dispatchers.IO) {
                 db.checkInDao().getCheckInByDateSync(today)
@@ -363,6 +363,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateMacrosUI(view: View, status: DailyStatus) {
+        // Hlavní kalorie a makra
         view.findViewById<TextView>(R.id.tvCalories)?.text =
             "${status.eatenCal.toInt()} / ${status.target.calories.toInt()}"
         view.findViewById<TextView>(R.id.tvValueProtein)?.text =
@@ -371,6 +372,29 @@ class DashboardFragment : Fragment() {
             "${status.eatenS.toInt()}g / ${status.target.carbs.toInt()}g"
         view.findViewById<TextView>(R.id.tvValueFat)?.text =
             "${status.eatenT.toInt()}g / ${status.target.fat.toInt()}g"
+
+        // ✅ Makroflow 2.0: Interaktivní Vláknina
+        val tvFiber = view.findViewById<TextView>(R.id.tvValueFiber)
+        val eatenFiber = status.eatenFiber
+        val targetFiber = status.target.fiber // Bere se z tvého nového výpočtu v enginu
+
+        // Formátovaný text: "Snědeno / Cíl g"
+        val newFiberText = String.format("%.1f / %.0f g", eatenFiber, targetFiber)
+
+        if (tvFiber?.text != newFiberText) {
+            tvFiber?.animate()?.alpha(0f)?.setDuration(120)?.withEndAction {
+                tvFiber.text = newFiberText
+
+                // Dynamická změna barvy: Pokud zbývá 0 nebo méně, svítíme barvou brand_primary
+                if (status.fiberLeft <= 0.1) {
+                    tvFiber.setTextColor(view.context.getColor(R.color.brand_primary))
+                } else {
+                    tvFiber.setTextColor(view.context.getColor(R.color.brand_dark))
+                }
+
+                tvFiber.animate().alpha(1f).setDuration(250).start()
+            }?.start()
+        }
 
         animateProgressCircles(view, status)
     }

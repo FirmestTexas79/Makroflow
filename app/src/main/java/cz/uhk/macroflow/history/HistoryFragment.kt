@@ -23,6 +23,7 @@ import cz.uhk.macroflow.analytics.BioLogicEngine
 import cz.uhk.macroflow.dashboard.EliteMetabolicEngine
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.CheckInEntity
+import cz.uhk.macroflow.data.ConsumedSnackDao
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.dashboard.MacroFlowEngine
@@ -49,6 +50,7 @@ class HistoryFragment : Fragment() {
     private lateinit var layoutNoMetrics: View
     private lateinit var tvStepsCount: TextView
     private lateinit var tvStepsBurned: TextView
+    private lateinit var tvFiber: TextView
 
     private val monthSdf = SimpleDateFormat("LLLL yyyy", Locale("cs"))
     private val calendar = Calendar.getInstance()
@@ -68,6 +70,7 @@ class HistoryFragment : Fragment() {
         tvProtein        = view.findViewById(R.id.tvHistoryProtein)
         tvCarbs          = view.findViewById(R.id.tvHistoryCarbs)
         tvFat            = view.findViewById(R.id.tvHistoryFat)
+        tvFiber          = view.findViewById(R.id.tvHistoryFiber)
         tvSymmetryStatus = view.findViewById(R.id.tvSymmetryStatus)
         tvMonthLabel     = view.findViewById(R.id.tvMonthLabel)
         calGrid          = view.findViewById(R.id.calGrid)
@@ -190,44 +193,84 @@ class HistoryFragment : Fragment() {
 
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 
+
     private fun loadData(dateKey: String) {
         val parsed = dateKeySdf.parse(dateKey) ?: Date()
         val isToday = dateKey == dateKeySdf.format(Date())
         tvDate.text = if (isToday) "DNES" else dateKey
 
-        val baseData = MacroCalculator.calculateForDate(requireContext(), parsed)
-
         lifecycleScope.launch {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // 1. Načteme historii pro výpočet trendu v reálném čase
-            val allHistory = withContext(Dispatchers.IO) { db.checkInDao().getAllCheckInsSync() }
+            // 1. NAČTENÍ PROFILU (pro zjištění typu diety)
+            val profile = withContext(Dispatchers.IO) {
+                db.userProfileDao().getProfileSync()
+            }
+            val dietType = profile?.dietType ?: "Vyvážená"
 
-            // 2. Místo abychom brali starou cache z DB, necháme BioLogicEngine
-            // přepočítat trend právě TEĎ. Tím se do 'trendSlope' dostane aktuální stav.
+            // 2. TEORETICKÝ ZÁKLAD (Cíle z kalkulačky)
+            val targetData = MacroCalculator.calculateForDate(requireContext(), parsed)
+
+            // 3. NAČTENÍ REÁLNÉ KONZUMACE
+            val consumedList = withContext(Dispatchers.IO) {
+                db.consumedSnackDao().getConsumedByDateSync(dateKey)
+            }
+
+            // Výpočet sumy snědených hodnot
+            val eatenCal = consumedList.sumOf { it.calories.toDouble() }
+            val eatenP = consumedList.sumOf { it.p.toDouble() }
+            val eatenS = consumedList.sumOf { it.s.toDouble() }
+            val eatenT = consumedList.sumOf { it.t.toDouble() }
+            val eatenFiber = consumedList.sumOf { it.fiber.toDouble() }
+
+            // 4. KROKY A DYNAMICKÝ VÝDEJ
+            val stepsEntity = withContext(Dispatchers.IO) { db.stepsDao().getStepsForDateSync(dateKey) }
+            val stepsCount = stepsEntity?.count ?: 0
+            val burnedKcalFromSteps = MacroFlowEngine.calculateCaloriesFromSteps(stepsCount, targetData.weight)
+
+            // Dynamické navýšení cílů podle kroků
+            val extraCarbs = (burnedKcalFromSteps * 0.8) / 4.0
+            val extraFat = (burnedKcalFromSteps * 0.2) / 9.0
+
+            val finalTargetCal = targetData.calories + burnedKcalFromSteps
+            val finalTargetCarbs = targetData.carbs + extraCarbs
+            val finalTargetFat = targetData.fat + extraFat
+
+            // 5. LOGIKA VLÁKNINY PODLE TYPU DIETY (shodná s dashboardem)
+            val fiberMultiplier = when (dietType) {
+                "Keto" -> 10.0
+                "Low Carb" -> 12.0
+                "Vegan" -> 18.0
+                "High Protein" -> 15.0
+                else -> 14.0 // Vyvážená
+            }
+
+            // Výpočet cílové vlákniny (násobitel na 1000kcal, s limity)
+            val finalTargetFiber = ((finalTargetCal / 1000.0) * fiberMultiplier)
+                .coerceAtLeast(targetData.weight * 0.4)
+                .coerceAtLeast(25.0)
+
+            // 6. UPDATE UI
+            tvStepsCount.text = String.format("%, d", stepsCount).replace(',', ' ')
+            tvStepsBurned.text = if (burnedKcalFromSteps > 0) "+${burnedKcalFromSteps.toInt()} kcal" else "+0 kcal"
+
+            // Formát: "Snědeno / Cíl"
+            tvKcal.text = "${eatenCal.toInt()} / ${finalTargetCal.toInt()} kcal"
+            tvProtein.text = "${eatenP.toInt()} / ${targetData.protein.toInt()} g"
+            tvCarbs.text = "${eatenS.toInt()} / ${finalTargetCarbs.toInt()} g"
+            tvFat.text = "${eatenT.toInt()} / ${finalTargetFat.toInt()} g"
+
+            // Vláknina s dynamickým cílem podle diety
+            tvFiber.text = "${String.format("%.1f", eatenFiber)} / ${finalTargetFiber.toInt()} g"
+
+            tvTraining.text = targetData.trainingType
+
+            // 7. GRAFY A ANALYTIKA
+            val allHistory = withContext(Dispatchers.IO) { db.checkInDao().getAllCheckInsSync() }
             val freshAnalytics = if (allHistory.isNotEmpty()) {
                 cz.uhk.macroflow.analytics.BioLogicEngine.calculateFullAnalytics(allHistory)
             } else null
 
-            // 3. Kroky a zbytek UI
-            val stepsEntity = withContext(Dispatchers.IO) { db.stepsDao().getStepsForDateSync(dateKey) }
-            val stepsCount = stepsEntity?.count ?: 0
-            val burnedKcal = MacroFlowEngine.calculateCaloriesFromSteps(stepsCount, baseData.weight)
-
-            tvStepsCount.text = String.format("%, d", stepsCount).replace(',', ' ')
-            tvStepsBurned.text = if (burnedKcal > 0) "+${burnedKcal.toInt()} kcal" else "+0 kcal"
-
-            if (baseData.calories > 0) {
-                val extraCarbs = (burnedKcal * 0.8) / 4.0
-                val extraFat = (burnedKcal * 0.2) / 9.0
-                tvKcal.text     = "${(baseData.calories + burnedKcal).toInt()} kcal"
-                tvTraining.text = baseData.trainingType
-                tvProtein.text  = "${baseData.protein.toInt()}g"
-                tvCarbs.text    = "${(baseData.carbs + extraCarbs).toInt()}g"
-                tvFat.text      = "${(baseData.fat + extraFat).toInt()}g"
-            }
-
-            // 4. Teď posíláme do grafu čerstvě vypočítaná data, která hned uvidí změnu v nastavení
             updateBioLogicChart(allHistory, freshAnalytics)
             updateSymmetry(dateKey)
         }

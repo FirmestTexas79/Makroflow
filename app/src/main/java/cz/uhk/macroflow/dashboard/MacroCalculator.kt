@@ -139,6 +139,7 @@ object MacroCalculator {
             protein = protein,
             carbs = carbs,
             fat = fat,
+            fiber = 0.0,
             water = (weight * 0.04) + (if (finalCalories > 3000) 1.0 else 0.0),
             trainingType = strengthType.uppercase(),
             weight = weight,

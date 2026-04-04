@@ -145,7 +145,7 @@
                     android:padding="26dp"
                     android:scaleX="-1"
                     android:alpha="0.35"
-                    android:progressDrawable="@drawable/circle_progress_carbs"
+                    android:progressDrawable="@drawable/circle_progress_carbs_light"
                     app:layout_constraintTop_toTopOf="@id/ratioKeeper"
                     app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
                     app:layout_constraintStart_toStartOf="@id/ratioKeeper"
@@ -158,7 +158,7 @@
                     android:layout_height="0dp"
                     android:padding="26dp"
                     android:scaleX="-1"
-                    android:progressDrawable="@drawable/circle_progress_carbs_light"
+                    android:progressDrawable="@drawable/circle_progress_carbs"
                     app:layout_constraintTop_toTopOf="@id/ratioKeeper"
                     app:layout_constraintBottom_toBottomOf="@id/ratioKeeper"
                     app:layout_constraintStart_toStartOf="@id/ratioKeeper"
@@ -319,6 +319,86 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="24dp"
+                app:cardBackgroundColor="@color/brand_cream"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/brand_dark_alpha12"
+                app:strokeWidth="1.5dp">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="12dp">
+
+                    <View
+                        android:id="@+id/viewFiberIconBg"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_status_pill"
+                        android:backgroundTint="@color/brand_primary_alpha10"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🌾"
+                        android:textSize="16sp"
+                        app:layout_constraintBottom_toBottomOf="@id/viewFiberIconBg"
+                        app:layout_constraintEnd_toEndOf="@id/viewFiberIconBg"
+                        app:layout_constraintStart_toStartOf="@id/viewFiberIconBg"
+                        app:layout_constraintTop_toTopOf="@id/viewFiberIconBg" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:orientation="vertical"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@+id/tvValueFiber"
+                        app:layout_constraintStart_toEndOf="@id/viewFiberIconBg"
+                        app:layout_constraintTop_toTopOf="parent">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="VLÁKNINA"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="9sp"
+                            android:fontFamily="sans-serif-black"
+                            android:letterSpacing="0.15" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Metabolický balanc"
+                            android:textColor="@color/brand_dark"
+                            android:textSize="11sp"
+                            android:alpha="0.6" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvValueFiber"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="sans-serif-black"
+                        android:text="0.0 g"
+                        android:textColor="@color/brand_dark"
+                        android:textSize="18sp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardCoachAdvice"

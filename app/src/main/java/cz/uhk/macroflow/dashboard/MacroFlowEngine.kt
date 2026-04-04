@@ -16,7 +16,6 @@ private const val BAZALNI_KROKY = 6000 // Prvních 6000 kroků je v základu (ac
 object MacroFlowEngine {
 
     fun calculateDailyStatus(context: Context, consumedList: List<ConsumedSnackEntity>): DailyStatus {
-        // MacroCalculator.calculate už v sobě má započítaný silový trénink i kardio (čas/tempo/skoky)
         val target = MacroCalculator.calculate(context)
         val db = AppDatabase.getDatabase(context)
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -38,6 +37,7 @@ object MacroFlowEngine {
         val eatenP = consumedList.sumOf { it.p.toDouble() }
         val eatenS = consumedList.sumOf { it.s.toDouble() }
         val eatenT = consumedList.sumOf { it.t.toDouble() }
+        val eatenFiber = consumedList.sumOf { it.fiber.toDouble() }
         val eatenCalRaw = consumedList.sumOf { it.calories.toDouble() }
 
         // Bílkoviny pálí nejvíc (25%), sacharidy (7%), tuky téměř nic (2.5%)
@@ -56,19 +56,31 @@ object MacroFlowEngine {
         val finalTargetCarbs = target.carbs + extraCarbsFromSteps
         val finalTargetFat = target.fat + extraFatFromSteps
 
+        /**
+         * 4. INTERAKTIVNÍ VÝPOČET VLÁKNINY (Makroflow 2.0 Logic)
+         * Výpočet: 14g na každých 1000 kcal cílového příjmu (včetně extra kalorií z kroků).
+         * Zároveň garantujeme minimum 25g (nebo 0.4g na kg váhy), aby engine neházel nesmysly při nízkém příjmu.
+         */
+        val fiberFromCalories = (finalTargetCalories / 1000.0) * 14.0
+        val fiberFromWeight = weight * 0.4
+        val finalTargetFiber = fiberFromCalories.coerceAtLeast(fiberFromWeight).coerceAtLeast(25.0)
+
         return DailyStatus(
             caloriesLeft = finalTargetCalories - netEatenCalories,
             proteinLeft = target.protein - eatenP,
             carbsLeft = finalTargetCarbs - eatenS,
             fatLeft = finalTargetFat - eatenT,
+            fiberLeft = finalTargetFiber - eatenFiber,
             target = target.copy(
                 calories = finalTargetCalories,
                 carbs = finalTargetCarbs,
-                fat = finalTargetFat
+                fat = finalTargetFat,
+                fiber = finalTargetFiber
             ),
             eatenP = eatenP,
             eatenS = eatenS,
             eatenT = eatenT,
+            eatenFiber = eatenFiber, // Tady to předáš
             eatenCal = eatenCalRaw,
             stepsCount = stepsCount,
             stepsCalories = burnedFromSteps
@@ -164,10 +176,12 @@ data class DailyStatus(
     val proteinLeft: Double,
     val carbsLeft: Double,
     val fatLeft: Double,
+    val fiberLeft: Double = 0.0,
     val target: MacroResult,
     val eatenP: Double,
     val eatenS: Double,
     val eatenT: Double,
+    val eatenFiber: Double = 0.0,
     val eatenCal: Double,
     val stepsCount: Int = 0,
     val stepsCalories: Double = 0.0

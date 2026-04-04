@@ -10,6 +10,10 @@ interface ConsumedSnackDao {
     @Query("SELECT * FROM consumed_snacks WHERE date = :date ORDER BY time DESC")
     fun getConsumedByDate(date: String): Flow<List<ConsumedSnackEntity>>
 
+    // PŘIDEJ TOTO: Pro jednorázové načtení v HistoryFragmentu
+    @Query("SELECT * FROM consumed_snacks WHERE date = :date")
+    fun getConsumedByDateSync(date: String): List<ConsumedSnackEntity>
+
     // Pro AchievementEngine a export pro trenéra — vrátí vše synchronně na Dispatchers.IO
     @Query("SELECT * FROM consumed_snacks")
     fun getAllConsumedSync(): List<ConsumedSnackEntity>
