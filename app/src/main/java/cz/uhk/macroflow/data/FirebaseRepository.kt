@@ -3,8 +3,8 @@ package cz.uhk.macroflow.data
 import android.content.Context
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
-import cz.uhk.macroflow.common.AppPreferences
 import com.google.firebase.auth.FirebaseUser
+import cz.uhk.macroflow.training.TrainingPlanEntity
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import cz.uhk.macroflow.achievements.AchievementEntity
@@ -76,17 +76,37 @@ object FirebaseRepository {
 
     // ========== TRÉNINKOVÝ PLÁN ==========
 
-    suspend fun uploadTrainingPlan(plan: Map<String, String>) {
+    /**
+     * Nahraje tréninkový plán do Firestore jako zanořenou mapu:
+     * { Monday: { type: "push", time: "07:30" }, Tuesday: { type: "rest", time: null }, ... }
+     */
+    suspend fun uploadTrainingPlan(entries: List<TrainingPlanEntity>) {
         if (!isLoggedIn) return
-        userDoc().collection("data").document("training_plan").set(plan, SetOptions.merge()).await()
+        val data = entries.associate { entry ->
+            entry.day to mapOf("type" to entry.type, "time" to entry.time)
+        }
+        userDoc().collection("data").document("training_plan").set(data, SetOptions.merge()).await()
     }
 
-    suspend fun downloadTrainingPlan(): Map<String, String> {
-        if (!isLoggedIn) return emptyMap()
+    /**
+     * Stáhne tréninkový plán z Firestore.
+     * Zpětně kompatibilní: pokud je hodnota String (starý formát), time = null.
+     */
+    suspend fun downloadTrainingPlan(): List<TrainingPlanEntity> {
+        if (!isLoggedIn) return emptyList()
         val snap = userDoc().collection("data").document("training_plan").get().await()
-        if (!snap.exists()) return emptyMap()
-        @Suppress("UNCHECKED_CAST")
-        return snap.data as? Map<String, String> ?: emptyMap()
+        if (!snap.exists()) return emptyList()
+        return snap.data?.mapNotNull { (day, value) ->
+            when (value) {
+                is String -> TrainingPlanEntity(day = day, type = value, time = null)
+                is Map<*, *> -> TrainingPlanEntity(
+                    day  = day,
+                    type = value["type"] as? String ?: "rest",
+                    time = value["time"] as? String
+                )
+                else -> null
+            }
+        } ?: emptyList()
     }
 
     // ========== CHECK-INY ==========
@@ -414,7 +434,7 @@ object FirebaseRepository {
 
         localDb.userProfileDao().getProfileSync()?.let { uploadProfile(it) }
 
-        uploadTrainingPlan(AppPreferences.getAllTrainingTypes(context))
+        uploadTrainingPlan(localDb.trainingPlanDao().getAll())
 
         localDb.checkInDao().getAllCheckInsSync().forEach      { uploadCheckIn(it) }
         localDb.bodyMetricsDao().getAllSync().forEach          { uploadBodyMetrics(it) }
@@ -463,7 +483,8 @@ object FirebaseRepository {
 
             profile?.let { localDb.userProfileDao().saveProfile(it) }
             if (plan.isNotEmpty()) {
-                AppPreferences.setAllTrainingTypes(context, plan)
+                localDb.trainingPlanDao().deleteAll()
+                localDb.trainingPlanDao().upsertAll(plan)
             }
 
             localDb.checkInDao().deleteAllCheckInsLocally()

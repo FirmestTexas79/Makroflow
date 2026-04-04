@@ -16,7 +16,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.card.MaterialCardView
-import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.common.MakroflowNotifications
 import cz.uhk.macroflow.common.MakroflowTimePicker
 import cz.uhk.macroflow.R
@@ -39,6 +38,8 @@ class PlanFragment : Fragment() {
         Triple("Saturday",  R.string.day_saturday,  "SO"),
         Triple("Sunday",    R.string.day_sunday,    "NE")
     )
+
+    private val db by lazy { AppDatabase.getDatabase(requireContext()) }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -64,7 +65,7 @@ class PlanFragment : Fragment() {
     private fun updateStats(view: View) {
         var push = 0; var pull = 0; var legs = 0; var rest = 0
         daysMap.forEach { (key, _, _) ->
-            when (AppPreferences.getTrainingTypeSync(requireContext(), key).lowercase()) {
+            when (db.trainingPlanDao().getDay(key)?.type?.lowercase() ?: "rest") {
                 "push" -> push++
                 "pull" -> pull++
                 "legs" -> legs++
@@ -85,7 +86,6 @@ class PlanFragment : Fragment() {
         val tvEmoji = view.findViewById<TextView>(R.id.tvStepsEmoji)
         val llStepsCounter = view.findViewById<LinearLayout>(R.id.llStepsCounter)
 
-        val db = AppDatabase.getDatabase(requireContext())
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -141,7 +141,7 @@ class PlanFragment : Fragment() {
             holder.tvDay.text     = shortCz
             holder.tvDayFull.text = getString(resId)
 
-            val savedType = AppPreferences.getTrainingTypeSync(requireContext(), englishName)
+            val savedType = db.trainingPlanDao().getDay(englishName)?.type ?: "rest"
             holder.toggleGroup.clearOnButtonCheckedListeners()
             when (savedType) {
                 "push" -> holder.toggleGroup.check(R.id.btnPush)
@@ -162,7 +162,9 @@ class PlanFragment : Fragment() {
                     R.id.btnLegs -> "legs"
                     else         -> "rest"
                 }
-                AppPreferences.setTrainingTypeSync(requireContext(), englishName, type)
+                // Při změně typu zachováme stávající čas
+                val existingTime = db.trainingPlanDao().getDay(englishName)?.time
+                db.trainingPlanDao().upsert(TrainingPlanEntity(day = englishName, type = type, time = existingTime))
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 updateCardVisual(holder, type)
                 updateTimePill(holder, englishName, type)
@@ -197,7 +199,8 @@ class PlanFragment : Fragment() {
             ) { hour, minute ->
                 val timeStr = String.format("%02d:%02d", hour, minute)
                 TrainingTimeManager.setTrainingTime(ctx, dayEnglish, timeStr)
-                updateTimePill(holder, dayEnglish, AppPreferences.getTrainingTypeSync(ctx, dayEnglish))
+                val currentType = db.trainingPlanDao().getDay(dayEnglish)?.type ?: "rest"
+                updateTimePill(holder, dayEnglish, currentType)
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 MakroflowNotifications.rescheduleWorkout(ctx)
             }
@@ -228,6 +231,7 @@ class PlanFragment : Fragment() {
                 }
             }
         }
+
         override fun getItemCount() = daysMap.size
     }
 }
