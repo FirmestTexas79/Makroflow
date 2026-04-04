@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
@@ -101,11 +102,12 @@ object AppPreferences {
 
     // ══ GAME ══════════════════════════════════════════════════════════════════════
 
-    private val KEY_GHOST_PLATE  = booleanPreferencesKey("game_ghost_plate_active")
-    private val KEY_ACQUIRED     = booleanPreferencesKey("game_pokemon_acquired")
-    private val KEY_BAR_CAPTURED = intPreferencesKey("game_current_on_bar_captured_id")
-    private val KEY_BAR_ID       = stringPreferencesKey("game_current_on_bar_id")
-    private val KEY_BAR_NAME     = stringPreferencesKey("game_current_on_bar_name")
+    private val KEY_GHOST_PLATE     = booleanPreferencesKey("game_ghost_plate_active")
+    private val KEY_ACQUIRED        = booleanPreferencesKey("game_pokemon_acquired")
+    private val KEY_BAR_CAPTURED    = intPreferencesKey("game_current_on_bar_captured_id")
+    private val KEY_BAR_CAUGHT_DATE = longPreferencesKey("game_current_on_bar_caught_date")
+    private val KEY_BAR_ID          = stringPreferencesKey("game_current_on_bar_id")
+    private val KEY_BAR_NAME        = stringPreferencesKey("game_current_on_bar_name")
 
     private fun lastXpDayKey(capturedId: Int) = intPreferencesKey("game_last_xp_day_$capturedId")
 
@@ -116,11 +118,12 @@ object AppPreferences {
     fun getActiveBarStateSync(context: Context): ActiveBarState = runBlocking {
         val prefs = context.dataStore.data.first()
         ActiveBarState(
-            capturedId  = prefs[KEY_BAR_CAPTURED] ?: -1,
-            pokemonId   = prefs[KEY_BAR_ID]       ?: "050",
-            pokemonName = prefs[KEY_BAR_NAME]      ?: "DIGLETT",
-            acquired    = prefs[KEY_ACQUIRED]      ?: false,
-            ghostActive = prefs[KEY_GHOST_PLATE]   ?: false
+            capturedId  = prefs[KEY_BAR_CAPTURED]    ?: -1,
+            caughtDate  = prefs[KEY_BAR_CAUGHT_DATE] ?: -1L,
+            pokemonId   = prefs[KEY_BAR_ID]          ?: "050",
+            pokemonName = prefs[KEY_BAR_NAME]        ?: "DIGLETT",
+            acquired    = prefs[KEY_ACQUIRED]        ?: false,
+            ghostActive = prefs[KEY_GHOST_PLATE]     ?: false
         )
     }
 
@@ -133,20 +136,22 @@ object AppPreferences {
     suspend fun setPokemonAcquired(context: Context, acquired: Boolean) =
         context.dataStore.edit { it[KEY_ACQUIRED] = acquired }
 
-    /** Připíchne pokémona na lištu. */
-    suspend fun pinPokemonToBar(context: Context, capturedId: Int, pokemonId: String, name: String) =
+    /** Připíchne pokémona na lištu. caughtDate = CapturedPokemonEntity.caughtDate pro identifikaci přes aktivity. */
+    suspend fun pinPokemonToBar(context: Context, capturedId: Int, caughtDate: Long, pokemonId: String, name: String) =
         context.dataStore.edit { prefs ->
-            prefs[KEY_ACQUIRED]     = true
-            prefs[KEY_BAR_CAPTURED] = capturedId
-            prefs[KEY_BAR_ID]       = pokemonId
-            prefs[KEY_BAR_NAME]     = name.uppercase()
+            prefs[KEY_ACQUIRED]        = true
+            prefs[KEY_BAR_CAPTURED]    = capturedId
+            prefs[KEY_BAR_CAUGHT_DATE] = caughtDate
+            prefs[KEY_BAR_ID]          = pokemonId
+            prefs[KEY_BAR_NAME]        = name.uppercase()
         }
 
     /** Odepne pokémona z lišty. */
     suspend fun unpinPokemonFromBar(context: Context) =
         context.dataStore.edit { prefs ->
-            prefs[KEY_ACQUIRED]     = false
-            prefs[KEY_BAR_CAPTURED] = -1
+            prefs[KEY_ACQUIRED]        = false
+            prefs[KEY_BAR_CAPTURED]    = -1
+            prefs[KEY_BAR_CAUGHT_DATE] = -1L
         }
 
     fun getLastXpDaySync(context: Context, capturedId: Int): Int =
@@ -195,6 +200,7 @@ data class UserPrefsSnapshot(
 /** Stav aktivního pokémona na dolní liště. */
 data class ActiveBarState(
     val capturedId: Int,
+    val caughtDate: Long,
     val pokemonId: String,
     val pokemonName: String,
     val acquired: Boolean,

@@ -130,7 +130,7 @@ class InventoryFragment : Fragment() {
 
             holder.btnPin.setOnClickListener {
                 lifecycleScope.launch {
-                    AppPreferences.pinPokemonToBar(requireContext(), item.id, item.pokemonId, item.name)
+                    AppPreferences.pinPokemonToBar(requireContext(), item.id, item.caughtDate, item.pokemonId, item.name)
                     withContext(Dispatchers.Main) {
                         (requireActivity() as? MainActivity)?.updatePokemonVisibility()
                         loadData()

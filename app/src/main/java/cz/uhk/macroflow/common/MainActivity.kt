@@ -527,8 +527,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val barState = AppPreferences.getActiveBarStateSync(this)
 
         val acquired = barState.acquired
-        val pId = barState.pokemonId
-        val pName = barState.pokemonName
+        val activeCaughtDate = barState.caughtDate
 
         Log.d("POKEMON_DEBUG", "--- UPDATE CHECK ---")
         Log.d("POKEMON_DEBUG", "Acquired: $acquired, Timestamp: $activeCaughtDate")
@@ -554,6 +553,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     val pName = caught.name
                     val uniqueKey = caught.caughtDate.toString() // Použijeme datum jako unikátní ID instance
 
+                    currentOnBarId = pId
+
                     if (uniqueKey != lastLoadedId) {
                         Log.i("POKEMON_DEBUG", "Načítám instanci: $pName (Timestamp: $uniqueKey)")
                         lastLoadedId = uniqueKey
@@ -573,6 +574,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                                 pokemonBehavior = WandererFactory.create(this@MainActivity, ivPokemon, pId)
                                 ivPokemon.visibility = View.VISIBLE
                                 pokemonBehavior?.start()
+                                ivPokemon.setOnClickListener { pokemonBehavior?.onSpriteClicked() }
+                            }, onError = { _, _ ->
+                                Log.e("POKEMON_IMAGE", "Nepodařilo se načíst obrázek z: $imageUrl")
+                                ivPokemon.load("https://img.pokemondb.net/sprites/firered-leafgreen/normal/caterpie.png")
+                                ivPokemon.visibility = View.VISIBLE
                             })
                         }
                     } else {
