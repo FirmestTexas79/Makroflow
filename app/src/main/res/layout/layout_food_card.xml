@@ -4,68 +4,84 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:clipChildren="false"
-    android:clipToPadding="false"
-    android:gravity="center">
+    android:clipToPadding="false">
 
     <TextView
         android:id="@+id/tvFoodContextBanner"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="24dp"
-        android:paddingHorizontal="18dp"
-        android:paddingVertical="7dp"
-        android:text=""
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:gravity="center"
+        android:layout_marginTop="32dp"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="10dp"
+        android:elevation="14dp"
         android:background="@drawable/bg_status_pill"
         android:backgroundTint="@color/brand_dark"
         android:textColor="@color/brand_cream"
-        android:visibility="gone"
-        android:elevation="4dp" />
+        android:textSize="13sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.02"
+        android:translationY="20dp"
+        android:visibility="gone" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/foodCard"
-        android:layout_width="300dp"
-        android:layout_height="450dp"
+        android:layout_width="320dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="center"
-        app:cardCornerRadius="40dp"
-        app:cardElevation="16dp"
+        app:cardCornerRadius="48dp"
+        app:cardElevation="20dp"
         app:cardBackgroundColor="@color/brand_cream"
+        app:strokeWidth="3dp"
+        app:strokeColor="@color/brand_dark_alpha40"
         android:clipChildren="false"
         android:clipToPadding="false"
-        app:cardPreventCornerOverlap="false"
-        app:cardUseCompatPadding="true">
+        app:cardUseCompatPadding="true"
+        app:cardPreventCornerOverlap="false">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="24dp"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="24dp"
             android:clipChildren="false"
             android:clipToPadding="false">
 
-            <ImageView
-                android:id="@+id/ivFoodImage"
+            <View
+                android:id="@+id/viewImageBg"
                 android:layout_width="140dp"
                 android:layout_height="140dp"
-                android:src="@drawable/bg_monstera_leaf_1"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#08283618"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <ImageView
+                android:id="@+id/ivFoodImage"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_macro_carbs"
+                app:layout_constraintTop_toTopOf="@id/viewImageBg"
+                app:layout_constraintBottom_toBottomOf="@id/viewImageBg"
+                app:layout_constraintStart_toStartOf="@id/viewImageBg"
+                app:layout_constraintEnd_toEndOf="@id/viewImageBg"
                 app:tint="@color/brand_primary" />
 
             <TextView
                 android:id="@+id/tvFoodName"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/food_card_default_name"
-                android:textSize="26sp"
-                android:textStyle="bold"
-                android:textColor="@color/brand_dark"
+                android:layout_marginTop="24dp"
+                android:fontFamily="sans-serif-black"
                 android:gravity="center"
-                app:layout_constraintTop_toBottomOf="@id/ivFoodImage"
+                android:text="Proteinová Kaše"
+                android:textColor="@color/brand_dark"
+                android:textSize="26sp"
+                android:lineSpacingExtra="-2sp"
+                android:letterSpacing="-0.02"
+                app:layout_constraintTop_toBottomOf="@id/viewImageBg"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
@@ -73,41 +89,67 @@
                 android:id="@+id/tvFoodTimingTag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="3dp"
+                android:layout_marginTop="10dp"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
                 android:textSize="10sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08"
+                android:fontFamily="sans-serif-medium"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
                 android:background="@drawable/bg_status_pill"
-                android:backgroundTint="@color/brand_primary_alpha08"
+                android:backgroundTint="#15606C38"
                 android:textColor="@color/brand_primary"
-                android:visibility="gone"
                 app:layout_constraintTop_toBottomOf="@id/tvFoodName"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
-            <TextView
+            <LinearLayout
+                android:id="@+id/llCalContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@id/tvFoodTimingTag"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <TextView
+                    android:id="@+id/tvFoodCalories"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-black"
+                    android:includeFontPadding="false"
+                    android:text="452 kcal | 1890 kJ"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="24sp" /> <TextView
                 android:id="@+id/tvCalLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/food_card_energy_label"
-                android:textSize="12sp"
-                android:letterSpacing="0.1"
-                android:textColor="@color/brand_accent_deep"
-                app:layout_constraintBottom_toTopOf="@id/tvFoodCalories"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                android:text="ENERGETICKÁ HODNOTA"
+                android:alpha="0.5"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.15"
+                android:textColor="@color/brand_dark" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/tvFoodCalories"
+                android:id="@+id/tvFoodFiber"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0 kcal"
-                android:textSize="48sp"
-                android:fontFamily="sans-serif-black"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp"
+                android:text="Vláknina: 5.2g"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
                 android:textColor="@color/brand_dark"
-                app:layout_constraintTop_toBottomOf="@id/tvFoodTimingTag"
+                android:alpha="0.7"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="#10283618"
+                app:layout_constraintTop_toBottomOf="@id/llCalContainer"
                 app:layout_constraintBottom_toTopOf="@id/macroContainer"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
@@ -118,66 +160,89 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:weightSum="3"
-                app:layout_constraintBottom_toBottomOf="parent"
-                android:layout_marginBottom="8dp">
+                app:layout_constraintBottom_toBottomOf="parent">
 
                 <LinearLayout
-                    android:id="@+id/containerProtein"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:src="@drawable/ic_macro_protein" />
+                    android:gravity="center"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#08283618"
+                    android:paddingVertical="14dp"
+                    android:layout_marginEnd="6dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="P"
+                        android:textSize="10sp"
+                        android:alpha="0.5"
+                        android:textStyle="bold"
+                        android:textColor="@color/brand_primary" />
                     <TextView
                         android:id="@+id/tvFoodProtein"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0g"
-                        android:textStyle="bold"
+                        android:text="24g"
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-black"
                         android:textColor="@color/brand_primary" />
                 </LinearLayout>
 
                 <LinearLayout
-                    android:id="@+id/containerCarbs"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:src="@drawable/ic_macro_carbs" />
+                    android:gravity="center"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#08DDA15E"
+                    android:paddingVertical="14dp"
+                    android:layout_marginHorizontal="3dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="S"
+                        android:textSize="10sp"
+                        android:alpha="0.5"
+                        android:textStyle="bold"
+                        android:textColor="@color/brand_accent_warm" />
                     <TextView
                         android:id="@+id/tvFoodCarbs"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0g"
-                        android:textStyle="bold"
+                        android:text="52g"
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-black"
                         android:textColor="@color/brand_accent_warm" />
                 </LinearLayout>
 
                 <LinearLayout
-                    android:id="@+id/containerFat"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:src="@drawable/ic_macro_fat"/>
+                    android:gravity="center"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#08BC6C25"
+                    android:paddingVertical="14dp"
+                    android:layout_marginStart="6dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="T"
+                        android:textSize="10sp"
+                        android:alpha="0.5"
+                        android:textStyle="bold"
+                        android:textColor="@color/brand_accent_deep" />
                     <TextView
                         android:id="@+id/tvFoodFat"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0g"
-                        android:textStyle="bold"
+                        android:text="12g"
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-black"
                         android:textColor="@color/brand_accent_deep" />
                 </LinearLayout>
 

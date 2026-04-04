@@ -30,7 +30,6 @@
         app:endIconMode="custom"
         app:endIconDrawable="@drawable/ic_barcode_scan"
         app:endIconTint="@color/brand_accent_deep"
-        app:endIconScaleType="centerInside"
         app:boxCornerRadiusBottomEnd="16dp"
         app:boxCornerRadiusBottomStart="16dp"
         app:boxCornerRadiusTopEnd="16dp"
@@ -41,8 +40,7 @@
             android:layout_height="wrap_content"
             android:textColor="@color/brand_dark"
             android:fontFamily="sans-serif-medium"
-            android:inputType="textCapSentences"
-            android:paddingEnd="48dp" />
+            android:inputType="textCapSentences" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -61,7 +59,6 @@
         app:boxCornerRadiusBottomStart="16dp"
         app:boxCornerRadiusTopEnd="16dp"
         app:boxCornerRadiusTopStart="16dp">
-
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etSnackWeight"
             android:layout_width="match_parent"
@@ -81,23 +78,21 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:hint="@string/snack_label_p"
-            android:textColorHint="@color/brand_dark_alpha40"
+            android:layout_marginEnd="4dp"
+            android:hint="B"
             app:startIconDrawable="@drawable/ic_dot_protein"
-            app:startIconTint="@color/brand_primary"
+            app:startIconTint="#606C38"
             app:boxStrokeColor="@color/brand_primary"
             app:hintTextColor="@color/brand_primary"
-            app:boxCornerRadiusBottomEnd="14dp"
+            app:boxCornerRadiusTopStart="14dp"
             app:boxCornerRadiusBottomStart="14dp"
             app:boxCornerRadiusTopEnd="14dp"
-            app:boxCornerRadiusTopStart="14dp">
+            app:boxCornerRadiusBottomEnd="14dp">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etSnackP"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/brand_dark"
-                android:fontFamily="monospace"
                 android:gravity="center_horizontal"
                 android:inputType="numberDecimal" />
         </com.google.android.material.textfield.TextInputLayout>
@@ -107,24 +102,85 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginHorizontal="6dp"
-            android:hint="@string/snack_label_s"
-            android:textColorHint="@color/brand_dark_alpha40"
+            android:layout_marginHorizontal="4dp"
+            android:hint="S"
             app:startIconDrawable="@drawable/ic_dot_carbs"
-            app:startIconTint="@color/brand_accent_warm"
+            app:startIconTint="#DDA15E"
             app:boxStrokeColor="@color/brand_accent_warm"
             app:hintTextColor="@color/brand_accent_warm"
-            app:boxCornerRadiusBottomEnd="14dp"
+            app:boxCornerRadiusTopStart="14dp"
             app:boxCornerRadiusBottomStart="14dp"
             app:boxCornerRadiusTopEnd="14dp"
-            app:boxCornerRadiusTopStart="14dp">
+            app:boxCornerRadiusBottomEnd="14dp">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etSnackS"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/brand_dark"
-                android:fontFamily="monospace"
                 android:gravity="center_horizontal"
+                android:inputType="numberDecimal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:hint="T"
+            app:startIconDrawable="@drawable/ic_dot_fat"
+            app:startIconTint="#BC6C25"
+            app:boxStrokeColor="@color/brand_accent_deep"
+            app:hintTextColor="@color/brand_accent_deep"
+            app:boxCornerRadiusTopStart="14dp"
+            app:boxCornerRadiusBottomStart="14dp"
+            app:boxCornerRadiusTopEnd="14dp"
+            app:boxCornerRadiusBottomEnd="14dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSnackT"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/brand_dark"
+                android:gravity="center_horizontal"
+                android:inputType="numberDecimal" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="8dp"
+        android:text="Volitelné doplňky"
+        android:textColor="@color/brand_dark_alpha40"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-medium"
+        android:textAllCaps="true" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:hint="Vláknina (v)"
+            app:boxStrokeColor="@color/brand_dark_alpha15"
+            app:hintTextColor="@color/brand_dark_alpha40"
+            app:boxCornerRadiusTopStart="14dp"
+            app:boxCornerRadiusBottomStart="14dp"
+            app:boxCornerRadiusTopEnd="14dp"
+            app:boxCornerRadiusBottomEnd="14dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSnackFiber"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/brand_dark"
+                android:gravity="center"
                 android:inputType="numberDecimal" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -134,23 +190,19 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="6dp"
-            android:hint="@string/snack_label_t"
-            android:textColorHint="@color/brand_dark_alpha40"
-            app:startIconDrawable="@drawable/ic_dot_fat"
-            app:startIconTint="@color/brand_accent_deep"
-            app:boxStrokeColor="@color/brand_accent_deep"
-            app:hintTextColor="@color/brand_accent_deep"
-            app:boxCornerRadiusBottomEnd="14dp"
+            android:hint="Cholest. (mg)"
+            app:boxStrokeColor="@color/brand_dark_alpha15"
+            app:hintTextColor="@color/brand_dark_alpha40"
+            app:boxCornerRadiusTopStart="14dp"
             app:boxCornerRadiusBottomStart="14dp"
             app:boxCornerRadiusTopEnd="14dp"
-            app:boxCornerRadiusTopStart="14dp">
+            app:boxCornerRadiusBottomEnd="14dp">
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSnackT"
+                android:id="@+id/etSnackCholesterol"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/brand_dark"
-                android:fontFamily="monospace"
-                android:gravity="center_horizontal"
+                android:gravity="center"
                 android:inputType="numberDecimal" />
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
@@ -158,18 +210,18 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="28dp"
-        app:cardBackgroundColor="@color/brand_cream_alpha50"
+        android:layout_marginTop="20dp"
+        app:cardBackgroundColor="@color/brand_cream_alpha40"
         app:cardCornerRadius="16dp"
         app:cardElevation="0dp"
-        app:strokeWidth="1.5dp"
-        app:strokeColor="@color/brand_accent_warm_alpha30">
+        app:strokeWidth="1dp"
+        app:strokeColor="@color/brand_dark_alpha12">
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/cbIsPreWorkout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="16dp"
+            android:padding="12dp"
             android:text="@string/snack_toggle_preworkout"
             android:textColor="@color/brand_dark"
             android:fontFamily="sans-serif-medium"
@@ -180,17 +232,14 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSaveSnack"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_marginTop="32dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="28dp"
         android:text="@string/snack_btn_save"
         android:textColor="@color/brand_cream"
-        android:textSize="16sp"
         android:fontFamily="sans-serif-black"
         app:backgroundTint="@color/brand_dark"
         app:cornerRadius="20dp"
         app:icon="@drawable/ic_save"
-        app:iconGravity="textStart"
-        app:iconPadding="12dp"
-        app:rippleColor="@color/brand_primary_alpha20" />
+        app:iconGravity="textStart" />
 
 </LinearLayout>

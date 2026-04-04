@@ -11,5 +11,8 @@ data class SnackEntity(
     val p: Float,
     val s: Float,
     val t: Float,
-    val isPre: Boolean
+    val isPre: Boolean,
+    val energyKj: Float,
+    val cholesterol: Float,
+    val fiber: Float
 )

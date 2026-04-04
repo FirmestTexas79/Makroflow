@@ -121,6 +121,9 @@ object MacroFlowEngine {
         s: Double,
         t: Double,
         cal: Double,
+        fiber: Double = 0.0,
+        kj: Double = 0.0,
+        chol: Double = 0.0,
         mealContext: String = "NO_TRAINING"
     ) {
         withContext(Dispatchers.IO) {
@@ -136,9 +139,13 @@ object MacroFlowEngine {
                 s = s.toFloat(),
                 t = t.toFloat(),
                 calories = cal.toInt(),
+                fiber = fiber.toFloat(),          // Přidáno
+                energyKj = kj.toFloat(),    // Přidáno
+                cholesterol = chol.toFloat(), // Přidáno
                 mealContext = mealContext,
                 timestamp = System.currentTimeMillis()
             )
+
             db.consumedSnackDao().insertConsumed(snack)
 
             if (FirebaseRepository.isLoggedIn) {

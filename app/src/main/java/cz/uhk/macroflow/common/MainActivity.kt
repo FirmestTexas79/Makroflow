@@ -77,10 +77,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private var pokemonBehavior: PokemonBehavior? = null
     private var lastLoadedId: String = ""
-    private var currentOnBarId: String = ""
 
-    private var fabHoldStart = 0L
-    private val FAB_HOLD_MS  = 2000L
     private var isLongPressTriggered = false
     private var holdRunnable: Runnable? = null
 

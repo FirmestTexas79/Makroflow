@@ -189,12 +189,22 @@ object FirebaseRepository {
         }
     }
 
+
     // ========== VLASTNÍ POTRAVINY ==========
 
     suspend fun uploadCustomSnack(snack: SnackEntity) {
         if (!isLoggedIn) return
-        val data = mapOf("name" to snack.name, "weight" to snack.weight,
-            "p" to snack.p, "s" to snack.s, "t" to snack.t, "isPre" to snack.isPre)
+        val data = mapOf(
+            "name" to snack.name,
+            "weight" to snack.weight,
+            "p" to snack.p,
+            "s" to snack.s,
+            "t" to snack.t,
+            "isPre" to snack.isPre,
+            "energyKj" to snack.energyKj,    // PŘIDÁNO
+            "fiber" to snack.fiber,          // PŘIDÁNO
+            "cholesterol" to snack.cholesterol // PŘIDÁNO
+        )
         userDoc().collection("custom_snacks").document(snack.id.toString()).set(data, SetOptions.merge()).await()
     }
 
@@ -203,10 +213,16 @@ object FirebaseRepository {
         val snaps = userDoc().collection("custom_snacks").get().await()
         return snaps.documents.mapNotNull { doc ->
             SnackEntity(
-                id = doc.id.toIntOrNull() ?: 0, name = doc.getString("name") ?: "",
+                id = doc.id.toIntOrNull() ?: 0,
+                name = doc.getString("name") ?: "",
                 weight = doc.getString("weight") ?: "",
-                p = (doc.getDouble("p") ?: 0.0).toFloat(), s = (doc.getDouble("s") ?: 0.0).toFloat(),
-                t = (doc.getDouble("t") ?: 0.0).toFloat(), isPre = doc.getBoolean("isPre") ?: false
+                p = (doc.getDouble("p") ?: 0.0).toFloat(),
+                s = (doc.getDouble("s") ?: 0.0).toFloat(),
+                t = (doc.getDouble("t") ?: 0.0).toFloat(),
+                isPre = doc.getBoolean("isPre") ?: false,
+                energyKj = (doc.getDouble("energyKj") ?: 0.0).toFloat(),    // PŘIDÁNO
+                fiber = (doc.getDouble("fiber") ?: 0.0).toFloat(),          // PŘIDÁNO
+                cholesterol = (doc.getDouble("cholesterol") ?: 0.0).toFloat() // PŘIDÁNO
             )
         }
     }
@@ -216,9 +232,17 @@ object FirebaseRepository {
     suspend fun uploadConsumedSnack(consumed: ConsumedSnackEntity) {
         if (!isLoggedIn) return
         val data = mapOf(
-            "date" to consumed.date, "time" to consumed.time, "name" to consumed.name,
-            "p" to consumed.p, "s" to consumed.s, "t" to consumed.t,
-            "calories" to consumed.calories, "mealContext" to consumed.mealContext,
+            "date" to consumed.date,
+            "time" to consumed.time,
+            "name" to consumed.name,
+            "p" to consumed.p,
+            "s" to consumed.s,
+            "t" to consumed.t,
+            "calories" to consumed.calories,
+            "energyKj" to consumed.energyKj,    // PŘIDÁNO
+            "fiber" to consumed.fiber,          // PŘIDÁNO
+            "cholesterol" to consumed.cholesterol, // PŘIDÁNO
+            "mealContext" to consumed.mealContext,
             "timestamp" to consumed.timestamp
         )
         userDoc().collection("consumed_history").document(consumed.timestamp.toString())
@@ -231,11 +255,16 @@ object FirebaseRepository {
         return snaps.documents.mapNotNull { doc ->
             ConsumedSnackEntity(
                 timestamp   = doc.getLong("timestamp") ?: System.currentTimeMillis(),
-                date        = doc.getString("date") ?: "", time = doc.getString("time") ?: "",
+                date        = doc.getString("date") ?: "",
+                time        = doc.getString("time") ?: "",
                 name        = doc.getString("name") ?: "",
-                p = (doc.getDouble("p") ?: 0.0).toFloat(), s = (doc.getDouble("s") ?: 0.0).toFloat(),
+                p = (doc.getDouble("p") ?: 0.0).toFloat(),
+                s = (doc.getDouble("s") ?: 0.0).toFloat(),
                 t = (doc.getDouble("t") ?: 0.0).toFloat(),
                 calories    = (doc.getLong("calories") ?: 0L).toInt(),
+                energyKj    = (doc.getDouble("energyKj") ?: 0.0).toFloat(),    // PŘIDÁNO
+                fiber       = (doc.getDouble("fiber") ?: 0.0).toFloat(),       // PŘIDÁNO
+                cholesterol = (doc.getDouble("cholesterol") ?: 0.0).toFloat(), // PŘIDÁNO
                 mealContext = doc.getString("mealContext") ?: "NO_TRAINING"
             )
         }
@@ -265,6 +294,7 @@ object FirebaseRepository {
         val snaps = userDoc().collection("captured_pokemon").get().await()
         return snaps.documents.mapNotNull { doc ->
             CapturedPokemonEntity(
+                id = 0,
                 pokemonId   = doc.getString("pokemonId") ?: "",
                 name        = doc.getString("name") ?: "",
                 isShiny     = doc.getBoolean("isShiny") ?: false,

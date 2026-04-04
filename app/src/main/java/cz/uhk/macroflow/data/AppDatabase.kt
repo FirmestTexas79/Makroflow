@@ -29,7 +29,7 @@ import kotlin.concurrent.thread
         StepsEntity::class,
         AnalyticsCacheEntity::class
     ],
-    version = 29,
+    version = 30,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,7 +46,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userItemDao(): UserItemDao
     abstract fun pokedexEntryDao(): PokedexEntryDao
     abstract fun pokedexStatusDao(): PokedexStatusDao
-    abstract fun seenPokemonDao(): SeenPokemonDao
     abstract fun pokemonXpDao(): PokemonXpDao
     abstract fun stepsDao(): StepsDao
 

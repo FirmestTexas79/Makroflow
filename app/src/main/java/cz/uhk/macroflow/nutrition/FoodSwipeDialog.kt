@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.os.*
 import android.view.*
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
@@ -40,12 +41,16 @@ class FoodSwipeDialog : DialogFragment() {
     override fun onStart() {
         super.onStart()
         dialog?.window?.apply {
+            // Použijeme WRAP_CONTENT pro obojí, aby se dialog přizpůsobil kartě
             setLayout(
-                (resources.displayMetrics.widthPixels * 0.95).toInt(),
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
             setBackgroundDrawableResource(android.R.color.transparent)
             setDimAmount(0.5f)
+
+            // Odstranění clippingu u samotného okna dialogu
+            attributes?.windowAnimations = android.R.style.Animation_Dialog
         }
     }
 
@@ -116,9 +121,9 @@ class FoodSwipeDialog : DialogFragment() {
      * Fuzzy řazení jídel podle kontextu tréninku + hodiny dne.
      *
      * Skóre = kombinace několika faktorů (0.0 – 1.0 každý):
-     *   macroScore    — jak dobře makra sedí na kontext (PRE=S, POST=P, atd.)
-     *   calorieScore  — ideální kalorický rozsah pro kontext
-     *   timeScore     — jídlo vhodné pro denní dobu
+     * macroScore    — jak dobře makra sedí na kontext (PRE=S, POST=P, atd.)
+     * calorieScore  — ideální kalorický rozsah pro kontext
+     * timeScore     — jídlo vhodné pro denní dobu
      *
      * Výsledné skóre řadí jídla od nejrelevantnějšího.
      */
@@ -170,12 +175,13 @@ class FoodSwipeDialog : DialogFragment() {
                 TrainingTimeManager.MealContext.NO_TRAINING,
                 TrainingTimeManager.MealContext.LONG_BEFORE,
                 TrainingTimeManager.MealContext.LONG_AFTER -> {
-                    // Podle hodiny dne
+                    // Podle hodiny dne + bonus za vlákninu pro sytost
+                    val fiberBonus = (s.fiber / total).coerceIn(0f, 0.3f)
                     when (hour) {
-                        in 6..9   -> s.p / total   // ráno: bílkoviny
-                        in 10..13 -> s.s / total   // dopoledne: sacharidy
+                        in 6..9   -> (s.p / total) + fiberBonus   // ráno: bílkoviny + vláknina
+                        in 10..13 -> (s.s / total)   // dopoledne: sacharidy
                         in 14..17 -> (s.p + s.s) / (total * 2)  // odpoledne: mix
-                        in 18..21 -> s.p / total   // večer: bílkoviny
+                        in 18..21 -> (s.p / total) + fiberBonus   // večer: bílkoviny + vláknina
                         else      -> s.p / total
                     }
                 }
@@ -273,10 +279,20 @@ class FoodSwipeDialog : DialogFragment() {
 
         val kcal = ((current.p * 4) + (current.s * 4) + (current.t * 9)).toInt()
         view.findViewById<TextView>(R.id.tvFoodName).text = current.name
-        view.findViewById<TextView>(R.id.tvFoodCalories).text = "$kcal kcal"
+
+        // Zobrazujeme kcal i kJ pro lepší přehled
+        view.findViewById<TextView>(R.id.tvFoodCalories).text = "$kcal kcal | ${current.energyKj.toInt()} kJ"
+
         view.findViewById<TextView>(R.id.tvFoodProtein).text = "${current.p.toInt()}g"
         view.findViewById<TextView>(R.id.tvFoodCarbs).text = "${current.s.toInt()}g"
         view.findViewById<TextView>(R.id.tvFoodFat).text = "${current.t.toInt()}g"
+
+        // Zobrazení vlákniny (pokud prvek tvFoodFiber existuje v layoutu)
+        view.findViewById<TextView>(R.id.tvFoodFiber)?.apply {
+            text = "Vláknina: ${"%.1f".format(current.fiber)}g"
+            visibility = if (current.fiber > 0.1f) View.VISIBLE else View.GONE
+        }
+
         view.findViewById<ImageView>(R.id.ivFoodImage)
             .setImageResource(getIconForSnack(current))
 
@@ -295,7 +311,6 @@ class FoodSwipeDialog : DialogFragment() {
     }
 
     // ── Potvrzení jídla — uloží s mealContext ────────────────────────
-    // V souboru FoodSwipeDialog.kt
     private fun handleConfirm(view: View) {
         if (snackList.isEmpty()) return
         val snack = snackList.removeAt(0)
@@ -304,7 +319,7 @@ class FoodSwipeDialog : DialogFragment() {
             val kcal = ((snack.p * 4) + (snack.s * 4) + (snack.t * 9)).toDouble()
 
             // ✅ OPRAVA: Voláme centrální mozek pro zápis jídla!
-            // To zajistí zápis do Roomu, odeslání do Cloudu a spuštění real-time XP!
+            // Předáváme i nové parametry: kJ, vlákninu a cholesterol
             cz.uhk.macroflow.dashboard.MacroFlowEngine.logSwipedFood(
                 context = requireContext(),
                 name = snack.name,
@@ -312,7 +327,10 @@ class FoodSwipeDialog : DialogFragment() {
                 s = snack.s.toDouble(),
                 t = snack.t.toDouble(),
                 cal = kcal,
-                mealContext = currentMealContext.name // Předej kontext do upravené metody níže!
+                kj = snack.energyKj.toDouble(),
+                fiber = snack.fiber.toDouble(),
+                chol = snack.cholesterol.toDouble(),
+                mealContext = currentMealContext.name
             )
 
             resetCardPositionAndData(view)
@@ -333,26 +351,84 @@ class FoodSwipeDialog : DialogFragment() {
     }
 
     private fun resetCardToDefaultState(view: View) {
-        view.findViewById<MaterialCardView>(R.id.foodCard)
-            .setCardBackgroundColor(Color.parseColor("#FEFAE0"))
-        view.findViewById<TextView>(R.id.tvFoodProtein).setTextColor(Color.parseColor("#606C38"))
-        view.findViewById<TextView>(R.id.tvFoodCarbs).setTextColor(Color.parseColor("#DDA15E"))
-        view.findViewById<TextView>(R.id.tvFoodFat).setTextColor(Color.parseColor("#BC6C25"))
-        view.findViewById<TextView>(R.id.tvFoodCalories).setTextColor(Color.parseColor("#283618"))
-        view.findViewById<TextView>(R.id.tvFoodName).setTextColor(Color.parseColor("#283618"))
-        view.findViewById<TextView>(R.id.tvCalLabel).setTextColor(Color.parseColor("#BC6C25"))
-        view.findViewById<ImageView>(R.id.ivFoodImage).setColorFilter(Color.parseColor("#DDA15E"))
+        val card = view.findViewById<MaterialCardView>(R.id.foodCard)
+        val viewImageBg = view.findViewById<View>(R.id.viewImageBg)
+        val ivFoodImage = view.findViewById<ImageView>(R.id.ivFoodImage)
+
+        val colorCream = Color.parseColor("#FEFAE0")
+        val colorDark = Color.parseColor("#283618")
+        val colorPrimary = Color.parseColor("#606C38")
+        val colorAccentWarm = Color.parseColor("#E9B072")
+        val colorAccentDeep = Color.parseColor("#BC6C25")
+
+        // 1. Reset karty a pozadí pod ikonou
+        card.setCardBackgroundColor(colorCream)
+        card.strokeColor = Color.parseColor("#15283618")
+        viewImageBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#08283618"))
+        ivFoodImage.setColorFilter(colorPrimary)
+
+        // 2. Reset hlavních textů
+        view.findViewById<TextView>(R.id.tvFoodName).setTextColor(colorDark)
+        view.findViewById<TextView>(R.id.tvFoodCalories).setTextColor(colorDark)
+        view.findViewById<TextView>(R.id.tvFoodFiber)?.setTextColor(colorDark)
+        view.findViewById<TextView>(R.id.tvCalLabel).setTextColor(colorDark)
+        view.findViewById<TextView>(R.id.tvCalLabel).alpha = 0.5f
+
+        // 3. Reset makro buněk (každá má svou barvu včetně popisků P, S, T)
+        // Protein (P)
+        val containerP = view.findViewById<TextView>(R.id.tvFoodProtein).parent as LinearLayout
+        containerP.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#08283618"))
+        view.findViewById<TextView>(R.id.tvFoodProtein).setTextColor(colorPrimary)
+        (containerP.getChildAt(0) as TextView).setTextColor(colorPrimary) // Písmeno P
+
+        // Sacharidy (S)
+        val containerS = view.findViewById<TextView>(R.id.tvFoodCarbs).parent as LinearLayout
+        containerS.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#08E9B072"))
+        view.findViewById<TextView>(R.id.tvFoodCarbs).setTextColor(colorAccentWarm)
+        (containerS.getChildAt(0) as TextView).setTextColor(colorAccentWarm) // Písmeno S
+
+        // Tuky (T)
+        val containerT = view.findViewById<TextView>(R.id.tvFoodFat).parent as LinearLayout
+        containerT.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#08BC6C25"))
+        view.findViewById<TextView>(R.id.tvFoodFat).setTextColor(colorAccentDeep)
+        (containerT.getChildAt(0) as TextView).setTextColor(colorAccentDeep) // Písmeno T
     }
 
     private fun updateElementsColor(view: View, colorHex: String) {
-        val color = Color.parseColor(colorHex)
-        view.findViewById<TextView>(R.id.tvFoodProtein).setTextColor(color)
-        view.findViewById<TextView>(R.id.tvFoodCarbs).setTextColor(color)
-        view.findViewById<TextView>(R.id.tvFoodFat).setTextColor(color)
-        view.findViewById<TextView>(R.id.tvFoodCalories).setTextColor(color)
-        view.findViewById<TextView>(R.id.tvFoodName).setTextColor(color)
-        view.findViewById<TextView>(R.id.tvCalLabel).setTextColor(color)
-        view.findViewById<ImageView>(R.id.ivFoodImage).setColorFilter(color)
+        val targetColor = Color.parseColor(colorHex)
+        val whiteTransparent = Color.argb(30, 255, 255, 255)
+
+        // 1. Hlavní texty a ikona
+        view.findViewById<TextView>(R.id.tvFoodName).setTextColor(targetColor)
+        view.findViewById<TextView>(R.id.tvFoodCalories).setTextColor(targetColor)
+        view.findViewById<TextView>(R.id.tvFoodFiber)?.setTextColor(targetColor)
+        view.findViewById<TextView>(R.id.tvCalLabel).setTextColor(targetColor)
+        view.findViewById<ImageView>(R.id.ivFoodImage).setColorFilter(targetColor)
+        view.findViewById<View>(R.id.viewImageBg).backgroundTintList = ColorStateList.valueOf(whiteTransparent)
+
+        // 2. Makro texty, jejich kontejnery a popisky (P, S, T)
+        val pTv = view.findViewById<TextView>(R.id.tvFoodProtein)
+        val sTv = view.findViewById<TextView>(R.id.tvFoodCarbs)
+        val tTv = view.findViewById<TextView>(R.id.tvFoodFat)
+
+        // Přebarvíme hodnoty (gramy)
+        pTv.setTextColor(targetColor)
+        sTv.setTextColor(targetColor)
+        tTv.setTextColor(targetColor)
+
+        // Přebarvíme popisky (P, S, T) - jsou to první potomci v těch LinearLayoutu
+        val containerP = pTv.parent as LinearLayout
+        val containerS = sTv.parent as LinearLayout
+        val containerT = tTv.parent as LinearLayout
+
+        (containerP.getChildAt(0) as TextView).setTextColor(targetColor)
+        (containerS.getChildAt(0) as TextView).setTextColor(targetColor)
+        (containerT.getChildAt(0) as TextView).setTextColor(targetColor)
+
+        // Glass efekt pro pozadí buněk
+        containerP.backgroundTintList = ColorStateList.valueOf(whiteTransparent)
+        containerS.backgroundTintList = ColorStateList.valueOf(whiteTransparent)
+        containerT.backgroundTintList = ColorStateList.valueOf(whiteTransparent)
     }
 
     private fun getIconForSnack(snack: SnackEntity): Int = when {

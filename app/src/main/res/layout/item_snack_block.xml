@@ -102,6 +102,23 @@
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
+            <View
+                android:id="@+id/dividerFiber"
+                android:layout_width="1dp"
+                android:layout_height="10dp"
+                android:layout_marginHorizontal="8dp"
+                android:background="@color/brand_dark_alpha20" />
+
+            <TextView
+                android:id="@+id/valFiber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="V: 0g"
+                android:textColor="@color/brand_dark"
+                android:alpha="0.6"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
         </LinearLayout>
 
         <LinearLayout
