@@ -103,4 +103,7 @@ dependencies {
     implementation("io.coil-kt:coil-gif:2.6.0")
 
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    // DataStore — nahrazuje SharedPreferences (type-safe, coroutine-based)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 }

@@ -1,13 +1,14 @@
 package cz.uhk.macroflow.training
 
 import android.content.Context
+import cz.uhk.macroflow.common.AppPreferences
 import java.text.SimpleDateFormat
 import java.util.*
 
 /**
  * TrainingTimeManager — ukládá a čte časy tréninků per den.
  *
- * Klíč: "time_Monday" → "07:30"  (nebo null = nenastaveno)
+ * Klíč: "training_time_Monday" → "07:30"  (nebo null = nenastaveno)
  * Délka tréninku: 75 minut (1h 15min)
  *
  * Poskytuje:
@@ -17,22 +18,14 @@ import java.util.*
  */
 object TrainingTimeManager {
 
-    private const val PREFS = "TrainingPrefs"
     private const val DURATION_MIN = 75  // normální trénink = 1h 15min
 
     // ── Čtení / zápis ────────────────────────────────────────────────
     fun getTrainingTime(context: Context, dayEnglish: String): String? =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString("time_$dayEnglish", null)
+        AppPreferences.getTrainingTimeSync(context, dayEnglish)
 
-    fun setTrainingTime(context: Context, dayEnglish: String, time: String?) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().apply {
-                if (time != null) putString("time_$dayEnglish", time)
-                else remove("time_$dayEnglish")
-                apply()
-            }
-    }
+    fun setTrainingTime(context: Context, dayEnglish: String, time: String?) =
+        AppPreferences.setTrainingTimeSync(context, dayEnglish, time)
 
     fun getTrainingTimeForToday(context: Context): String? {
         val day = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
@@ -118,9 +111,10 @@ object TrainingTimeManager {
     fun getMealContextLabel(context: Context): String? {
         val timeStr = getTrainingTimeForToday(context) ?: return null
         val minutes = minutesToTraining(context) ?: return null
-        val trainingType = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString("type_${SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())}", "rest")
-            ?.uppercase() ?: "REST"
+        val trainingType = AppPreferences.getTrainingTypeSync(
+            context,
+            SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
+        ).uppercase()
 
         return when (getMealContext(context)) {
             MealContext.LONG_BEFORE       -> "$trainingType v $timeStr — máš čas se dobře najíst"

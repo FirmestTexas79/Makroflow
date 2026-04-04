@@ -1,8 +1,10 @@
 package cz.uhk.macroflow.pokemon
 
 import android.content.Context
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.dashboard.MacroCalculator
+import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -118,10 +120,8 @@ object SpawnManager {
         POOL.filter { spawn -> spawn.conditions.all { it.isMet(context) } }
 
     fun rollWildEncounter(context: Context): Pokemon {
-        val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-
-        if (prefs.getBoolean("ghostPlateActive", false)) {
-            prefs.edit().putBoolean("ghostPlateActive", false).apply()
+        if (AppPreferences.isGhostPlateActiveSync(context)) {
+            runBlocking { AppPreferences.setGhostPlateActive(context, false) }
             return BattleFactory.createGengar()
         }
 

@@ -1,6 +1,5 @@
 package cz.uhk.macroflow.pokemon
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,6 +15,8 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.google.android.material.tabs.TabLayout
+import cz.uhk.macroflow.common.ActiveBarState
+import cz.uhk.macroflow.common.AppPreferences
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.common.MainActivity
@@ -58,17 +59,21 @@ class InventoryFragment : Fragment() {
         lifecycleScope.launch {
             if (currentTab == 0) {
                 val list = withContext(Dispatchers.IO) { db.capturedPokemonDao().getAllCaught() }
-                rvInventory.adapter = PokemonAdapter(list)
+                // Načteme barState jednou pro celý adapter — ne per-item v onBindViewHolder
+                val barState = withContext(Dispatchers.IO) { AppPreferences.getActiveBarStateSync(requireContext()) }
+                rvInventory.adapter = PokemonAdapter(list, barState)
             } else {
                 val list = withContext(Dispatchers.IO) { db.userItemDao().getAllItems() }
                 val ownedItems = list.filter { it.quantity > 0 }
-                rvInventory.adapter = ItemAdapter(ownedItems)
+                val ghostActive = withContext(Dispatchers.IO) { AppPreferences.isGhostPlateActiveSync(requireContext()) }
+                rvInventory.adapter = ItemAdapter(ownedItems, ghostActive)
             }
         }
     }
 
     private inner class PokemonAdapter(
-        private val list: List<CapturedPokemonEntity>
+        private val list: List<CapturedPokemonEntity>,
+        private val barState: ActiveBarState
     ) : RecyclerView.Adapter<PokemonAdapter.VH>() {
 
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
@@ -89,11 +94,7 @@ class InventoryFragment : Fragment() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = list[position]
-            val prefs = holder.itemView.context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-
-            val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
-            val isAcquired = prefs.getBoolean("pokemonAcquired", false)
-            val isActiveOnBar = isAcquired && (item.id == activeCapturedId)
+            val isActiveOnBar = barState.acquired && (item.id == barState.capturedId)
 
             val prog = PokemonLevelCalc.progressToNextLevel(item.xp)
 
@@ -119,7 +120,6 @@ class InventoryFragment : Fragment() {
                     item.isLocked = !item.isLocked
                     db.capturedPokemonDao().updatePokemon(item)
 
-                    // ☁️ Synchronizujeme změnu zámku s Cloudem
                     if (FirebaseRepository.isLoggedIn) {
                         FirebaseRepository.uploadCapturedPokemon(item)
                     }
@@ -129,37 +129,34 @@ class InventoryFragment : Fragment() {
             }
 
             holder.btnPin.setOnClickListener {
-                requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
-                    .putBoolean("pokemonAcquired", true)
-                    .putInt("currentOnBarCapturedId", item.id)   // ✅ Int — item.id je autoGenerate Int
-                    .putString("currentOnBarId", item.pokemonId)
-                    .putString("currentOnBarName", item.name.uppercase())
-                    .apply()
-                (requireActivity() as? MainActivity)?.updatePokemonVisibility()
-                loadData()
-                Toast.makeText(requireContext(), "📌 ${item.name} vypuštěn na lištu!", Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    AppPreferences.pinPokemonToBar(requireContext(), item.id, item.pokemonId, item.name)
+                    withContext(Dispatchers.Main) {
+                        (requireActivity() as? MainActivity)?.updatePokemonVisibility()
+                        loadData()
+                        Toast.makeText(requireContext(), "📌 ${item.name} vypuštěn na lištu!", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
 
             holder.btnUnpin.setOnClickListener {
-                requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
-                    .putBoolean("pokemonAcquired", false)
-                    .putInt("currentOnBarCapturedId", -1)        // ✅ Int reset
-                    .apply()
-                (requireActivity() as? MainActivity)?.updatePokemonVisibility()
-                loadData()
-                Toast.makeText(requireContext(), "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    AppPreferences.unpinPokemonFromBar(requireContext())
+                    withContext(Dispatchers.Main) {
+                        (requireActivity() as? MainActivity)?.updatePokemonVisibility()
+                        loadData()
+                        Toast.makeText(requireContext(), "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
 
-            // 🔥 OPRAVENÉ MAZÁNÍ S CLOUDEM
             holder.btnDelete.setOnClickListener {
                 if (item.isLocked) {
                     Toast.makeText(requireContext(), "Odemkni pokémona před smazáním! 🔒", Toast.LENGTH_SHORT).show()
                 } else {
                     lifecycleScope.launch(Dispatchers.IO) {
-                        // 1. Smažeme z lokální SQLite DB
                         db.capturedPokemonDao().deletePokemon(item)
 
-                        // 2. ✅ OPRAVENO: Smažeme z Cloudu podle unikátního časového razítka (Long)
                         if (FirebaseRepository.isLoggedIn) {
                             try {
                                 FirebaseRepository.deleteCapturedPokemon(item.caughtDate)
@@ -169,7 +166,7 @@ class InventoryFragment : Fragment() {
                         }
 
                         if (isActiveOnBar) {
-                            prefs.edit().putBoolean("pokemonAcquired", false).putInt("currentOnBarCapturedId", -1).apply()
+                            AppPreferences.unpinPokemonFromBar(requireContext())
                         }
 
                         withContext(Dispatchers.Main) {
@@ -185,8 +182,10 @@ class InventoryFragment : Fragment() {
         override fun getItemCount() = list.size
     }
 
-    private inner class ItemAdapter(private val list: List<UserItemEntity>) :
-        RecyclerView.Adapter<ItemAdapter.VH>() {
+    private inner class ItemAdapter(
+        private val list: List<UserItemEntity>,
+        private val ghostActive: Boolean
+    ) : RecyclerView.Adapter<ItemAdapter.VH>() {
 
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
             val ivSprite: ImageView = v.findViewById(R.id.ivPokemonSprite)
@@ -230,17 +229,15 @@ class InventoryFragment : Fragment() {
 
             holder.itemView.setOnClickListener {
                 if (item.itemId == "lure_lamp" && item.quantity > 0) {
-                    val prefs = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-                    if (prefs.getBoolean("ghostPlateActive", false)) {
+                    if (ghostActive) {
                         Toast.makeText(requireContext(), "Spooky Plate už je aktivní!", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
 
                     lifecycleScope.launch(Dispatchers.IO) {
                         if (db.userItemDao().consumeItem("lure_lamp", 1)) {
-                            prefs.edit().putBoolean("ghostPlateActive", true).apply()
+                            AppPreferences.setGhostPlateActive(requireContext(), true)
 
-                            // ☁️ Uložíme snížení itemů i v cloudu
                             if (FirebaseRepository.isLoggedIn) {
                                 val updatedItem = db.userItemDao().getItem("lure_lamp")
                                 if (updatedItem != null) {
