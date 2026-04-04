@@ -54,8 +54,8 @@ class KardioInputDialog(
 
     override fun onStart() {
         super.onStart()
-        dialog?.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-            ?.setBackgroundResource(android.R.color.transparent)
+        dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            ?.background = null
     }
 
     companion object {
