@@ -202,8 +202,7 @@ object FirebaseRepository {
             "t" to snack.t,
             "isPre" to snack.isPre,
             "energyKj" to snack.energyKj,    // PŘIDÁNO
-            "fiber" to snack.fiber,          // PŘIDÁNO
-            "cholesterol" to snack.cholesterol // PŘIDÁNO
+            "fiber" to snack.fiber      // PŘIDÁNO
         )
         userDoc().collection("custom_snacks").document(snack.id.toString()).set(data, SetOptions.merge()).await()
     }
@@ -221,8 +220,7 @@ object FirebaseRepository {
                 t = (doc.getDouble("t") ?: 0.0).toFloat(),
                 isPre = doc.getBoolean("isPre") ?: false,
                 energyKj = (doc.getDouble("energyKj") ?: 0.0).toFloat(),    // PŘIDÁNO
-                fiber = (doc.getDouble("fiber") ?: 0.0).toFloat(),          // PŘIDÁNO
-                cholesterol = (doc.getDouble("cholesterol") ?: 0.0).toFloat() // PŘIDÁNO
+                fiber = (doc.getDouble("fiber") ?: 0.0).toFloat()        // PŘIDÁNO
             )
         }
     }
@@ -241,7 +239,6 @@ object FirebaseRepository {
             "calories" to consumed.calories,
             "energyKj" to consumed.energyKj,    // PŘIDÁNO
             "fiber" to consumed.fiber,          // PŘIDÁNO
-            "cholesterol" to consumed.cholesterol, // PŘIDÁNO
             "mealContext" to consumed.mealContext,
             "timestamp" to consumed.timestamp
         )
@@ -264,7 +261,6 @@ object FirebaseRepository {
                 calories    = (doc.getLong("calories") ?: 0L).toInt(),
                 energyKj    = (doc.getDouble("energyKj") ?: 0.0).toFloat(),    // PŘIDÁNO
                 fiber       = (doc.getDouble("fiber") ?: 0.0).toFloat(),       // PŘIDÁNO
-                cholesterol = (doc.getDouble("cholesterol") ?: 0.0).toFloat(), // PŘIDÁNO
                 mealContext = doc.getString("mealContext") ?: "NO_TRAINING"
             )
         }

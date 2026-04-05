@@ -137,17 +137,26 @@ object ReportGenerator {
         yPos += 35f
 
         // --- 5. DETAILNÍ HISTORIE JÍDEL ---
-        if (yPos > PAGE_HEIGHT - 100) {
+        if (yPos > PAGE_HEIGHT - 120) {
             pdfDocument.finishPage(currentPage)
             currentPage = createNewPage(pdfDocument, reportTitle, context)
             canvas = currentPage.canvas
-            yPos = HEADER_END_Y // ✅ OPRAVENO: Start pod logem
+            yPos = HEADER_END_Y
         }
 
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        paint.textSize = 13f
+        paint.textSize = 14f
+        paint.color = Color.BLACK
         canvas.drawText("DETAILNÍ LOG POTRAVIN", MARGIN, yPos, paint)
-        yPos += 20f
+        yPos += 25f
+
+        // Definice sloupců pro tabulku
+        val colName = MARGIN
+        val colKcal = MARGIN + 220f
+        val colP = MARGIN + 280f
+        val colS = MARGIN + 330f
+        val colT = MARGIN + 380f
+        val colVl = MARGIN + 430f
 
         val foodCal = Calendar.getInstance()
         for (i in 0 until 7) {
@@ -155,37 +164,67 @@ object ReportGenerator {
             val snacks = db.consumedSnackDao().getConsumedByDateSync(dateKey)
 
             if (snacks.isNotEmpty()) {
-                if (yPos > PAGE_HEIGHT - 80) {
+                // Kontrola místa pro nadpis dne a hlavičku tabulky
+                if (yPos > PAGE_HEIGHT - 100) {
                     pdfDocument.finishPage(currentPage)
                     currentPage = createNewPage(pdfDocument, reportTitle, context)
                     canvas = currentPage.canvas
-                    yPos = HEADER_END_Y // ✅ OPRAVENO: Start pod logem
+                    yPos = HEADER_END_Y
                 }
 
+                // Nadpis dne
+                yPos += 10f
                 paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                paint.textSize = 10f
+                paint.textSize = 11f
                 paint.color = Color.parseColor("#283618")
                 val dayTitle = SimpleDateFormat("EEEE dd.MM.", Locale("cs", "CZ")).format(foodCal.time)
                 canvas.drawText(dayTitle.uppercase(), MARGIN, yPos, paint)
-                yPos += 16f
+                yPos += 5f
+                canvas.drawRect(MARGIN, yPos, PAGE_WIDTH - MARGIN, yPos + 0.5f, paint)
+                yPos += 15f
+
+                // Hlavička tabulky
+                paint.textSize = 9f
+                paint.color = Color.GRAY
+                canvas.drawText("NÁZEV POTRAVINY", colName, yPos, paint)
+                canvas.drawText("KCAL", colKcal, yPos, paint)
+                canvas.drawText("B", colP, yPos, paint)
+                canvas.drawText("S", colS, yPos, paint)
+                canvas.drawText("T", colT, yPos, paint)
+                canvas.drawText("VL", colVl, yPos, paint)
+                yPos += 12f
 
                 paint.typeface = Typeface.DEFAULT
-                paint.textSize = 9f
                 paint.color = Color.BLACK
 
                 snacks.forEach { snack ->
+                    // Kontrola místa pro řádek jídla
                     if (yPos > PAGE_HEIGHT - 50) {
                         pdfDocument.finishPage(currentPage)
                         currentPage = createNewPage(pdfDocument, reportTitle, context)
                         canvas = currentPage.canvas
-                        yPos = HEADER_END_Y // ✅ OPRAVENO: Start pod logem
+                        yPos = HEADER_END_Y
+
+                        // Znovu vykreslit hlavičku na nové stránce, pokud den pokračuje
+                        paint.color = Color.GRAY
+                        canvas.drawText("NÁZEV POTRAVINY (pokr.)", colName, yPos, paint)
+                        yPos += 12f
+                        paint.color = Color.BLACK
                     }
-                    val infoStr = "${snack.name} (${snack.calories} kcal) -> B:${snack.p.toInt()}g S:${snack.s.toInt()}g T:${snack.t.toInt()}g Vl:${snack.fiber.toInt()}g"
-                    canvas.drawText(snack.time, MARGIN, yPos, paint)
-                    canvas.drawText(infoStr, MARGIN + 40f, yPos, paint)
+
+                    // Ořezání dlouhého názvu, aby nepřetékal do čísel
+                    val displayName = if (snack.name.length > 35) snack.name.take(32) + "..." else snack.name
+
+                    canvas.drawText(displayName, colName, yPos, paint)
+                    canvas.drawText("${snack.calories}", colKcal, yPos, paint)
+                    canvas.drawText("${snack.p.toInt()}g", colP, yPos, paint)
+                    canvas.drawText("${snack.s.toInt()}g", colS, yPos, paint)
+                    canvas.drawText("${snack.t.toInt()}g", colT, yPos, paint)
+                    canvas.drawText("${snack.fiber.toInt()}g", colVl, yPos, paint)
+
                     yPos += 14f
                 }
-                yPos += 10f
+                yPos += 15f // Mezera mezi dny
             }
             foodCal.add(Calendar.DAY_OF_YEAR, -1)
         }

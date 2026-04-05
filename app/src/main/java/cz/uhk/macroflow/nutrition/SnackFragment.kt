@@ -55,7 +55,6 @@ class SnackFragment : Fragment() {
     private var baseS = 0f
     private var baseT = 0f
     private var baseKj = 0f
-    private var baseChol = 0f
     private var baseFiber = 0f
 
     private var currentSearchQuery = ""
@@ -113,6 +112,15 @@ class SnackFragment : Fragment() {
 
     private fun observeSnacks() {
         lifecycleScope.launch {
+            // 1. Nejdřív získáme aktuální stav (jednorázově přes .first())
+            val currentSnacks = db.snackDao().getAllSnacks().first()
+
+            // 2. Pokud je prázdno, nasypeme tam defaulty
+            if (currentSnacks.isEmpty()) {
+                seedDatabase()
+            }
+
+            // 3. Pak teprve začneme collectovat (sledovat) změny pro UI
             db.snackDao().getAllSnacks().collect { snacks ->
                 displaySnacks(snacks)
             }
@@ -126,216 +134,216 @@ class SnackFragment : Fragment() {
                     name = "Hovězí steak (Sirloin)",
                     weight = "150g",
                     p = 35f, s = 0f, t = 12f,
-                    energyKj = 1050f, cholesterol = 95f, fiber = 0f,
+                    energyKj = 1050f, fiber = 0f,
                     isPre = false
                 ),
                 SnackEntity(
                     name = "Syrovátkový Izolát",
                     weight = "30g",
                     p = 26f, s = 2f, t = 1f,
-                    energyKj = 480f, cholesterol = 5f, fiber = 0.5f,
+                    energyKj = 480f, fiber = 0.5f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Grilované kuřecí prso",
                     weight = "150g",
                     p = 32f, s = 0f, t = 3f,
-                    energyKj = 650f, cholesterol = 85f, fiber = 0f,
+                    energyKj = 650f, fiber = 0f,
                     isPre = false
                 ),
                 SnackEntity(
                     name = "Řecký jogurt (Skyr)",
                     weight = "140g",
                     p = 16f, s = 5f, t = 0f,
-                    energyKj = 350f, cholesterol = 10f, fiber = 0f,
+                    energyKj = 350f, fiber = 0f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Tvaroh s ořechy",
                     weight = "200g",
                     p = 24f, s = 8f, t = 10f,
-                    energyKj = 920f, cholesterol = 15f, fiber = 2f,
+                    energyKj = 920f, fiber = 2f,
                     isPre = false
                 ),
                 SnackEntity(
                     name = "Tuňák ve vl. šťávě",
                     weight = "130g",
                     p = 28f, s = 0f, t = 1f,
-                    energyKj = 510f, cholesterol = 40f, fiber = 0f,
+                    energyKj = 510f, fiber = 0f,
                     isPre = false
                 ),
                 SnackEntity(
                     name = "Tofu na pánvi",
                     weight = "150g",
                     p = 18f, s = 4f, t = 9f,
-                    energyKj = 720f, cholesterol = 0f, fiber = 1.5f,
+                    energyKj = 720f, fiber = 1.5f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Vajíčka natvrdo",
                     weight = "120g",
                     p = 15f, s = 1f, t = 11f,
-                    energyKj = 680f, cholesterol = 420f, fiber = 0f,
+                    energyKj = 680f, fiber = 0f,
                     isPre = false
                 ),
                 SnackEntity(
                     name = "Krůtí šunka",
                     weight = "100g",
                     p = 20f, s = 1f, t = 2f,
-                    energyKj = 420f, cholesterol = 45f, fiber = 0f,
+                    energyKj = 420f, fiber = 0f,
                     isPre = false
                 ),
                 SnackEntity(
                     name = "Cottage cheese",
                     weight = "180g",
                     p = 22f, s = 6f, t = 8f,
-                    energyKj = 760f, cholesterol = 25f, fiber = 0f,
+                    energyKj = 760f, fiber = 0f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Banán s medem",
                     weight = "150g",
                     p = 1.5f, s = 38f, t = 0.5f,
-                    energyKj = 680f, cholesterol = 0f, fiber = 3.5f,
+                    energyKj = 680f, fiber = 3.5f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Ovesná kaše s jablkem",
                     weight = "250g",
                     p = 8f, s = 45f, t = 6f,
-                    energyKj = 1120f, cholesterol = 0f, fiber = 7f,
+                    energyKj = 1120f, fiber = 7f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Rýžové chlebíčky",
                     weight = "40g",
                     p = 3f, s = 32f, t = 1f,
-                    energyKj = 630f, cholesterol = 0f, fiber = 1.2f,
+                    energyKj = 630f, fiber = 1.2f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Těstoviny s pestem",
                     weight = "200g",
                     p = 12f, s = 55f, t = 14f,
-                    energyKj = 1650f, cholesterol = 5f, fiber = 4f,
+                    energyKj = 1650f, fiber = 4f,
                     isPre = false
                 ),
                 SnackEntity(
                     name = "Toast s džemem",
                     weight = "80g",
                     p = 5f, s = 42f, t = 3f,
-                    energyKj = 910f, cholesterol = 0f, fiber = 2.5f,
+                    energyKj = 910f, fiber = 2.5f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Kuskus se zeleninou",
                     weight = "200g",
                     p = 9f, s = 48f, t = 4f,
-                    energyKj = 1100f, cholesterol = 0f, fiber = 5.5f,
+                    energyKj = 1100f, fiber = 5.5f,
                     isPre = false
                 ),
                 SnackEntity(
                     name = "Sušené datle",
                     weight = "50g",
                     p = 1f, s = 35f, t = 0f,
-                    energyKj = 600f, cholesterol = 0f, fiber = 4f,
+                    energyKj = 600f, fiber = 4f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Gnocchi s rajčaty",
                     weight = "220g",
                     p = 7f, s = 52f, t = 5f,
-                    energyKj = 1210f, cholesterol = 0f, fiber = 3.8f,
+                    energyKj = 1210f, fiber = 3.8f,
                     isPre = false
                 ),
                 SnackEntity(
                     name = "Palačinky s ovocem",
                     weight = "180g",
                     p = 10f, s = 40f, t = 8f,
-                    energyKj = 1150f, cholesterol = 60f, fiber = 3f,
+                    energyKj = 1150f, fiber = 3f,
                     isPre = true
                 ),
                 SnackEntity(
                     name = "Pečená brambora",
                     weight = "200g",
                     p = 4f, s = 40f, t = 0f,
-                    energyKj = 760f, cholesterol = 0f, fiber = 4.2f,
+                    energyKj = 760f, fiber = 4.2f,
                     isPre = false
                 ),
 
-                SnackEntity(name="Artyčoky", weight="100g", p=2.4f, s=2.6f, t=0.1f, energyKj=170f, cholesterol=0f, fiber=10.8f, isPre=false),
-                SnackEntity(name="Brambory rané", weight="100g", p=1.7f, s=16.6f, t=0.2f, energyKj=300f, cholesterol=0f, fiber=1.3f, isPre=false),
-                SnackEntity(name="Brambory zimní", weight="100g", p=1.8f, s=18.2f, t=0.3f, energyKj=330f, cholesterol=0f, fiber=1.6f, isPre=false),
-                SnackEntity(name="Brokolice, kedlubna", weight="100g", p=4.4f, s=2.9f, t=0.9f, energyKj=140f, cholesterol=0f, fiber=2.8f, isPre=false),
-                SnackEntity(name="Brukev", weight="100g", p=2.1f, s=5.8f, t=0.2f, energyKj=130f, cholesterol=0f, fiber=2.2f, isPre=false),
-                SnackEntity(name="Celer-bulva", weight="100g", p=1.7f, s=9.9f, t=0.3f, energyKj=210f, cholesterol=0f, fiber=3.7f, isPre=false),
-                SnackEntity(name="Celer - řapíkatý", weight="100g", p=1.3f, s=3.7f, t=0.2f, energyKj=140f, cholesterol=0f, fiber=2.4f, isPre=false),
-                SnackEntity(name="Cibule", weight="100g", p=1.7f, s=9.6f, t=0.3f, energyKj=200f, cholesterol=0f, fiber=1.4f, isPre=false),
-                SnackEntity(name="Cibule - raná", weight="100g", p=2f, s=5.8f, t=0.2f, energyKj=140f, cholesterol=0f, fiber=1.3f, isPre=false),
-                SnackEntity(name="Cuketa", weight="100g", p=1.6f, s=2.1f, t=0.4f, energyKj=80f, cholesterol=0f, fiber=0.9f, isPre=false),
-                SnackEntity(name="Čekanka salátová", weight="100g", p=1.5f, s=4f, t=0.1f, energyKj=90f, cholesterol=0f, fiber=1.4f, isPre=false),
-                SnackEntity(name="Černý kořen", weight="100g", p=1.4f, s=13.3f, t=0.4f, energyKj=260f, cholesterol=0f, fiber=5.3f, isPre=false),
-                SnackEntity(name="Červená řepa", weight="100g", p=1.8f, s=10.6f, t=0.1f, energyKj=200f, cholesterol=0f, fiber=2.3f, isPre=false),
-                SnackEntity(name="Česnek", weight="100g", p=6.6f, s=26.9f, t=0.2f, energyKj=450f, cholesterol=0f, fiber=0.9f, isPre=false),
-                SnackEntity(name="Fazolky", weight="100g", p=2.3f, s=7.1f, t=0.3f, energyKj=160f, cholesterol=0f, fiber=3f, isPre=false),
-                SnackEntity(name="Fenykl", weight="100g", p=2.4f, s=6.1f, t=0.3f, energyKj=110f, cholesterol=0f, fiber=3.3f, isPre=false),
-                SnackEntity(name="Hrášek", weight="100g", p=6.5f, s=13.3f, t=0.5f, energyKj=320f, cholesterol=0f, fiber=5.2f, isPre=false),
-                SnackEntity(name="Chřest", weight="100g", p=2.2f, s=3.5f, t=0.2f, energyKj=90f, cholesterol=0f, fiber=1.8f, isPre=false),
-                SnackEntity(name="Kapusta hlávková", weight="100g", p=3.1f, s=6.7f, t=0.5f, energyKj=180f, cholesterol=0f, fiber=3.1f, isPre=false),
-                SnackEntity(name="Kapusta kadeřavá", weight="100g", p=4.3f, s=2.1f, t=0.9f, energyKj=140f, cholesterol=0f, fiber=3.3f, isPre=false),
-                SnackEntity(name="Kapusta růžičková", weight="100g", p=5.2f, s=7.6f, t=0.6f, energyKj=210f, cholesterol=0f, fiber=1.6f, isPre=false),
-                SnackEntity(name="Kopr", weight="100g", p=2.4f, s=7.8f, t=0.2f, energyKj=160f, cholesterol=0f, fiber=1.6f, isPre=false),
-                SnackEntity(name="Křen", weight="100g", p=3.9f, s=22.4f, t=0.5f, energyKj=440f, cholesterol=0f, fiber=6.2f, isPre=false),
-                SnackEntity(name="Kukuřice cukrová", weight="100g", p=3.5f, s=18.8f, t=2.2f, energyKj=440f, cholesterol=0f, fiber=0.5f, isPre=false),
-                SnackEntity(name="Květák", weight="100g", p=2.4f, s=4.4f, t=0.3f, energyKj=120f, cholesterol=0f, fiber=1.8f, isPre=false),
-                SnackEntity(name="Lilek", weight="100g", p=1.3f, s=8.2f, t=0.3f, energyKj=160f, cholesterol=0f, fiber=2.3f, isPre=false),
-                SnackEntity(name="Mangold listy", weight="100g", p=2.1f, s=2.8f, t=0.3f, energyKj=60f, cholesterol=0f, fiber=2f, isPre=false),
-                SnackEntity(name="Meloun červený", weight="100g", p=0.6f, s=5f, t=0.2f, energyKj=110f, cholesterol=0f, fiber=0.3f, isPre=false),
-                SnackEntity(name="Meloun žlutý", weight="100g", p=0.5f, s=6.5f, t=0.1f, energyKj=120f, cholesterol=0f, fiber=0.9f, isPre=false),
-                SnackEntity(name="Mrkev", weight="100g", p=1.4f, s=9.7f, t=0.3f, energyKj=190f, cholesterol=0f, fiber=3f, isPre=false),
-                SnackEntity(name="Okurka nakládačka", weight="100g", p=1f, s=1.8f, t=0.2f, energyKj=50f, cholesterol=0f, fiber=1f, isPre=false),
-                SnackEntity(name="Okurka salátová", weight="100g", p=0.7f, s=2.6f, t=0.2f, energyKj=70f, cholesterol=0f, fiber=0.9f, isPre=false),
-                SnackEntity(name="Paprika červená", weight="100g", p=1.2f, s=5.2f, t=0.5f, energyKj=120f, cholesterol=0f, fiber=1.6f, isPre=false),
-                SnackEntity(name="Paprika zelená", weight="100g", p=0.8f, s=2.6f, t=0.3f, energyKj=70f, cholesterol=0f, fiber=1.9f, isPre=false),
-                SnackEntity(name="Patizony", weight="100g", p=2.3f, s=10.2f, t=0.3f, energyKj=210f, cholesterol=0f, fiber=0f, isPre=false),
-                SnackEntity(name="Pažitka", weight="100g", p=3.3f, s=8.1f, t=0.7f, energyKj=210f, cholesterol=0f, fiber=2f, isPre=false),
-                SnackEntity(name="Pekingské zelí", weight="100g", p=1.1f, s=1f, t=0.3f, energyKj=50f, cholesterol=0f, fiber=1.6f, isPre=false),
-                SnackEntity(name="Petržel kořen", weight="100g", p=2.9f, s=12.2f, t=0.6f, energyKj=260f, cholesterol=0f, fiber=1.8f, isPre=false),
-                SnackEntity(name="Petržel nať", weight="100g", p=3.7f, s=9f, t=1f, energyKj=240f, cholesterol=0f, fiber=5f, isPre=false),
-                SnackEntity(name="Polníček", weight="100g", p=1.8f, s=1.4f, t=0.4f, energyKj=70f, cholesterol=0f, fiber=1.5f, isPre=false),
-                SnackEntity(name="Pór", weight="100g", p=2.5f, s=8.6f, t=0.3f, energyKj=190f, cholesterol=0f, fiber=1.5f, isPre=false),
-                SnackEntity(name="Rajčata", weight="100g", p=1.1f, s=4.6f, t=0.3f, energyKj=100f, cholesterol=0f, fiber=1.5f, isPre=false),
-                SnackEntity(name="Reveň", weight="100g", p=1.3f, s=3.6f, t=0.1f, energyKj=80f, cholesterol=0f, fiber=1.4f, isPre=false),
-                SnackEntity(name="Ředkev", weight="100g", p=1.5f, s=5f, t=0.1f, energyKj=90f, cholesterol=0f, fiber=1.1f, isPre=false),
-                SnackEntity(name="Ředkvičky", weight="100g", p=1.1f, s=3.7f, t=0.1f, energyKj=80f, cholesterol=0f, fiber=1f, isPre=false),
-                SnackEntity(name="Řeřicha zahradní", weight="100g", p=1.6f, s=0.4f, t=0.6f, energyKj=60f, cholesterol=0f, fiber=3.3f, isPre=false),
-                SnackEntity(name="Salát hlávkový", weight="100g", p=1.5f, s=2.7f, t=0.3f, energyKj=80f, cholesterol=0f, fiber=0.9f, isPre=false),
-                SnackEntity(name="Salát ledový", weight="100g", p=0.7f, s=1.9f, t=0.3f, energyKj=50f, cholesterol=0f, fiber=1.2f, isPre=false),
-                SnackEntity(name="Salát římský", weight="100g", p=1f, s=1.7f, t=0.6f, energyKj=70f, cholesterol=0f, fiber=1.2f, isPre=false),
-                SnackEntity(name="Sójové výhonky", weight="100g", p=5.5f, s=4.7f, t=1f, energyKj=210f, cholesterol=0f, fiber=2.6f, isPre=false),
-                SnackEntity(name="Špenát", weight="100g", p=3.4f, s=4.1f, t=0.6f, energyKj=140f, cholesterol=0f, fiber=2.1f, isPre=false),
-                SnackEntity(name="Topinambury", weight="100g", p=1.9f, s=17f, t=0.2f, energyKj=330f, cholesterol=0f, fiber=3.5f, isPre=false),
-                SnackEntity(name="Tykev velkoplodá", weight="100g", p=0.8f, s=9f, t=0.1f, energyKj=170f, cholesterol=0f, fiber=2.3f, isPre=false),
-                SnackEntity(name="Výhonky vojtěšky (alfalfa)", weight="100g", p=4f, s=0.4f, t=0.7f, energyKj=100f, cholesterol=0f, fiber=1.6f, isPre=false),
-                SnackEntity(name="Zelí bílé hlávkové", weight="100g", p=1.5f, s=4.5f, t=0.2f, energyKj=120f, cholesterol=0f, fiber=2.7f, isPre=false),
-                SnackEntity(name="Zelí červené hlávkové", weight="100g", p=1.6f, s=6.1f, t=0.3f, energyKj=130f, cholesterol=0f, fiber=3.1f, isPre=false),
-                SnackEntity(name="Čočka", weight="100g", p=26.9f, s=59.2f, t=1.2f, energyKj=1440f, cholesterol=0f, fiber=10.6f, isPre=false),
-                SnackEntity(name="Fazole", weight="100g", p=23.5f, s=59.8f, t=1.6f, energyKj=1400f, cholesterol=0f, fiber=17f, isPre=false),
-                SnackEntity(name="Hrách", weight="100g", p=23.7f, s=61.5f, t=1.4f, energyKj=1420f, cholesterol=0f, fiber=16.6f, isPre=false),
-                SnackEntity(name="Sója", weight="100g", p=43.8f, s=16.3f, t=23f, energyKj=1860f, cholesterol=0f, fiber=21f, isPre=false),
-                SnackEntity(name="Ananas", weight="100g", p=0.4f, s=10.1f, t=0.2f, energyKj=180f, cholesterol=0f, fiber=1.3f, isPre=false),
-                SnackEntity(name="Angrešt", weight="100g", p=0.9f, s=10.6f, t=0.5f, energyKj=210f, cholesterol=0f, fiber=2.8f, isPre=false),
-                SnackEntity(name="Avokádo", weight="100g", p=1.9f, s=0.4f, t=23.5f, energyKj=930f, cholesterol=0f, fiber=6.3f, isPre=false),
-                SnackEntity(name="Banány", weight="100g", p=0.3f, s=23f, t=0.3f, energyKj=400f, cholesterol=0f, fiber=3.1f, isPre=false),
-                SnackEntity(name="Borůvky", weight="100g", p=0.8f, s=14.7f, t=0.7f, energyKj=280f, cholesterol=0f, fiber=2.2f, isPre=false),
-                SnackEntity(name="Broskve", weight="100g", p=0.8f, s=12.5f, t=0.2f, energyKj=220f, cholesterol=0f, fiber=1.4f, isPre=false),
-                SnackEntity(name="Citrony", weight="100g", p=0.7f, s=10.5f, t=0.5f, energyKj=200f, cholesterol=0f, fiber=1.8f, isPre=false),
-                SnackEntity(name="Jablka", weight="100g", p=0.4f, s=14.4f, t=0.4f, energyKj=260f, cholesterol=0f, fiber=1.8f, isPre=false),
-                SnackEntity(name="Jahody", weight="100g", p=0.9f, s=8.8f, t=0.6f, energyKj=180f, cholesterol=0f, fiber=1.3f, isPre=false),
-                SnackEntity(name="Mandarinky", weight="100g", p=0.9f, s=10.6f, t=0.3f, energyKj=200f, cholesterol=0f, fiber=1.5f, isPre=false),
-                SnackEntity(name="Pomeranče", weight="100g", p=0.9f, s=11.7f, t=0.3f, energyKj=200f, cholesterol=0f, fiber=1.8f, isPre=false),
-                SnackEntity(name="Arašídy", weight="100g", p=26.9f, s=23.6f, t=44.2f, energyKj=2510f, cholesterol=0f, fiber=6.2f, isPre=false),
-                SnackEntity(name="Vlašské ořechy", weight="100g", p=18.4f, s=14.6f, t=60f, energyKj=2820f, cholesterol=0f, fiber=2.7f, isPre=false)
+                SnackEntity(name="Artyčoky", weight="100g", p=2.4f, s=2.6f, t=0.1f, energyKj=170f, fiber=10.8f, isPre=false),
+                SnackEntity(name="Brambory rané", weight="100g", p=1.7f, s=16.6f, t=0.2f, energyKj=300f, fiber=1.3f, isPre=false),
+                SnackEntity(name="Brambory zimní", weight="100g", p=1.8f, s=18.2f, t=0.3f, energyKj=330f, fiber=1.6f, isPre=false),
+                SnackEntity(name="Brokolice, kedlubna", weight="100g", p=4.4f, s=2.9f, t=0.9f, energyKj=140f, fiber=2.8f, isPre=false),
+                SnackEntity(name="Brukev", weight="100g", p=2.1f, s=5.8f, t=0.2f, energyKj=130f, fiber=2.2f, isPre=false),
+                SnackEntity(name="Celer-bulva", weight="100g", p=1.7f, s=9.9f, t=0.3f, energyKj=210f, fiber=3.7f, isPre=false),
+                SnackEntity(name="Celer - řapíkatý", weight="100g", p=1.3f, s=3.7f, t=0.2f, energyKj=140f, fiber=2.4f, isPre=false),
+                SnackEntity(name="Cibule", weight="100g", p=1.7f, s=9.6f, t=0.3f, energyKj=200f, fiber=1.4f, isPre=false),
+                SnackEntity(name="Cibule - raná", weight="100g", p=2f, s=5.8f, t=0.2f, energyKj=140f, fiber=1.3f, isPre=false),
+                SnackEntity(name="Cuketa", weight="100g", p=1.6f, s=2.1f, t=0.4f, energyKj=80f, fiber=0.9f, isPre=false),
+                SnackEntity(name="Čekanka salátová", weight="100g", p=1.5f, s=4f, t=0.1f, energyKj=90f, fiber=1.4f, isPre=false),
+                SnackEntity(name="Černý kořen", weight="100g", p=1.4f, s=13.3f, t=0.4f, energyKj=260f, fiber=5.3f, isPre=false),
+                SnackEntity(name="Červená řepa", weight="100g", p=1.8f, s=10.6f, t=0.1f, energyKj=200f, fiber=2.3f, isPre=false),
+                SnackEntity(name="Česnek", weight="100g", p=6.6f, s=26.9f, t=0.2f, energyKj=450f, fiber=0.9f, isPre=false),
+                SnackEntity(name="Fazolky", weight="100g", p=2.3f, s=7.1f, t=0.3f, energyKj=160f, fiber=3f, isPre=false),
+                SnackEntity(name="Fenykl", weight="100g", p=2.4f, s=6.1f, t=0.3f, energyKj=110f, fiber=3.3f, isPre=false),
+                SnackEntity(name="Hrášek", weight="100g", p=6.5f, s=13.3f, t=0.5f, energyKj=320f, fiber=5.2f, isPre=false),
+                SnackEntity(name="Chřest", weight="100g", p=2.2f, s=3.5f, t=0.2f, energyKj=90f, fiber=1.8f, isPre=false),
+                SnackEntity(name="Kapusta hlávková", weight="100g", p=3.1f, s=6.7f, t=0.5f, energyKj=180f, fiber=3.1f, isPre=false),
+                SnackEntity(name="Kapusta kadeřavá", weight="100g", p=4.3f, s=2.1f, t=0.9f, energyKj=140f, fiber=3.3f, isPre=false),
+                SnackEntity(name="Kapusta růžičková", weight="100g", p=5.2f, s=7.6f, t=0.6f, energyKj=210f, fiber=1.6f, isPre=false),
+                SnackEntity(name="Kopr", weight="100g", p=2.4f, s=7.8f, t=0.2f, energyKj=160f, fiber=1.6f, isPre=false),
+                SnackEntity(name="Křen", weight="100g", p=3.9f, s=22.4f, t=0.5f, energyKj=440f, fiber=6.2f, isPre=false),
+                SnackEntity(name="Kukuřice cukrová", weight="100g", p=3.5f, s=18.8f, t=2.2f, energyKj=440f, fiber=0.5f, isPre=false),
+                SnackEntity(name="Květák", weight="100g", p=2.4f, s=4.4f, t=0.3f, energyKj=120f, fiber=1.8f, isPre=false),
+                SnackEntity(name="Lilek", weight="100g", p=1.3f, s=8.2f, t=0.3f, energyKj=160f, fiber=2.3f, isPre=false),
+                SnackEntity(name="Mangold listy", weight="100g", p=2.1f, s=2.8f, t=0.3f, energyKj=60f, fiber=2f, isPre=false),
+                SnackEntity(name="Meloun červený", weight="100g", p=0.6f, s=5f, t=0.2f, energyKj=110f, fiber=0.3f, isPre=false),
+                SnackEntity(name="Meloun žlutý", weight="100g", p=0.5f, s=6.5f, t=0.1f, energyKj=120f, fiber=0.9f, isPre=false),
+                SnackEntity(name="Mrkev", weight="100g", p=1.4f, s=9.7f, t=0.3f, energyKj=190f, fiber=3f, isPre=false),
+                SnackEntity(name="Okurka nakládačka", weight="100g", p=1f, s=1.8f, t=0.2f, energyKj=50f, fiber=1f, isPre=false),
+                SnackEntity(name="Okurka salátová", weight="100g", p=0.7f, s=2.6f, t=0.2f, energyKj=70f, fiber=0.9f, isPre=false),
+                SnackEntity(name="Paprika červená", weight="100g", p=1.2f, s=5.2f, t=0.5f, energyKj=120f, fiber=1.6f, isPre=false),
+                SnackEntity(name="Paprika zelená", weight="100g", p=0.8f, s=2.6f, t=0.3f, energyKj=70f, fiber=1.9f, isPre=false),
+                SnackEntity(name="Patizony", weight="100g", p=2.3f, s=10.2f, t=0.3f, energyKj=210f, fiber=0f, isPre=false),
+                SnackEntity(name="Pažitka", weight="100g", p=3.3f, s=8.1f, t=0.7f, energyKj=210f, fiber=2f, isPre=false),
+                SnackEntity(name="Pekingské zelí", weight="100g", p=1.1f, s=1f, t=0.3f, energyKj=50f, fiber=1.6f, isPre=false),
+                SnackEntity(name="Petržel kořen", weight="100g", p=2.9f, s=12.2f, t=0.6f, energyKj=260f, fiber=1.8f, isPre=false),
+                SnackEntity(name="Petržel nať", weight="100g", p=3.7f, s=9f, t=1f, energyKj=240f, fiber=5f, isPre=false),
+                SnackEntity(name="Polníček", weight="100g", p=1.8f, s=1.4f, t=0.4f, energyKj=70f, fiber=1.5f, isPre=false),
+                SnackEntity(name="Pór", weight="100g", p=2.5f, s=8.6f, t=0.3f, energyKj=190f, fiber=1.5f, isPre=false),
+                SnackEntity(name="Rajčata", weight="100g", p=1.1f, s=4.6f, t=0.3f, energyKj=100f, fiber=1.5f, isPre=false),
+                SnackEntity(name="Reveň", weight="100g", p=1.3f, s=3.6f, t=0.1f, energyKj=80f, fiber=1.4f, isPre=false),
+                SnackEntity(name="Ředkev", weight="100g", p=1.5f, s=5f, t=0.1f, energyKj=90f, fiber=1.1f, isPre=false),
+                SnackEntity(name="Ředkvičky", weight="100g", p=1.1f, s=3.7f, t=0.1f, energyKj=80f, fiber=1f, isPre=false),
+                SnackEntity(name="Řeřicha zahradní", weight="100g", p=1.6f, s=0.4f, t=0.6f, energyKj=60f, fiber=3.3f, isPre=false),
+                SnackEntity(name="Salát hlávkový", weight="100g", p=1.5f, s=2.7f, t=0.3f, energyKj=80f, fiber=0.9f, isPre=false),
+                SnackEntity(name="Salát ledový", weight="100g", p=0.7f, s=1.9f, t=0.3f, energyKj=50f, fiber=1.2f, isPre=false),
+                SnackEntity(name="Salát římský", weight="100g", p=1f, s=1.7f, t=0.6f, energyKj=70f, fiber=1.2f, isPre=false),
+                SnackEntity(name="Sójové výhonky", weight="100g", p=5.5f, s=4.7f, t=1f, energyKj=210f, fiber=2.6f, isPre=false),
+                SnackEntity(name="Špenát", weight="100g", p=3.4f, s=4.1f, t=0.6f, energyKj=140f, fiber=2.1f, isPre=false),
+                SnackEntity(name="Topinambury", weight="100g", p=1.9f, s=17f, t=0.2f, energyKj=330f, fiber=3.5f, isPre=false),
+                SnackEntity(name="Tykev velkoplodá", weight="100g", p=0.8f, s=9f, t=0.1f, energyKj=170f, fiber=2.3f, isPre=false),
+                SnackEntity(name="Výhonky vojtěšky (alfalfa)", weight="100g", p=4f, s=0.4f, t=0.7f, energyKj=100f, fiber=1.6f, isPre=false),
+                SnackEntity(name="Zelí bílé hlávkové", weight="100g", p=1.5f, s=4.5f, t=0.2f, energyKj=120f, fiber=2.7f, isPre=false),
+                SnackEntity(name="Zelí červené hlávkové", weight="100g", p=1.6f, s=6.1f, t=0.3f, energyKj=130f, fiber=3.1f, isPre=false),
+                SnackEntity(name="Čočka", weight="100g", p=26.9f, s=59.2f, t=1.2f, energyKj=1440f, fiber=10.6f, isPre=false),
+                SnackEntity(name="Fazole", weight="100g", p=23.5f, s=59.8f, t=1.6f, energyKj=1400f, fiber=17f, isPre=false),
+                SnackEntity(name="Hrách", weight="100g", p=23.7f, s=61.5f, t=1.4f, energyKj=1420f, fiber=16.6f, isPre=false),
+                SnackEntity(name="Sója", weight="100g", p=43.8f, s=16.3f, t=23f, energyKj=1860f, fiber=21f, isPre=false),
+                SnackEntity(name="Ananas", weight="100g", p=0.4f, s=10.1f, t=0.2f, energyKj=180f, fiber=1.3f, isPre=false),
+                SnackEntity(name="Angrešt", weight="100g", p=0.9f, s=10.6f, t=0.5f, energyKj=210f, fiber=2.8f, isPre=false),
+                SnackEntity(name="Avokádo", weight="100g", p=1.9f, s=0.4f, t=23.5f, energyKj=930f, fiber=6.3f, isPre=false),
+                SnackEntity(name="Banány", weight="100g", p=0.3f, s=23f, t=0.3f, energyKj=400f, fiber=3.1f, isPre=false),
+                SnackEntity(name="Borůvky", weight="100g", p=0.8f, s=14.7f, t=0.7f, energyKj=280f, fiber=2.2f, isPre=false),
+                SnackEntity(name="Broskve", weight="100g", p=0.8f, s=12.5f, t=0.2f, energyKj=220f, fiber=1.4f, isPre=false),
+                SnackEntity(name="Citrony", weight="100g", p=0.7f, s=10.5f, t=0.5f, energyKj=200f, fiber=1.8f, isPre=false),
+                SnackEntity(name="Jablka", weight="100g", p=0.4f, s=14.4f, t=0.4f, energyKj=260f, fiber=1.8f, isPre=false),
+                SnackEntity(name="Jahody", weight="100g", p=0.9f, s=8.8f, t=0.6f, energyKj=180f, fiber=1.3f, isPre=false),
+                SnackEntity(name="Mandarinky", weight="100g", p=0.9f, s=10.6f, t=0.3f, energyKj=200f, fiber=1.5f, isPre=false),
+                SnackEntity(name="Pomeranče", weight="100g", p=0.9f, s=11.7f, t=0.3f, energyKj=200f, fiber=1.8f, isPre=false),
+                SnackEntity(name="Arašídy", weight="100g", p=26.9f, s=23.6f, t=44.2f, energyKj=2510f, fiber=6.2f, isPre=false),
+                SnackEntity(name="Vlašské ořechy", weight="100g", p=18.4f, s=14.6f, t=60f, energyKj=2820f, fiber=2.7f, isPre=false)
             )
             defaultItems.forEach { db.snackDao().insertSnack(it) }
         }
@@ -405,7 +413,7 @@ class SnackFragment : Fragment() {
             date = today, time = nowTime, name = snack.name,
             p = snack.p, s = snack.s, t = snack.t,
             calories = calories, energyKj = snack.energyKj,
-            cholesterol = snack.cholesterol, fiber = snack.fiber
+            fiber = snack.fiber
         )
 
         lifecycleScope.launch(Dispatchers.IO) {
@@ -434,7 +442,7 @@ class SnackFragment : Fragment() {
         val tilName      = v.findViewById<TextInputLayout>(R.id.tilSnackName)
 
         // Reset base hodnot při otevření nového dialogu
-        baseP = 0f; baseS = 0f; baseT = 0f; baseKj = 0f; baseFiber = 0f; baseChol = 0f
+        baseP = 0f; baseS = 0f; baseT = 0f; baseKj = 0f; baseFiber = 0f
 
         btnSave.setOnClickListener {
             val name   = etName.text.toString()
@@ -458,7 +466,6 @@ class SnackFragment : Fragment() {
                             p = p, s = s, t = t,
                             isPre = switchPre.isChecked,
                             energyKj = energy,
-                            cholesterol = chol,
                             fiber = fiber
                         )
                     )
@@ -481,7 +488,6 @@ class SnackFragment : Fragment() {
                 etS.setText("%.1f".format(baseS * weight).replace(",", "."))
                 etT.setText("%.1f".format(baseT * weight).replace(",", "."))
                 etFiber.setText("%.1f".format(baseFiber * weight).replace(",", "."))
-                etChol.setText("%.0f".format(baseChol * weight).replace(",", "."))
             }
         }
 
@@ -518,7 +524,6 @@ class SnackFragment : Fragment() {
                             baseS = (n.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat()
                             baseT = (n.optDouble("fat_100g", 0.0) / 100.0).toFloat()
                             baseFiber = (n.optDouble("fiber_100g", 0.0) / 100.0).toFloat()
-                            baseChol = (n.optDouble("cholesterol_100g", 0.0) / 100.0).toFloat()
 
                             etName.setText(name)
                             etWeight.setText("100") // Reset na 100g pro začátek
@@ -526,7 +531,6 @@ class SnackFragment : Fragment() {
                             etS.setText("%.1f".format(baseS * 100).replace(",", "."))
                             etT.setText("%.1f".format(baseT * 100).replace(",", "."))
                             etF.setText("%.1f".format(baseFiber * 100).replace(",", "."))
-                            etC.setText("%.0f".format(baseChol * 100).replace(",", "."))
                         }
                     }
                 }

@@ -329,7 +329,6 @@ class FoodSwipeDialog : DialogFragment() {
                 cal = kcal,
                 kj = snack.energyKj.toDouble(),
                 fiber = snack.fiber.toDouble(),
-                chol = snack.cholesterol.toDouble(),
                 mealContext = currentMealContext.name
             )
 

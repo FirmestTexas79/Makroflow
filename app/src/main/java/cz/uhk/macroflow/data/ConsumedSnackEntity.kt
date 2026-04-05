@@ -24,6 +24,5 @@ data class ConsumedSnackEntity(
     val calories: Int,
     val mealContext: String = "NO_TRAINING",
     val energyKj: Float,
-    val cholesterol: Float,
     val fiber: Float
 )

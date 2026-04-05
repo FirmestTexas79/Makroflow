@@ -134,12 +134,14 @@ object MacroCalculator {
         // Finální srovnání kalorií
         val finalCalories = (protein * 4) + (carbs * 4) + (fat * 9)
 
+        val recommendedFiber = (finalCalories / 1000.0) * 12.0
+
         return MacroResult(
             calories = finalCalories,
             protein = protein,
             carbs = carbs,
             fat = fat,
-            fiber = 0.0,
+            fiber = recommendedFiber,
             water = (weight * 0.04) + (if (finalCalories > 3000) 1.0 else 0.0),
             trainingType = strengthType.uppercase(),
             weight = weight,
