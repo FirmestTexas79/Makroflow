@@ -152,6 +152,37 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
+/*
+
+        // --- DOČASNÝ ADMIN CHEAT PRO SHINY ---
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(this@MainActivity)
+            val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+            val activeDate = prefs.getLong("currentOnBarCaughtDate", -1L)
+
+            if (activeDate != -1L) {
+                val p = db.capturedPokemonDao().getPokemonByCaughtDate(activeDate)
+                if (p != null && !p.isShiny) {
+                    // ✅ Použijeme .copy(), tím obejdeme "val" a vytvoříme upravený objekt
+                    val shinyVersion = p.copy(isShiny = true)
+
+                    db.capturedPokemonDao().updatePokemon(shinyVersion)
+
+                    if (FirebaseRepository.isLoggedIn) {
+                        FirebaseRepository.uploadCapturedPokemon(shinyVersion)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "✨ ${p.name} zmutoval na SHINY!", Toast.LENGTH_LONG).show()
+                        updatePokemonVisibility()
+                    }
+                }
+            }
+        }
+
+*/
+
+
 // JEDEN JEDNOTNÝ TOUCH LISTENER PRO LONG PRESS
         fabHome.setOnTouchListener { v, event ->
             when (event.action) {
@@ -614,58 +645,53 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val ivPokemon = findViewById<ImageView>(R.id.ivDiglettBottomBar) ?: return
         val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
 
-        // Načítáme tvůj unikátní timestamp chycení
         val acquired = prefs.getBoolean("pokemonAcquired", false)
         val activeCaughtDate = prefs.getLong("currentOnBarCaughtDate", -1L)
-
-        Log.d("POKEMON_DEBUG", "--- UPDATE CHECK ---")
-        Log.d("POKEMON_DEBUG", "Acquired: $acquired, Timestamp: $activeCaughtDate")
 
         if (!acquired || activeCaughtDate == -1L) {
             pokemonBehavior?.stop()
             pokemonBehavior = null
             ivPokemon.visibility = View.GONE
-            lastLoadedId = "" // Resetujeme cache, aby se příště mohl načíst znovu
+            lastLoadedId = ""
             return
         }
 
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(this@MainActivity)
-
-            // Hledáme přesně toho Gengara/Pikachua podle času chycení
             val caught = db.capturedPokemonDao().getPokemonByCaughtDate(activeCaughtDate)
 
             withContext(Dispatchers.Main) {
                 if (caught != null) {
-                    // Pokémon nalezen v DB!
-                    val pId = caught.pokemonId // "094"
+                    val pId = caught.pokemonId
                     val pName = caught.name
-                    val uniqueKey = caught.caughtDate.toString() // Použijeme datum jako unikátní ID instance
+                    val uniqueKey = caught.caughtDate.toString()
 
                     if (uniqueKey != lastLoadedId) {
-                        Log.i("POKEMON_DEBUG", "Načítám instanci: $pName (Timestamp: $uniqueKey)")
                         lastLoadedId = uniqueKey
-
                         pokemonBehavior?.stop()
                         pokemonBehavior = null
                         ivPokemon.visibility = View.INVISIBLE
 
-                        // Příprava jména pro URL (převede "PIKACHU" na "pikachu")
                         val webName = pName.lowercase().trim()
-                        val imageUrl = "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
 
-                        ivPokemon.load(imageUrl) {
+                        // --- SHINY LOGIKA START ---
+                        val imageSource: Any = if (caught.isShiny) {
+                            val resId = resources.getIdentifier("shiny_$webName", "drawable", packageName)
+                            if (resId != 0) resId else "https://img.pokemondb.net/sprites/ruby-sapphire/shiny/$webName.png"
+                        } else {
+                            "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
+                        }
+                        // --- SHINY LOGIKA END ---
+
+                        ivPokemon.load(imageSource) {
                             crossfade(true)
                             listener(onSuccess = { _, _ ->
-                                // Vytvoříme Wanderera (použije staty z DB díky tomu pId a caughtDate)
                                 pokemonBehavior = WandererFactory.create(this@MainActivity, ivPokemon, pId)
                                 ivPokemon.visibility = View.VISIBLE
                                 pokemonBehavior?.start()
-
                             })
                         }
                     } else {
-                        // Už je načtený, jen se ujistíme, že běží
                         ivPokemon.visibility = View.VISIBLE
                         if (pokemonBehavior == null) {
                             pokemonBehavior = WandererFactory.create(this@MainActivity, ivPokemon, pId)
@@ -673,12 +699,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         }
                     }
                 } else {
-                    // ⚠️ DŮLEŽITÉ: Pokémon v DB není (asi ho Sync smazal a ještě nenahrál zpět)
-                    Log.w("POKEMON_DEBUG", "Pokémon s datem $activeCaughtDate v DB zatím není. Čekám na Sync...")
-
                     ivPokemon.visibility = View.GONE
-
-                    // Zkusíme to znovu za 3 sekundy. TADY NESMÍ BÝT prefs.edit().clear()!
                     Handler(Looper.getMainLooper()).postDelayed({
                         updatePokemonVisibility()
                     }, 3000)

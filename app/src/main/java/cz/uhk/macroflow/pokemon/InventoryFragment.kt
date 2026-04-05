@@ -106,39 +106,56 @@ class InventoryFragment : Fragment() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = list[position]
-            val prefs = holder.itemView.context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+            val context = holder.itemView.context
+            val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
 
-            // ✅ OPRAVA: Teď kontrolujeme aktivního Pokémona podle jeho unikátního timestampu chycení
             val activeOnBarCaughtDate = prefs.getLong("currentOnBarCaughtDate", -1L)
             val isAcquired = prefs.getBoolean("pokemonAcquired", false)
             val isActiveOnBar = isAcquired && (item.caughtDate == activeOnBarCaughtDate)
 
-            // Logika pro zobrazení správného tlačítka (Pin vs Unpin)
-            if (isActiveOnBar) {
-                holder.btnPin.visibility = View.GONE
-                holder.btnUnpin.visibility = View.VISIBLE
-            } else {
-                holder.btnPin.visibility = View.VISIBLE
-                holder.btnUnpin.visibility = View.GONE
-            }
+            // UI Logika pro tlačítka
+            holder.btnPin.visibility = if (isActiveOnBar) View.GONE else View.VISIBLE
+            holder.btnUnpin.visibility = if (isActiveOnBar) View.VISIBLE else View.GONE
 
             val prog = PokemonLevelCalc.progressToNextLevel(item.xp)
 
-            holder.tvName.text = item.name
+            holder.tvName.text = if (item.isShiny) "✨ ${item.name}" else item.name
             holder.tvLevel.visibility = View.VISIBLE
             holder.pbXp.visibility = View.VISIBLE
             holder.tvLevel.text = "Lv.${item.level}"
             holder.pbXp.progress = (prog * 100).toInt()
 
+            // --- LOGIKA NAČÍTÁNÍ OBRÁZKU ---
             val webName = item.name.lowercase()
                 .replace(" ", "-").replace(".", "")
                 .replace("♀", "-f").replace("♂", "-m")
 
-            holder.ivSprite.load("https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png") {
-                placeholder(R.drawable.ic_home)
-                error(R.drawable.ic_home)
+            if (item.isShiny) {
+                // 1. Priorita: Zkusíme tvůj lokální drawable (např. shiny_mewtwo)
+                val resourceId = context.resources.getIdentifier(
+                    "shiny_${webName.replace("-", "_")}",
+                    "drawable",
+                    context.packageName
+                )
+
+                if (resourceId != 0) {
+                    holder.ivSprite.load(resourceId)
+                } else {
+                    // 2. Záloha: Shiny verze z webu (Ruby/Sapphire styl podle tvého odkazu)
+                    holder.ivSprite.load("https://img.pokemondb.net/sprites/ruby-sapphire/shiny/$webName.png") {
+                        placeholder(R.drawable.ic_home)
+                        error(R.drawable.ic_home)
+                    }
+                }
+            } else {
+                // Klasický pokémon
+                holder.ivSprite.load("https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png") {
+                    placeholder(R.drawable.ic_home)
+                    error(R.drawable.ic_home)
+                }
             }
 
+            // --- LISTENERY (beze změn) ---
             val lockIcon = if (item.isLocked) android.R.drawable.ic_lock_lock else android.R.drawable.ic_lock_idle_lock
             holder.btnLock.setImageResource(lockIcon)
 
@@ -146,64 +163,49 @@ class InventoryFragment : Fragment() {
                 lifecycleScope.launch(Dispatchers.IO) {
                     item.isLocked = !item.isLocked
                     db.capturedPokemonDao().updatePokemon(item)
-                    if (FirebaseRepository.isLoggedIn) {
-                        FirebaseRepository.uploadCapturedPokemon(item)
-                    }
+                    if (FirebaseRepository.isLoggedIn) FirebaseRepository.uploadCapturedPokemon(item)
                     withContext(Dispatchers.Main) { loadData() }
                 }
             }
 
             holder.btnPin.setOnClickListener {
-                // ✅ OPRAVA: Ukládáme caughtDate jako hlavní identifikátor pro bar
                 prefs.edit()
                     .putBoolean("pokemonAcquired", true)
                     .putLong("currentOnBarCaughtDate", item.caughtDate)
                     .putString("currentOnBarName", item.name.uppercase())
-                    // Ponecháme i ID pro zpětnou kompatibilitu, ale už na něm nezávisíme
                     .putInt("currentOnBarCapturedId", item.id)
                     .apply()
 
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
                 refreshStickyNotification()
                 loadData()
-                Toast.makeText(requireContext(), "📌 ${item.name} vypuštěn na lištu!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "📌 ${item.name} vypuštěn na lištu!", Toast.LENGTH_SHORT).show()
             }
 
             holder.btnUnpin.setOnClickListener {
-                prefs.edit()
-                    .putBoolean("pokemonAcquired", false)
-                    .putLong("currentOnBarCaughtDate", -1L)
-                    .apply()
-
+                prefs.edit().putBoolean("pokemonAcquired", false).putLong("currentOnBarCaughtDate", -1L).apply()
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
                 refreshStickyNotification()
                 loadData()
-                Toast.makeText(requireContext(), "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
             }
 
             holder.btnDelete.setOnClickListener {
                 if (item.isLocked) {
-                    Toast.makeText(requireContext(), "Odemkni pokémona před smazáním! 🔒", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Odemkni pokémona před smazáním! 🔒", Toast.LENGTH_SHORT).show()
                 } else {
                     lifecycleScope.launch(Dispatchers.IO) {
                         db.capturedPokemonDao().deletePokemon(item)
                         if (FirebaseRepository.isLoggedIn) {
-                            try {
-                                FirebaseRepository.deleteCapturedPokemon(item.caughtDate)
-                            } catch (e: Exception) { e.printStackTrace() }
+                            try { FirebaseRepository.deleteCapturedPokemon(item.caughtDate) } catch (e: Exception) { e.printStackTrace() }
                         }
-
                         if (isActiveOnBar) {
-                            prefs.edit()
-                                .putBoolean("pokemonAcquired", false)
-                                .putLong("currentOnBarCaughtDate", -1L)
-                                .apply()
+                            prefs.edit().putBoolean("pokemonAcquired", false).putLong("currentOnBarCaughtDate", -1L).apply()
                         }
-
                         withContext(Dispatchers.Main) {
                             (requireActivity() as? MainActivity)?.updatePokemonVisibility()
                             loadData()
-                            Toast.makeText(requireContext(), "🗑️ Pokémon smazán.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "🗑️ Pokémon smazán.", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }

@@ -56,14 +56,16 @@ object WandererFactory {
     private val configMap by lazy { CONFIGS.associateBy { it.pokemonId } }
 
     fun create(context: Context, pokemonView: ImageView, pokemonId: String): PokemonBehavior {
-        val cfg = configMap[pokemonId] ?: defaultConfig()
+        // ✅ PŘEDÁVÁME ID DO DEFAULTU, POKUD NENÍ V MAPĚ
+        val cfg = configMap[pokemonId] ?: defaultConfig(pokemonId)
         return cfg.behaviorFactory(context, pokemonView, cfg.baseScale)
     }
 
-    private fun defaultConfig() = WandererConfig(
-        pokemonId     = "",
-        baseScale     = 1.8f,
-        behaviorFactory = { ctx, view, sc -> StandardWanderer(ctx, view, "", sc) },
+    // ✅ OPRAVA: Default musí brát ID, aby StandardWanderer věděl, o koho jde
+    private fun defaultConfig(id: String) = WandererConfig(
+        pokemonId     = id,
+        baseScale     = 2.0f,
+        behaviorFactory = { ctx, view, sc -> StandardWanderer(ctx, view, id, sc) },
         effectFactory = { SmokeTransitionEffect(false) }
     )
 }

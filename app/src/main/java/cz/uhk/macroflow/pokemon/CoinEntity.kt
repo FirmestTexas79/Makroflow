@@ -44,6 +44,7 @@ data class CapturedPokemonEntity(
     var moveListStr: String = "",
     var level: Int = 1,
     var xp: Int = 0
+
 )
 
 @Dao

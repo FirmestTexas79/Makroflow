@@ -125,20 +125,32 @@ class CompanionForegroundService : Service() {
                         .replace(" ", "-").replace(".", "")
                         .replace("♀", "-f").replace("♂", "-m")
 
-                    val url = "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
+                    // --- ✨ OPRAVENÁ SHINY LOGIKA PRO NOTIFIKACI ---
+                    val imageData: Any = if (pokemon.isShiny) {
+                        val resId = resources.getIdentifier("shiny_${webName.replace("-", "_")}", "drawable", packageName)
+                        if (resId != 0) resId else "https://img.pokemondb.net/sprites/ruby-sapphire/shiny/$webName.png"
+                    } else {
+                        "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
+                    }
 
                     val request = ImageRequest.Builder(applicationContext)
-                        .data(url)
+                        .data(imageData) // Tady teď může být Int i String
                         .allowHardware(false)
                         .target { drawable ->
                             val bitmap = (drawable as? BitmapDrawable)?.bitmap
                             if (bitmap != null) {
-                                rvSmall.setImageViewBitmap(R.id.ivNotificationPokemon, bitmap)
+                                // Aplikujeme tvůj crop a upscale pro ostrost
                                 val giantPokemon = getCroppedAndScaledBitmap(bitmap)
+
+                                rvSmall.setImageViewBitmap(R.id.ivNotificationPokemon, giantPokemon)
                                 rvLarge.setImageViewBitmap(R.id.ivNotificationPokemon, giantPokemon)
 
-                                // Refresh notifikace s obrázkem
-                                nm.notify(MakroflowNotifications.ID_STICKY_SERVICE, builder.build())
+                                // Refresh notifikace s novým bitmapem
+                                val updatedNotification = builder
+                                    .setCustomContentView(rvSmall)
+                                    .setCustomBigContentView(rvLarge)
+                                    .build()
+                                nm.notify(MakroflowNotifications.ID_STICKY_SERVICE, updatedNotification)
                             }
                         }.build()
                     Coil.imageLoader(applicationContext).enqueue(request)
