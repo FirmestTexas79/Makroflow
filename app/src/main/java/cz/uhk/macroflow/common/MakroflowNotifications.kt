@@ -7,12 +7,19 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.BitmapDrawable
 import android.os.Build
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import coil.Coil
+import coil.request.ImageRequest
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.common.MakroflowNotifications.CHANNEL_STICKY
+import cz.uhk.macroflow.common.MakroflowNotifications.ID_STICKY_SERVICE
 import cz.uhk.macroflow.training.TrainingTimeManager
+import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -58,6 +65,10 @@ object MakroflowNotifications {
     const val REQ_EVENING_LOG    = 2005
     const val REQ_STREAK_RISK    = 2006
 
+    // ── STICKY ───────────────────────────────────
+
+    const val ID_STICKY_SERVICE = 9999
+
     // ── Akce pro BroadcastReceiver ───────────────────────────────────
     const val ACTION_MORNING_RITUAL = "cz.uhk.macroflow.MORNING_RITUAL"
     const val ACTION_PRE_WORKOUT    = "cz.uhk.macroflow.PRE_WORKOUT"
@@ -65,6 +76,8 @@ object MakroflowNotifications {
     const val ACTION_WATER_REMINDER = "cz.uhk.macroflow.WATER_REMINDER"
     const val ACTION_EVENING_LOG    = "cz.uhk.macroflow.EVENING_LOG"
     const val ACTION_STREAK_RISK    = "cz.uhk.macroflow.STREAK_RISK"
+
+    const val CHANNEL_STICKY = "makroflow_ongoing"
 
     // ═══════════════════════════════════════════════════════════════
     // Vytvoření kanálů (volej jednou při startu)
@@ -239,6 +252,107 @@ object MakroflowNotifications {
         }
         return PendingIntent.getBroadcast(context, reqCode, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+
+    fun showOngoingCompanionNotification(context: Context, currentSteps: Int) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // 1. Inicializace kanálu (Android 8+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_STICKY,
+                "Aktivní parťák",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                setShowBadge(false)
+                setSound(null, null)
+                enableVibration(false)
+            }
+            nm.createNotificationChannel(channel)
+        }
+
+        // 2. Načtení dat z DB a Prefs (shodné s Inventory)
+        val gamePrefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val caughtDate = gamePrefs.getLong("currentOnBarCaughtDate", -1L)
+
+        val db = AppDatabase.getDatabase(context)
+        val activePokemon = runBlocking { db.capturedPokemonDao().getPokemonByCaughtDate(caughtDate) }
+        val profile = runBlocking { db.userProfileDao().getProfileSync() }
+
+        // 3. Příprava RemoteViews
+        val rv = RemoteViews(context.packageName, R.layout.notification_sticky)
+
+        // Nastavení textů
+        val stepGoal = profile?.stepGoal ?: 6000
+        rv.setTextViewText(R.id.tvNotificationSteps, "Kroky: $currentSteps / $stepGoal")
+
+        val trainingTime = TrainingTimeManager.getTrainingTimeForToday(context) ?: "--:--"
+        rv.setTextViewText(R.id.tvNotificationStatus, trainingTime)
+
+        // Dynamický titulek podle denní doby a jména
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val pokemonName = activePokemon?.name ?: "Pokémon"
+        val greeting = when(hour) {
+            in 5..10 -> "Dobré ráno, trenére!"
+            in 18..22 -> "Dáme dnes trénink?"
+            else -> "Tvůj parťák: $pokemonName"
+        }
+        rv.setTextViewText(R.id.tvNotificationTitle, greeting)
+
+        // 4. Sestavení URL pro sprit (identické s InventoryFragment)
+        val spriteUrl = activePokemon?.let {
+            val webName = it.name.lowercase()
+                .replace(" ", "-").replace(".", "")
+                .replace("♀", "-f").replace("♂", "-m")
+            "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
+        }
+
+        // 5. Příprava Intentu pro otevření aplikace
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pi = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        // 6. Základní builder notifikace
+        val builder = NotificationCompat.Builder(context, CHANNEL_STICKY)
+            .setSmallIcon(R.drawable.ic_logo_white)   // ← musí být bílá/průhledná ikona
+            .setCustomContentView(rv)
+            .setCustomBigContentView(rv)
+            .setOngoing(true)
+            .setSilent(true)
+            .setContentIntent(pi)
+            .setOnlyAlertOnce(true)
+            .setColor(0xFFFEFAE0.toInt())             // ← cream barva pozadí
+            .setColorized(true)                        // ← toto vyplní celé pozadí notifikace
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+
+
+        // 7. Načtení obrázku přes Coil
+        if (spriteUrl != null) {
+            val imageLoader = Coil.imageLoader(context)
+            val request = ImageRequest.Builder(context)
+                .data(spriteUrl)
+                .target { drawable ->
+                    val bitmap = (drawable as? BitmapDrawable)?.bitmap
+                    if (bitmap != null) {
+                        rv.setImageViewBitmap(R.id.ivNotificationPokemon, bitmap)
+                    } else {
+                        rv.setImageViewResource(R.id.ivNotificationPokemon, R.drawable.ic_logo_black)
+                    }
+                    // Publikujeme notifikaci až po stažení obrázku
+                    nm.notify(ID_STICKY_SERVICE, builder.build())
+                }
+                .build()
+            imageLoader.enqueue(request)
+        } else {
+            // Pokud není vybrán pokémon, zobrazíme hned s logem
+            rv.setImageViewResource(R.id.ivNotificationPokemon, R.drawable.ic_logo_black)
+            nm.notify(ID_STICKY_SERVICE, builder.build())
+        }
     }
 }
 
@@ -417,6 +531,8 @@ class NotificationReceiver : BroadcastReceiver() {
         }
     }
 }
+
+
 
 // ═══════════════════════════════════════════════════════════════════
 // BootReceiver — obnoví alarmy po restartu telefonu

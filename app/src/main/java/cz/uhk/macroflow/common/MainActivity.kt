@@ -99,6 +99,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setContentView(R.layout.activity_main)
         hideStatusBar()
 
+        MakroflowNotifications.createChannels(this)
+
         // ☁️ 1. AUTOSYNC PŘI STARTU: Pojistka pro případ offline změn
         if (FirebaseRepository.isLoggedIn) {
             lifecycleScope.launch(Dispatchers.IO) {
@@ -403,6 +405,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
             todayStepsCount++
             saveStepsToDb(todayStepsCount)
+
+            MakroflowNotifications.showOngoingCompanionNotification(this, todayStepsCount)
         }
     }
 
@@ -414,6 +418,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val db = AppDatabase.getDatabase(this@MainActivity)
             val entity = db.stepsDao().getStepsForDateSync(todayStr)
             todayStepsCount = entity?.count ?: 0
+
+            // 🔔 První vykreslení notifikace po načtení dat
+            withContext(Dispatchers.Main) {
+                MakroflowNotifications.showOngoingCompanionNotification(this@MainActivity, todayStepsCount)
+            }
         }
     }
 

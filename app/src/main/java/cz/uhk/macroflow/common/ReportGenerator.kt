@@ -28,6 +28,9 @@ object ReportGenerator {
         val profile = db.userProfileDao().getProfileSync() ?: return@withContext null
         val trainingPrefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
 
+        val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        val clientName = user?.displayName ?: "Sportovec"
+
         val pdfDocument = PdfDocument()
         val paint = Paint()
 
@@ -46,7 +49,8 @@ object ReportGenerator {
         paint.color = Color.BLACK
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         paint.textSize = 15f
-        canvas.drawText("KLIENT: ${profile.id}", MARGIN, yPos, paint)
+        // ✅ Teď vypisujeme reálné jméno nebo "Sportovec"
+        canvas.drawText("KLIENT: $clientName", MARGIN, yPos, paint)
         yPos += 22f
 
         paint.typeface = Typeface.DEFAULT
