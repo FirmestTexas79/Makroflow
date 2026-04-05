@@ -1,67 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="96dp"
     android:background="@android:color/transparent"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingVertical="4dp"
-    android:paddingHorizontal="8dp"
-    android:layout_marginLeft="-10dp">
+    android:paddingLeft="12dp"
+    android:paddingRight="12dp">
 
     <ImageView
         android:id="@+id/ivNotificationPokemon"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:paddingBottom="8dp"
-        android:scaleType="centerInside"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginRight="12dp"
+        android:scaleType="fitCenter"
+        android:adjustViewBounds="true"
         android:src="@drawable/ic_temp" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginStart="8dp"
+        android:layout_gravity="center_vertical"
         android:orientation="vertical">
+
         <TextView
             android:id="@+id/tvNotificationTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="CHARIZARD"
             android:textStyle="bold"
-            android:textSize="14sp"
-            android:maxLines="1"
-            android:ellipsize="end"
+            android:textSize="16sp"
             android:textColor="#283618" />
+
+        <TextView
+            android:id="@+id/tvNotificationLevelLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#BC6C25"
+            android:textStyle="bold"
+            android:textSize="13sp" />
+
         <TextView
             android:id="@+id/tvNotificationSteps"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0 / 6000"
             android:textColor="#606C38"
-            android:textSize="12sp" />
+            android:textSize="14sp" />
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
         android:gravity="end"
         android:layout_marginStart="4dp"
         android:orientation="vertical">
+
         <TextView
+            android:id="@+id/tvNotificationWorkoutType"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TRÉNINK"
             android:textStyle="bold"
             android:textColor="#BC6C25"
-            android:textSize="9sp" />
+            android:textSize="12sp" />
+
         <TextView
             android:id="@+id/tvNotificationStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="17:30"
             android:textColor="#283618"
             android:textStyle="bold"
-            android:textSize="11sp" />
+            android:textSize="15sp" />
     </LinearLayout>
 </LinearLayout>

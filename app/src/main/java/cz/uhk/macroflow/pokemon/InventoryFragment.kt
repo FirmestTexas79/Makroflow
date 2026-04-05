@@ -1,6 +1,7 @@
 package cz.uhk.macroflow.pokemon
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -20,6 +21,7 @@ import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.common.CompanionForegroundService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -65,6 +67,21 @@ class InventoryFragment : Fragment() {
                 rvInventory.adapter = ItemAdapter(ownedItems)
             }
         }
+    }
+
+    private fun refreshStickyNotification() {
+        // 1. Získáme referenci na MainActivity
+        val mainActivity = activity as? MainActivity
+
+        // 2. Vytáhneme si tvoje aktuální kroky (todayStepsCount) přes getter
+        val currentSteps = mainActivity?.getTodayStepsCount() ?: 0
+
+        // 3. Pošleme je do služby, aby je nepřepsala nulou
+        val intent = Intent(requireContext(), CompanionForegroundService::class.java).apply {
+            putExtra("steps", currentSteps)
+        }
+
+        requireContext().startService(intent)
     }
 
     private inner class PokemonAdapter(
@@ -147,6 +164,7 @@ class InventoryFragment : Fragment() {
                     .apply()
 
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
+                refreshStickyNotification()
                 loadData()
                 Toast.makeText(requireContext(), "📌 ${item.name} vypuštěn na lištu!", Toast.LENGTH_SHORT).show()
             }
@@ -158,6 +176,7 @@ class InventoryFragment : Fragment() {
                     .apply()
 
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
+                refreshStickyNotification()
                 loadData()
                 Toast.makeText(requireContext(), "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
             }

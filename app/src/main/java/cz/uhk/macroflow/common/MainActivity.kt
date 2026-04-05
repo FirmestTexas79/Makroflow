@@ -400,17 +400,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         sensorManager?.unregisterListener(this)
     }
 
-    // 👣 ✅ Živý poslech pro celou aplikaci!
+// --- SENZOROVÉ POSLOUCHÁNÍ ---
+
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
             todayStepsCount++
             saveStepsToDb(todayStepsCount)
 
-            MakroflowNotifications.showOngoingCompanionNotification(this, todayStepsCount)
+            // ✅ Aktualizace služby při každém kroku
+            updateCompanionService(todayStepsCount)
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+// --- NAČÍTÁNÍ Z DB ---
 
     private fun loadTodayStepsFromDb() {
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -419,10 +423,29 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val entity = db.stepsDao().getStepsForDateSync(todayStr)
             todayStepsCount = entity?.count ?: 0
 
-            // 🔔 První vykreslení notifikace po načtení dat
+            // ✅ Po načtení z DB okamžitě nastartujeme/aktualizujeme službu
             withContext(Dispatchers.Main) {
-                MakroflowNotifications.showOngoingCompanionNotification(this@MainActivity, todayStepsCount)
+                updateCompanionService(todayStepsCount)
             }
+        }
+    }
+
+// --- POMOCNÁ FUNKCE PRO SPOUŠTĚNÍ SLUŽBY ---
+
+    private fun updateCompanionService(steps: Int) {
+        val serviceIntent = Intent(this, CompanionForegroundService::class.java).apply {
+            putExtra("steps", steps)
+        }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Foreground service se musí spouštět touto metodou
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            Log.e("SERVICE_START", "Chyba při spouštění CompanionForegroundService: ${e.message}")
         }
     }
 
@@ -492,6 +515,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 }
             }
         }
+    }
+
+    // Přidej do MainActivity.kt
+    fun getTodayStepsCount(): Int {
+        return todayStepsCount
     }
 
     fun addXpToActivePokemonRealTime(xpAmount: Int) {
@@ -633,6 +661,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                                 pokemonBehavior = WandererFactory.create(this@MainActivity, ivPokemon, pId)
                                 ivPokemon.visibility = View.VISIBLE
                                 pokemonBehavior?.start()
+
                             })
                         }
                     } else {
