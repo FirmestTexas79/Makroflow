@@ -5,6 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
 import android.view.View
@@ -14,18 +18,73 @@ import coil.Coil
 import coil.request.ImageRequest
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.data.FirebaseRepository
+import cz.uhk.macroflow.data.StepsEntity
 import cz.uhk.macroflow.training.TrainingTimeManager
 import kotlinx.coroutines.*
+import java.text.SimpleDateFormat
 import java.util.*
 
-class CompanionForegroundService : Service() {
+class CompanionForegroundService : Service(), SensorEventListener {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
+    private var sensorManager: SensorManager? = null
+    private var todayStepsCount = 0
+
+    // Pomocné proměnné pro držení stavu, aby to neblikalo
+    private var cachedPokemonBitmap: Bitmap? = null
+    private var lastPokemonId: Int? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+        stepSensor?.let {
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        }
+
+        loadStepsAndPokemon()
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val steps = intent?.getIntExtra("steps", 0) ?: 0
-        updateNotification(steps)
+        // Vynutíme refresh dat z DB (kdyby se změnil pokemon v aplikaci)
+        loadStepsAndPokemon()
         return START_STICKY
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
+            todayStepsCount++
+            saveStepsToDb(todayStepsCount)
+            updateNotification(todayStepsCount)
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    private fun loadStepsAndPokemon() {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        serviceScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(applicationContext)
+            val entity = db.stepsDao().getStepsForDateSync(todayStr)
+            todayStepsCount = entity?.count ?: 0
+
+            withContext(Dispatchers.Main) {
+                updateNotification(todayStepsCount)
+            }
+        }
+    }
+
+    private fun saveStepsToDb(count: Int) {
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val db = AppDatabase.getDatabase(applicationContext)
+        val entity = StepsEntity(date = todayStr, count = count)
+        serviceScope.launch(Dispatchers.IO) {
+            db.stepsDao().insertSteps(entity)
+            if (FirebaseRepository.isLoggedIn) {
+                try { FirebaseRepository.uploadSteps(entity) } catch (e: Exception) {}
+            }
+        }
     }
 
     private fun updateNotification(currentSteps: Int) {
@@ -50,8 +109,6 @@ class CompanionForegroundService : Service() {
             val trainingPrefs = getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
 
             val caughtDate = gamePrefs.getLong("currentOnBarCaughtDate", -1L)
-
-            // 🔥 Pokud je v prefs -1, ani se nepokoušej tahat z DB
             val activePokemon = withContext(Dispatchers.IO) {
                 if (caughtDate != -1L) db.capturedPokemonDao().getPokemonByCaughtDate(caughtDate) else null
             }
@@ -62,15 +119,12 @@ class CompanionForegroundService : Service() {
 
             val stepGoal = profile?.stepGoal ?: 6000
             val timeStr = TrainingTimeManager.getTrainingTimeForToday(applicationContext) ?: "--:--"
-            val dayName = java.text.SimpleDateFormat("EEEE", java.util.Locale.ENGLISH).format(java.util.Date())
+            val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
             val workoutType = trainingPrefs.getString("type_$dayName", "REST")?.uppercase() ?: "REST"
 
-            // ─── LOGIKA VIDITELNOSTI POKÉMONA ───
             val hasPokemon = activePokemon != null
-
             if (hasPokemon) {
                 val pName = activePokemon!!.name.uppercase()
-                // Viditelné prvky
                 rvSmall.setViewVisibility(R.id.tvNotificationTitle, View.VISIBLE)
                 rvSmall.setViewVisibility(R.id.ivNotificationPokemon, View.VISIBLE)
                 rvSmall.setTextViewText(R.id.tvNotificationTitle, pName)
@@ -80,20 +134,22 @@ class CompanionForegroundService : Service() {
                 rvLarge.setViewVisibility(R.id.ivNotificationPokemon, View.VISIBLE)
                 rvLarge.setTextViewText(R.id.tvNotificationTitle, pName)
                 rvLarge.setTextViewText(R.id.tvNotificationLevelLarge, "LEVEL: ${activePokemon.level}")
+
+                // Pokud už máme bitmapu v RAM, hned ji tam dáme
+                if (activePokemon.id == lastPokemonId && cachedPokemonBitmap != null) {
+                    rvSmall.setImageViewBitmap(R.id.ivNotificationPokemon, cachedPokemonBitmap)
+                    rvLarge.setImageViewBitmap(R.id.ivNotificationPokemon, cachedPokemonBitmap)
+                }
             } else {
-                // 🔥 TOTÁLNÍ SMAZÁNÍ POKÉMON STUPIDIT (GONE nezabírá místo)
                 rvSmall.setViewVisibility(R.id.tvNotificationTitle, View.GONE)
                 rvSmall.setViewVisibility(R.id.ivNotificationPokemon, View.GONE)
-
                 rvLarge.setViewVisibility(R.id.tvNotificationTitle, View.GONE)
                 rvLarge.setViewVisibility(R.id.tvNotificationLevelLarge, View.GONE)
                 rvLarge.setViewVisibility(R.id.ivNotificationPokemon, View.GONE)
             }
 
-            // Společná fitness data (vždy viditelná)
             rvSmall.setTextViewText(R.id.tvNotificationSteps, "Kroky: $currentSteps / $stepGoal")
             rvSmall.setTextViewText(R.id.tvNotificationStatus, timeStr)
-
             rvLarge.setTextViewText(R.id.tvNotificationSteps, "Kroky: $currentSteps / $stepGoal")
             rvLarge.setTextViewText(R.id.tvNotificationStatus, timeStr)
             rvLarge.setTextViewText(R.id.tvNotificationWorkoutType, workoutType)
@@ -115,17 +171,12 @@ class CompanionForegroundService : Service() {
                 .setColor(0xFEFAE0)
                 .setColorized(true)
 
-            // Spustíme service hned se základními daty
             startForeground(MakroflowNotifications.ID_STICKY_SERVICE, builder.build())
 
-            // Načtení obrázku pouze pokud Pokémon existuje
-            if (hasPokemon) {
+            // Načítání obrázku - spustí se jen pokud se změnil pokemon nebo bitmapa chybí
+            if (hasPokemon && (activePokemon?.id != lastPokemonId || cachedPokemonBitmap == null)) {
                 activePokemon?.let { pokemon ->
-                    val webName = pokemon.name.lowercase().trim()
-                        .replace(" ", "-").replace(".", "")
-                        .replace("♀", "-f").replace("♂", "-m")
-
-                    // --- ✨ OPRAVENÁ SHINY LOGIKA PRO NOTIFIKACI ---
+                    val webName = pokemon.name.lowercase().trim().replace(" ", "-").replace(".", "").replace("♀", "-f").replace("♂", "-m")
                     val imageData: Any = if (pokemon.isShiny) {
                         val resId = resources.getIdentifier("shiny_${webName.replace("-", "_")}", "drawable", packageName)
                         if (resId != 0) resId else "https://img.pokemondb.net/sprites/ruby-sapphire/shiny/$webName.png"
@@ -134,23 +185,19 @@ class CompanionForegroundService : Service() {
                     }
 
                     val request = ImageRequest.Builder(applicationContext)
-                        .data(imageData) // Tady teď může být Int i String
+                        .data(imageData)
                         .allowHardware(false)
                         .target { drawable ->
                             val bitmap = (drawable as? BitmapDrawable)?.bitmap
                             if (bitmap != null) {
-                                // Aplikujeme tvůj crop a upscale pro ostrost
-                                val giantPokemon = getCroppedAndScaledBitmap(bitmap)
+                                // Tady je tvoje originální ořezávací logika
+                                val finalBitmap = getCroppedAndScaledBitmap(bitmap)
+                                cachedPokemonBitmap = finalBitmap
+                                lastPokemonId = pokemon.id
 
-                                rvSmall.setImageViewBitmap(R.id.ivNotificationPokemon, giantPokemon)
-                                rvLarge.setImageViewBitmap(R.id.ivNotificationPokemon, giantPokemon)
-
-                                // Refresh notifikace s novým bitmapem
-                                val updatedNotification = builder
-                                    .setCustomContentView(rvSmall)
-                                    .setCustomBigContentView(rvLarge)
-                                    .build()
-                                nm.notify(MakroflowNotifications.ID_STICKY_SERVICE, updatedNotification)
+                                rvSmall.setImageViewBitmap(R.id.ivNotificationPokemon, finalBitmap)
+                                rvLarge.setImageViewBitmap(R.id.ivNotificationPokemon, finalBitmap)
+                                nm.notify(MakroflowNotifications.ID_STICKY_SERVICE, builder.build())
                             }
                         }.build()
                     Coil.imageLoader(applicationContext).enqueue(request)
@@ -159,12 +206,12 @@ class CompanionForegroundService : Service() {
         }
     }
 
+    // Tvoje původní logika - na tu nesahám, je v pořádku
     private fun getCroppedAndScaledBitmap(src: Bitmap): Bitmap {
         var minX = src.width; var maxX = -1; var minY = src.height; var maxY = -1
         for (y in 0 until src.height) {
             for (x in 0 until src.width) {
-                val alpha = (src.getPixel(x, y) shr 24) and 0xFF
-                if (alpha > 30) {
+                if (((src.getPixel(x, y) shr 24) and 0xFF) > 30) {
                     if (x < minX) minX = x; if (x > maxX) maxX = x
                     if (y < minY) minY = y; if (y > maxY) maxY = y
                 }
@@ -172,19 +219,14 @@ class CompanionForegroundService : Service() {
         }
         if (maxX < minX || maxY < minY) return src
         val cropped = Bitmap.createBitmap(src, minX, minY, (maxX - minX) + 1, (maxY - minY) + 1)
-
-        // Upscale na 120px výšku pro ostrost na Pixelu
         val targetHeight = 120
-        val aspectRatio = cropped.width.toFloat() / cropped.height.toFloat()
-        val targetWidth = (targetHeight * aspectRatio).toInt()
-
-        val scaled = Bitmap.createScaledBitmap(cropped, targetWidth, targetHeight, true)
-        scaled.density = src.density
-        return scaled
+        val targetWidth = (targetHeight * (cropped.width.toFloat() / cropped.height.toFloat())).toInt()
+        return Bitmap.createScaledBitmap(cropped, targetWidth, targetHeight, true)
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        sensorManager?.unregisterListener(this)
         serviceScope.cancel()
     }
 

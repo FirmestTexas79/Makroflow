@@ -347,6 +347,18 @@
         app:elevation="6dp"
         app:cornerRadius="28dp" />
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnAiScanner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="140dp"
+        android:src="@android:drawable/ic_menu_camera"
+        app:tint="@color/brand_cream"
+        app:backgroundTint="#BC6C25"
+        app:elevation="8dp"
+        app:fabSize="normal" />
+
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fabAddSnack"
         android:layout_width="wrap_content"

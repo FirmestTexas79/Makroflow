@@ -19,4 +19,18 @@
     <style name="BottomNavText.Inactive" parent="BottomNavText">
     </style>
 
+    <style name="CustomAlertDialog" parent="Theme.MaterialComponents.Light.Dialog.Alert">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="materialAlertDialogTheme">@style/CustomAlertDialogContent</item>
+    </style>
+
+    <style name="CustomAlertDialogContent" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="backgroundTint">@color/brand_cream</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.LargeComponent.Rounded</item>
+    </style>
+
+    <style name="ShapeAppearance.LargeComponent.Rounded" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerSize">24dp</item>
+    </style>
 </resources>

@@ -69,21 +69,6 @@ class InventoryFragment : Fragment() {
         }
     }
 
-    private fun refreshStickyNotification() {
-        // 1. Získáme referenci na MainActivity
-        val mainActivity = activity as? MainActivity
-
-        // 2. Vytáhneme si tvoje aktuální kroky (todayStepsCount) přes getter
-        val currentSteps = mainActivity?.getTodayStepsCount() ?: 0
-
-        // 3. Pošleme je do služby, aby je nepřepsala nulou
-        val intent = Intent(requireContext(), CompanionForegroundService::class.java).apply {
-            putExtra("steps", currentSteps)
-        }
-
-        requireContext().startService(intent)
-    }
-
     private inner class PokemonAdapter(
         private val list: List<CapturedPokemonEntity>
     ) : RecyclerView.Adapter<PokemonAdapter.VH>() {
@@ -177,7 +162,7 @@ class InventoryFragment : Fragment() {
                     .apply()
 
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
-                refreshStickyNotification()
+                (requireActivity() as? MainActivity)?.refreshStickyNotification()
                 loadData()
                 Toast.makeText(context, "📌 ${item.name} vypuštěn na lištu!", Toast.LENGTH_SHORT).show()
             }
@@ -185,7 +170,7 @@ class InventoryFragment : Fragment() {
             holder.btnUnpin.setOnClickListener {
                 prefs.edit().putBoolean("pokemonAcquired", false).putLong("currentOnBarCaughtDate", -1L).apply()
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
-                refreshStickyNotification()
+                (requireActivity() as? MainActivity)?.refreshStickyNotification()
                 loadData()
                 Toast.makeText(context, "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
             }

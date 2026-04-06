@@ -70,7 +70,7 @@ import java.util.Locale
 import kotlin.random.Random
 
 // 👣 ✅MainActivity teď spravuje kroky pro celou aplikaci
-class MainActivity : AppCompatActivity(), SensorEventListener {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
@@ -89,10 +89,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val lureSmokeHandler = Handler(Looper.getMainLooper())
     private var isLureActive = false
 
-    // 👣 ✅ Senzorové proměnné celo-aplikace
-    private var sensorManager: SensorManager? = null
-    private var stepDetectorSensor: Sensor? = null
-    private var todayStepsCount = 0
+
+    private var currentStepsForUI = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -127,11 +125,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         window.decorView.post { updatePokemonVisibility() }
 
-        // 👣 ✅ Inicializace HW senzoru z Pixelu
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        stepDetectorSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+
 
         loadTodayStepsFromDb() // Načteme ranní stav do RAM
+
+        val intent = Intent(this, CompanionForegroundService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
 
         onBackPressedDispatcher.addCallback(this) {
             if (drawerLayout.isDrawerOpen(GravityCompat.END)) {
@@ -151,6 +154,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 resetBottomNavVisuals(bottomNav)
             }
         }
+
+
+
 
 /*
 
@@ -370,6 +376,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         updatePokemonVisibility()
     }
 
+
+
+    fun loadTodayStepsFromDb() {
+        val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(this@MainActivity)
+            val entity = db.stepsDao().getStepsForDateSync(todayStr)
+
+            withContext(Dispatchers.Main) {
+                currentStepsForUI = entity?.count ?: 0
+                // Volitelně: Pokud máš v Dashboardu UI update, zavolej ho zde
+            }
+        }
+    }
+
     private fun showReportSetupDialog() {
         val input = android.widget.EditText(this).apply {
             hint = "Název reportu (např. Sam - Duben)"
@@ -413,53 +434,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
 
+    fun refreshStickyNotification() {
+        val intent = Intent(this, CompanionForegroundService::class.java)
+        // Služba si aktuální kroky pořeší sama, my ji jen "probudíme", aby překreslila notifikaci
+        startService(intent)
+    }
+
+
     override fun onResume() {
         super.onResume()
         updatePokemonVisibility()
         awardDailyXp()
         runItemSpawner()
 
-        // 👣 ✅ Senzor běží pořád, když je aplikace na popředí
-        stepDetectorSensor?.let {
-            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-        }
     }
 
-    override fun onPause() {
-        super.onPause()
-        // Senzor vypneme jen když se aplikace minimalizuje
-        sensorManager?.unregisterListener(this)
-    }
 
-// --- SENZOROVÉ POSLOUCHÁNÍ ---
 
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
-            todayStepsCount++
-            saveStepsToDb(todayStepsCount)
 
-            // ✅ Aktualizace služby při každém kroku
-            updateCompanionService(todayStepsCount)
-        }
-    }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
-// --- NAČÍTÁNÍ Z DB ---
-
-    private fun loadTodayStepsFromDb() {
-        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        lifecycleScope.launch(Dispatchers.IO) {
-            val db = AppDatabase.getDatabase(this@MainActivity)
-            val entity = db.stepsDao().getStepsForDateSync(todayStr)
-            todayStepsCount = entity?.count ?: 0
-
-            // ✅ Po načtení z DB okamžitě nastartujeme/aktualizujeme službu
-            withContext(Dispatchers.Main) {
-                updateCompanionService(todayStepsCount)
-            }
-        }
-    }
 
 // --- POMOCNÁ FUNKCE PRO SPOUŠTĚNÍ SLUŽBY ---
 
@@ -480,23 +473,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    private fun saveStepsToDb(count: Int) {
-        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val db = AppDatabase.getDatabase(this@MainActivity)
-        val entity = StepsEntity(date = todayStr, count = count)
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            db.stepsDao().insertSteps(entity)
-
-            if (FirebaseRepository.isLoggedIn) {
-                try {
-                    FirebaseRepository.uploadSteps(entity)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
-    }
 
     private fun awardDailyXp() {
         val prefs = getSharedPreferences("GamePrefs", MODE_PRIVATE)
@@ -548,9 +524,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // Přidej do MainActivity.kt
     fun getTodayStepsCount(): Int {
-        return todayStepsCount
+        return currentStepsForUI
     }
 
     fun addXpToActivePokemonRealTime(xpAmount: Int) {

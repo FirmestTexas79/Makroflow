@@ -23,6 +23,7 @@ import com.google.android.material.card.MaterialCardView
 import cz.uhk.macroflow.common.MakroflowNotifications
 import cz.uhk.macroflow.common.MakroflowTimePicker
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.dashboard.MacroFlowEngine
 import kotlinx.coroutines.Dispatchers
@@ -100,6 +101,7 @@ class PlanFragment : Fragment() {
                     updateStats(view)
                     rv.animate().alpha(1f).setDuration(200).start()
                 }?.start()
+                (requireActivity() as? MainActivity)?.refreshStickyNotification()
             }
         }
 
@@ -397,6 +399,9 @@ class PlanFragment : Fragment() {
                     else         -> "rest"
                 }
                 trainingPrefs.edit().putString("type_$dayEnglish", type).apply()
+
+                (requireActivity() as? MainActivity)?.refreshStickyNotification()
+
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 updatePowerCardVisual(holder, type)
                 updateToggleGroupColors(holder, type, false)
@@ -462,6 +467,9 @@ class PlanFragment : Fragment() {
                     else         -> "rest"
                 }
                 trainingPrefs.edit().putString("kardio_type_$dayEnglish", type).apply()
+
+                (requireActivity() as? MainActivity)?.refreshStickyNotification()
+
                 holder.itemView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 updateKardioCardVisual(holder, type)
                 updateToggleGroupColors(holder, type, true)
@@ -570,6 +578,9 @@ class PlanFragment : Fragment() {
             MakroflowTimePicker.show(parentFragmentManager, initH, initM, label) { hour, minute ->
                 val timeStr = String.format("%02d:%02d", hour, minute)
                 TrainingTimeManager.setTrainingTime(ctx, timeKey, timeStr)
+
+                (requireActivity() as? MainActivity)?.refreshStickyNotification()
+
                 val type = if (isPower) trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest"
                 else          trainingPrefs.getString("kardio_type_$dayEnglish", "rest") ?: "rest"
                 updateTimePill(holder, dayEnglish, type, isPower)

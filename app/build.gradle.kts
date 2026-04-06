@@ -12,12 +12,20 @@ android {
         }
     }
 
+
     defaultConfig {
+
+        buildFeatures {
+            buildConfig = true
+        }
+
         applicationId = "cz.uhk.macroflow"
         minSdk = 26
         targetSdk = 36
         versionCode = 17
         versionName = "1.1.14"
+
+        buildConfigField("String", "GEMINI_API_KEY", "\"AIzaSyA2-GWmBoa8HHXsYz6aQRGIH-ji-QarX5w\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -103,4 +111,6 @@ dependencies {
     implementation("io.coil-kt:coil-gif:2.6.0")
 
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
 }

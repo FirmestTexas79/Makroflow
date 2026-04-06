@@ -13,7 +13,6 @@
         android:id="@+id/ivNotificationPokemon"
         android:layout_width="56dp"
         android:layout_height="56dp"
-        android:paddingBottom="8dp"
         android:scaleType="centerInside"
         android:src="@drawable/ic_temp" />
 

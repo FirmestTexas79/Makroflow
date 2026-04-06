@@ -1,15 +1,18 @@
 package cz.uhk.macroflow.nutrition
 
 import android.annotation.SuppressLint
-import android.content.res.ColorStateList
+import android.app.Activity
+import android.app.AlertDialog
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.Editable
-import android.text.TextWatcher
+import android.provider.MediaStore
 import android.view.*
 import android.widget.*
-import androidx.core.content.ContextCompat
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -17,13 +20,13 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputLayout
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
-import cz.uhk.macroflow.achievements.AchievementEngine
 import cz.uhk.macroflow.data.ConsumedSnackEntity
 import cz.uhk.macroflow.data.SnackEntity
+import cz.uhk.macroflow.data.GeminiRepository
+import cz.uhk.macroflow.data.FoodAIResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -43,6 +46,7 @@ class SnackFragment : Fragment() {
     private lateinit var btnCancelAction: View
     private lateinit var etSearch: EditText
     private lateinit var ivClearSearch: ImageView
+    private lateinit var btnAiScanner: View
 
     private var isPreSelected = true
     private val db by lazy { AppDatabase.getDatabase(requireContext()) }
@@ -50,21 +54,30 @@ class SnackFragment : Fragment() {
     private var isSelectionMode = false
     private var startX = 0f
 
-    // Pomocné proměnné pro přepočet z barcode (hodnoty na 1g)
     private var baseP = 0f
     private var baseS = 0f
     private var baseT = 0f
-    private var baseKj = 0f
     private var baseFiber = 0f
 
     private var currentSearchQuery = ""
+
+    // Launcher pro fotoaparát - AI analýza
+    private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val bitmap = result.data?.extras?.get("data") as? Bitmap
+            bitmap?.let {
+                // Klíč k úspěchu: Zmenšíme bitmapu před odesláním do AI
+                val scaledBitmap = getResizedBitmap(it, 1024)
+                analyzeImageWithAi(scaledBitmap)
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_snack, container, false)
 
-        // Inicializace UI prvků z tvého nového XML
         etSearch            = view.findViewById(R.id.etSnackSearch)
         ivClearSearch       = view.findViewById(R.id.ivClearSearch)
         listCarbs           = view.findViewById(R.id.listCarbs)
@@ -73,17 +86,13 @@ class SnackFragment : Fragment() {
         deleteOverlay       = view.findViewById(R.id.deleteOverlay)
         btnDeleteAction     = view.findViewById(R.id.btnDeleteAction)
         btnCancelAction     = view.findViewById(R.id.btnCancelAction)
+        btnAiScanner        = view.findViewById(R.id.btnAiScanner)
 
-        // ✅ Oprava: Křížek vymaže text
-        ivClearSearch.setOnClickListener {
-            etSearch.setText("")
-        }
+        ivClearSearch.setOnClickListener { etSearch.setText("") }
 
-        // ✅ Real-time vyhledávání
         etSearch.addTextChangedListener { text ->
             currentSearchQuery = text.toString().trim()
             ivClearSearch.visibility = if (currentSearchQuery.isEmpty()) View.GONE else View.VISIBLE
-
             lifecycleScope.launch {
                 val allSnacks = db.snackDao().getAllSnacks().first()
                 displaySnacks(allSnacks)
@@ -106,21 +115,62 @@ class SnackFragment : Fragment() {
             showAddDialog()
         }
 
+        btnAiScanner.setOnClickListener {
+            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            takePhotoLauncher.launch(intent)
+        }
+
         observeSnacks()
         return view
     }
 
+    private fun analyzeImageWithAi(bitmap: Bitmap) {
+        // Vytvoření "vysvětlivkového" rámečku (Progress Dialogu)
+        val progressView = layoutInflater.inflate(R.layout.layout_ai_progress, null)
+        val progressDialog = AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+            .setView(progressView)
+            .setCancelable(false)
+            .create()
+
+        progressDialog.show()
+
+        lifecycleScope.launch {
+            val result = GeminiRepository.analyzeFood(bitmap)
+
+            withContext(Dispatchers.Main) {
+                progressDialog.dismiss()
+                if (result != null) {
+                    showAddDialog(result)
+                } else {
+                    showAiErrorDialog()
+                }
+            }
+        }
+    }
+
+    private fun showAiErrorDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("AI se zamyslela...")
+            .setMessage("Nepodařilo se mi z fotky určit nutriční hodnoty. Zkus:\n\n1. Lepší světlo\n2. Vyfotit jídlo zblízka\n3. Ujistit se, že jídlo dobře vidět")
+            .setPositiveButton("Zkusit znovu") { _, _ -> btnAiScanner.performClick() }
+            .setNegativeButton("Zrušit", null)
+            .show()
+    }
+
+    private fun getResizedBitmap(bm: Bitmap, newWidth: Int): Bitmap {
+        val width = bm.width
+        val height = bm.height
+        val scale = newWidth.toFloat() / width
+        val matrix = Matrix()
+        matrix.postScale(scale, scale)
+        return Bitmap.createBitmap(bm, 0, 0, width, height, matrix, false)
+    }
+
     private fun observeSnacks() {
         lifecycleScope.launch {
-            // 1. Nejdřív získáme aktuální stav (jednorázově přes .first())
             val currentSnacks = db.snackDao().getAllSnacks().first()
+            if (currentSnacks.isEmpty()) seedDatabase()
 
-            // 2. Pokud je prázdno, nasypeme tam defaulty
-            if (currentSnacks.isEmpty()) {
-                seedDatabase()
-            }
-
-            // 3. Pak teprve začneme collectovat (sledovat) změny pro UI
             db.snackDao().getAllSnacks().collect { snacks ->
                 displaySnacks(snacks)
             }
@@ -366,15 +416,12 @@ class SnackFragment : Fragment() {
 
         filtered.forEach { snack ->
             val card = layoutInflater.inflate(R.layout.item_snack_block, null)
-
             card.findViewById<TextView>(R.id.tvSnackName).text   = snack.name
             card.findViewById<TextView>(R.id.tvSnackWeight).text = snack.weight
-
             card.findViewById<TextView>(R.id.valP).text = "B: ${snack.p.toInt()}g"
             card.findViewById<TextView>(R.id.valS).text = "S: ${snack.s.toInt()}g"
             card.findViewById<TextView>(R.id.valT).text = "T: ${snack.t.toInt()}g"
 
-            // Zobrazení vlákniny, pokud existuje (v listu)
             val tvFiber = card.findViewById<TextView>(R.id.valFiber)
             val dividerFiber = card.findViewById<View>(R.id.dividerFiber)
 
@@ -425,7 +472,7 @@ class SnackFragment : Fragment() {
         }
     }
 
-    private fun showAddDialog() {
+    private fun showAddDialog(aiResult: FoodAIResult? = null) {
         val dialog   = BottomSheetDialog(requireContext())
         val v        = layoutInflater.inflate(R.layout.dialog_add_snack, null)
         dialog.setContentView(v)
@@ -437,96 +484,63 @@ class SnackFragment : Fragment() {
         val etS          = v.findViewById<EditText>(R.id.etSnackS)
         val etT          = v.findViewById<EditText>(R.id.etSnackT)
         val etFiber      = v.findViewById<EditText>(R.id.etSnackFiber)
-        val etChol       = v.findViewById<EditText>(R.id.etSnackCholesterol)
-        val switchPre    = v.findViewById<SwitchMaterial>(R.id.cbIsPreWorkout)
         val tilName      = v.findViewById<TextInputLayout>(R.id.tilSnackName)
 
-        // Reset base hodnot při otevření nového dialogu
-        baseP = 0f; baseS = 0f; baseT = 0f; baseKj = 0f; baseFiber = 0f
+        aiResult?.let {
+            etName.setText(it.name)
+            etWeight.setText(it.weight.filter { char -> char.isDigit() }.ifEmpty { "100" })
+            etP.setText(it.p.toString())
+            etS.setText(it.s.toString())
+            etT.setText(it.t.toString())
+            etFiber.setText(it.fiber.toString())
+        }
 
         btnSave.setOnClickListener {
-            val name   = etName.text.toString()
-            val p      = etP.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-            val s      = etS.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-            val t      = etT.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-
-            // Dobrovolné hodnoty (pokud jsou prázdné, použijeme 0)
+            val name = etName.text.toString()
+            val p = etP.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
+            val s = etS.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
+            val t = etT.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
             val fiber = etFiber.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-            val chol  = etChol.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-
-            // Automatický výpočet kJ (B*17 + S*17 + T*38)
             val energy = (p * 17f) + (s * 17f) + (t * 38f)
 
             if (name.isNotEmpty()) {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    db.snackDao().insertSnack(
-                        SnackEntity(
-                            name = name,
-                            weight = "${etWeight.text}g",
-                            p = p, s = s, t = t,
-                            isPre = switchPre.isChecked,
-                            energyKj = energy,
-                            fiber = fiber
-                        )
-                    )
+                    db.snackDao().insertSnack(SnackEntity(name = name, weight = "${etWeight.text}g", p = p, s = s, t = t, isPre = isPreSelected, energyKj = energy, fiber = fiber))
                     withContext(Dispatchers.Main) { dialog.dismiss() }
                 }
-            } else {
-                etName.error = "Zadej název"
-            }
+            } else { etName.error = "Zadej název" }
         }
 
         tilName.setEndIconOnClickListener {
-            startBarcodeScanner(etName, etWeight, etP, etS, etT, etFiber, etChol)
-        }
-
-        // Live přepočet při změně váhy
-        etWeight.addTextChangedListener { s ->
-            val weight = s.toString().toFloatOrNull() ?: 100f
-            if (baseP > 0 || baseS > 0 || baseT > 0) {
-                etP.setText("%.1f".format(baseP * weight).replace(",", "."))
-                etS.setText("%.1f".format(baseS * weight).replace(",", "."))
-                etT.setText("%.1f".format(baseT * weight).replace(",", "."))
-                etFiber.setText("%.1f".format(baseFiber * weight).replace(",", "."))
-            }
+            startBarcodeScanner(etName, etWeight, etP, etS, etT, etFiber)
         }
 
         dialog.show()
     }
 
-    private fun startBarcodeScanner(
-        etName: EditText, etWeight: EditText, etP: EditText,
-        etS: EditText, etT: EditText, etF: EditText, etC: EditText
-    ) {
+    private fun startBarcodeScanner(etName: EditText, etWeight: EditText, etP: EditText, etS: EditText, etT: EditText, etF: EditText) {
         val scanner = GmsBarcodeScanning.getClient(requireContext())
         scanner.startScan().addOnSuccessListener { barcode ->
-            barcode.rawValue?.let { fetchFoodData(it, etName, etWeight, etP, etS, etT, etF, etC) }
+            barcode.rawValue?.let { fetchFoodData(it, etName, etWeight, etP, etS, etT, etF) }
         }
     }
 
-    private fun fetchFoodData(
-        barcode: String, etName: EditText, etWeight: EditText,
-        etP: EditText, etS: EditText, etT: EditText, etF: EditText, etC: EditText
-    ) {
+    private fun fetchFoodData(barcode: String, etName: EditText, etWeight: EditText, etP: EditText, etS: EditText, etT: EditText, etF: EditText) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val response = URL("https://world.openfoodfacts.org/api/v2/product/$barcode.json").readText()
                 val json = JSONObject(response)
-
                 if (json.optInt("status") == 1) {
                     val product = json.getJSONObject("product")
                     val nutriments = product.optJSONObject("nutriments")
                     val name = product.optString("product_name_cs").ifEmpty { product.optString("product_name", "Neznámý") }
-
                     nutriments?.let { n ->
                         withContext(Dispatchers.Main) {
                             baseP = (n.optDouble("proteins_100g", 0.0) / 100.0).toFloat()
                             baseS = (n.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat()
                             baseT = (n.optDouble("fat_100g", 0.0) / 100.0).toFloat()
                             baseFiber = (n.optDouble("fiber_100g", 0.0) / 100.0).toFloat()
-
-                            etName.setText(name)
-                            etWeight.setText("100") // Reset na 100g pro začátek
+                            etName.setText(name); etWeight.setText("100")
                             etP.setText("%.1f".format(baseP * 100).replace(",", "."))
                             etS.setText("%.1f".format(baseS * 100).replace(",", "."))
                             etT.setText("%.1f".format(baseT * 100).replace(",", "."))
@@ -570,9 +584,7 @@ class SnackFragment : Fragment() {
     }
 
     private fun deleteSnackFromDb(snack: SnackEntity) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            db.snackDao().deleteSnack(snack)
-        }
+        lifecycleScope.launch(Dispatchers.IO) { db.snackDao().deleteSnack(snack) }
     }
 
     private fun animateAndRefresh() {
