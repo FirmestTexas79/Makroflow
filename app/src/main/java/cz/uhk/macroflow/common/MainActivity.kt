@@ -639,7 +639,7 @@ class MainActivity : AppCompatActivity() {
                 if (caught != null) {
                     val pId = caught.pokemonId
                     val pName = caught.name
-                    val uniqueKey = caught.caughtDate.toString()
+                    val uniqueKey = "${caught.caughtDate}_${caught.isShiny}"
 
                     if (uniqueKey != lastLoadedId) {
                         lastLoadedId = uniqueKey

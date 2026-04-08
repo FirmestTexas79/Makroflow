@@ -76,6 +76,21 @@ interface CapturedPokemonDao {
 
     @Query("SELECT * FROM captured_pokemon WHERE caughtDate = :timestamp LIMIT 1")
     fun getPokemonByCaughtDate(timestamp: Long): CapturedPokemonEntity?
+
+    @Transaction
+    fun addExperience(timestamp: Long, amount: Int): Pair<Int, Int> { // vrací (starýLevel, novýLevel)
+        val p = getPokemonByCaughtDate(timestamp)
+        if (p != null) {
+            val oldLevel = p.level
+            val newXp = p.xp + amount
+            val newLevel = PokemonLevelCalc.levelFromXp(newXp) // Použijeme tvůj Calc
+
+            val updated = p.copy(xp = newXp, level = newLevel)
+            updatePokemon(updated)
+            return Pair(oldLevel, newLevel)
+        }
+        return Pair(0, 0)
+    }
 }
 
 // --- 🎒 BATOH (Předměty a Bally) ---

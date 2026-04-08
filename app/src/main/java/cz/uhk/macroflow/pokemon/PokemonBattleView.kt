@@ -529,7 +529,7 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     // ✅ TATO METODA TI CHYBĚLA A VYŘEŠÍ ČERVENOU CHYBU ZE SCREENSHOTU!
-    private fun createPlayerPokemon(id: String, level: Int): Pokemon {
+    fun createPlayerPokemon(id: String, level: Int): Pokemon {
         val base = when (id) {
             "001" -> BattleFactory.createBulbasaur()
             "002" -> BattleFactory.createIvysaur()

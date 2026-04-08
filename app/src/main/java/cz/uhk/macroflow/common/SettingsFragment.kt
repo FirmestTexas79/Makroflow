@@ -48,6 +48,9 @@ class SettingsFragment : Fragment() {
         val etCheatId = view.findViewById<EditText>(R.id.etCheatPokemonId)
         val btnCheatAddPokemon = view.findViewById<MaterialButton>(R.id.btnCheatAddPokemon)
 
+        val etPromoCode = view.findViewById<EditText>(R.id.etPromoCode)
+        val btnApplyPromo = view.findViewById<MaterialButton>(R.id.btnApplyPromo)
+
 
         // 🧪 1. Přidání libovolného Pokémona do kapsy zadáním ID (např. 025)
         btnCheatAddPokemon?.setOnClickListener {
@@ -128,6 +131,19 @@ class SettingsFragment : Fragment() {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(requireContext(), "💰 Přidáno 100 coinů!", Toast.LENGTH_SHORT).show()
                 }
+            }
+        }
+
+        btnApplyPromo?.setOnClickListener {
+            val code = etPromoCode?.text?.toString() ?: ""
+            if (code.isNotEmpty()) {
+                PromoManager.redeemCode(requireContext(), code, lifecycleScope) {
+                    // Co se má stát po úspěchu (např. vymazat pole)
+                    etPromoCode?.text?.clear()
+                    // Tady můžeš zavolat i refresh UI pokud zobrazuješ počet coinů/ballů
+                }
+            } else {
+                Toast.makeText(requireContext(), "Zadej kód!", Toast.LENGTH_SHORT).show()
             }
         }
     }
