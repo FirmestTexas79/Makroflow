@@ -27,6 +27,7 @@ import cz.uhk.macroflow.data.ConsumedSnackEntity
 import cz.uhk.macroflow.data.SnackEntity
 import cz.uhk.macroflow.data.GeminiRepository
 import cz.uhk.macroflow.data.FoodAIResult
+import cz.uhk.macroflow.dashboard.MacroCalculator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -66,7 +67,6 @@ class SnackFragment : Fragment() {
         if (result.resultCode == Activity.RESULT_OK) {
             val bitmap = result.data?.extras?.get("data") as? Bitmap
             bitmap?.let {
-                // Klíč k úspěchu: Zmenšíme bitmapu před odesláním do AI
                 val scaledBitmap = getResizedBitmap(it, 1024)
                 analyzeImageWithAi(scaledBitmap)
             }
@@ -125,7 +125,6 @@ class SnackFragment : Fragment() {
     }
 
     private fun analyzeImageWithAi(bitmap: Bitmap) {
-        // Vytvoření "vysvětlivkového" rámečku (Progress Dialogu)
         val progressView = layoutInflater.inflate(R.layout.layout_ai_progress, null)
         val progressDialog = AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
             .setView(progressView)
@@ -313,14 +312,7 @@ class SnackFragment : Fragment() {
                     energyKj = 1150f, fiber = 3f,
                     isPre = true
                 ),
-                SnackEntity(
-                    name = "Pečená brambora",
-                    weight = "200g",
-                    p = 4f, s = 40f, t = 0f,
-                    energyKj = 760f, fiber = 4.2f,
-                    isPre = false
-                ),
-
+                SnackEntity(name = "Pečená brambora", weight = "200g", p = 4f, s = 40f, t = 0f, energyKj = 760f, fiber = 4.2f, isPre = false),
                 SnackEntity(name="Artyčoky", weight="100g", p=2.4f, s=2.6f, t=0.1f, energyKj=170f, fiber=10.8f, isPre=false),
                 SnackEntity(name="Brambory rané", weight="100g", p=1.7f, s=16.6f, t=0.2f, energyKj=300f, fiber=1.3f, isPre=false),
                 SnackEntity(name="Brambory zimní", weight="100g", p=1.8f, s=18.2f, t=0.3f, energyKj=330f, fiber=1.6f, isPre=false),
@@ -477,14 +469,69 @@ class SnackFragment : Fragment() {
         val v        = layoutInflater.inflate(R.layout.dialog_add_snack, null)
         dialog.setContentView(v)
 
-        val btnSave      = v.findViewById<Button>(R.id.btnSaveSnack)
-        val etName       = v.findViewById<EditText>(R.id.etSnackName)
-        val etWeight     = v.findViewById<EditText>(R.id.etSnackWeight)
-        val etP          = v.findViewById<EditText>(R.id.etSnackP)
-        val etS          = v.findViewById<EditText>(R.id.etSnackS)
-        val etT          = v.findViewById<EditText>(R.id.etSnackT)
-        val etFiber      = v.findViewById<EditText>(R.id.etSnackFiber)
-        val tilName      = v.findViewById<TextInputLayout>(R.id.tilSnackName)
+        val btnSave        = v.findViewById<Button>(R.id.btnSaveSnack)
+        val etName         = v.findViewById<EditText>(R.id.etSnackName)
+        val etWeight       = v.findViewById<EditText>(R.id.etSnackWeight)
+        val etP            = v.findViewById<EditText>(R.id.etSnackP)
+        val etS            = v.findViewById<EditText>(R.id.etSnackS)
+        val etT            = v.findViewById<EditText>(R.id.etSnackT)
+        val etFiber        = v.findViewById<EditText>(R.id.etSnackFiber)
+        val tilName        = v.findViewById<TextInputLayout>(R.id.tilSnackName)
+        val tvPercentP     = v.findViewById<TextView>(R.id.tvPercentP)
+        val tvPercentS     = v.findViewById<TextView>(R.id.tvPercentS)
+        val tvPercentT     = v.findViewById<TextView>(R.id.tvPercentT)
+        val tvPercentFiber = v.findViewById<TextView>(R.id.tvPercentFiber)
+
+        // Stav pro živý výpočet procent (načteno asynchronně)
+        var targetP = 0.0; var targetS = 0.0; var targetT = 0.0; var targetFiber = 0.0
+        var alreadyP = 0.0; var alreadyS = 0.0; var alreadyT = 0.0; var alreadyFiber = 0.0
+
+        fun updatePercents() {
+            if (targetP <= 0) return
+            val colorNormal = requireContext().getColor(R.color.brand_primary)
+            val colorOver   = requireContext().getColor(R.color.brand_accent_deep)
+
+            fun applyPercent(tv: TextView, already: Double, adding: Double, target: Double) {
+                if (adding <= 0 || target <= 0) { tv.visibility = View.GONE; return }
+                val addPct   = (adding / target * 100).toInt()
+                val totalPct = ((already + adding) / target * 100).toInt()
+                tv.text = if (already > 0.1) "+$addPct% ($totalPct%)" else "+$addPct%"
+                tv.setTextColor(if (totalPct > 100) colorOver else colorNormal)
+                tv.visibility = View.VISIBLE
+            }
+
+            val p = etP.text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
+            val s = etS.text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
+            val t = etT.text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
+            val f = etFiber.text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
+
+            applyPercent(tvPercentP,     alreadyP,     p, targetP)
+            applyPercent(tvPercentS,     alreadyS,     s, targetS)
+            applyPercent(tvPercentT,     alreadyT,     t, targetT)
+            applyPercent(tvPercentFiber, alreadyFiber, f, targetFiber)
+        }
+
+        etP.addTextChangedListener { updatePercents() }
+        etS.addTextChangedListener { updatePercents() }
+        etT.addTextChangedListener { updatePercents() }
+        etFiber.addTextChangedListener { updatePercents() }
+
+        // Načtení denního cíle a dnešního příjmu
+        lifecycleScope.launch {
+            val today  = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val target   = withContext(Dispatchers.IO) { MacroCalculator.calculate(requireContext()) }
+            val consumed = withContext(Dispatchers.IO) { db.consumedSnackDao().getConsumedByDate(today).first() }
+
+            targetP = target.protein; targetS = target.carbs
+            targetT = target.fat;     targetFiber = target.fiber
+
+            alreadyP     = consumed.sumOf { it.p.toDouble() }
+            alreadyS     = consumed.sumOf { it.s.toDouble() }
+            alreadyT     = consumed.sumOf { it.t.toDouble() }
+            alreadyFiber = consumed.sumOf { it.fiber.toDouble() }
+
+            updatePercents()
+        }
 
         aiResult?.let {
             etName.setText(it.name)
@@ -570,7 +617,7 @@ class SnackFragment : Fragment() {
                 }
                 return true
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+            MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
                 longPressHandler.removeCallbacksAndMessages(null)
                 if (isSelectionMode) {
                     if (event.rawX < startX - 100) deleteSnackFromDb(snack)

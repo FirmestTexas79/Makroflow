@@ -7,5 +7,6 @@ data class FoodAIResult(
     val s: Float,
     val t: Float,
     val fiber: Float,
-    val kj: Float
+    val kj: Float,
+    val isPre: Boolean = false
 )

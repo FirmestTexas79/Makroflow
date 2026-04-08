@@ -1,7 +1,9 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.google.devtools.ksp) // Přidej toto
-    id("com.google.gms.google-services") // <--- PŘIDEJ TENTO ŘÁDEK
+    alias(libs.plugins.google.devtools.ksp)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -12,9 +14,7 @@ android {
         }
     }
 
-
     defaultConfig {
-
         buildFeatures {
             buildConfig = true
         }
@@ -25,15 +25,22 @@ android {
         versionCode = 17
         versionName = "1.1.14"
 
-        buildConfigField("String", "GEMINI_API_KEY", "\"AIzaSyA2-GWmBoa8HHXsYz6aQRGIH-ji-QarX5w\"")
+        // --- TADY JE TA ZMĚNA: Načtení klíče ze souboru ---
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localProperties.load(localPropertiesFile.inputStream())
+        }
+        val apiKey = localProperties.getProperty("GEMINI_API_KEY") ?: ""
+
+        // Teď už tu není ten dlouhý klíč, ale proměnná apiKey
+        buildConfigField("String", "GEMINI_API_KEY", "\"$apiKey\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // 1. Definuj konfiguraci podpisu
     signingConfigs {
         create("release") {
-            // Soubor .jks musí být ve složce 'app' nebo uveď celou cestu
             storeFile = file("D:\\Makroflow1.0\\Makroflow 1.0")
             storePassword = "makroflow1234"
             keyAlias = "makroflow_key"
@@ -44,13 +51,14 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-
             signingConfig = signingConfigs.getByName("release")
-
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            // Debug teď automaticky bere klíč z defaultConfig výše
         }
     }
     compileOptions {
@@ -69,7 +77,6 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    // Activity KTX — potřeba pro onBackPressedDispatcher.addCallback
     implementation("androidx.activity:activity-ktx:1.8.0")
 
     val roomVersion = "2.6.1"
@@ -80,37 +87,23 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
 
-    // --- OPRAVENÉ KNIHOVNY PRO SKENER A DATA ---
-
-    // Google Code Scanner (volá systémové UI, ideální pro Pixel 10 Pro) [cite: 2026-03-01]
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
-
-    // Pro jednoduché stahování dat z OpenFoodFacts bez nutnosti složitého Retrofitu [cite: 2026-03-01]
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // --- PŘIDÁNO PRO TRENÉRA (Barbell Path Tracking) ---
     val camerax_version = "1.3.1"
     implementation("androidx.camera:camera-core:$camerax_version")
     implementation("androidx.camera:camera-camera2:$camerax_version")
     implementation("androidx.camera:camera-lifecycle:$camerax_version")
     implementation("androidx.camera:camera-view:$camerax_version")
 
-    // ML Kit pro detekci objektů (kotouče) [cite: 2026-03-01]
     implementation("com.google.mlkit:object-detection:17.0.0")
 
-    // Firebase BoM — řídí verze všech Firebase knihoven
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
-
-// Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.2.0")
-
     implementation("io.coil-kt:coil:2.6.0")
-
     implementation("io.coil-kt:coil-gif:2.6.0")
-
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
-
-    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 }

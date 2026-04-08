@@ -98,8 +98,8 @@
                     android:fontFamily="sans-serif-black"
                     android:text="@string/training_schedule_title"
                     android:textColor="@color/brand_dark"
-                    android:textSize="36sp"
-                    android:lineSpacingMultiplier="0.92"
+                    android:textSize="34sp"
+                    android:lineSpacingMultiplier="0.82"
                     app:layout_constraintEnd_toStartOf="@+id/llStepsCounter"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvWeekLabel" />

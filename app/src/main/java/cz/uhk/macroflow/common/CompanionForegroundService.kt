@@ -11,6 +11,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
@@ -30,6 +31,7 @@ class CompanionForegroundService : Service(), SensorEventListener {
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var sensorManager: SensorManager? = null
     private var todayStepsCount = 0
+    private var lastDateString: String = "" // Klíč pro detekci změny dne
 
     // Pomocné proměnné pro držení stavu, aby to neblikalo
     private var cachedPokemonBitmap: Bitmap? = null
@@ -37,6 +39,9 @@ class CompanionForegroundService : Service(), SensorEventListener {
 
     override fun onCreate() {
         super.onCreate()
+        // Inicializujeme datum hned při startu
+        lastDateString = getTodayString()
+
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
         stepSensor?.let {
@@ -54,35 +59,61 @@ class CompanionForegroundService : Service(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
+            // 1. Nejdřív zkontrolujeme, zda není nový den
+            checkDateChange()
+
+            // 2. Přičteme krok
             todayStepsCount++
+
+            // 3. Uložíme a aktualizujeme
             saveStepsToDb(todayStepsCount)
             updateNotification(todayStepsCount)
         }
     }
 
+    /**
+     * Pokud se aktuální datum liší od naposledy zaznamenaného,
+     * znamená to, že uživatel přešel do nového dne a musíme začít od nuly.
+     */
+    private fun checkDateChange() {
+        val currentDate = getTodayString()
+        if (currentDate != lastDateString) {
+            Log.d("MacroFlowService", "Detekována změna dne ($lastDateString -> $currentDate). Resetuji kroky.")
+            lastDateString = currentDate
+            todayStepsCount = 0
+        }
+    }
+
+    private fun getTodayString(): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    }
+
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     private fun loadStepsAndPokemon() {
-        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val todayStr = getTodayString()
         serviceScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(applicationContext)
             val entity = db.stepsDao().getStepsForDateSync(todayStr)
-            todayStepsCount = entity?.count ?: 0
 
             withContext(Dispatchers.Main) {
+                todayStepsCount = entity?.count ?: 0
+                lastDateString = todayStr // Ujistíme se, že máme aktuální datum
                 updateNotification(todayStepsCount)
             }
         }
     }
 
     private fun saveStepsToDb(count: Int) {
-        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val todayStr = getTodayString()
         val db = AppDatabase.getDatabase(applicationContext)
         val entity = StepsEntity(date = todayStr, count = count)
         serviceScope.launch(Dispatchers.IO) {
             db.stepsDao().insertSteps(entity)
             if (FirebaseRepository.isLoggedIn) {
-                try { FirebaseRepository.uploadSteps(entity) } catch (e: Exception) {}
+                try { FirebaseRepository.uploadSteps(entity) } catch (e: Exception) {
+                    Log.e("MacroFlowService", "Chyba uploadu kroků: ${e.message}")
+                }
             }
         }
     }
@@ -119,6 +150,8 @@ class CompanionForegroundService : Service(), SensorEventListener {
 
             val stepGoal = profile?.stepGoal ?: 6000
             val timeStr = TrainingTimeManager.getTrainingTimeForToday(applicationContext) ?: "--:--"
+
+            // Jméno dne v EN pro klíče v TrainingPrefs
             val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
             val workoutType = trainingPrefs.getString("type_$dayName", "REST")?.uppercase() ?: "REST"
 
@@ -190,7 +223,6 @@ class CompanionForegroundService : Service(), SensorEventListener {
                         .target { drawable ->
                             val bitmap = (drawable as? BitmapDrawable)?.bitmap
                             if (bitmap != null) {
-                                // Tady je tvoje originální ořezávací logika
                                 val finalBitmap = getCroppedAndScaledBitmap(bitmap)
                                 cachedPokemonBitmap = finalBitmap
                                 lastPokemonId = pokemon.id
@@ -206,7 +238,6 @@ class CompanionForegroundService : Service(), SensorEventListener {
         }
     }
 
-    // Tvoje původní logika - na tu nesahám, je v pořádku
     private fun getCroppedAndScaledBitmap(src: Bitmap): Bitmap {
         var minX = src.width; var maxX = -1; var minY = src.height; var maxY = -1
         for (y in 0 until src.height) {
