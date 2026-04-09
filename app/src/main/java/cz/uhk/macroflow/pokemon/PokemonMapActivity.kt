@@ -140,7 +140,6 @@ class PokemonMapActivity : AppCompatActivity() {
     }
 
     private fun updateCompanionDisplay() {
-        // Najdeme i podkladové kolečko
         val companionShadow = findViewById<View>(R.id.companionShadow) ?: return
         val ivCompanion = findViewById<ImageView>(R.id.ivCompanion) ?: return
         val tvCompanionLabel = findViewById<TextView>(R.id.tvCompanionLabel) ?: return
@@ -149,11 +148,10 @@ class PokemonMapActivity : AppCompatActivity() {
         val isAcquired = prefs.getBoolean("pokemonAcquired", false)
         val caughtDate = prefs.getLong("currentOnBarCaughtDate", -1L)
 
-        // Logika viditelnosti pro CELOU skupinu
         if (!isAcquired || caughtDate == -1L) {
             ivCompanion.visibility = View.GONE
             tvCompanionLabel.visibility = View.GONE
-            companionShadow.visibility = View.GONE // Schováme i kolečko
+            companionShadow.visibility = View.GONE
             return
         }
 
@@ -163,22 +161,47 @@ class PokemonMapActivity : AppCompatActivity() {
 
             withContext(Dispatchers.Main) {
                 if (companion != null) {
-                    // Zobrazíme CELOU skupinu
                     tvCompanionLabel.visibility = View.VISIBLE
                     ivCompanion.visibility = View.VISIBLE
-                    companionShadow.visibility = View.VISIBLE // Zobrazíme i kolečko
+                    companionShadow.visibility = View.VISIBLE
 
-                    // Formátování jména pro URL (pokud už nemáš hotovo)
-                    val webName = companion.name.lowercase()
-                        .replace(" ", "-").replace(".", "")
+                    // Normalizace názvu pro vyhledávání (odstranění mezer, teček, speciálních znaků)
+                    val webName = companion.name.lowercase().trim()
+                        .replace(" ", "-")
+                        .replace(".", "")
+                        .replace("♀", "-f")
+                        .replace("♂", "-m")
 
-                    // Načtení spritů s Coil (stále statický)
-                    ivCompanion.load("https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png") {
-                        crossfade(true)
-                        placeholder(R.drawable.ic_home)
+                    // Logika pro výběr zdroje obrázku (Shiny vs Normal)
+                    val imageData: Any = if (companion.isShiny) {
+                        // Zkusíme najít lokální drawable: shiny_jmeno_poka
+                        val resName = "shiny_${webName.replace("-", "_")}"
+                        val resId = resources.getIdentifier(resName, "drawable", packageName)
+
+                        if (resId != 0) {
+                            resId // Máme ho lokálně (třeba ten Raichu, co jsi přidával)
+                        } else {
+                            "https://img.pokemondb.net/sprites/ruby-sapphire/shiny/$webName.png" // Backup z webu
+                        }
+                    } else {
+                        "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
                     }
+
+                    // Načtení pomocí Coil
+                    ivCompanion.load(imageData) {
+                        crossfade(true)
+                        placeholder(R.drawable.ic_home) // Nebo jiný placeholder
+                    }
+
+                    // Bonus: Můžeš přidat text "SHINY" před jméno nebo změnit barvu textu
+                    tvCompanionLabel.text = if (companion.isShiny) "⭐ ${companion.name}" else companion.name
+                    if (companion.isShiny) {
+                        tvCompanionLabel.setTextColor(Color.parseColor("#DDA15E")) // Barva z tvého manuálu
+                    } else {
+                        tvCompanionLabel.setTextColor(Color.WHITE)
+                    }
+
                 } else {
-                    // Pokud záznam v DB neexistuje, schováme vše
                     ivCompanion.visibility = View.GONE
                     tvCompanionLabel.visibility = View.GONE
                     companionShadow.visibility = View.GONE

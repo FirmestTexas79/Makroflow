@@ -68,42 +68,43 @@ class PokemonBattleView @JvmOverloads constructor(
     private data class Zone(val r: Rect, val fn: () -> Unit)
     private val zones = mutableListOf<Zone>()
 
-    private fun spriteUrl(webName: String) =
-        "https://img.pokemondb.net/sprites/firered-leafgreen/normal/$webName.png"
+    private fun spriteUrl(webName: String, isShiny: Boolean = false): String {
+        val type = if (isShiny) "shiny" else "normal"
+        return "https://img.pokemondb.net/sprites/firered-leafgreen/$type/$webName.png"
+    }
 
     init {
         PokemonSprites.init(context)
 
         val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-
-        // Získáme unikátní ID řádku z DB a záložní ID druhu
         val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
         val backupPokemonId = prefs.getString("currentOnBarId", "050") ?: "050"
 
         Thread {
             val db = AppDatabase.getDatabase(context)
 
-            // 1. Pokusíme se načíst reálného pokémona z DB
+            // 1. Načtení hráče a jeho shiny stavu z DB
             val caughtEntity = if (activeCapturedId != -1) {
                 db.capturedPokemonDao().getPokemonById(activeCapturedId)
             } else null
 
-            // 2. Definujeme parametry hráče na základě dat z DB nebo zálohy
             val pId = caughtEntity?.pokemonId ?: backupPokemonId
             val playerLevel = caughtEntity?.level ?: 1
+            // Předpokládám, že CapturedPokemonEntity má field isShiny
+            val playerIsShiny = caughtEntity?.isShiny ?: false
 
-            // 3. Vytvoření objektu hráče se správnými staty
             val playerWithStats = createPlayerPokemon(pId, playerLevel)
 
-            // 4. Inicializace nepřítele (level odvozen od hráče)
+            // 2. Nepřítel a šance na Shiny (např. 1 z 4096 nebo tvoje vlastní šance)
             val baseEnemy = SpawnManager.rollWildEncounter(context)
             val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
 
-            // 5. Načtení Pokéballů z inventáře
+            // Náhodná šance pro divokého pokémona (1 % šance pro testování)
+            val enemyIsShiny = Random.nextInt(100) == 0
+
             val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
 
-            // 6. Sestavení herního stavu a aktualizace UI
             handler.post {
                 gs = BattleState(
                     player = playerWithStats,
@@ -111,11 +112,14 @@ class PokemonBattleView @JvmOverloads constructor(
                     ballCount = currentPokeballs
                 )
 
+                // Uložíme informaci o shiny do stavu, pokud ji budeme potřebovat při chycení
+                gs.isEnemyShiny = enemyIsShiny
+
                 handler.post(cursorTick)
 
-                // Načtení spritů pro oba bojovníky
-                loadSprite(spriteUrl(BattleFactory.webName(enemyWithStats)), isPlayer = false)
-                loadSprite(spriteUrl(BattleFactory.webName(playerWithStats)), isPlayer = true)
+                // 3. Načtení spritů s ohledem na shiny stav
+                loadSprite(spriteUrl(BattleFactory.webName(enemyWithStats), enemyIsShiny), isPlayer = false)
+                loadSprite(spriteUrl(BattleFactory.webName(playerWithStats), playerIsShiny), isPlayer = true)
 
                 invalidate()
             }
@@ -745,38 +749,46 @@ class PokemonBattleView @JvmOverloads constructor(
         ballVisible = 2
         invalidate()
 
+        // Získáme ID druhu (např. "004")
         val pId = BattleFactory.pokedexId(gs.enemy)
 
+        // ✅ Vytvoření entity - isShiny bereme z našeho BattleState
         val entity = CapturedPokemonEntity(
             pokemonId = pId,
             name = gs.enemy.name,
             level = gs.enemy.level,
-            caughtDate = System.currentTimeMillis() // Přidá unikátní čas chycení
+            isShiny = gs.isEnemyShiny, // 👈 Přenesení shiny stavu
+            caughtDate = System.currentTimeMillis()
         )
 
         Thread {
+            // 1. Uložení do lokální Room databáze
             db.capturedPokemonDao().insertPokemon(entity)
 
+            // 2. Synchronizace s Firebase (pokud je uživatel přihlášen)
             if (FirebaseRepository.isLoggedIn) {
                 kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
-                    // ✅ Uloží do inventáře s unikátním ID (nepřepíše se!)
+                    // ✅ Posíláme přímo entitu (Firebase si ji zpracuje)
                     FirebaseRepository.uploadCapturedPokemon(entity)
-
-                    // ✅ Označí v Pokédexu jako viděného i chyceného
+                    // ✅ Označí v Pokédexu jako chyceného
                     FirebaseRepository.uploadPokedexStatus(pId)
                 }
             }
 
+            // 3. Logika odměn a UI
             val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
             val isAcquired = prefs.getBoolean("pokemonAcquired", false)
 
             handler.post {
-                setText("CAUGHT ${gs.enemy.name.take(7)}!", "")
+                // Shiny pokémoni dostanou v textu ikonku ✨
+                val shinyPrefix = if (gs.isEnemyShiny) "✨ " else ""
+                setText("${shinyPrefix}CAUGHT ${gs.enemy.name.take(7)}!", "")
                 busy = false
 
-                // ✅ XP za chycení — přímo do DB, bez závislosti na MainActivity
+                // ✅ XP za chycení (Bonus za Shiny a Rarity)
                 if (isAcquired) {
-                    val xpReward = when (SpawnManager.allEntries.find { it.id == pId }?.rarity) {
+                    val rarity = SpawnManager.allEntries.find { it.id == pId }?.rarity
+                    var xpReward = when (rarity) {
                         Rarity.COMMON    -> 20
                         Rarity.RARE      -> 50
                         Rarity.EPIC      -> 100
@@ -784,6 +796,12 @@ class PokemonBattleView @JvmOverloads constructor(
                         Rarity.MYTHIC    -> 250
                         else             -> 20
                     }
+
+                    // ✨ Bonusové XP za chycení Shiny varianty (2x tolik)
+                    if (gs.isEnemyShiny) {
+                        xpReward *= 2
+                    }
+
                     awardXpToActivePokemon(xpReward)
                 }
 
@@ -791,7 +809,6 @@ class PokemonBattleView @JvmOverloads constructor(
             }
         }.start()
     }
-
     /**
      * Udělí XP aktivnímu pokémonovi přímo z BattleView.
      * Funguje v jakémkoli Activity kontextu (PokemonMapActivity i MainActivity).

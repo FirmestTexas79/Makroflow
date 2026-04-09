@@ -49,6 +49,12 @@ data class BattleState(
     var enemyDefMod: Float = 1.0f,
     var enemyVisible: Boolean = true,
     var caught: Boolean = false,
+
+    // --- NOVÉ PROMĚNNÉ PRO SHINY A MECHANIKY ---
+    var isEnemyShiny: Boolean = false,  // Musíme vědět, zda je tenhle konkrétní nepřítel shiny
+    var isPlayerShiny: Boolean = false, // Pro případné efekty u tvého pokémona
+    var selectedBallId: String = "poke_ball", // Abychom věděli, co hráč zrovna hází
+
     var wobbleCount: Int = 0,
     var wobbleDone: Int = 0,
     var captureSuccess: Boolean = false
