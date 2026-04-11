@@ -554,4 +554,26 @@ object FirebaseRepository {
     }
 
     fun signOut() = auth.signOut()
+
+    suspend fun deleteAllUserData() {
+        val uid = auth.currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        // Smazání všech kolekcí uživatele
+        listOf(
+            "profiles", "checkIns", "bodyMetrics", "analytics",
+            "capturedPokemon", "water", "consumedSnacks", "trainingPlans"
+        ).forEach { collection ->
+            try {
+                val docs = db.collection("users").document(uid)
+                    .collection(collection).get().await()
+                docs.documents.forEach { it.reference.delete().await() }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+
+        // Smazání hlavního dokumentu uživatele
+        try {
+            db.collection("users").document(uid).delete().await()
+        } catch (e: Exception) { e.printStackTrace() }
+    }
 }

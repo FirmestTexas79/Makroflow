@@ -164,6 +164,17 @@ class ProfileFragment : Fragment() {
             startActivity(Intent(requireContext(), LoginActivity::class.java))
             requireActivity().finish()
         }
+
+        // Tlačítko smazání účtu — požadavek Google Play pro publikaci
+        val btnDeleteAccount = view.findViewById<MaterialButton>(R.id.btnDeleteAccount)
+        btnDeleteAccount?.setOnClickListener {
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Smazat účet")
+                .setMessage("Tato akce je nevratná. Všechna tvá data (profil, check-iny, Pokémoni) budou trvale smazána.")
+                .setPositiveButton("Smazat účet") { _, _ -> deleteAccount() }
+                .setNegativeButton("Zrušit", null)
+                .show()
+        }
     }
 
     // --- NAČÍTÁNÍ (Profil určuje pravdu) ---
@@ -355,5 +366,54 @@ class ProfileFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         loadUserData()
+    }
+
+    private fun deleteAccount() {
+        val appContext = requireContext().applicationContext
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // 1. Smazání všech dat z Firestore
+                if (FirebaseRepository.isLoggedIn) {
+                    try { FirebaseRepository.deleteAllUserData() } catch (e: Exception) { e.printStackTrace() }
+                }
+
+                // 2. Smazání Firebase Auth účtu
+                FirebaseRepository.currentUser?.delete()?.addOnCompleteListener { task ->
+                    if (!task.isSuccessful) {
+                        // Pokud selže (expired token) — přesměruj na re-autentizaci
+                        lifecycleScope.launch(Dispatchers.Main) {
+                            Toast.makeText(appContext,
+                                "Pro smazání se prosím znovu přihlas.",
+                                Toast.LENGTH_LONG).show()
+                        }
+                        return@addOnCompleteListener
+                    }
+                }
+
+                // 3. Vyčištění lokální DB
+                val db = AppDatabase.getDatabase(appContext)
+                db.clearAllTables()
+
+                // 4. Vyčištění SharedPreferences
+                listOf("GamePrefs", "UserPrefs", "TrainingPrefs").forEach { name ->
+                    appContext.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().apply()
+                }
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(appContext, "Účet byl smazán.", Toast.LENGTH_SHORT).show()
+                    startActivity(
+                        android.content.Intent(appContext, LoginActivity::class.java).apply {
+                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                    )
+                    requireActivity().finish()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(appContext, "Chyba: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 }
