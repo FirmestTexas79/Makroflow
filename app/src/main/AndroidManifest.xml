@@ -20,6 +20,10 @@
 
     <queries>
         <package android:name="com.google.android.gms" />
+        <!-- Nutné pro Android 11+ aby resolveActivity() našlo kamerovou aplikaci -->
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
     </queries>
 
 

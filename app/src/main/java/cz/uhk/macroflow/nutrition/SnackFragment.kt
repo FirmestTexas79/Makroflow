@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Bundle
@@ -18,7 +19,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputLayout
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import cz.uhk.macroflow.data.AppDatabase
@@ -62,13 +62,54 @@ class SnackFragment : Fragment() {
 
     private var currentSearchQuery = ""
 
-    // Launcher pro fotoaparát - AI analýza
-    private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    private var photoUri: android.net.Uri? = null
+
+
+    // ── Runtime oprávnění pro kameru ──────────────────────────────────
+    // Registrujeme launcher pro žádost o oprávnění CAMERA.
+    // Na zařízeních kde oprávnění nebylo uděleno dřív, bez toho dojde k okamžitému crashu.
+    private val requestCameraPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            // Oprávnění uděleno — spustíme kameru
+            launchCamera()
+        } else {
+            Toast.makeText(
+                requireContext(),
+                "Fotoaparát není povolen — povol ho v nastavení telefonu.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    // ── Launcher pro výsledek z kamery ───────────────────────────────
+    // ACTION_IMAGE_CAPTURE vrátí thumbnail bitmap přes extras["data"].
+    // Na některých zařízeních (Android 12+) může být null — ošetřujeme to.
+    // Launcher pro výsledek z kamery — teď používá plnou fotku přes URI
+    private val takePhotoLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            val bitmap = result.data?.extras?.get("data") as? Bitmap
-            bitmap?.let {
-                val scaledBitmap = getResizedBitmap(it, 1024)
-                analyzeImageWithAi(scaledBitmap)
+            val uri = photoUri
+            if (uri != null) {
+                try {
+                    // Načteme plnou fotku z URI (ne thumbnail z extras)
+                    val inputStream = requireContext().contentResolver.openInputStream(uri)
+                    val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                    inputStream?.close()
+
+                    if (bitmap != null) {
+                        val scaledBitmap = getResizedBitmap(bitmap, 1024)
+                        analyzeImageWithAi(scaledBitmap)
+                    } else {
+                        Toast.makeText(requireContext(), "Nepodařilo se načíst fotku.", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), "Chyba při načítání fotky: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(requireContext(), "Nepodařilo se načíst fotku.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -115,13 +156,67 @@ class SnackFragment : Fragment() {
             showAddDialog()
         }
 
+        // ── AI Scanner click listener ─────────────────────────────────
+        // Před spuštěním kamery zkontrolujeme runtime oprávnění.
+        // Manifest oprávnění nestačí — od API 23 je nutné žádat za běhu.
         btnAiScanner.setOnClickListener {
-            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            takePhotoLauncher.launch(intent)
+            when {
+                // Oprávnění už máme — rovnou spustíme kameru
+                requireContext().checkSelfPermission(android.Manifest.permission.CAMERA)
+                        == PackageManager.PERMISSION_GRANTED -> {
+                    launchCamera()
+                }
+                // Uživatel jednou odmítl — vysvětlíme proč to potřebujeme
+                shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA) -> {
+                    Toast.makeText(
+                        requireContext(),
+                        "Fotoaparát potřebujeme pro AI analýzu nutričních hodnot jídla.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    requestCameraPermission.launch(android.Manifest.permission.CAMERA)
+                }
+                // Prvotní žádost o oprávnění
+                else -> {
+                    requestCameraPermission.launch(android.Manifest.permission.CAMERA)
+                }
+            }
         }
 
         observeSnacks()
         return view
+    }
+
+    /**
+     * Spustí systémovou kameru pro pořízení snímku jídla.
+     * Voláme až po ověření že máme CAMERA oprávnění.
+     * Ověřujeme také že existuje aplikace schopná obsloužit intent
+     * (na některých emulátorech nebo stripped ROM zařízeních kamera chybí).
+     */
+    private fun launchCamera() {
+        try {
+            // Vytvoříme dočasný soubor v cache pro plnou fotku
+            val photoFile = java.io.File.createTempFile(
+                "food_${System.currentTimeMillis()}",
+                ".jpg",
+                requireContext().cacheDir
+            )
+
+            // Získáme URI přes FileProvider (nutné pro Android 7+)
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.fileprovider",
+                photoFile
+            )
+            photoUri = uri
+
+            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                // Řekneme kameře kam má uložit plnou fotku
+                putExtra(MediaStore.EXTRA_OUTPUT, uri)
+            }
+            takePhotoLauncher.launch(intent)
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Nepodařilo se spustit kameru: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun analyzeImageWithAi(bitmap: Bitmap) {
@@ -572,8 +667,8 @@ class SnackFragment : Fragment() {
     }
 
     private fun consumeSnack(snack: SnackEntity) {
-        val today    = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val nowTime  = SimpleDateFormat("HH:mm",      Locale.getDefault()).format(Date())
+        val today   = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val nowTime = SimpleDateFormat("HH:mm",      Locale.getDefault()).format(Date())
         val calories = ((snack.p * 4) + (snack.s * 4) + (snack.t * 9)).toInt()
 
         val consumed = ConsumedSnackEntity(
@@ -593,8 +688,8 @@ class SnackFragment : Fragment() {
     }
 
     private fun showAddDialog(aiResult: FoodAIResult? = null) {
-        val dialog   = BottomSheetDialog(requireContext())
-        val v        = layoutInflater.inflate(R.layout.dialog_add_snack, null)
+        val dialog = BottomSheetDialog(requireContext())
+        val v      = layoutInflater.inflate(R.layout.dialog_add_snack, null)
         dialog.setContentView(v)
 
         val btnSave        = v.findViewById<Button>(R.id.btnSaveSnack)
@@ -610,7 +705,6 @@ class SnackFragment : Fragment() {
         val tvPercentT     = v.findViewById<TextView>(R.id.tvPercentT)
         val tvPercentFiber = v.findViewById<TextView>(R.id.tvPercentFiber)
 
-        // Stav pro živý výpočet procent (načteno asynchronně)
         var targetP = 0.0; var targetS = 0.0; var targetT = 0.0; var targetFiber = 0.0
         var alreadyP = 0.0; var alreadyS = 0.0; var alreadyT = 0.0; var alreadyFiber = 0.0
 
@@ -644,9 +738,8 @@ class SnackFragment : Fragment() {
         etT.addTextChangedListener { updatePercents() }
         etFiber.addTextChangedListener { updatePercents() }
 
-        // Načtení denního cíle a dnešního příjmu
         lifecycleScope.launch {
-            val today  = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val today    = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             val target   = withContext(Dispatchers.IO) { MacroCalculator.calculate(requireContext()) }
             val consumed = withContext(Dispatchers.IO) { db.consumedSnackDao().getConsumedByDate(today).first() }
 
@@ -671,19 +764,27 @@ class SnackFragment : Fragment() {
         }
 
         btnSave.setOnClickListener {
-            val name = etName.text.toString()
-            val p = etP.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-            val s = etS.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-            val t = etT.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
+            val name  = etName.text.toString()
+            val p     = etP.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
+            val s     = etS.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
+            val t     = etT.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
             val fiber = etFiber.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
             val energy = (p * 17f) + (s * 17f) + (t * 38f)
 
             if (name.isNotEmpty()) {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    db.snackDao().insertSnack(SnackEntity(name = name, weight = "${etWeight.text}g", p = p, s = s, t = t, isPre = isPreSelected, energyKj = energy, fiber = fiber))
+                    db.snackDao().insertSnack(
+                        SnackEntity(
+                            name = name, weight = "${etWeight.text}g",
+                            p = p, s = s, t = t,
+                            isPre = isPreSelected, energyKj = energy, fiber = fiber
+                        )
+                    )
                     withContext(Dispatchers.Main) { dialog.dismiss() }
                 }
-            } else { etName.error = "Zadej název" }
+            } else {
+                etName.error = "Zadej název"
+            }
         }
 
         tilName.setEndIconOnClickListener {
@@ -693,27 +794,35 @@ class SnackFragment : Fragment() {
         dialog.show()
     }
 
-    private fun startBarcodeScanner(etName: EditText, etWeight: EditText, etP: EditText, etS: EditText, etT: EditText, etF: EditText) {
+    private fun startBarcodeScanner(
+        etName: EditText, etWeight: EditText,
+        etP: EditText, etS: EditText, etT: EditText, etF: EditText
+    ) {
         val scanner = GmsBarcodeScanning.getClient(requireContext())
         scanner.startScan().addOnSuccessListener { barcode ->
             barcode.rawValue?.let { fetchFoodData(it, etName, etWeight, etP, etS, etT, etF) }
         }
     }
 
-    private fun fetchFoodData(barcode: String, etName: EditText, etWeight: EditText, etP: EditText, etS: EditText, etT: EditText, etF: EditText) {
+    private fun fetchFoodData(
+        barcode: String,
+        etName: EditText, etWeight: EditText,
+        etP: EditText, etS: EditText, etT: EditText, etF: EditText
+    ) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val response = URL("https://world.openfoodfacts.org/api/v2/product/$barcode.json").readText()
                 val json = JSONObject(response)
                 if (json.optInt("status") == 1) {
-                    val product = json.getJSONObject("product")
+                    val product    = json.getJSONObject("product")
                     val nutriments = product.optJSONObject("nutriments")
-                    val name = product.optString("product_name_cs").ifEmpty { product.optString("product_name", "Neznámý") }
+                    val name = product.optString("product_name_cs")
+                        .ifEmpty { product.optString("product_name", "Neznámý") }
                     nutriments?.let { n ->
                         withContext(Dispatchers.Main) {
-                            baseP = (n.optDouble("proteins_100g", 0.0) / 100.0).toFloat()
-                            baseS = (n.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat()
-                            baseT = (n.optDouble("fat_100g", 0.0) / 100.0).toFloat()
+                            baseP     = (n.optDouble("proteins_100g", 0.0) / 100.0).toFloat()
+                            baseS     = (n.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat()
+                            baseT     = (n.optDouble("fat_100g", 0.0) / 100.0).toFloat()
                             baseFiber = (n.optDouble("fiber_100g", 0.0) / 100.0).toFloat()
                             etName.setText(name); etWeight.setText("100")
                             etP.setText("%.1f".format(baseP * 100).replace(",", "."))
@@ -751,7 +860,9 @@ class SnackFragment : Fragment() {
                     if (event.rawX < startX - 100) deleteSnackFromDb(snack)
                     deleteOverlay.visibility = View.GONE
                     isSelectionMode = false
-                } else if (event.action == MotionEvent.ACTION_UP) { v.performClick() }
+                } else if (event.action == MotionEvent.ACTION_UP) {
+                    v.performClick()
+                }
                 return true
             }
         }

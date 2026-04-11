@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
  * - Načtení aktivního Pokémona z DB (podle caughtDate v GamePrefs)
  * - Stažení správného spritu (normální / shiny) z pokesprite CDN
  * - Spuštění/zastavení WandererFactory animace
+ * - Nastavení click listeneru pro tap reakce Pokémona
  * - Retry logika pokud Pokémon v DB ještě není (čeká 3s a zkusí znovu)
  */
 class PokemonBarController(
@@ -70,6 +71,8 @@ class PokemonBarController(
                 if (uniqueKey == lastLoadedKey) {
                     ivPokemon.visibility = View.VISIBLE
                     if (behavior == null) startBehavior(caught.pokemonId)
+                    // Pojistka — listener musí být vždy nastaven i bez přenačtení spritu
+                    setupClickListener()
                     return@withContext
                 }
 
@@ -97,6 +100,9 @@ class PokemonBarController(
                         // Obrázek načten — spustíme animaci pohybu
                         startBehavior(caught.pokemonId)
                         ivPokemon.visibility = View.VISIBLE
+                        // Click listener nastavíme až po načtení spritu
+                        // aby byl behavior již inicializován
+                        setupClickListener()
                     })
                 }
             }
@@ -120,6 +126,19 @@ class PokemonBarController(
     fun stop() {
         behavior?.stop()
         behavior = null
+    }
+
+    /**
+     * Nastaví click listener na ImageView.
+     * Deleguje tap na behavior.onSpriteClicked() — každý Pokémon
+     * má vlastní reakci (Pikachu blesky, Snorlax kývání, Mew blikání...).
+     * Voláme po každém startBehavior() aby listener vždy odkazoval
+     * na aktuální instanci behavior.
+     */
+    private fun setupClickListener() {
+        ivPokemon.setOnClickListener {
+            behavior?.onSpriteClicked()
+        }
     }
 
     // Vytvoří a spustí WandererFactory animaci pro daný pokemonId
