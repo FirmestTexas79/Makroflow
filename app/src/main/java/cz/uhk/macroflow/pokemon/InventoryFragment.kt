@@ -84,6 +84,17 @@ class InventoryFragment : Fragment() {
             val btnDelete: ImageButton  = v.findViewById(R.id.btnDeletePokemon)
         }
 
+        // Pomocná funkce pro sestavení URL z Gen 8 zdroje
+        private fun spriteUrl(webName: String, isShiny: Boolean = false): String {
+            val type = if (isShiny) "shiny" else "regular"
+            val formattedName = webName.lowercase().trim()
+                .replace(" ", "-")
+                .replace(".", "")
+                .replace("♀", "-f")
+                .replace("♂", "-m")
+            return "https://raw.githubusercontent.com/msikma/pokesprite/master/pokemon-gen8/$type/$formattedName.png"
+        }
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val v = LayoutInflater.from(parent.context).inflate(R.layout.item_captured_pokemon, parent, false)
             return VH(v)
@@ -98,49 +109,32 @@ class InventoryFragment : Fragment() {
             val isAcquired = prefs.getBoolean("pokemonAcquired", false)
             val isActiveOnBar = isAcquired && (item.caughtDate == activeOnBarCaughtDate)
 
-            // UI Logika pro tlačítka
+            // UI Logika pro tlačítka (Pin/Unpin)
             holder.btnPin.visibility = if (isActiveOnBar) View.GONE else View.VISIBLE
             holder.btnUnpin.visibility = if (isActiveOnBar) View.VISIBLE else View.GONE
 
+            // Levely a XP
             val prog = PokemonLevelCalc.progressToNextLevel(item.xp)
-
             holder.tvName.text = if (item.isShiny) "✨ ${item.name}" else item.name
-            holder.tvLevel.visibility = View.VISIBLE
-            holder.pbXp.visibility = View.VISIBLE
             holder.tvLevel.text = "Lv.${item.level}"
             holder.pbXp.progress = (prog * 100).toInt()
 
-            // --- LOGIKA NAČÍTÁNÍ OBRÁZKU ---
-            val webName = item.name.lowercase()
-                .replace(" ", "-").replace(".", "")
-                .replace("♀", "-f").replace("♂", "-m")
+            holder.tvLevel.visibility = View.VISIBLE
+            holder.pbXp.visibility = View.VISIBLE
 
-            if (item.isShiny) {
-                // 1. Priorita: Zkusíme tvůj lokální drawable (např. shiny_mewtwo)
-                val resourceId = context.resources.getIdentifier(
-                    "shiny_${webName.replace("-", "_")}",
-                    "drawable",
-                    context.packageName
-                )
+            // --- UNIFIKOVANÁ LOGIKA NAČÍTÁNÍ OBRÁZKU (Gen 8) ---
+            // Použijeme tvou funkci spriteUrl, která bere data z GitHubu
+            val finalUrl = spriteUrl(item.name, item.isShiny)
 
-                if (resourceId != 0) {
-                    holder.ivSprite.load(resourceId)
-                } else {
-                    // 2. Záloha: Shiny verze z webu (Ruby/Sapphire styl podle tvého odkazu)
-                    holder.ivSprite.load("https://img.pokemondb.net/sprites/ruby-sapphire/shiny/$webName.png") {
-                        placeholder(R.drawable.ic_home)
-                        error(R.drawable.ic_home)
-                    }
-                }
-            } else {
-                // Klasický pokémon
-                holder.ivSprite.load("https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png") {
-                    placeholder(R.drawable.ic_home)
-                    error(R.drawable.ic_home)
-                }
+            holder.ivSprite.load(finalUrl) {
+                crossfade(true)
+                placeholder(R.drawable.ic_home)
+                error(R.drawable.ic_home)
             }
 
-            // --- LISTENERY (beze změn) ---
+            // --- LISTENERY ---
+
+            // Zámek
             val lockIcon = if (item.isLocked) android.R.drawable.ic_lock_lock else android.R.drawable.ic_lock_idle_lock
             holder.btnLock.setImageResource(lockIcon)
 
@@ -153,6 +147,7 @@ class InventoryFragment : Fragment() {
                 }
             }
 
+            // Připnout na lištu (Pin)
             holder.btnPin.setOnClickListener {
                 prefs.edit()
                     .putBoolean("pokemonAcquired", true)
@@ -167,14 +162,20 @@ class InventoryFragment : Fragment() {
                 Toast.makeText(context, "📌 ${item.name} vypuštěn na lištu!", Toast.LENGTH_SHORT).show()
             }
 
+            // Odepnout z lišty (Unpin)
             holder.btnUnpin.setOnClickListener {
-                prefs.edit().putBoolean("pokemonAcquired", false).putLong("currentOnBarCaughtDate", -1L).apply()
+                prefs.edit()
+                    .putBoolean("pokemonAcquired", false)
+                    .putLong("currentOnBarCaughtDate", -1L)
+                    .apply()
+
                 (requireActivity() as? MainActivity)?.updatePokemonVisibility()
                 (requireActivity() as? MainActivity)?.refreshStickyNotification()
                 loadData()
                 Toast.makeText(context, "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
             }
 
+            // Smazat (Delete)
             holder.btnDelete.setOnClickListener {
                 if (item.isLocked) {
                     Toast.makeText(context, "Odemkni pokémona před smazáním! 🔒", Toast.LENGTH_SHORT).show()

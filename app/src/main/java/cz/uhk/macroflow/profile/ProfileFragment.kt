@@ -166,39 +166,30 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // --- NAČÍTÁNÍ (včetně nového cíle a Firebase sync) ---
+    // --- NAČÍTÁNÍ (Profil určuje pravdu) ---
     private fun loadUserData() {
         lifecycleScope.launch {
-            val db = AppDatabase.getDatabase(requireContext())
+            val appContext = requireContext().applicationContext
+            val db = AppDatabase.getDatabase(appContext)
+
+            // Bereme čistě data z profilu, ranní rituál nás při načítání profilu nezajímá
             val profile = withContext(Dispatchers.IO) { db.userProfileDao().getProfileSync() }
 
-            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            val currentWeight = withContext(Dispatchers.IO) {
-                db.checkInDao().getCheckInByDateSync(today)?.weight
-                    ?: db.checkInDao().getAllCheckInsSync().firstOrNull()?.weight
-                    ?: profile?.weight
-            }
-
             if (profile != null) {
-                etWeight.setText((currentWeight ?: profile.weight).toString())
+                etWeight.setText(profile.weight.toString())
                 etHeight.setText(profile.height.toString())
                 etAge.setText(profile.age.toString())
                 toggleGender.check(if (profile.gender == "male") R.id.btnMale else R.id.btnFemale)
                 selectedMultiplier = profile.activityMultiplier
                 sliderStepGoal.value = profile.stepGoal.toFloat()
                 tvStepGoalValue.text = "${profile.stepGoal} kroků"
-
-                // ✅ Načtení cíle z DB a aktualizace UI
                 selectedGoal = profile.goal
                 updateGoalVisuals()
             } else {
-                // Fallback SharedPrefs
-                val prefs = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-                etWeight.setText((currentWeight ?: prefs.getString("weightAkt", "83")?.toDoubleOrNull() ?: 83.0).toString())
-                etHeight.setText(prefs.getString("height", "175"))
-                etAge.setText(prefs.getString("age", "22"))
-                toggleGender.check(if (prefs.getString("gender", "male") == "male") R.id.btnMale else R.id.btnFemale)
-                selectedMultiplier = prefs.getFloat("multiplier", 1.2f)
+                // Totální fallback pro nové uživatele
+                etWeight.setText("83.0")
+                etHeight.setText("175")
+                etAge.setText("22")
                 selectedGoal = "MAINTAIN"
                 updateGoalVisuals()
             }
@@ -209,8 +200,9 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // --- UKLÁDÁNÍ (Zahrnuje goal do Firebase i Room) ---
+    // --- UKLÁDÁNÍ (Profil přepisuje rituál, pokud existuje) ---
     private fun saveAllData() {
+        val btnSave = view?.findViewById<MaterialButton>(R.id.btnSave)
         val weight = etWeight.text.toString().toDoubleOrNull()
         val height = etHeight.text.toString().toDoubleOrNull()
         val age    = etAge.text.toString().toIntOrNull()
@@ -221,42 +213,53 @@ class ProfileFragment : Fragment() {
             return
         }
 
+        btnSave?.isEnabled = false // Prevence proti "zběsilému klikání"
         val gender = if (toggleGender.checkedButtonId == R.id.btnMale) "male" else "female"
+        val appContext = requireContext().applicationContext
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            val db = AppDatabase.getDatabase(requireContext())
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val db = AppDatabase.getDatabase(appContext)
+                    val currentProfile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
 
-            // 1. Získáme aktuální profil (včetně dat z architekta)
-            val currentProfile = db.userProfileDao().getProfileSync() ?: return@launch
+                    val profileToSave = currentProfile.copy(
+                        weight = weight,
+                        height = height,
+                        age = age,
+                        gender = gender,
+                        activityMultiplier = selectedMultiplier,
+                        stepGoal = stepGoal,
+                        goal = selectedGoal
+                    )
 
-            // 2. Vytvoříme kopii pomocí .copy() - přepíšeme jen to, co vidíme v tomto UI
-            // Ostatní hodnoty (BF%, dieta, zápěstí) zůstanou v objektu netknuté
-            val profileToSave = currentProfile.copy(
-                weight = weight,
-                height = height,
-                age = age,
-                gender = gender,
-                activityMultiplier = selectedMultiplier,
-                stepGoal = stepGoal,
-                goal = selectedGoal
-            )
+                    // 1. Uložíme do Profilu (Hlavní pravda)
+                    db.userProfileDao().saveProfile(profileToSave)
 
-            // 3. Uložíme aktualizovaný profil zpět do DB
-            db.userProfileDao().saveProfile(profileToSave)
+                    // 2. Synchronizace váhy do dnešního check-inu (pokud už existuje)
+                    val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                    val todayCheckIn = db.checkInDao().getCheckInByDateSync(today)
+                    if (todayCheckIn != null) {
+                        db.checkInDao().insertCheckIn(todayCheckIn.copy(weight = weight))
+                    }
 
-            requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-                .edit().putString("weightAkt", weight.toString()).apply()
+                    // 3. SharedPrefs pro rychlý přístup jinde
+                    appContext.getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+                        .edit().putString("weightAkt", weight.toString()).apply()
 
-            // 4. Synchronizace na Firebase (posíláme kompletní objekt s architektem)
-            if (FirebaseRepository.isLoggedIn) {
-                try {
-                    FirebaseRepository.uploadProfile(profileToSave)
-                } catch (e: Exception) { e.printStackTrace() }
-            }
+                    // 4. Firebase (v samostatném launch, aby neblokoval UI)
+                    if (FirebaseRepository.isLoggedIn) {
+                        try { FirebaseRepository.uploadProfile(profileToSave) } catch (e: Exception) { e.printStackTrace() }
+                    }
+                }
 
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, if (FirebaseRepository.isLoggedIn) "Synchronizováno ☁️" else "Uloženo lokálně 💪", Toast.LENGTH_SHORT).show()
+                Toast.makeText(appContext, if (FirebaseRepository.isLoggedIn) "Synchronizováno ☁️" else "Uloženo lokálně 💪", Toast.LENGTH_SHORT).show()
                 if (isExpanded) shrinkCircle()
+
+            } catch (e: Exception) {
+                Toast.makeText(appContext, "Chyba: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                btnSave?.isEnabled = true
             }
         }
     }
@@ -347,5 +350,10 @@ class ProfileFragment : Fragment() {
         isExpanded = false
         circleContainer.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).start()
         tvDesc.animate().alpha(0f).setDuration(300).withEndAction { tvDesc.visibility = View.INVISIBLE }.start()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadUserData()
     }
 }

@@ -50,10 +50,14 @@ data class BattleState(
     var enemyVisible: Boolean = true,
     var caught: Boolean = false,
 
-    // --- NOVÉ PROMĚNNÉ PRO SHINY A MECHANIKY ---
-    var isEnemyShiny: Boolean = false,  // Musíme vědět, zda je tenhle konkrétní nepřítel shiny
-    var isPlayerShiny: Boolean = false, // Pro případné efekty u tvého pokémona
-    var selectedBallId: String = "poke_ball", // Abychom věděli, co hráč zrovna hází
+    // --- PROMĚNNÉ PRO SHINY A MECHANIKY ---
+    var isEnemyShiny: Boolean = false,
+    var isPlayerShiny: Boolean = false,
+    var selectedBallId: String = "poke_ball",
+
+    // --- NOVÉ PROMĚNNÉ PRO ANIMACE (Slide-in a Hvězdičky) ---
+    var introOffset: Float = 1.0f,    // 1.0 = úplně mimo obrazovku, 0.0 = na svých pozicích
+    var shinyAnimFrame: Int = 0,      // 0 = nic, 1-30 = probíhající animace hvězdiček
 
     var wobbleCount: Int = 0,
     var wobbleDone: Int = 0,
@@ -598,7 +602,7 @@ object BattleFactory {
         "PIDGEOTTO" -> "017"
         "PIDGEOT"   -> "018"
         "RATTATA"   -> "019"
-        "RATTICATE" -> "020"
+        "RATICATE"  -> "020"
         "SPEAROW"   -> "021"
         "FEAROW"    -> "022"
         "EKANS"     -> "023"
@@ -643,7 +647,7 @@ object BattleFactory {
         "PIDGEOTTO"  -> "pidgeotto"
         "PIDGEOT"    -> "pidgeot"
         "RATTATA"    -> "rattata"
-        "RATTICATE"  -> "raticate"
+        "RATICATE"   -> "raticate"
         "SPEAROW"    -> "spearow"
         "FEAROW"     -> "fearow"
         "EKANS"      -> "ekans"

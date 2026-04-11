@@ -93,14 +93,18 @@ class LoginActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     try {
                         withContext(Dispatchers.IO) {
-                            // Rozhodneme, zda stahujeme (starý uživatel) nebo nahráváme (nový uživatel)
                             val cloudProfileExists = FirebaseRepository.downloadProfile() != null
 
                             if (cloudProfileExists) {
-                                // Obnova dat ze serveru (včetně tvého nového Power/Kardio plánu)
                                 FirebaseRepository.syncCloudDataToLocal(applicationContext)
                             } else {
-                                // První spuštění -> pošleme výchozí data z telefonu na server
+                                // Nový uživatel — zajistíme výchozí profil v lokální DB před uploadem
+                                val db = cz.uhk.macroflow.data.AppDatabase.getDatabase(applicationContext)
+                                if (db.userProfileDao().getProfileSync() == null) {
+                                    db.userProfileDao().saveProfile(
+                                        cz.uhk.macroflow.data.UserProfileEntity(id = 1)
+                                    )
+                                }
                                 FirebaseRepository.syncLocalDataToCloud(applicationContext)
                             }
                         }

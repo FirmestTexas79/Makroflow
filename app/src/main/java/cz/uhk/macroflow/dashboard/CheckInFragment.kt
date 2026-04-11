@@ -12,12 +12,11 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
-import com.google.firebase.auth.FirebaseAuth
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.R
-import cz.uhk.macroflow.analytics.BioLogicEngine
 import cz.uhk.macroflow.data.CheckInEntity
+import cz.uhk.macroflow.data.UserProfileEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,18 +33,19 @@ class CheckInFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val etWeight  = view.findViewById<EditText>(R.id.etCheckInWeight)
-        val userPrefs = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        val etWeight = view.findViewById<EditText>(R.id.etCheckInWeight)
+        val appContext = requireContext().applicationContext
 
-        // Načti dnešní váhu z DB, fallback na SharedPrefs
+        // Načti váhu: Priorita dnešní záznam > Profil > Fallback
         lifecycleScope.launch(Dispatchers.IO) {
-            val today        = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            val db           = AppDatabase.getDatabase(requireContext())
+            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val db = AppDatabase.getDatabase(appContext)
             val todayCheckIn = db.checkInDao().getCheckInByDateSync(today)
+            val profile = db.userProfileDao().getProfileSync()
+
             withContext(Dispatchers.Main) {
-                etWeight.setText(
-                    todayCheckIn?.weight?.toString() ?: userPrefs.getString("weightAkt", "83.0")
-                )
+                val lastWeight = todayCheckIn?.weight ?: profile?.weight ?: 83.0
+                etWeight.setText(lastWeight.toString())
             }
         }
 
@@ -54,13 +54,16 @@ class CheckInFragment : Fragment() {
             val energy = view.findViewById<Slider>(R.id.sliderEnergy).value.toInt()
             val sleep  = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
             val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
-            userPrefs.edit().putString("weightAkt", weight.toString()).apply()
+
             saveToDatabase(weight, energy, sleep, hunger)
         }
     }
 
+
     private fun saveToDatabase(weight: Double, energy: Int, sleep: Int, hunger: Int) {
+        val appContext = requireContext().applicationContext
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
         val checkInEntity = CheckInEntity(
             date = today,
             weight = weight,
@@ -71,10 +74,17 @@ class CheckInFragment : Fragment() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val db = AppDatabase.getDatabase(requireContext())
+                val db = AppDatabase.getDatabase(appContext)
+
+                // 1. Uložíme rituál
                 db.checkInDao().insertCheckIn(checkInEntity)
 
-                // --- PŘIDÁNO: Výpočet a upload analytiky ---
+                // 2. PROPSÁNÍ DO PROFILU (Hierarchie: Rituál aktualizuje Profil)
+                val currentProfile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
+                val updatedProfile = currentProfile.copy(weight = weight)
+                db.userProfileDao().saveProfile(updatedProfile)
+
+                // 3. Analytika
                 val history = db.checkInDao().getAllCheckInsSync()
                 val analyticsResult = try {
                     cz.uhk.macroflow.analytics.BioLogicEngine.calculateFullAnalytics(history)
@@ -82,16 +92,17 @@ class CheckInFragment : Fragment() {
 
                 analyticsResult?.let { db.analyticsDao().insertAnalytics(it) }
 
+                // 4. Cloud Sync
                 if (FirebaseRepository.isLoggedIn) {
                     try {
                         FirebaseRepository.uploadCheckIn(checkInEntity)
+                        FirebaseRepository.uploadProfile(updatedProfile)
                         analyticsResult?.let { FirebaseRepository.uploadAnalytics(it) }
                     } catch (e: Exception) { e.printStackTrace() }
                 }
-                // --------------------------------------------
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "Zápis dokončen!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "Zápis dokončen a profil aktualizován!", Toast.LENGTH_SHORT).show()
                     parentFragmentManager.popBackStack()
                 }
             } catch (e: Exception) {

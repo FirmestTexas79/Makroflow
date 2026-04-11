@@ -230,6 +230,10 @@ class DashboardFragment : Fragment() {
                 db.checkInDao().insertCheckIn(checkInEntity)
 
                 // --- PŘIDÁNO: Výpočet a upload analytiky, aby se vytvořila tabulka ---
+                val currentProfile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
+                val updatedProfile = currentProfile.copy(weight = weightVal)
+                db.userProfileDao().saveProfile(updatedProfile)
+
                 val history = db.checkInDao().getAllCheckInsSync()
                 val analyticsResult = try {
                     cz.uhk.macroflow.analytics.BioLogicEngine.calculateFullAnalytics(history)
@@ -242,6 +246,7 @@ class DashboardFragment : Fragment() {
                 if (FirebaseRepository.isLoggedIn) {
                     try {
                         FirebaseRepository.uploadCheckIn(checkInEntity)
+                        FirebaseRepository.uploadProfile(updatedProfile) // ✅ PŘIDÁNO
                         analyticsResult?.let { FirebaseRepository.uploadAnalytics(it) }
                     } catch (e: Exception) {
                         e.printStackTrace()

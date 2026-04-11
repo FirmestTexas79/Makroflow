@@ -59,6 +59,7 @@ class PokemonBattleView @JvmOverloads constructor(
     private var playerBitmap: Bitmap? = null
     private var introStarted = false
 
+
     private val db = AppDatabase.getDatabase(context)
 
     private val cursorTick = object : Runnable {
@@ -69,8 +70,11 @@ class PokemonBattleView @JvmOverloads constructor(
     private val zones = mutableListOf<Zone>()
 
     private fun spriteUrl(webName: String, isShiny: Boolean = false): String {
+
         val type = if (isShiny) "shiny" else "normal"
+
         return "https://img.pokemondb.net/sprites/firered-leafgreen/$type/$webName.png"
+
     }
 
     init {
@@ -101,7 +105,7 @@ class PokemonBattleView @JvmOverloads constructor(
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
 
             // Náhodná šance pro divokého pokémona (1 % šance pro testování)
-            val enemyIsShiny = Random.nextInt(100) == 0
+            val enemyIsShiny = Random.nextInt(5) == 0
 
             val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
 
@@ -187,13 +191,17 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun drawSpritesOverlay(canvas: Canvas) {
         val sc = scale
-        if (sc <= 0f) return
+        if (sc <= 0f || !::gs.isInitialized) return
+
+        // ✅ Tady vypočítáme posun pro plynulý příjezd (stejně jako v renderu)
+        val animOffset = (gs.introOffset * 100f) * sc
 
         if (gs.enemyVisible) {
             enemyBitmap?.let { bmp ->
                 val targetH = enemySpriteHeight() * sc
                 val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
-                val sx = gbX(112f) - targetW / 2f
+                // ✅ PŘIDÁNO: + animOffset (přijíždí zprava)
+                val sx = gbX(112f) - targetW / 2f + animOffset
                 val sy = gbY(54f)  - targetH
                 canvas.drawBitmap(bmp, null, RectF(sx, sy, sx + targetW, sy + targetH), spSmooth)
             }
@@ -202,7 +210,8 @@ class PokemonBattleView @JvmOverloads constructor(
         playerBitmap?.let { bmp ->
             val targetH = 36f * sc
             val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
-            val cx = gbX(48f)
+            // ✅ PŘIDÁNO: - animOffset (přijíždí zleva)
+            val cx = gbX(48f) - animOffset
             val sy = gbY(82f) - targetH
             canvas.save()
             canvas.scale(-1f, 1f, cx, 0f)
@@ -258,6 +267,7 @@ class PokemonBattleView @JvmOverloads constructor(
         }
         drawBottomUI(c)
         if (flashOn) { fp.color = 0xBBFFFFFF.toInt(); c.drawRect(0f, 0f, 160f, 144f, fp) }
+        if (gs.shinyAnimFrame > 0) drawShinyStars(c)
     }
 
     private fun drawPlatform(c: Canvas, x: Int, y: Int, w: Int, h: Int) {
@@ -408,6 +418,64 @@ class PokemonBattleView @JvmOverloads constructor(
         }
     }
 
+    private fun startShinyAnim() {
+        var frame = 0
+        val anim = object : Runnable {
+            override fun run() {
+                frame++
+                gs.shinyAnimFrame = frame
+                invalidate()
+                if (frame < 30) {
+                    handler.postDelayed(this, 30)
+                } else {
+                    gs.shinyAnimFrame = 0
+                    busy = false
+                    invalidate()
+                }
+            }
+        }
+        handler.post(anim)
+    }
+
+    private fun drawShinyStars(c: Canvas) {
+        val f = gs.shinyAnimFrame
+        val starColor = 0xFFFFD700.toInt() // Zlatá
+        val shadowColor = 0xFF181818.toInt() // Tmavá pro kontrast
+
+        val cx = 112f; val cy = 35f // Střed nepřítele
+
+        // Rotace a rozlet
+        val rotation = f * 6.0
+        val dist = f * 1.6f
+
+        for (i in 0 until 8) {
+            val angle = i * 45.0 + rotation
+            val x = cx + cos(Math.toRadians(angle)).toFloat() * dist
+            val y = cy + sin(Math.toRadians(angle)).toFloat() * dist
+
+            // Velikost ramen hvězdy (v čase se zmenšuje)
+            val s = if (f < 15) 2f else 1.5f
+
+            // 1. KRESLÍME STÍN (Křížek o 1px širší)
+            fp.color = shadowColor
+            // Horizontální linka stínu
+            c.drawRect(x - s - 1f, y - 1f, x + s + 1f, y + 1f, fp)
+            // Vertikální linka stínu
+            c.drawRect(x - 1f, y - s - 1f, x + 1f, y + s + 1f, fp)
+
+            // 2. KRESLÍME HVĚZDU (Zlatý křížek)
+            fp.color = starColor
+            // Horizontální rameno
+            c.drawRect(x - s, y - 0.5f, x + s, y + 0.5f, fp)
+            // Vertikální rameno
+            c.drawRect(x - 0.5f, y - s, x + 0.5f, y + s, fp)
+
+            // 3. STŘEDOVÝ BOD (pro extra jiskru)
+            fp.color = Color.WHITE
+            c.drawRect(x - 0.5f, y - 0.5f, x + 0.5f, y + 0.5f, fp)
+        }
+    }
+
     override fun onTouchEvent(e: MotionEvent): Boolean {
         if (e.action != MotionEvent.ACTION_DOWN) return true
 
@@ -442,7 +510,34 @@ class PokemonBattleView @JvmOverloads constructor(
         invalidate()
     }
 
-    private fun startIntro()  { setText("WILD ${gs.enemy.name}", "APPEARED!") }
+    private fun startIntro() {
+        busy = true
+        setText("WILD ${gs.enemy.name}", "APPEARED!")
+
+        val startTime = System.currentTimeMillis()
+        val duration = 1000L
+
+        val introLoop = object : Runnable {
+            override fun run() {
+                val elapsed = System.currentTimeMillis() - startTime
+                val progress = (elapsed.toFloat() / duration).coerceIn(0f, 1f)
+
+                // Snižujeme offset z 1.0 na 0.0
+                gs.introOffset = 1.0f - progress
+                invalidate()
+
+                if (progress < 1f) {
+                    handler.postDelayed(this, 16)
+                } else {
+                    // Dojeli, pokud je shiny, spusť hvězdy, jinak uvolni busy
+                    if (gs.isEnemyShiny) startShinyAnim() else busy = false
+                }
+            }
+        }
+        handler.post(introLoop)
+    }
+
+
     private fun showMain()    { busy = false; gs.phase = BattlePhase.MAIN_MENU; zones.clear(); invalidate() }
     private fun startFight()  { if (gs.player.moves.all { it.pp <= 0 }) { setText("NO PP LEFT!",""); return }; gs.phase = BattlePhase.FIGHT_MENU; invalidate() }
     private fun showPkmn()    { setText("ONLY ${gs.player.name}", "IN PARTY!") }
