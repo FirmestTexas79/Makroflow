@@ -55,24 +55,15 @@ class SnackFragment : Fragment() {
     private var isSelectionMode = false
     private var startX = 0f
 
-    private var baseP = 0f
-    private var baseS = 0f
-    private var baseT = 0f
-    private var baseFiber = 0f
-
     private var currentSearchQuery = ""
 
     private var photoUri: android.net.Uri? = null
 
-
     // ── Runtime oprávnění pro kameru ──────────────────────────────────
-    // Registrujeme launcher pro žádost o oprávnění CAMERA.
-    // Na zařízeních kde oprávnění nebylo uděleno dřív, bez toho dojde k okamžitému crashu.
     private val requestCameraPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            // Oprávnění uděleno — spustíme kameru
             launchCamera()
         } else {
             Toast.makeText(
@@ -84,9 +75,6 @@ class SnackFragment : Fragment() {
     }
 
     // ── Launcher pro výsledek z kamery ───────────────────────────────
-    // ACTION_IMAGE_CAPTURE vrátí thumbnail bitmap přes extras["data"].
-    // Na některých zařízeních (Android 12+) může být null — ošetřujeme to.
-    // Launcher pro výsledek z kamery — teď používá plnou fotku přes URI
     private val takePhotoLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -94,7 +82,6 @@ class SnackFragment : Fragment() {
             val uri = photoUri
             if (uri != null) {
                 try {
-                    // Načteme plnou fotku z URI (ne thumbnail z extras)
                     val inputStream = requireContext().contentResolver.openInputStream(uri)
                     val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
                     inputStream?.close()
@@ -156,17 +143,12 @@ class SnackFragment : Fragment() {
             showAddDialog()
         }
 
-        // ── AI Scanner click listener ─────────────────────────────────
-        // Před spuštěním kamery zkontrolujeme runtime oprávnění.
-        // Manifest oprávnění nestačí — od API 23 je nutné žádat za běhu.
         btnAiScanner.setOnClickListener {
             when {
-                // Oprávnění už máme — rovnou spustíme kameru
                 requireContext().checkSelfPermission(android.Manifest.permission.CAMERA)
                         == PackageManager.PERMISSION_GRANTED -> {
                     launchCamera()
                 }
-                // Uživatel jednou odmítl — vysvětlíme proč to potřebujeme
                 shouldShowRequestPermissionRationale(android.Manifest.permission.CAMERA) -> {
                     Toast.makeText(
                         requireContext(),
@@ -175,7 +157,6 @@ class SnackFragment : Fragment() {
                     ).show()
                     requestCameraPermission.launch(android.Manifest.permission.CAMERA)
                 }
-                // Prvotní žádost o oprávnění
                 else -> {
                     requestCameraPermission.launch(android.Manifest.permission.CAMERA)
                 }
@@ -186,22 +167,13 @@ class SnackFragment : Fragment() {
         return view
     }
 
-    /**
-     * Spustí systémovou kameru pro pořízení snímku jídla.
-     * Voláme až po ověření že máme CAMERA oprávnění.
-     * Ověřujeme také že existuje aplikace schopná obsloužit intent
-     * (na některých emulátorech nebo stripped ROM zařízeních kamera chybí).
-     */
     private fun launchCamera() {
         try {
-            // Vytvoříme dočasný soubor v cache pro plnou fotku
             val photoFile = java.io.File.createTempFile(
                 "food_${System.currentTimeMillis()}",
                 ".jpg",
                 requireContext().cacheDir
             )
-
-            // Získáme URI přes FileProvider (nutné pro Android 7+)
             val uri = androidx.core.content.FileProvider.getUriForFile(
                 requireContext(),
                 "${requireContext().packageName}.fileprovider",
@@ -210,7 +182,6 @@ class SnackFragment : Fragment() {
             photoUri = uri
 
             val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                // Řekneme kameře kam má uložit plnou fotku
                 putExtra(MediaStore.EXTRA_OUTPUT, uri)
             }
             takePhotoLauncher.launch(intent)
@@ -667,24 +638,126 @@ class SnackFragment : Fragment() {
     }
 
     private fun consumeSnack(snack: SnackEntity) {
-        val today   = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val nowTime = SimpleDateFormat("HH:mm",      Locale.getDefault()).format(Date())
-        val calories = ((snack.p * 4) + (snack.s * 4) + (snack.t * 9)).toInt()
+        showConsumeDialog(snack)
+    }
 
-        val consumed = ConsumedSnackEntity(
-            date = today, time = nowTime, name = snack.name,
-            p = snack.p, s = snack.s, t = snack.t,
-            calories = calories, energyKj = snack.energyKj,
-            fiber = snack.fiber
-        )
+    private fun showConsumeDialog(snack: SnackEntity) {
+        val dialog = BottomSheetDialog(requireContext())
+        val v      = layoutInflater.inflate(R.layout.dialog_consume_snack, null)
+        dialog.setContentView(v)
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            db.consumedSnackDao().insertConsumed(consumed)
-            withContext(Dispatchers.Main) {
-                view?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                Toast.makeText(requireContext(), "${snack.name} přidáno! 🔥", Toast.LENGTH_SHORT).show()
+        val tvName         = v.findViewById<EditText>(R.id.tvConsumeName)
+        val etWeight       = v.findViewById<EditText>(R.id.etConsumeWeight)
+        val tvP            = v.findViewById<EditText>(R.id.tvConsumeP)
+        val tvS            = v.findViewById<EditText>(R.id.tvConsumeS)
+        val tvT            = v.findViewById<EditText>(R.id.tvConsumeT)
+        val tvFiber        = v.findViewById<EditText>(R.id.tvConsumeFiber)
+        val tvCalories     = v.findViewById<EditText>(R.id.tvConsumeCalories)
+        val tvPercentP     = v.findViewById<TextView>(R.id.tvConsumePercentP)
+        val tvPercentS     = v.findViewById<TextView>(R.id.tvConsumePercentS)
+        val tvPercentT     = v.findViewById<TextView>(R.id.tvConsumePercentT)
+        val tvPercentFiber = v.findViewById<TextView>(R.id.tvConsumePercentFiber)
+        val btnConfirm     = v.findViewById<Button>(R.id.btnConsumeConfirm)
+
+        // Výchozí váha ze snacku (číslo před "g")
+        val defaultGrams = snack.weight.filter { it.isDigit() }.toFloatOrNull() ?: 100f
+
+        // Per-gram hodnoty z uloženého snacku
+        val perGramP     = if (defaultGrams > 0) snack.p     / defaultGrams else 0f
+        val perGramS     = if (defaultGrams > 0) snack.s     / defaultGrams else 0f
+        val perGramT     = if (defaultGrams > 0) snack.t     / defaultGrams else 0f
+        val perGramFiber = if (defaultGrams > 0) snack.fiber / defaultGrams else 0f
+
+        tvName.setText(snack.name)
+
+        // Cílové a zkonzumované hodnoty pro percent helper
+        var targetP = 0.0; var targetS = 0.0; var targetT = 0.0; var targetFiber = 0.0
+        var alreadyP = 0.0; var alreadyS = 0.0; var alreadyT = 0.0; var alreadyFiber = 0.0
+
+        fun currentGrams() = etWeight.text.toString().toFloatOrNull() ?: defaultGrams
+
+        fun recalcAndDisplay() {
+            val g = currentGrams()
+            val p     = perGramP     * g
+            val s     = perGramS     * g
+            val t     = perGramT     * g
+            val fiber = perGramFiber * g
+            val kcal  = (p * 4) + (s * 4) + (t * 9)
+
+            tvP.setText("%.1f".format(p).replace(",", "."))
+            tvS.setText("%.1f".format(s).replace(",", "."))
+            tvT.setText("%.1f".format(t).replace(",", "."))
+            tvFiber.setText("%.1f".format(fiber).replace(",", "."))
+            tvCalories.setText("%.0f".format(kcal))
+
+            if (targetP <= 0) return
+            val colorNormal = requireContext().getColor(R.color.brand_primary)
+            val colorOver   = requireContext().getColor(R.color.brand_accent_deep)
+
+            fun applyPercent(tv: TextView, already: Double, adding: Double, target: Double) {
+                if (adding <= 0 || target <= 0) { tv.visibility = View.GONE; return }
+                val addPct   = (adding / target * 100).toInt()
+                val totalPct = ((already + adding) / target * 100).toInt()
+                tv.text = if (already > 0.1) "+$addPct% ($totalPct%)" else "+$addPct%"
+                tv.setTextColor(if (totalPct > 100) colorOver else colorNormal)
+                tv.visibility = View.VISIBLE
+            }
+
+            applyPercent(tvPercentP,     alreadyP,     p.toDouble(),     targetP)
+            applyPercent(tvPercentS,     alreadyS,     s.toDouble(),     targetS)
+            applyPercent(tvPercentT,     alreadyT,     t.toDouble(),     targetT)
+            applyPercent(tvPercentFiber, alreadyFiber, fiber.toDouble(), targetFiber)
+        }
+
+        // Načteme cíle a zkonzumované, pak zobrazíme výchozí hodnoty
+        lifecycleScope.launch {
+            val today    = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val target   = withContext(Dispatchers.IO) { MacroCalculator.calculate(requireContext()) }
+            val consumed = withContext(Dispatchers.IO) { db.consumedSnackDao().getConsumedByDate(today).first() }
+
+            targetP = target.protein; targetS = target.carbs
+            targetT = target.fat;     targetFiber = target.fiber
+
+            alreadyP     = consumed.sumOf { it.p.toDouble() }
+            alreadyS     = consumed.sumOf { it.s.toDouble() }
+            alreadyT     = consumed.sumOf { it.t.toDouble() }
+            alreadyFiber = consumed.sumOf { it.fiber.toDouble() }
+
+            etWeight.setText(defaultGrams.toInt().toString())
+            recalcAndDisplay()
+        }
+
+        etWeight.addTextChangedListener { recalcAndDisplay() }
+
+        btnConfirm.setOnClickListener {
+            val g     = currentGrams()
+            val p     = perGramP     * g
+            val s     = perGramS     * g
+            val t     = perGramT     * g
+            val fiber = perGramFiber * g
+            val kcal  = ((p * 4) + (s * 4) + (t * 9)).toInt()
+            val kj    = (p * 17f) + (s * 17f) + (t * 38f)
+
+            val today   = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val nowTime = SimpleDateFormat("HH:mm",      Locale.getDefault()).format(Date())
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                db.consumedSnackDao().insertConsumed(
+                    ConsumedSnackEntity(
+                        date = today, time = nowTime, name = snack.name,
+                        p = p, s = s, t = t,
+                        calories = kcal, energyKj = kj, fiber = fiber
+                    )
+                )
+                withContext(Dispatchers.Main) {
+                    view?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    Toast.makeText(requireContext(), "${snack.name} přidáno! 🔥", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                }
             }
         }
+
+        dialog.show()
     }
 
     private fun showAddDialog(aiResult: FoodAIResult? = null) {
@@ -705,6 +778,23 @@ class SnackFragment : Fragment() {
         val tvPercentT     = v.findViewById<TextView>(R.id.tvPercentT)
         val tvPercentFiber = v.findViewById<TextView>(R.id.tvPercentFiber)
 
+        // ── Per-gram základy — sdílené closure pro AI i barcode ───────
+        var perGramP     = 0f
+        var perGramS     = 0f
+        var perGramT     = 0f
+        var perGramFiber = 0f
+
+        // Přepočítá makra podle aktuální váhy — volá se z weight listeneru
+        fun recalcMacrosForWeight() {
+            val grams = etWeight.text.toString().toFloatOrNull() ?: return
+            if (perGramP == 0f && perGramS == 0f && perGramT == 0f) return
+            etP.setText("%.1f".format(perGramP * grams).replace(",", "."))
+            etS.setText("%.1f".format(perGramS * grams).replace(",", "."))
+            etT.setText("%.1f".format(perGramT * grams).replace(",", "."))
+            etFiber.setText("%.1f".format(perGramFiber * grams).replace(",", "."))
+        }
+
+        // ── Cílové a již zkonzumované hodnoty pro percent helper ─────
         var targetP = 0.0; var targetS = 0.0; var targetT = 0.0; var targetFiber = 0.0
         var alreadyP = 0.0; var alreadyS = 0.0; var alreadyT = 0.0; var alreadyFiber = 0.0
 
@@ -733,11 +823,14 @@ class SnackFragment : Fragment() {
             applyPercent(tvPercentFiber, alreadyFiber, f, targetFiber)
         }
 
-        etP.addTextChangedListener { updatePercents() }
-        etS.addTextChangedListener { updatePercents() }
-        etT.addTextChangedListener { updatePercents() }
+        // ── Listenery na makra (procenta) + váha (přepočet) ──────────
+        etP.addTextChangedListener     { updatePercents() }
+        etS.addTextChangedListener     { updatePercents() }
+        etT.addTextChangedListener     { updatePercents() }
         etFiber.addTextChangedListener { updatePercents() }
+        etWeight.addTextChangedListener { recalcMacrosForWeight() }
 
+        // ── Načtení cílů a již zkonzumovaného ─────────────────────────
         lifecycleScope.launch {
             val today    = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             val target   = withContext(Dispatchers.IO) { MacroCalculator.calculate(requireContext()) }
@@ -754,15 +847,25 @@ class SnackFragment : Fragment() {
             updatePercents()
         }
 
+        // ── Předvyplnění z AI výsledku ────────────────────────────────
+        // Spočítáme per-gram hodnoty z váhy kterou AI vrátila,
+        // aby weight listener mohl okamžitě přepočítat.
         aiResult?.let {
+            val grams = it.weight.filter { c -> c.isDigit() }.toFloatOrNull()?.takeIf { g -> g > 0 } ?: 100f
+            perGramP     = it.p     / grams
+            perGramS     = it.s     / grams
+            perGramT     = it.t     / grams
+            perGramFiber = it.fiber / grams
+
             etName.setText(it.name)
-            etWeight.setText(it.weight.filter { char -> char.isDigit() }.ifEmpty { "100" })
+            etWeight.setText(grams.toInt().toString())
             etP.setText(it.p.toString())
             etS.setText(it.s.toString())
             etT.setText(it.t.toString())
             etFiber.setText(it.fiber.toString())
         }
 
+        // ── Uložení snacku ────────────────────────────────────────────
         btnSave.setOnClickListener {
             val name  = etName.text.toString()
             val p     = etP.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
@@ -787,53 +890,47 @@ class SnackFragment : Fragment() {
             }
         }
 
+        // ── Barcode scanner — inline closure sdílí perGram proměnné ──
         tilName.setEndIconOnClickListener {
-            startBarcodeScanner(etName, etWeight, etP, etS, etT, etFiber)
-        }
+            val scanner = GmsBarcodeScanning.getClient(requireContext())
+            scanner.startScan().addOnSuccessListener { barcode ->
+                barcode.rawValue?.let { code ->
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            val response = URL("https://world.openfoodfacts.org/api/v2/product/$code.json").readText()
+                            val json = JSONObject(response)
+                            if (json.optInt("status") == 1) {
+                                val product    = json.getJSONObject("product")
+                                val nutriments = product.optJSONObject("nutriments")
+                                val name = product.optString("product_name_cs")
+                                    .ifEmpty { product.optString("product_name", "Neznámý") }
+                                nutriments?.let { n ->
+                                    withContext(Dispatchers.Main) {
+                                        // Uložíme per-gram hodnoty — weight listener pak přepočítá
+                                        perGramP     = (n.optDouble("proteins_100g",      0.0) / 100.0).toFloat()
+                                        perGramS     = (n.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat()
+                                        perGramT     = (n.optDouble("fat_100g",           0.0) / 100.0).toFloat()
+                                        perGramFiber = (n.optDouble("fiber_100g",         0.0) / 100.0).toFloat()
 
-        dialog.show()
-    }
-
-    private fun startBarcodeScanner(
-        etName: EditText, etWeight: EditText,
-        etP: EditText, etS: EditText, etT: EditText, etF: EditText
-    ) {
-        val scanner = GmsBarcodeScanning.getClient(requireContext())
-        scanner.startScan().addOnSuccessListener { barcode ->
-            barcode.rawValue?.let { fetchFoodData(it, etName, etWeight, etP, etS, etT, etF) }
-        }
-    }
-
-    private fun fetchFoodData(
-        barcode: String,
-        etName: EditText, etWeight: EditText,
-        etP: EditText, etS: EditText, etT: EditText, etF: EditText
-    ) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val response = URL("https://world.openfoodfacts.org/api/v2/product/$barcode.json").readText()
-                val json = JSONObject(response)
-                if (json.optInt("status") == 1) {
-                    val product    = json.getJSONObject("product")
-                    val nutriments = product.optJSONObject("nutriments")
-                    val name = product.optString("product_name_cs")
-                        .ifEmpty { product.optString("product_name", "Neznámý") }
-                    nutriments?.let { n ->
-                        withContext(Dispatchers.Main) {
-                            baseP     = (n.optDouble("proteins_100g", 0.0) / 100.0).toFloat()
-                            baseS     = (n.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat()
-                            baseT     = (n.optDouble("fat_100g", 0.0) / 100.0).toFloat()
-                            baseFiber = (n.optDouble("fiber_100g", 0.0) / 100.0).toFloat()
-                            etName.setText(name); etWeight.setText("100")
-                            etP.setText("%.1f".format(baseP * 100).replace(",", "."))
-                            etS.setText("%.1f".format(baseS * 100).replace(",", "."))
-                            etT.setText("%.1f".format(baseT * 100).replace(",", "."))
-                            etF.setText("%.1f".format(baseFiber * 100).replace(",", "."))
+                                        etName.setText(name)
+                                        etWeight.setText("100")
+                                        // Nastavíme makra pro 100g — změna váhy pak přepočítá automaticky
+                                        etP.setText("%.1f".format(perGramP * 100).replace(",", "."))
+                                        etS.setText("%.1f".format(perGramS * 100).replace(",", "."))
+                                        etT.setText("%.1f".format(perGramT * 100).replace(",", "."))
+                                        etFiber.setText("%.1f".format(perGramFiber * 100).replace(",", "."))
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
                     }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            }
         }
+
+        dialog.show()
     }
 
     private fun handleDeleteGesture(v: View, event: MotionEvent, snack: SnackEntity): Boolean {
