@@ -163,6 +163,12 @@ class SnackFragment : Fragment() {
             }
         }
 
+        view.findViewById<View>(R.id.btnOpenMealBuilder)?.setOnClickListener {
+            // Spustíme tvou novou třídu, kterou jsi vytvořil
+            // Předáváme isPreSelected, aby jídlo vědělo, jestli je PRE nebo POST workout
+            MealBuilderSheet(isPreSelected).show(parentFragmentManager, "MealBuilder")
+        }
+
         observeSnacks()
         return view
     }
@@ -593,24 +599,41 @@ class SnackFragment : Fragment() {
         val filtered = allSnacks.filter { snack ->
             val matchesTiming = snack.isPre == isPreSelected
             val matchesSearch = currentSearchQuery.isEmpty() ||
-                    snack.name.lowercase().contains(currentSearchQuery.lowercase())
+                    snack.name.lowercase().contains(currentSearchQuery.lowercase(), ignoreCase = true)
             matchesTiming && matchesSearch
         }
 
+        // Výpočet stropu pro progress bary
         val absoluteMax = allSnacks.flatMap { listOf(it.p, it.s, it.t) }.maxOrNull() ?: 1f
         val globalCeiling = absoluteMax * 1.1f
 
         filtered.forEach { snack ->
             val card = layoutInflater.inflate(R.layout.item_snack_block, null)
-            card.findViewById<TextView>(R.id.tvSnackName).text   = snack.name
+
+            // Základní textové pole
+            card.findViewById<TextView>(R.id.tvSnackName).text = snack.name
             card.findViewById<TextView>(R.id.tvSnackWeight).text = snack.weight
+
+            // --- ZÁCHRANNÁ SÍŤ A VÝPOČET ENERGIE ---
+            // Pokud energyKj chybí (je <= 0.1), vypočítáme ho z maker (B=17kJ, S=17kJ, T=38kJ)
+            val finalEnergyKj = if (snack.energyKj > 0.1f) {
+                snack.energyKj
+            } else {
+                (snack.p * 17f) + (snack.s * 17f) + (snack.t * 38f)
+            }
+
+            // Převod na kcal (1 kcal = 4.184 kJ) a zobrazení v pillu
+            val kcalValue = (finalEnergyKj / 4.184).toInt()
+            card.findViewById<TextView>(R.id.tvSnackKcal).text = "$kcalValue kcal"
+
+            // Makra texty
             card.findViewById<TextView>(R.id.valP).text = "B: ${snack.p.toInt()}g"
             card.findViewById<TextView>(R.id.valS).text = "S: ${snack.s.toInt()}g"
             card.findViewById<TextView>(R.id.valT).text = "T: ${snack.t.toInt()}g"
 
+            // Vláknina - podmíněné zobrazení
             val tvFiber = card.findViewById<TextView>(R.id.valFiber)
             val dividerFiber = card.findViewById<View>(R.id.dividerFiber)
-
             if (snack.fiber > 0.05f) {
                 tvFiber?.visibility = View.VISIBLE
                 tvFiber?.text = "V: ${"%.1f".format(snack.fiber)}g"
@@ -620,14 +643,21 @@ class SnackFragment : Fragment() {
                 dividerFiber?.visibility = View.GONE
             }
 
+            // Progress bary
             setupMacroBar(card.findViewById(R.id.barP), snack.p, globalCeiling)
             setupMacroBar(card.findViewById(R.id.barS), snack.s, globalCeiling)
             setupMacroBar(card.findViewById(R.id.barT), snack.t, globalCeiling)
 
+            // Interakce
             card.setOnClickListener { consumeSnack(snack) }
             card.setOnTouchListener { v, event -> handleDeleteGesture(v, event, snack) }
 
-            if (snack.p > snack.s) listProteins.addView(card) else listCarbs.addView(card)
+            // Třídění do sloupců (Bílkoviny vs Sacharidy)
+            if (snack.p > snack.s) {
+                listProteins.addView(card)
+            } else {
+                listCarbs.addView(card)
+            }
         }
     }
 

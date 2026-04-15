@@ -80,29 +80,33 @@
             app:layout_constraintTop_toTopOf="@id/toggleGroup"
             app:layout_constraintBottom_toBottomOf="@id/toggleGroup" />
 
+        <!--
+            singleSelection="true" ale selectionRequired="false" — umožní clearChecked()
+            při druhém kliknutí na stejné tlačítko (toggle off = OFF).
+        -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggleGroup"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            app:selectionRequired="true"
+            app:selectionRequired="false"
             app:singleSelection="true"
-            app:checkedButton="@+id/btnRest"
             app:layout_constraintHorizontal_weight="0.78"
             app:layout_constraintStart_toEndOf="@id/divider"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
+            <!-- FULL (power) / STAIRS (kardio) — první tlačítko -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRest"
+                android:id="@+id/btnFull"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_weight="1"
-                android:text="@string/plan_off"
-                android:textSize="10sp"
+                android:text="FULL"
+                android:textSize="9sp"
                 android:textStyle="bold"
-                android:textColor="@color/black"
+                android:textColor="@color/brand_dark"
                 android:padding="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
@@ -117,7 +121,7 @@
                 android:layout_height="44dp"
                 android:layout_weight="1"
                 android:text="@string/plan_push"
-                android:textSize="10sp"
+                android:textSize="9sp"
                 android:textStyle="bold"
                 android:textColor="@color/brand_dark"
                 android:padding="0dp"
@@ -133,7 +137,7 @@
                 android:layout_height="44dp"
                 android:layout_weight="1"
                 android:text="@string/plan_pull"
-                android:textSize="10sp"
+                android:textSize="9sp"
                 android:textStyle="bold"
                 android:textColor="@color/brand_primary"
                 android:padding="0dp"
@@ -149,7 +153,7 @@
                 android:layout_height="44dp"
                 android:layout_weight="1"
                 android:text="@string/plan_legs"
-                android:textSize="10sp"
+                android:textSize="9sp"
                 android:textStyle="bold"
                 android:textColor="@color/brand_accent_deep"
                 android:padding="0dp"

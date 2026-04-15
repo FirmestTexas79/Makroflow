@@ -39,39 +39,45 @@
         app:cardUseCompatPadding="true"
         app:cardPreventCornerOverlap="false">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <!--
+            Plný vertical LinearLayout místo ConstraintLayout.
+            ConstraintLayout s GONE views a chybějícími top-chain vazbami
+            způsoboval kolaps obsahu (překryv textu) u některých jídel.
+        -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
             android:paddingHorizontal="24dp"
             android:paddingTop="32dp"
-            android:paddingBottom="24dp"
-            android:clipChildren="false"
-            android:clipToPadding="false">
+            android:paddingBottom="24dp">
 
-            <View
-                android:id="@+id/viewImageBg"
+            <!-- Ikonový kruh -->
+            <FrameLayout
                 android:layout_width="140dp"
-                android:layout_height="140dp"
-                android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#08283618"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                android:layout_height="140dp">
 
-            <ImageView
-                android:id="@+id/ivFoodImage"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_macro_carbs"
-                app:layout_constraintTop_toTopOf="@id/viewImageBg"
-                app:layout_constraintBottom_toBottomOf="@id/viewImageBg"
-                app:layout_constraintStart_toStartOf="@id/viewImageBg"
-                app:layout_constraintEnd_toEndOf="@id/viewImageBg"
-                app:tint="@color/brand_primary" />
+                <View
+                    android:id="@+id/viewImageBg"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#08283618" />
 
+                <ImageView
+                    android:id="@+id/ivFoodImage"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_macro_carbs"
+                    app:tint="@color/brand_primary" />
+            </FrameLayout>
+
+            <!-- Název jídla -->
             <TextView
                 android:id="@+id/tvFoodName"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:fontFamily="sans-serif-black"
@@ -81,10 +87,14 @@
                 android:textSize="26sp"
                 android:lineSpacingExtra="-2sp"
                 android:letterSpacing="-0.02"
-                app:layout_constraintTop_toBottomOf="@id/viewImageBg"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                android:minLines="1"
+                android:maxLines="2"
+                android:ellipsize="end" />
 
+            <!--
+                Timing tag — když je GONE nepřidává žádnou výšku,
+                marginTop se projeví jen když je VISIBLE.
+            -->
             <TextView
                 android:id="@+id/tvFoodTimingTag"
                 android:layout_width="wrap_content"
@@ -99,20 +109,16 @@
                 android:background="@drawable/bg_status_pill"
                 android:backgroundTint="#15606C38"
                 android:textColor="@color/brand_primary"
-                app:layout_constraintTop_toBottomOf="@id/tvFoodName"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                android:visibility="gone" />
 
+            <!-- Kalorie + label -->
             <LinearLayout
                 android:id="@+id/llCalContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:layout_marginTop="16dp"
-                app:layout_constraintTop_toBottomOf="@id/tvFoodTimingTag"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                android:layout_marginTop="16dp">
 
                 <TextView
                     android:id="@+id/tvFoodCalories"
@@ -122,24 +128,29 @@
                     android:includeFontPadding="false"
                     android:text="452 kcal | 1890 kJ"
                     android:textColor="@color/brand_dark"
-                    android:textSize="24sp" /> <TextView
-                android:id="@+id/tvCalLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="ENERGETICKÁ HODNOTA"
-                android:alpha="0.5"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.15"
-                android:textColor="@color/brand_dark" />
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:id="@+id/tvCalLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ENERGETICKÁ HODNOTA"
+                    android:alpha="0.5"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.15"
+                    android:textColor="@color/brand_dark" />
             </LinearLayout>
 
+            <!--
+                Vláknina — marginTop jen vizuálně odděluje od kalorií,
+                GONE nepřidává výšku (LinearLayout to respektuje správně).
+            -->
             <TextView
                 android:id="@+id/tvFoodFiber"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp"
+                android:layout_marginTop="12dp"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp"
                 android:text="Vláknina: 5.2g"
@@ -149,19 +160,18 @@
                 android:alpha="0.7"
                 android:background="@drawable/bg_status_pill"
                 android:backgroundTint="#10283618"
-                app:layout_constraintTop_toBottomOf="@id/llCalContainer"
-                app:layout_constraintBottom_toTopOf="@id/macroContainer"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                android:visibility="gone" />
 
+            <!-- Makra — P / S / T -->
             <LinearLayout
                 android:id="@+id/macroContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:weightSum="3"
-                app:layout_constraintBottom_toBottomOf="parent">
+                android:layout_marginTop="16dp">
 
+                <!-- Bílkoviny (P) -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -172,6 +182,7 @@
                     android:backgroundTint="#08283618"
                     android:paddingVertical="14dp"
                     android:layout_marginEnd="6dp">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -180,6 +191,7 @@
                         android:alpha="0.5"
                         android:textStyle="bold"
                         android:textColor="@color/brand_primary" />
+
                     <TextView
                         android:id="@+id/tvFoodProtein"
                         android:layout_width="wrap_content"
@@ -190,6 +202,7 @@
                         android:textColor="@color/brand_primary" />
                 </LinearLayout>
 
+                <!-- Sacharidy (S) -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -200,6 +213,7 @@
                     android:backgroundTint="#08DDA15E"
                     android:paddingVertical="14dp"
                     android:layout_marginHorizontal="3dp">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -208,6 +222,7 @@
                         android:alpha="0.5"
                         android:textStyle="bold"
                         android:textColor="@color/brand_accent_warm" />
+
                     <TextView
                         android:id="@+id/tvFoodCarbs"
                         android:layout_width="wrap_content"
@@ -218,6 +233,7 @@
                         android:textColor="@color/brand_accent_warm" />
                 </LinearLayout>
 
+                <!-- Tuky (T) -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -228,6 +244,7 @@
                     android:backgroundTint="#08BC6C25"
                     android:paddingVertical="14dp"
                     android:layout_marginStart="6dp">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -236,6 +253,7 @@
                         android:alpha="0.5"
                         android:textStyle="bold"
                         android:textColor="@color/brand_accent_deep" />
+
                     <TextView
                         android:id="@+id/tvFoodFat"
                         android:layout_width="wrap_content"
@@ -248,6 +266,7 @@
 
             </LinearLayout>
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        </LinearLayout>
+
     </com.google.android.material.card.MaterialCardView>
 </FrameLayout>

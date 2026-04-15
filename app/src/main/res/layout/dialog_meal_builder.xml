@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_cream">
+
+    <LinearLayout
+        android:id="@+id/viewMealBuilder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nové komplexní jídlo"
+            android:fontFamily="sans-serif-black"
+            android:textSize="24sp"
+            android:textColor="@color/brand_dark" />
+
+        <EditText
+            android:id="@+id/etMealName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Název (např. Domácí rizoto)"
+            android:textColor="@color/brand_dark"
+            android:textColorHint="@color/brand_dark_alpha40"
+            android:backgroundTint="@color/brand_primary"
+            android:layout_marginTop="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="12dp">
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleUnit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                app:checkedButton="@+id/btnUnitGrams">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnUnitGrams"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="g"
+                    app:cornerRadius="18dp"
+                    android:paddingHorizontal="16dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnUnitPortion"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Porce"
+                    app:cornerRadius="18dp"
+                    android:paddingHorizontal="16dp" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <EditText
+                android:id="@+id/etMealWeight"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:hint="Váha"
+                android:inputType="numberDecimal"
+                android:textColor="@color/brand_dark"
+                android:textColorHint="@color/brand_dark_alpha40"
+                android:gravity="end"
+                android:paddingEnd="8dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAddFromPantry"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Ze spíže"
+                app:cornerRadius="28dp"
+                app:icon="@android:drawable/ic_input_add"
+                app:strokeColor="@color/brand_primary"
+                app:iconTint="@color/brand_primary"
+                android:textColor="@color/brand_primary"
+                android:layout_marginEnd="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnScanIngredient"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Skenovat"
+                app:cornerRadius="28dp"
+                app:icon="@android:drawable/ic_menu_camera"
+                app:strokeColor="@color/brand_accent_deep"
+                app:iconTint="@color/brand_accent_deep"
+                android:textColor="@color/brand_accent_deep" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Vybrané ingredience:"
+            android:layout_marginTop="20dp"
+            android:textSize="12sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.1"
+            android:textColor="@color/brand_dark_alpha40" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvIngredients"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveMeal"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Uložit do deníku"
+            android:textColor="@color/brand_cream"
+            android:fontFamily="sans-serif-black"
+            app:cornerRadius="28dp"
+            android:backgroundTint="@color/brand_primary" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/viewPantrySearch"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/brand_cream"
+        android:padding="20dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Vyber ze spíže"
+            android:fontFamily="sans-serif-black"
+            android:textSize="22sp"
+            android:textColor="@color/brand_dark" />
+
+        <EditText
+            android:id="@+id/etPantrySearch"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="12dp"
+            android:hint="Hledej jídlo..."
+            android:textColor="@color/brand_dark"
+            android:textColorHint="@color/brand_dark_alpha40"
+            android:paddingHorizontal="16dp"
+            android:background="@drawable/bg_search_field" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvPantryResults"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClosePantry"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Zrušit"
+            android:textColor="@color/brand_dark_alpha40" />
+    </LinearLayout>
+</FrameLayout>

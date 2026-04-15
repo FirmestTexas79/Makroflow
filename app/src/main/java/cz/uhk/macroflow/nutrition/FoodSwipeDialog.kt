@@ -31,7 +31,6 @@ class FoodSwipeDialog : DialogFragment() {
     private var initialX = 0f
     private var snackList = mutableListOf<SnackEntity>()
 
-    // Kontext tréninku při otevření dialogu — zaznamenáme jednou
     private lateinit var currentMealContext: TrainingTimeManager.MealContext
 
     override fun onCreateView(
@@ -41,15 +40,12 @@ class FoodSwipeDialog : DialogFragment() {
     override fun onStart() {
         super.onStart()
         dialog?.window?.apply {
-            // Použijeme WRAP_CONTENT pro obojí, aby se dialog přizpůsobil kartě
             setLayout(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
             setBackgroundDrawableResource(android.R.color.transparent)
             setDimAmount(0.5f)
-
-            // Odstranění clippingu u samotného okna dialogu
             attributes?.windowAnimations = android.R.style.Animation_Dialog
         }
     }
@@ -58,7 +54,6 @@ class FoodSwipeDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Zachyť kontext ihned při otevření
         currentMealContext = TrainingTimeManager.getMealContext(requireContext())
 
         val card = view.findViewById<MaterialCardView>(R.id.foodCard)
@@ -69,9 +64,7 @@ class FoodSwipeDialog : DialogFragment() {
 
         val vibrator = getVibrator()
 
-        // Zobraz banner hned
         updateContextBanner(view, currentMealContext)
-
         loadRealSnacks(view)
 
         card.setOnTouchListener { v, event ->
@@ -107,148 +100,110 @@ class FoodSwipeDialog : DialogFragment() {
         }
     }
 
-    // ── Načtení a seřazení jídel ──────────────────────────────────────
     private fun loadRealSnacks(view: View) {
         lifecycleScope.launch {
-            val allSnacks = AppDatabase.Companion.getDatabase(requireContext())
+            val allSnacks = AppDatabase.getDatabase(requireContext())
                 .snackDao().getAllSnacks().first().toMutableList()
             snackList = sortByFuzzyContext(allSnacks, currentMealContext).toMutableList()
             updateUI(view)
         }
     }
 
-    /**
-     * Fuzzy řazení jídel podle kontextu tréninku + hodiny dne.
-     *
-     * Skóre = kombinace několika faktorů (0.0 – 1.0 každý):
-     * macroScore    — jak dobře makra sedí na kontext (PRE=S, POST=P, atd.)
-     * calorieScore  — ideální kalorický rozsah pro kontext
-     * timeScore     — jídlo vhodné pro denní dobu
-     *
-     * Výsledné skóre řadí jídla od nejrelevantnějšího.
-     */
     private fun sortByFuzzyContext(
         snacks: List<SnackEntity>,
         ctx: TrainingTimeManager.MealContext
     ): List<SnackEntity> {
-
-        val hour = Calendar.getInstance()
-            .get(Calendar.HOUR_OF_DAY)
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
         return snacks.sortedByDescending { s ->
             val total = s.p + s.s + s.t + 0.01f
             val kcal  = (s.p * 4 + s.s * 4 + s.t * 9)
 
-            // ── Macro score ───────────────────────────────────────────
             val macroScore = when (ctx) {
                 TrainingTimeManager.MealContext.PRE_WORKOUT -> {
-                    // Chceme: hodně S, střední P, málo T
-                    val carbRatio = (s.s / total).coerceIn(0f, 1f)
+                    val carbRatio  = (s.s / total).coerceIn(0f, 1f)
                     val fatPenalty = (s.t / total).coerceIn(0f, 1f) * 0.4f
                     carbRatio - fatPenalty
                 }
                 TrainingTimeManager.MealContext.IMMINENT -> {
-                    // Chceme: rychlé S, nízká hmotnost (< 400 kcal), málo T a P
-                    val carbRatio = (s.s / total).coerceIn(0f, 1f)
-                    val lightBonus = if (kcal < 400) 0.4f else 0f
+                    val carbRatio    = (s.s / total).coerceIn(0f, 1f)
+                    val lightBonus   = if (kcal < 400) 0.4f else 0f
                     val heavyPenalty = if (kcal > 600) 0.5f else 0f
                     carbRatio + lightBonus - heavyPenalty
                 }
                 TrainingTimeManager.MealContext.POST_WORKOUT_EARLY -> {
-                    // Chceme: co nejvíc P + střední S (anabolické okno)
                     val protRatio = (s.p / total).coerceIn(0f, 1f)
                     val carbBonus = (s.s / total * 0.3f).coerceIn(0f, 0.3f)
                     protRatio + carbBonus
                 }
                 TrainingTimeManager.MealContext.POST_WORKOUT_LATE -> {
-                    // Vyvážené — P + S rovnoměrně
                     val protRatio = (s.p / total).coerceIn(0f, 1f)
                     val carbRatio = (s.s / total).coerceIn(0f, 1f)
                     (protRatio + carbRatio) / 2f
                 }
                 TrainingTimeManager.MealContext.DURING -> {
-                    // Jen tekutiny/rychlé S — velmi lehká jídla
                     val lightBonus = if (kcal < 200) 0.8f else 0f
-                    val carbRatio = (s.s / total * 0.3f)
+                    val carbRatio  = (s.s / total * 0.3f)
                     lightBonus + carbRatio
                 }
                 TrainingTimeManager.MealContext.NO_TRAINING,
                 TrainingTimeManager.MealContext.LONG_BEFORE,
                 TrainingTimeManager.MealContext.LONG_AFTER -> {
-                    // Podle hodiny dne + bonus za vlákninu pro sytost
                     val fiberBonus = (s.fiber / total).coerceIn(0f, 0.3f)
                     when (hour) {
-                        in 6..9   -> (s.p / total) + fiberBonus   // ráno: bílkoviny + vláknina
-                        in 10..13 -> (s.s / total)   // dopoledne: sacharidy
-                        in 14..17 -> (s.p + s.s) / (total * 2)  // odpoledne: mix
-                        in 18..21 -> (s.p / total) + fiberBonus   // večer: bílkoviny + vláknina
+                        in 6..9   -> (s.p / total) + fiberBonus
+                        in 10..13 -> (s.s / total)
+                        in 14..17 -> (s.p + s.s) / (total * 2)
+                        in 18..21 -> (s.p / total) + fiberBonus
                         else      -> s.p / total
                     }
                 }
             }
 
-            // ── Calorie score ─────────────────────────────────────────
             val calorieScore = when (ctx) {
-                TrainingTimeManager.MealContext.PRE_WORKOUT ->
-                    // Ideálně 300–600 kcal
-                    gaussianScore(kcal, 450f, 150f)
-                TrainingTimeManager.MealContext.IMMINENT ->
-                    // Ideálně 100–300 kcal
-                    gaussianScore(kcal, 200f, 100f)
-                TrainingTimeManager.MealContext.POST_WORKOUT_EARLY ->
-                    // Ideálně 400–700 kcal
-                    gaussianScore(kcal, 550f, 150f)
-                else ->
-                    // Normální jídlo 400–800 kcal
-                    gaussianScore(kcal, 600f, 200f)
+                TrainingTimeManager.MealContext.PRE_WORKOUT        -> gaussianScore(kcal, 450f, 150f)
+                TrainingTimeManager.MealContext.IMMINENT           -> gaussianScore(kcal, 200f, 100f)
+                TrainingTimeManager.MealContext.POST_WORKOUT_EARLY -> gaussianScore(kcal, 550f, 150f)
+                else                                               -> gaussianScore(kcal, 600f, 200f)
             }
 
-            // ── Finální skóre ─────────────────────────────────────────
-            // macroScore váha 60%, calorieScore váha 40%
             (macroScore * 0.6f + calorieScore * 0.4f).toDouble()
         }
     }
 
-    /**
-     * Gaussova funkce pro hodnocení kalorickévalue — hodnota blízko ideálu = 1.0
-     */
     private fun gaussianScore(value: Float, ideal: Float, sigma: Float): Float {
         val diff = value - ideal
         return exp(-(diff * diff) / (2 * sigma * sigma)).toFloat()
     }
 
-    /**
-     * Vrátí "timing tag" pro konkrétní jídlo v kontextu — zobrazí se na kartě
-     */
     private fun getTimingTag(snack: SnackEntity, ctx: TrainingTimeManager.MealContext): Pair<String, String>? {
-        val total = snack.p + snack.s + snack.t + 0.01f
+        val total     = snack.p + snack.s + snack.t + 0.01f
         val carbRatio = snack.s / total
         val protRatio = snack.p / total
-        val kcal = (snack.p * 4 + snack.s * 4 + snack.t * 9)
+        val kcal      = (snack.p * 4 + snack.s * 4 + snack.t * 9)
 
         return when (ctx) {
             TrainingTimeManager.MealContext.PRE_WORKOUT ->
-                if (carbRatio > 0.5f) "⚡ Ideální PRE" to "#606C38"
-                else if (carbRatio > 0.35f) "✓ Vhodné PRE" to "#DDA15E"
+                if (carbRatio > 0.5f)       "⚡ Ideální PRE" to "#606C38"
+                else if (carbRatio > 0.35f) "✓ Vhodné PRE"  to "#DDA15E"
                 else null
             TrainingTimeManager.MealContext.IMMINENT ->
-                if (kcal < 300 && carbRatio > 0.4f) "✓ Lehké a rychlé" to "#606C38"
-                else if (kcal > 500) "⚠ Těžké před tréninkem" to "#BC6C25"
+                if (kcal < 300 && carbRatio > 0.4f) "✓ Lehké a rychlé"       to "#606C38"
+                else if (kcal > 500)                 "⚠ Těžké před tréninkem" to "#BC6C25"
                 else null
             TrainingTimeManager.MealContext.POST_WORKOUT_EARLY ->
-                if (protRatio > 0.4f) "💪 Ideální POST" to "#283618"
-                else if (protRatio > 0.25f) "✓ Vhodné POST" to "#606C38"
+                if (protRatio > 0.4f)       "💪 Ideální POST" to "#283618"
+                else if (protRatio > 0.25f) "✓ Vhodné POST"  to "#606C38"
                 else null
             TrainingTimeManager.MealContext.DURING ->
                 if (kcal < 200) "💧 Vhodné při tréninku" to "#606C38"
-                else "⚠ Příliš těžké" to "#BC6C25"
+                else            "⚠ Příliš těžké"         to "#BC6C25"
             else -> null
         }
     }
 
-    // ── Banner nad kartou ─────────────────────────────────────────────
     private fun updateContextBanner(view: View, ctx: TrainingTimeManager.MealContext) {
-        val banner = view.findViewById<TextView>(R.id.tvFoodContextBanner) ?: return
+        val banner  = view.findViewById<TextView>(R.id.tvFoodContextBanner) ?: return
         val minutes = TrainingTimeManager.minutesToTraining(requireContext())
 
         val (text, bgColor) = when (ctx) {
@@ -256,82 +211,65 @@ class FoodSwipeDialog : DialogFragment() {
                 val min = minutes ?: 0
                 "⚡ PRE trénink za ${TrainingTimeManager.formatCountdown(min)}" to "#606C38"
             }
-            TrainingTimeManager.MealContext.IMMINENT ->
-                "⏱️ Trénink za chvíli — lehce!" to "#DDA15E"
-            TrainingTimeManager.MealContext.POST_WORKOUT_EARLY ->
-                "💪 POST okno — dej bílkoviny hned!" to "#283618"
-            TrainingTimeManager.MealContext.DURING ->
-                "🏋️ Trénink probíhá — hydratace!" to "#BC6C25"
-            TrainingTimeManager.MealContext.POST_WORKOUT_LATE ->
-                "🔄 Po tréninku — doplň zásoby" to "#606C38"
+            TrainingTimeManager.MealContext.IMMINENT        -> "⏱️ Trénink za chvíli — lehce!"        to "#DDA15E"
+            TrainingTimeManager.MealContext.POST_WORKOUT_EARLY -> "💪 POST okno — dej bílkoviny hned!" to "#283618"
+            TrainingTimeManager.MealContext.DURING          -> "🏋️ Trénink probíhá — hydratace!"      to "#BC6C25"
+            TrainingTimeManager.MealContext.POST_WORKOUT_LATE  -> "🔄 Po tréninku — doplň zásoby"    to "#606C38"
             else -> { banner.visibility = View.GONE; return }
         }
         banner.text = text
-        banner.backgroundTintList = ColorStateList.valueOf(
-            Color.parseColor(bgColor))
+        banner.backgroundTintList = ColorStateList.valueOf(Color.parseColor(bgColor))
         banner.visibility = View.VISIBLE
     }
 
-    // ── UI update ─────────────────────────────────────────────────────
     private fun updateUI(view: View) {
         val current = snackList.firstOrNull() ?: run { dismiss(); return }
         resetCardToDefaultState(view)
 
         val kcal = ((current.p * 4) + (current.s * 4) + (current.t * 9)).toInt()
-        view.findViewById<TextView>(R.id.tvFoodName).text = current.name
-
-        // Zobrazujeme kcal i kJ pro lepší přehled
+        view.findViewById<TextView>(R.id.tvFoodName).text     = current.name
         view.findViewById<TextView>(R.id.tvFoodCalories).text = "$kcal kcal | ${current.energyKj.toInt()} kJ"
+        view.findViewById<TextView>(R.id.tvFoodProtein).text  = "${current.p.toInt()}g"
+        view.findViewById<TextView>(R.id.tvFoodCarbs).text    = "${current.s.toInt()}g"
+        view.findViewById<TextView>(R.id.tvFoodFat).text      = "${current.t.toInt()}g"
 
-        view.findViewById<TextView>(R.id.tvFoodProtein).text = "${current.p.toInt()}g"
-        view.findViewById<TextView>(R.id.tvFoodCarbs).text = "${current.s.toInt()}g"
-        view.findViewById<TextView>(R.id.tvFoodFat).text = "${current.t.toInt()}g"
-
-        // Zobrazení vlákniny (pokud prvek tvFoodFiber existuje v layoutu)
         view.findViewById<TextView>(R.id.tvFoodFiber)?.apply {
-            text = "Vláknina: ${"%.1f".format(current.fiber)}g"
+            text       = "Vláknina: ${"%.1f".format(current.fiber)}g"
             visibility = if (current.fiber > 0.1f) View.VISIBLE else View.GONE
         }
 
         view.findViewById<ImageView>(R.id.ivFoodImage)
             .setImageResource(getIconForSnack(current))
 
-        // ── Timing tag na kartě ───────────────────────────────────────
         val tvTag = view.findViewById<TextView>(R.id.tvFoodTimingTag)
-        val tag = getTimingTag(current, currentMealContext)
+        val tag   = getTimingTag(current, currentMealContext)
         if (tag != null) {
             tvTag?.text = tag.first
             tvTag?.setTextColor(Color.parseColor(tag.second))
-            tvTag?.backgroundTintList = ColorStateList.valueOf(
-                Color.parseColor(tag.second + "20"))  // 12% opacity
+            tvTag?.backgroundTintList = ColorStateList.valueOf(Color.parseColor(tag.second + "20"))
             tvTag?.visibility = View.VISIBLE
         } else {
             tvTag?.visibility = View.GONE
         }
     }
 
-    // ── Potvrzení jídla — uloží s mealContext ────────────────────────
     private fun handleConfirm(view: View) {
         if (snackList.isEmpty()) return
         val snack = snackList.removeAt(0)
 
         lifecycleScope.launch {
             val kcal = ((snack.p * 4) + (snack.s * 4) + (snack.t * 9)).toDouble()
-
-            // ✅ OPRAVA: Voláme centrální mozek pro zápis jídla!
-            // Předáváme i nové parametry: kJ, vlákninu a cholesterol
             cz.uhk.macroflow.dashboard.MacroFlowEngine.logSwipedFood(
-                context = requireContext(),
-                name = snack.name,
-                p = snack.p.toDouble(),
-                s = snack.s.toDouble(),
-                t = snack.t.toDouble(),
-                cal = kcal,
-                kj = snack.energyKj.toDouble(),
-                fiber = snack.fiber.toDouble(),
+                context     = requireContext(),
+                name        = snack.name,
+                p           = snack.p.toDouble(),
+                s           = snack.s.toDouble(),
+                t           = snack.t.toDouble(),
+                cal         = kcal,
+                kj          = snack.energyKj.toDouble(),
+                fiber       = snack.fiber.toDouble(),
                 mealContext = currentMealContext.name
             )
-
             resetCardPositionAndData(view)
         }
     }
@@ -350,81 +288,73 @@ class FoodSwipeDialog : DialogFragment() {
     }
 
     private fun resetCardToDefaultState(view: View) {
-        val card = view.findViewById<MaterialCardView>(R.id.foodCard)
+        val card        = view.findViewById<MaterialCardView>(R.id.foodCard)
         val viewImageBg = view.findViewById<View>(R.id.viewImageBg)
         val ivFoodImage = view.findViewById<ImageView>(R.id.ivFoodImage)
 
-        val colorCream = Color.parseColor("#FEFAE0")
-        val colorDark = Color.parseColor("#283618")
-        val colorPrimary = Color.parseColor("#606C38")
+        val colorCream      = Color.parseColor("#FEFAE0")
+        val colorDark       = Color.parseColor("#283618")
+        val colorPrimary    = Color.parseColor("#606C38")
         val colorAccentWarm = Color.parseColor("#E9B072")
         val colorAccentDeep = Color.parseColor("#BC6C25")
 
-        // 1. Reset karty a pozadí pod ikonou
         card.setCardBackgroundColor(colorCream)
         card.strokeColor = Color.parseColor("#15283618")
         viewImageBg.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#08283618"))
         ivFoodImage.setColorFilter(colorPrimary)
 
-        // 2. Reset hlavních textů
         view.findViewById<TextView>(R.id.tvFoodName).setTextColor(colorDark)
         view.findViewById<TextView>(R.id.tvFoodCalories).setTextColor(colorDark)
         view.findViewById<TextView>(R.id.tvFoodFiber)?.setTextColor(colorDark)
         view.findViewById<TextView>(R.id.tvCalLabel).setTextColor(colorDark)
         view.findViewById<TextView>(R.id.tvCalLabel).alpha = 0.5f
 
-        // 3. Reset makro buněk (každá má svou barvu včetně popisků P, S, T)
-        // Protein (P)
-        val containerP = view.findViewById<TextView>(R.id.tvFoodProtein).parent as LinearLayout
+        // ── Makro kontejnery — přístup přes přímé ID kontejnerů ──────
+        // V novém LinearLayout jsou kontejnery P/S/T přímo children macroContainer.
+        val macroContainer = view.findViewById<LinearLayout>(R.id.macroContainer)
+        val containerP = macroContainer.getChildAt(0) as LinearLayout
+        val containerS = macroContainer.getChildAt(1) as LinearLayout
+        val containerT = macroContainer.getChildAt(2) as LinearLayout
+
         containerP.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#08283618"))
         view.findViewById<TextView>(R.id.tvFoodProtein).setTextColor(colorPrimary)
-        (containerP.getChildAt(0) as TextView).setTextColor(colorPrimary) // Písmeno P
+        (containerP.getChildAt(0) as TextView).setTextColor(colorPrimary)
 
-        // Sacharidy (S)
-        val containerS = view.findViewById<TextView>(R.id.tvFoodCarbs).parent as LinearLayout
         containerS.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#08E9B072"))
         view.findViewById<TextView>(R.id.tvFoodCarbs).setTextColor(colorAccentWarm)
-        (containerS.getChildAt(0) as TextView).setTextColor(colorAccentWarm) // Písmeno S
+        (containerS.getChildAt(0) as TextView).setTextColor(colorAccentWarm)
 
-        // Tuky (T)
-        val containerT = view.findViewById<TextView>(R.id.tvFoodFat).parent as LinearLayout
         containerT.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#08BC6C25"))
         view.findViewById<TextView>(R.id.tvFoodFat).setTextColor(colorAccentDeep)
-        (containerT.getChildAt(0) as TextView).setTextColor(colorAccentDeep) // Písmeno T
+        (containerT.getChildAt(0) as TextView).setTextColor(colorAccentDeep)
     }
 
     private fun updateElementsColor(view: View, colorHex: String) {
-        val targetColor = Color.parseColor(colorHex)
+        val targetColor      = Color.parseColor(colorHex)
         val whiteTransparent = Color.argb(30, 255, 255, 255)
 
-        // 1. Hlavní texty a ikona
         view.findViewById<TextView>(R.id.tvFoodName).setTextColor(targetColor)
         view.findViewById<TextView>(R.id.tvFoodCalories).setTextColor(targetColor)
         view.findViewById<TextView>(R.id.tvFoodFiber)?.setTextColor(targetColor)
         view.findViewById<TextView>(R.id.tvCalLabel).setTextColor(targetColor)
         view.findViewById<ImageView>(R.id.ivFoodImage).setColorFilter(targetColor)
-        view.findViewById<View>(R.id.viewImageBg).backgroundTintList = ColorStateList.valueOf(whiteTransparent)
+        view.findViewById<View>(R.id.viewImageBg).backgroundTintList =
+            ColorStateList.valueOf(whiteTransparent)
 
-        // 2. Makro texty, jejich kontejnery a popisky (P, S, T)
-        val pTv = view.findViewById<TextView>(R.id.tvFoodProtein)
-        val sTv = view.findViewById<TextView>(R.id.tvFoodCarbs)
-        val tTv = view.findViewById<TextView>(R.id.tvFoodFat)
+        // ── Makro kontejnery — přes macroContainer children ──────────
+        val macroContainer = view.findViewById<LinearLayout>(R.id.macroContainer)
+        val containerP = macroContainer.getChildAt(0) as LinearLayout
+        val containerS = macroContainer.getChildAt(1) as LinearLayout
+        val containerT = macroContainer.getChildAt(2) as LinearLayout
 
-        // Přebarvíme hodnoty (gramy)
-        pTv.setTextColor(targetColor)
-        sTv.setTextColor(targetColor)
-        tTv.setTextColor(targetColor)
-
-        // Přebarvíme popisky (P, S, T) - jsou to první potomci v těch LinearLayoutu
-        val containerP = pTv.parent as LinearLayout
-        val containerS = sTv.parent as LinearLayout
-        val containerT = tTv.parent as LinearLayout
+        view.findViewById<TextView>(R.id.tvFoodProtein).setTextColor(targetColor)
+        view.findViewById<TextView>(R.id.tvFoodCarbs).setTextColor(targetColor)
+        view.findViewById<TextView>(R.id.tvFoodFat).setTextColor(targetColor)
 
         (containerP.getChildAt(0) as TextView).setTextColor(targetColor)
         (containerS.getChildAt(0) as TextView).setTextColor(targetColor)
         (containerT.getChildAt(0) as TextView).setTextColor(targetColor)
 
-        // Glass efekt pro pozadí buněk
         containerP.backgroundTintList = ColorStateList.valueOf(whiteTransparent)
         containerS.backgroundTintList = ColorStateList.valueOf(whiteTransparent)
         containerT.backgroundTintList = ColorStateList.valueOf(whiteTransparent)

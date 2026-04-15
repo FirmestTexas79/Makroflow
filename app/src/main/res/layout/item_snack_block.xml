@@ -23,6 +23,7 @@
         android:paddingTop="14dp"
         android:paddingBottom="12dp">
 
+        <!-- Řádek 1: Název + váha + kcal pill -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -41,6 +42,21 @@
                 android:maxLines="1"
                 android:ellipsize="end" />
 
+            <!-- kcal pill — zobrazuje energetickou hodnotu -->
+            <TextView
+                android:id="@+id/tvSnackKcal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="@color/brand_dark_alpha05"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:text="0 kcal"
+                android:textColor="@color/brand_accent_deep"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
             <TextView
                 android:id="@+id/tvSnackWeight"
                 android:layout_width="wrap_content"
@@ -56,6 +72,7 @@
 
         </LinearLayout>
 
+        <!-- Řádek 2: Makra -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -121,6 +138,7 @@
 
         </LinearLayout>
 
+        <!-- Makro progress bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="6dp"

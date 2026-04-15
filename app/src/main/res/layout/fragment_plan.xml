@@ -158,7 +158,7 @@
 
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <!-- Stat cards -->
+            <!-- Stat cards — 5 bloků, FULL/STAIRS jako první -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -166,51 +166,151 @@
                 android:layout_marginHorizontal="24dp"
                 android:layout_marginTop="20dp">
 
+                <!-- FULL / STAIRS — nový první blok -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardStatFull"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="5dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#5C4033"
+                    app:cardElevation="0dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:paddingVertical="14dp">
+                        <TextView
+                            android:id="@+id/tvStatFullCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="22sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:id="@+id/tvStatFullLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="FULL"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="8sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- PUSH / BĚH -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardStatPush"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
+                    android:layout_marginEnd="5dp"
                     app:cardCornerRadius="18dp"
                     app:cardBackgroundColor="@color/brand_dark"
                     app:cardElevation="0dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
-                        <TextView android:id="@+id/tvStatPushCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/brand_cream" android:textSize="26sp" android:fontFamily="sans-serif-black" />
-                        <TextView android:id="@+id/tvStatPushLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PUSH" android:textColor="@color/brand_cream" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:paddingVertical="14dp">
+                        <TextView
+                            android:id="@+id/tvStatPushCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="22sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:id="@+id/tvStatPushLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="PUSH"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="8sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- PULL / ŠVIH -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardStatPull"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
+                    android:layout_marginEnd="5dp"
                     app:cardCornerRadius="18dp"
                     app:cardBackgroundColor="@color/brand_accent_warm"
                     app:cardElevation="0dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
-                        <TextView android:id="@+id/tvStatPullCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/brand_cream" android:textSize="26sp" android:fontFamily="sans-serif-black" />
-                        <TextView android:id="@+id/tvStatPullLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PULL" android:textColor="@color/brand_cream" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:paddingVertical="14dp">
+                        <TextView
+                            android:id="@+id/tvStatPullCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="22sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:id="@+id/tvStatPullLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="PULL"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="8sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- LEGS / KOLO -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardStatLegs"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
+                    android:layout_marginEnd="5dp"
                     app:cardCornerRadius="18dp"
                     app:cardBackgroundColor="@color/brand_accent_deep"
                     app:cardElevation="0dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
-                        <TextView android:id="@+id/tvStatLegsCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/brand_cream" android:textSize="26sp" android:fontFamily="sans-serif-black" />
-                        <TextView android:id="@+id/tvStatLegsLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LEGS" android:textColor="@color/brand_cream" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:paddingVertical="14dp">
+                        <TextView
+                            android:id="@+id/tvStatLegsCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="22sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:id="@+id/tvStatLegsLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="LEGS"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="8sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- REST / OFF -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardStatRest"
                     android:layout_width="0dp"
@@ -221,11 +321,31 @@
                     app:cardElevation="0dp"
                     app:strokeColor="@color/brand_dark_alpha20"
                     app:strokeWidth="1.5dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingVertical="14dp">
-                        <TextView android:id="@+id/tvStatRestCount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/brand_dark" android:textSize="26sp" android:fontFamily="sans-serif-black" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="REST" android:textColor="@color/brand_primary" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.1" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:paddingVertical="14dp">
+                        <TextView
+                            android:id="@+id/tvStatRestCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/brand_dark"
+                            android:textSize="22sp"
+                            android:fontFamily="sans-serif-black" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="REST"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="8sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
+
             </LinearLayout>
 
             <LinearLayout

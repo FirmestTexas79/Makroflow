@@ -1,11 +1,7 @@
 package cz.uhk.macroflow.nutrition
 
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.*
 import android.widget.*
@@ -27,7 +23,7 @@ class ConsumedFoodSheet : BottomSheetDialogFragment() {
 
     var onFoodDeleted: (() -> Unit)? = null
 
-    private val db by lazy { AppDatabase.Companion.getDatabase(requireContext()) }
+    private val db by lazy { AppDatabase.getDatabase(requireContext()) }
     private val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
     override fun onCreateView(
@@ -37,7 +33,6 @@ class ConsumedFoodSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Roztáhni sheet na 85% výšky
         val sheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
         sheet?.let {
             val behavior = BottomSheetBehavior.from(it)
@@ -50,8 +45,9 @@ class ConsumedFoodSheet : BottomSheetDialogFragment() {
 
     private fun loadAndDisplay(view: View) {
         val container = view.findViewById<LinearLayout>(R.id.sheetFoodList)
-        val tvTotal   = view.findViewById<TextView>(R.id.tvSheetTotalKcal)
-        val tvEmpty   = view.findViewById<TextView>(R.id.tvSheetEmpty)
+        val tvTotalKcal = view.findViewById<TextView>(R.id.tvSheetTotalKcal)
+        // Opraveno na tvSheetEmpty podle tvého XML
+        val tvEmpty = view.findViewById<TextView>(R.id.tvSheetEmpty)
 
         lifecycleScope.launch {
             val items = withContext(Dispatchers.IO) {
@@ -62,21 +58,18 @@ class ConsumedFoodSheet : BottomSheetDialogFragment() {
 
             if (items.isEmpty()) {
                 tvEmpty.visibility = View.VISIBLE
-                tvTotal.text = "0 kcal"
+                tvTotalKcal.text = "0 kcal"
                 return@launch
             }
 
             tvEmpty.visibility = View.GONE
 
+            // Výpočet celkových kalorií (Makra v hlavičce tvé XML teď nemá, tak je nepřiřazujeme)
             val totalKcal = items.sumOf { it.calories }
-            val totalP    = items.sumOf { it.p.toDouble() }.toInt()
-            val totalS    = items.sumOf { it.s.toDouble() }.toInt()
-            val totalT    = items.sumOf { it.t.toDouble() }.toInt()
-            tvTotal.text  = "$totalKcal kcal  ·  B:${totalP}g  S:${totalS}g  T:${totalT}g"
+            tvTotalKcal.text = "$totalKcal kcal"
 
-            items.forEachIndexed { index, consumed ->
-                val row = buildFoodRow(consumed, index, container, view)
-                container.addView(row)
+            items.sortedByDescending { it.time }.forEach { consumed ->
+                container.addView(buildFoodRow(consumed, container, view))
             }
         }
     }
@@ -84,218 +77,81 @@ class ConsumedFoodSheet : BottomSheetDialogFragment() {
     @SuppressLint("ClickableViewAccessibility")
     private fun buildFoodRow(
         consumed: ConsumedSnackEntity,
-        index: Int,
         container: LinearLayout,
         rootView: View
     ): View {
-        // Barva řádku — střídá se + mění se podle makra dominance
-        val rowBg = when {
-            consumed.p > consumed.s && consumed.p > consumed.t ->
-                Color.parseColor("#0A606C38")  // olivová — protein dominuje
-            consumed.s > consumed.t ->
-                Color.parseColor("#0ADDA15E")  // zlatá — sacharidy
-            else ->
-                Color.parseColor("#0ABC6C25")  // oranžová — tuky
-        }
+        val view = layoutInflater.inflate(R.layout.item_consumed_food, container, false)
+        val card = view.findViewById<MaterialCardView>(R.id.cardConsumed)
 
-        val card = MaterialCardView(requireContext()).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.setMargins(0, 4, 0, 4) }
-            setCardBackgroundColor(rowBg)
-            radius = 16f
-            cardElevation = 0f
-            strokeWidth = 0
-        }
+        view.findViewById<TextView>(R.id.tvItemName).text = consumed.name
+        view.findViewById<TextView>(R.id.tvItemTime).text = consumed.time
+        view.findViewById<TextView>(R.id.tvItemKcal).text = "${consumed.calories} kcal"
+        view.findViewById<TextView>(R.id.tvItemSub).text =
+            "B: ${consumed.p.toInt()}g  •  S: ${consumed.s.toInt()}g  •  T: ${consumed.t.toInt()}g"
 
-        val inner = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(16, 14, 16, 14)
-        }
-
-        // Barevný dot — indikátor makro dominance
-        val dot = View(requireContext()).apply {
-            val dotColor = when {
-                consumed.p > consumed.s && consumed.p > consumed.t -> Color.parseColor("#606C38")
-                consumed.s > consumed.t -> Color.parseColor("#DDA15E")
-                else -> Color.parseColor("#BC6C25")
-            }
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(dotColor)
-            }
-            layoutParams = LinearLayout.LayoutParams(10, 10).also {
-                it.marginEnd = 12
-            }
-        }
-
-        // Čas + název
-        val leftCol = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-
-        val tvTime = TextView(requireContext()).apply {
-            text = consumed.time
-            textSize = 10f
-            setTextColor(Color.parseColor("#80283618"))
-            letterSpacing = 0.05f
-        }
-        val tvName = TextView(requireContext()).apply {
-            text = consumed.name
-            textSize = 13f
-            setTextColor(Color.parseColor("#283618"))
-            typeface = Typeface.DEFAULT_BOLD
-        }
-
-        leftCol.addView(tvTime)
-        leftCol.addView(tvName)
-
-        // Makra
-        val tvMacros = TextView(requireContext()).apply {
-            text = "${consumed.calories}\nkcal"
-            textSize = 12f
-            gravity = Gravity.CENTER
-            setTextColor(Color.parseColor("#606C38"))
-            typeface = Typeface.DEFAULT_BOLD
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.marginEnd = 8 }
-        }
-
-        inner.addView(dot)
-        inner.addView(leftCol)
-        inner.addView(tvMacros)
-        card.addView(inner)
-
-        // ── SWIPE DOLEVA PRO SMAZÁNÍ ─────────────────────────────────
         var startX = 0f
-        var isDragging = false
+        val deleteThreshold = -350f
+        val baseColor = requireContext().getColor(R.color.brand_cream)
+        val deleteColorHint = Color.parseColor("#FFF0F0")
 
         card.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     startX = event.rawX
-                    isDragging = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val deltaX = event.rawX - startX
-                    if (deltaX < -20) {
-                        isDragging = true
-                        // Posuň kartu doleva + zčervej
-                        val progress = (-deltaX / 300f).coerceIn(0f, 1f)
-                        v.translationX = deltaX.coerceAtLeast(-280f)
-                        val deleteColor = Color.argb(
-                            (progress * 200).toInt(),
-                            188, 108, 37  // #BC6C25
-                        )
-                        card.setCardBackgroundColor(
-                            blendColors(rowBg, Color.parseColor("#30BC6C25"), progress)
-                        )
+                    if (deltaX < 0) {
+                        v.translationX = deltaX.coerceAtLeast(-500f)
+                        val progress = (Math.abs(deltaX) / Math.abs(deleteThreshold)).coerceIn(0f, 1f)
+                        card.setCardBackgroundColor(blendColors(baseColor, deleteColorHint, progress))
+
+                        if (progress > 0.8f) {
+                            card.strokeColor = Color.parseColor("#EF5350")
+                        } else {
+                            card.setStrokeColor(android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.brand_dark_alpha10)))
+                        }
                     }
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    val deltaX = event.rawX - startX
-                    if (isDragging && deltaX < -180f) {
-                        // Potvrzení smazání — animace ven + vibrace
+                    if (v.translationX < deleteThreshold) {
                         v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                        animateDeleteOut(card, consumed, container, rootView)
+                        animateDelete(card, consumed, container, rootView)
                     } else {
-                        // Snap zpět
-                        v.animate().translationX(0f).setDuration(200).start()
-                        card.setCardBackgroundColor(rowBg)
+                        v.animate().translationX(0f).setDuration(250).start()
+                        card.setCardBackgroundColor(baseColor)
+                        card.setStrokeColor(android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.brand_dark_alpha10)))
                     }
-                    isDragging = false
                     true
                 }
                 else -> false
             }
         }
-
-        // ── PULZUJÍCÍ ANIMACE barvy (živý feeling) ───────────────────
-        startPulseAnimation(card, rowBg, index)
-
-        return card
+        return view
     }
 
-    private fun animateDeleteOut(
-        card: MaterialCardView,
-        consumed: ConsumedSnackEntity,
-        container: LinearLayout,
-        rootView: View
-    ) {
+    private fun animateDelete(card: View, consumed: ConsumedSnackEntity, container: LinearLayout, rootView: View) {
         card.animate()
             .translationX(-card.width.toFloat())
             .alpha(0f)
-            .setDuration(280)
+            .setDuration(300)
             .withEndAction {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    // 1. 🏠 Smažeme lokálně z Room databáze
                     db.consumedSnackDao().deleteConsumedByTimestamp(consumed.timestamp)
-
-                    // 2. ☁️ ✅ NOVÉ: Smažeme z cloudu Firebase!
                     if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) {
                         try {
                             cz.uhk.macroflow.data.FirebaseRepository.deleteConsumedSnack(consumed.timestamp)
-                        } catch (e: Exception) {
-                            android.util.Log.e("FIREBASE_DELETE", "Nepovedlo se smazat z cloudu: ${e.message}")
-                        }
+                        } catch (e: Exception) { }
                     }
-
                     withContext(Dispatchers.Main) {
                         container.removeView(card)
                         onFoodDeleted?.invoke()
-
-                        // Přepočítej celkový součet v UI listu
                         loadAndDisplay(rootView)
-
-                        Toast.makeText(
-                            requireContext(),
-                            "${consumed.name} odebráno",
-                            Toast.LENGTH_SHORT
-                        ).show()
                     }
                 }
             }.start()
-    }
-
-    /**
-     * Jemná pulzující animace — každý řádek má mírně jiné načasování
-     * aby to působilo jako "dýchání" — živý seznam
-     */
-    private fun startPulseAnimation(card: MaterialCardView, baseColor: Int, index: Int) {
-        val lighterColor = blendColors(baseColor, Color.parseColor("#08FEFAE0"), 0.5f)
-        val animator = ValueAnimator.ofObject(ArgbEvaluator(), baseColor, lighterColor).apply {
-            duration = 2400
-            startDelay = index * 180L  // kaskádové spuštění
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            addUpdateListener { anim ->
-                card.setCardBackgroundColor(anim.animatedValue as Int)
-            }
-        }
-        animator.start()
-        // Uložíme animator aby šel zastavit při dismiss
-        card.tag = animator
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        // Zastav všechny animace
-        val container = view?.findViewById<LinearLayout>(R.id.sheetFoodList)
-        container?.let {
-            for (i in 0 until it.childCount) {
-                (it.getChildAt(i) as? MaterialCardView)?.let { card ->
-                    (card.tag as? ValueAnimator)?.cancel()
-                }
-            }
-        }
     }
 
     private fun blendColors(c1: Int, c2: Int, ratio: Float): Int {
