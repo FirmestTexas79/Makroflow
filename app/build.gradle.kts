@@ -22,8 +22,8 @@ android {
         applicationId = "cz.uhk.macroflow"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.1.20"
+        versionCode = 24
+        versionName = "1.1.21"
 
         // --- TADY JE TA ZMĚNA: Načtení klíče ze souboru ---
         val localProperties = Properties()
