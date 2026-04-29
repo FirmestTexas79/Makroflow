@@ -96,9 +96,6 @@ class InventoryFragment : Fragment() {
             // 2. Vyčistíme jméno
             val namePart = name.lowercase().trim().replace(" ", "_")
 
-            // TODO: Odkomentuj až budeme mít shiny sprity Makromonů
-            // val drawableName = if (isShiny) "makromon_${baseName}_shiny" else "makromon_$baseName"
-
             // 3. Sestavíme dynamický název: makromon_12_spirra
             val drawableName = "makromon_${shortId}_$namePart"
 
