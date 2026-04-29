@@ -7,6 +7,7 @@ import android.os.Looper
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import kotlinx.coroutines.Dispatchers
@@ -787,25 +788,35 @@ class PokemonBattleView @JvmOverloads constructor(
             makromon.xp += xpAmount
             makromon.level = PokemonLevelCalc.levelFromXp(makromon.xp)
 
+            // 1. Uložíme do lokální DB
             localDb.capturedMakromonDao().updateMakromon(makromon)
 
+            // 2. Synchronizace na pozadí
             if (FirebaseRepository.isLoggedIn) {
-                try {
-                    kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                    try {
                         FirebaseRepository.uploadCapturedMakromon(makromon)
+                    } catch (e: Exception) {
+                        android.util.Log.e("XP_AWARD", "Firebase upload failed: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    android.util.Log.e("XP_AWARD", "Firebase upload failed: ${e.message}")
                 }
             }
 
+            // 3. Aktualizace UI na hlavním vlákně
             handler.post {
+                // Zobrazení toastu
                 val levelMsg = if (makromon.level > oldLevel) " 🎊 Level up! Lv.${makromon.level}!" else ""
                 android.widget.Toast.makeText(
                     context,
                     "⭐ ${makromon.name} získal $xpAmount XP!$levelMsg",
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
+
+                // --- KLÍČOVÁ ZMĚNA ---
+                // Zavoláme pouze refresh lišty v MainActivity,
+                // což aktualizuje texty a progress bar na spodním baru,
+                // ale nepřepne fragment (nevyhodí tě na Dashboard).
+                (context as? MainActivity)?.updateMakromonVisibility()
             }
         }.start()
     }
