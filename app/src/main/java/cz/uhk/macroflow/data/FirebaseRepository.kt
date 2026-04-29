@@ -273,54 +273,56 @@ object FirebaseRepository {
 
     // ========== POKÉMONI ==========
 
-    suspend fun uploadCapturedPokemon(pokemon: CapturedPokemonEntity) {
+    suspend fun uploadCapturedMakromon(makromon: CapturedMakromonEntity) {
         if (!isLoggedIn) return
         val data = mapOf(
-            "pokemonId" to pokemon.pokemonId, "name" to pokemon.name,
-            "isShiny" to pokemon.isShiny, "isLocked" to pokemon.isLocked,
-            "caughtDate" to pokemon.caughtDate, "moveListStr" to pokemon.moveListStr,
-            "level" to pokemon.level, "xp" to pokemon.xp
+            "makromonId" to makromon.makromonId,
+            "name" to makromon.name,
+            "isShiny" to makromon.isShiny,
+            "isLocked" to makromon.isLocked,
+            "caughtDate" to makromon.caughtDate,
+            "level" to makromon.level,
+            "xp" to makromon.xp
         )
-        userDoc().collection("captured_pokemon").document(pokemon.caughtDate.toString())
+        userDoc().collection("captured_makromons").document(makromon.caughtDate.toString())
             .set(data, SetOptions.merge()).await()
     }
 
-    suspend fun downloadAllCapturedPokemon(): List<CapturedPokemonEntity> {
+    suspend fun downloadAllCapturedMakromons(): List<CapturedMakromonEntity> {
         if (!isLoggedIn) return emptyList()
-        val snaps = userDoc().collection("captured_pokemon").get().await()
+        val snaps = userDoc().collection("captured_makromons").get().await()
         return snaps.documents.mapNotNull { doc ->
-            CapturedPokemonEntity(
+            CapturedMakromonEntity(
                 id = 0,
-                pokemonId   = doc.getString("pokemonId") ?: "",
+                makromonId  = doc.getString("makromonId") ?: "",
                 name        = doc.getString("name") ?: "",
                 isShiny     = doc.getBoolean("isShiny") ?: false,
                 isLocked    = doc.getBoolean("isLocked") ?: false,
                 caughtDate  = doc.getLong("caughtDate") ?: System.currentTimeMillis(),
-                moveListStr = doc.getString("moveListStr") ?: "",
                 level       = (doc.getLong("level") ?: 1L).toInt(),
                 xp          = (doc.getLong("xp") ?: 0L).toInt()
             )
         }
     }
 
-    suspend fun deleteCapturedPokemon(caughtDate: Long) {
+    suspend fun deleteCapturedMakromon(caughtDate: Long) {
         if (!isLoggedIn) return
-        userDoc().collection("captured_pokemon").document(caughtDate.toString()).delete().await()
+        userDoc().collection("captured_makromon").document(caughtDate.toString()).delete().await()
     }
 
     // ========== POKÉDEX, ITEMS, XP ==========
 
-    suspend fun uploadPokedexStatus(pokemonId: String) {
+    suspend fun uploadMakrodexStatus(makromonId: String) {
         if (!isLoggedIn) return
         val data = mapOf("unlocked" to true, "unlockedDate" to System.currentTimeMillis())
-        userDoc().collection("pokedex_status").document(pokemonId).set(data, SetOptions.merge()).await()
+        userDoc().collection("makrodex_status").document(makromonId).set(data, SetOptions.merge()).await()
     }
 
-    suspend fun downloadAllPokedexStatus(): List<PokedexStatusEntity> {
+    suspend fun downloadAllMakrodexStatus(): List<MakrodexStatusEntity> {
         if (!isLoggedIn) return emptyList()
-        val snaps = userDoc().collection("pokedex_status").get().await()
+        val snaps = userDoc().collection("makrodex_status").get().await()
         return snaps.documents.mapNotNull { doc ->
-            PokedexStatusEntity(pokemonId = doc.id, unlocked = true,
+            MakrodexStatusEntity(makromonId = doc.id, unlocked = true,
                 unlockedDate = doc.getLong("unlockedDate") ?: System.currentTimeMillis())
         }
     }
@@ -339,17 +341,17 @@ object FirebaseRepository {
         }
     }
 
-    suspend fun uploadPokemonXp(xp: PokemonXpEntity) {
+    suspend fun uploadMakromonXp(xp: MakromonXpEntity) {
         if (!isLoggedIn) return
         val data = mapOf("totalXp" to xp.totalXp, "lastDailyRewardDate" to xp.lastDailyRewardDate)
-        userDoc().collection("pokemon_xp").document(xp.pokemonId).set(data, SetOptions.merge()).await()
+        userDoc().collection("makromon_xp").document(xp.makromonId).set(data, SetOptions.merge()).await()
     }
 
-    suspend fun downloadAllPokemonXp(): List<PokemonXpEntity> {
+    suspend fun downloadAllMakromonXp(): List<MakromonXpEntity> {
         if (!isLoggedIn) return emptyList()
-        val snaps = userDoc().collection("pokemon_xp").get().await()
+        val snaps = userDoc().collection("makromon_xp").get().await()
         return snaps.documents.mapNotNull { doc ->
-            PokemonXpEntity(pokemonId = doc.id,
+            MakromonXpEntity(makromonId = doc.id,
                 totalXp = (doc.getLong("totalXp") ?: 0L).toInt(),
                 lastDailyRewardDate = doc.getString("lastDailyRewardDate") ?: "")
         }
@@ -464,12 +466,12 @@ object FirebaseRepository {
         localDb.stepsDao().getStepsForDateSync(today)?.let    { uploadSteps(it) }
         localDb.analyticsDao().getAllAnalyticsSync().forEach  { uploadAnalytics(it) }
 
-        localDb.capturedPokemonDao().getAllCaught().forEach { pokemon ->
-            uploadCapturedPokemon(pokemon)
-            uploadPokedexStatus(pokemon.pokemonId)
-            localDb.pokemonXpDao().getXp(pokemon.pokemonId)?.let { uploadPokemonXp(it) }
+        localDb.capturedMakromonDao().getAllCaught().forEach { makromon ->
+            uploadCapturedMakromon(makromon)
+            uploadMakrodexStatus(makromon.makromonId)
+            localDb.makromonXpDao().getXp(makromon.makromonId)?.let { uploadMakromonXp(it) }
         }
-        localDb.pokedexStatusDao().getUnlockedIds().forEach { uploadPokedexStatus(it) }
+        localDb.makrodexStatusDao().getUnlockedIds().forEach { uploadMakrodexStatus(it) }
         localDb.achievementDao().getAllUnlocked().forEach   { uploadAchievement(it) }
 
         Log.d("FB_SYNC", "Upload dokončen")
@@ -492,10 +494,10 @@ object FirebaseRepository {
             val water        = downloadAllWater()
             val coins        = downloadCoins()
             val items        = downloadAllUserItems()
-            val pokemon      = downloadAllCapturedPokemon()
+            val makromon      = downloadAllCapturedMakromons()
             val achievements = downloadAllAchievements()
-            val pokedex      = downloadAllPokedexStatus()
-            val pokemonXp    = downloadAllPokemonXp()
+            val makrodex      = downloadAllMakrodexStatus()
+            val makromonXp    = downloadAllMakromonXp()
             val steps        = downloadAllSteps()
             val analytics    = downloadAllAnalytics()
 
@@ -532,12 +534,12 @@ object FirebaseRepository {
             localDb.coinDao().setBalance(coins)
             items.forEach { localDb.userItemDao().insertOrUpdateItem(it) }
 
-            localDb.capturedPokemonDao().deleteAllCapturedLocally()
-            pokemon.forEach { localDb.capturedPokemonDao().insertPokemon(it) }
+            localDb.capturedMakromonDao().deleteAllCapturedLocally()
+            makromon.forEach { localDb.capturedMakromonDao().insertMakromon(it) }
 
             achievements.forEach { localDb.achievementDao().unlock(it) }
-            pokedex.forEach      { localDb.pokedexStatusDao().unlockPokemon(it) }
-            pokemonXp.forEach    { localDb.pokemonXpDao().setXp(it) }
+            makrodex.forEach      { localDb.makrodexStatusDao().unlockMakromon(it) }
+            makromonXp.forEach    { localDb.makromonXpDao().setXp(it) }
             steps.forEach        { localDb.stepsDao().insertSteps(it) }
 
             if (analytics.isNotEmpty()) {
@@ -562,7 +564,7 @@ object FirebaseRepository {
         // Smazání všech kolekcí uživatele
         listOf(
             "profiles", "checkIns", "bodyMetrics", "analytics",
-            "capturedPokemon", "water", "consumedSnacks", "trainingPlans"
+            "capturedMakromon", "water", "consumedSnacks", "trainingPlans"
         ).forEach { collection ->
             try {
                 val docs = db.collection("users").document(uid)

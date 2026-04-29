@@ -15,8 +15,7 @@ import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
-import coil.Coil
-import coil.request.ImageRequest
+import androidx.core.content.ContextCompat
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
@@ -31,15 +30,14 @@ class CompanionForegroundService : Service(), SensorEventListener {
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var sensorManager: SensorManager? = null
     private var todayStepsCount = 0
-    private var lastDateString: String = "" // Klíč pro detekci změny dne
+    private var lastDateString: String = ""
 
-    // Pomocné proměnné pro držení stavu, aby to neblikalo
+    // Cache pro bitmapu, aby se při každém kroku nemusela znovu generovat
     private var cachedPokemonBitmap: Bitmap? = null
     private var lastPokemonId: Int? = null
 
     override fun onCreate() {
         super.onCreate()
-        // Inicializujeme datum hned při startu
         lastDateString = getTodayString()
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -52,33 +50,22 @@ class CompanionForegroundService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Vynutíme refresh dat z DB (kdyby se změnil pokemon v aplikaci)
         loadStepsAndPokemon()
         return START_STICKY
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
-            // 1. Nejdřív zkontrolujeme, zda není nový den
             checkDateChange()
-
-            // 2. Přičteme krok
             todayStepsCount++
-
-            // 3. Uložíme a aktualizujeme
             saveStepsToDb(todayStepsCount)
             updateNotification(todayStepsCount)
         }
     }
 
-    /**
-     * Pokud se aktuální datum liší od naposledy zaznamenaného,
-     * znamená to, že uživatel přešel do nového dne a musíme začít od nuly.
-     */
     private fun checkDateChange() {
         val currentDate = getTodayString()
         if (currentDate != lastDateString) {
-            Log.d("MacroFlowService", "Detekována změna dne ($lastDateString -> $currentDate). Resetuji kroky.")
             lastDateString = currentDate
             todayStepsCount = 0
         }
@@ -98,7 +85,7 @@ class CompanionForegroundService : Service(), SensorEventListener {
 
             withContext(Dispatchers.Main) {
                 todayStepsCount = entity?.count ?: 0
-                lastDateString = todayStr // Ujistíme se, že máme aktuální datum
+                lastDateString = todayStr
                 updateNotification(todayStepsCount)
             }
         }
@@ -112,7 +99,7 @@ class CompanionForegroundService : Service(), SensorEventListener {
             db.stepsDao().insertSteps(entity)
             if (FirebaseRepository.isLoggedIn) {
                 try { FirebaseRepository.uploadSteps(entity) } catch (e: Exception) {
-                    Log.e("MacroFlowService", "Chyba uploadu kroků: ${e.message}")
+                    Log.e("MacroFlowService", "Upload failed: ${e.message}")
                 }
             }
         }
@@ -141,7 +128,7 @@ class CompanionForegroundService : Service(), SensorEventListener {
 
             val caughtDate = gamePrefs.getLong("currentOnBarCaughtDate", -1L)
             val activePokemon = withContext(Dispatchers.IO) {
-                if (caughtDate != -1L) db.capturedPokemonDao().getPokemonByCaughtDate(caughtDate) else null
+                if (caughtDate != -1L) db.capturedMakromonDao().getMakromonByCaughtDate(caughtDate) else null
             }
             val profile = withContext(Dispatchers.IO) { db.userProfileDao().getProfileSync() }
 
@@ -150,14 +137,14 @@ class CompanionForegroundService : Service(), SensorEventListener {
 
             val stepGoal = profile?.stepGoal ?: 6000
             val timeStr = TrainingTimeManager.getTrainingTimeForToday(applicationContext) ?: "--:--"
-
-            // Jméno dne v EN pro klíče v TrainingPrefs
             val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
             val workoutType = trainingPrefs.getString("type_$dayName", "REST")?.uppercase() ?: "REST"
 
             val hasPokemon = activePokemon != null
             if (hasPokemon) {
-                val pName = activePokemon!!.name.uppercase()
+                val pokemon = activePokemon!!
+                val pName = pokemon.name.uppercase()
+
                 rvSmall.setViewVisibility(R.id.tvNotificationTitle, View.VISIBLE)
                 rvSmall.setViewVisibility(R.id.ivNotificationPokemon, View.VISIBLE)
                 rvSmall.setTextViewText(R.id.tvNotificationTitle, pName)
@@ -166,10 +153,18 @@ class CompanionForegroundService : Service(), SensorEventListener {
                 rvLarge.setViewVisibility(R.id.tvNotificationLevelLarge, View.VISIBLE)
                 rvLarge.setViewVisibility(R.id.ivNotificationPokemon, View.VISIBLE)
                 rvLarge.setTextViewText(R.id.tvNotificationTitle, pName)
-                rvLarge.setTextViewText(R.id.tvNotificationLevelLarge, "LEVEL: ${activePokemon.level}")
+                rvLarge.setTextViewText(R.id.tvNotificationLevelLarge, "LEVEL: ${pokemon.level}")
 
-                // Pokud už máme bitmapu v RAM, hned ji tam dáme
-                if (activePokemon.id == lastPokemonId && cachedPokemonBitmap != null) {
+                // LOGIKA NAČTENÍ LOKÁLNÍHO OBRÁZKU
+                if (pokemon.id != lastPokemonId || cachedPokemonBitmap == null) {
+                    val rawBitmap = getLocalMakromonBitmap(applicationContext, pokemon.makromonId, pokemon.name)
+                    if (rawBitmap != null) {
+                        cachedPokemonBitmap = getCroppedAndScaledBitmap(rawBitmap)
+                        lastPokemonId = pokemon.id
+                    }
+                }
+
+                if (cachedPokemonBitmap != null) {
                     rvSmall.setImageViewBitmap(R.id.ivNotificationPokemon, cachedPokemonBitmap)
                     rvLarge.setImageViewBitmap(R.id.ivNotificationPokemon, cachedPokemonBitmap)
                 }
@@ -205,37 +200,22 @@ class CompanionForegroundService : Service(), SensorEventListener {
                 .setColorized(true)
 
             startForeground(MakroflowNotifications.ID_STICKY_SERVICE, builder.build())
-
-            // Načítání obrázku - spustí se jen pokud se změnil pokemon nebo bitmapa chybí
-            if (hasPokemon && (activePokemon?.id != lastPokemonId || cachedPokemonBitmap == null)) {
-                activePokemon?.let { pokemon ->
-                    val webName = pokemon.name.lowercase().trim().replace(" ", "-").replace(".", "").replace("♀", "-f").replace("♂", "-m")
-                    val imageData: Any = if (pokemon.isShiny) {
-                        val resId = resources.getIdentifier("shiny_${webName.replace("-", "_")}", "drawable", packageName)
-                        if (resId != 0) resId else "https://img.pokemondb.net/sprites/ruby-sapphire/shiny/$webName.png"
-                    } else {
-                        "https://img.pokemondb.net/sprites/lets-go-pikachu-eevee/normal/$webName.png"
-                    }
-
-                    val request = ImageRequest.Builder(applicationContext)
-                        .data(imageData)
-                        .allowHardware(false)
-                        .target { drawable ->
-                            val bitmap = (drawable as? BitmapDrawable)?.bitmap
-                            if (bitmap != null) {
-                                val finalBitmap = getCroppedAndScaledBitmap(bitmap)
-                                cachedPokemonBitmap = finalBitmap
-                                lastPokemonId = pokemon.id
-
-                                rvSmall.setImageViewBitmap(R.id.ivNotificationPokemon, finalBitmap)
-                                rvLarge.setImageViewBitmap(R.id.ivNotificationPokemon, finalBitmap)
-                                nm.notify(MakroflowNotifications.ID_STICKY_SERVICE, builder.build())
-                            }
-                        }.build()
-                    Coil.imageLoader(applicationContext).enqueue(request)
-                }
-            }
         }
+    }
+
+    /**
+     * Sestaví název resource a vrátí Bitmapu z lokálních drawable.
+     */
+    private fun getLocalMakromonBitmap(context: Context, makromonId: String, name: String): Bitmap? {
+        val shortId = if (makromonId.length >= 3) makromonId.takeLast(2) else makromonId
+        val namePart = name.lowercase().trim().replace(" ", "_")
+        val drawableName = "makromon_${shortId}_$namePart"
+
+        val resId = context.resources.getIdentifier(drawableName, "drawable", context.packageName)
+        if (resId == 0) return null
+
+        val drawable = ContextCompat.getDrawable(context, resId)
+        return (drawable as? BitmapDrawable)?.bitmap
     }
 
     private fun getCroppedAndScaledBitmap(src: Bitmap): Bitmap {

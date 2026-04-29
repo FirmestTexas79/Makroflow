@@ -44,7 +44,7 @@ class PokemonBattleFragment : Fragment() {
             )
             onCaught = {
                 // ✅ Voláme aktualizaci na MainActivity
-                (requireActivity() as? MainActivity)?.updatePokemonVisibility()
+                (requireActivity() as? MainActivity)?.updateMakromonVisibility()
 
                 // 🛡️ Bezpečné odložení zavření fragmentu
                 view?.postDelayed({

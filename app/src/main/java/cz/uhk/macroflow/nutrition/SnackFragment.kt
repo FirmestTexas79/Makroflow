@@ -239,10 +239,14 @@ class SnackFragment : Fragment() {
 
     private fun observeSnacks() {
         lifecycleScope.launch {
+            // 1. Zkontrolujeme, zda je databáze prázdná (použijeme jednoduchý getAllSnacks)
             val currentSnacks = db.snackDao().getAllSnacks().first()
-            if (currentSnacks.isEmpty()) seedDatabase()
+            if (currentSnacks.isEmpty()) {
+                seedDatabase()
+            }
 
-            db.snackDao().getAllSnacks().collect { snacks ->
+            // 2. Sledujeme změny pomocí Smart Query (seřazeno podle popularity a času)
+            db.snackDao().getAllSnacksSmart(System.currentTimeMillis()).collect { snacks ->
                 displaySnacks(snacks)
             }
         }
@@ -759,30 +763,33 @@ class SnackFragment : Fragment() {
 
         etWeight.addTextChangedListener { recalcAndDisplay() }
 
+        // ... uvnitř showConsumeDialog v btnConfirm.setOnClickListener
         btnConfirm.setOnClickListener {
-            val g     = currentGrams()
-            val p     = perGramP     * g
-            val s     = perGramS     * g
-            val t     = perGramT     * g
-            val fiber = perGramFiber * g
-            val kcal  = ((p * 4) + (s * 4) + (t * 9)).toInt()
-            val kj    = (p * 17f) + (s * 17f) + (t * 38f)
-
-            val today   = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            val nowTime = SimpleDateFormat("HH:mm",      Locale.getDefault()).format(Date())
+            val g = etWeight.text.toString().toFloatOrNull() ?: defaultGrams
+            val p = (snack.p / defaultGrams) * g
+            val s = (snack.s / defaultGrams) * g
+            val t = (snack.t / defaultGrams) * g
+            val fiber = (snack.fiber / defaultGrams) * g
+            val kcal = ((p * 4) + (s * 4) + (t * 9)).toInt()
+            val kj = (p * 17f) + (s * 17f) + (t * 38f)
 
             lifecycleScope.launch(Dispatchers.IO) {
+                // Uložení konzumace
                 db.consumedSnackDao().insertConsumed(
                     ConsumedSnackEntity(
-                        date = today, time = nowTime, name = snack.name,
-                        p = p, s = s, t = t,
-                        calories = kcal, energyKj = kj, fiber = fiber
+                        date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                        time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()),
+                        name = snack.name, p = p, s = s, t = t, calories = kcal, energyKj = kj, fiber = fiber
                     )
                 )
+
+                // AKTUALIZACE POPULARITY (Smart sorting bod)
+                incrementSnackUsage(snack.name)
+
                 withContext(Dispatchers.Main) {
-                    view?.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    Toast.makeText(requireContext(), "${snack.name} přidáno! 🔥", Toast.LENGTH_SHORT).show()
                     dialog.dismiss()
+                    view?.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                    Toast.makeText(requireContext(), "${snack.name} přidáno!", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -1005,11 +1012,30 @@ class SnackFragment : Fragment() {
             .alpha(0f).translationY(15f).setDuration(150)
             .withEndAction {
                 lifecycleScope.launch {
-                    val currentSnacks = db.snackDao().getAllSnacks().first()
-                    displaySnacks(currentSnacks)
+                    // Získáme aktuální data seřazená podle popularity
+                    val snacks = db.snackDao().getAllSnacksSmart(System.currentTimeMillis()).first()
+                    displaySnacks(snacks)
+
                     snackListsContainer.animate()
                         .alpha(1f).translationY(0f).setDuration(300).start()
                 }
             }.start()
+    }
+
+    private fun incrementSnackUsage(snackName: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val existing = db.snackDao().getUsageStats(snackName)
+            if (existing != null) {
+                db.snackDao().updateUsageMetadata(existing.copy(
+                    usageCount = existing.usageCount + 1,
+                    lastUsedTimestamp = now
+                ))
+            } else {
+                db.snackDao().updateUsageMetadata(
+                    cz.uhk.macroflow.data.SnackUsageEntity(snackName, 1, now)
+                )
+            }
+        }
     }
 }

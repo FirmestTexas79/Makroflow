@@ -183,6 +183,6 @@ class DiglettKilledDialog : DialogFragment() {
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
-        (activity as? MainActivity)?.updatePokemonVisibility()
+        (activity as? MainActivity)?.updateMakromonVisibility()
     }
 }

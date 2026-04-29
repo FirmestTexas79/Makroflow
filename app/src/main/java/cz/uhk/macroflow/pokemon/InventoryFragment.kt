@@ -1,7 +1,6 @@
 package cz.uhk.macroflow.pokemon
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -21,7 +20,6 @@ import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.R
-import cz.uhk.macroflow.common.CompanionForegroundService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -59,8 +57,8 @@ class InventoryFragment : Fragment() {
     private fun loadData() {
         lifecycleScope.launch {
             if (currentTab == 0) {
-                val list = withContext(Dispatchers.IO) { db.capturedPokemonDao().getAllCaught() }
-                rvInventory.adapter = PokemonAdapter(list)
+                val list = withContext(Dispatchers.IO) { db.capturedMakromonDao().getAllCaught() }
+                rvInventory.adapter = MakromonAdapter(list)
             } else {
                 val list = withContext(Dispatchers.IO) { db.userItemDao().getAllItems() }
                 val ownedItems = list.filter { it.quantity > 0 }
@@ -69,34 +67,50 @@ class InventoryFragment : Fragment() {
         }
     }
 
-    private inner class PokemonAdapter(
-        private val list: List<CapturedPokemonEntity>
-    ) : RecyclerView.Adapter<PokemonAdapter.VH>() {
+    private inner class MakromonAdapter(
+        private val list: List<CapturedMakromonEntity>
+    ) : RecyclerView.Adapter<MakromonAdapter.VH>() {
 
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val ivSprite: ImageView     = v.findViewById(R.id.ivPokemonSprite)
-            val tvName: TextView        = v.findViewById(R.id.tvPokemonName)
-            val tvLevel: TextView       = v.findViewById(R.id.tvPokemonLevel)
-            val pbXp: ProgressBar       = v.findViewById(R.id.pbPokemonXp)
-            val btnLock: ImageButton    = v.findViewById(R.id.btnLock)
-            val btnPin: ImageButton     = v.findViewById(R.id.btnPinToBar)
-            val btnUnpin: ImageButton   = v.findViewById(R.id.btnUnpinFromBar)
-            val btnDelete: ImageButton  = v.findViewById(R.id.btnDeletePokemon)
+            val ivSprite: ImageView    = v.findViewById(R.id.ivPokemonSprite)
+            val tvName: TextView       = v.findViewById(R.id.tvPokemonName)
+            val tvLevel: TextView      = v.findViewById(R.id.tvPokemonLevel)
+            val pbXp: ProgressBar      = v.findViewById(R.id.pbPokemonXp)
+            val btnLock: ImageButton   = v.findViewById(R.id.btnLock)
+            val btnPin: ImageButton    = v.findViewById(R.id.btnPinToBar)
+            val btnUnpin: ImageButton  = v.findViewById(R.id.btnUnpinFromBar)
+            val btnDelete: ImageButton = v.findViewById(R.id.btnDeletePokemon)
         }
 
-        // Pomocná funkce pro sestavení URL z Gen 8 zdroje
-        private fun spriteUrl(webName: String, isShiny: Boolean = false): String {
-            val type = if (isShiny) "shiny" else "regular"
-            val formattedName = webName.lowercase().trim()
-                .replace(" ", "-")
-                .replace(".", "")
-                .replace("♀", "-f")
-                .replace("♂", "-m")
-            return "https://raw.githubusercontent.com/msikma/pokesprite/master/pokemon-gen8/$type/$formattedName.png"
+        /**
+         * Vrátí resource ID drawable pro daného Makromona.
+         * Konvence: makromon_spirra, makromon_ignar, atd.
+         *
+         * Shiny verze jsou zatím zakomentovány – odkomentuj až budou hotové sprity:
+         * Konvence shiny: makromon_spirra_shiny, makromon_ignar_shiny, atd.
+         */
+        private fun makromonDrawableRes(makromonId: String, name: String): Int {
+            // 1. Získáme zkrácené ID (např. "012" -> "12")
+            val shortId = if (makromonId.length >= 3) makromonId.takeLast(2) else makromonId
+
+            // 2. Vyčistíme jméno
+            val namePart = name.lowercase().trim().replace(" ", "_")
+
+            // TODO: Odkomentuj až budeme mít shiny sprity Makromonů
+            // val drawableName = if (isShiny) "makromon_${baseName}_shiny" else "makromon_$baseName"
+
+            // 3. Sestavíme dynamický název: makromon_12_spirra
+            val drawableName = "makromon_${shortId}_$namePart"
+
+            val resId = requireContext().resources.getIdentifier(
+                drawableName, "drawable", requireContext().packageName
+            )
+            return if (resId != 0) resId else R.drawable.ic_home
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_captured_pokemon, parent, false)
+            val v = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_captured_pokemon, parent, false)
             return VH(v)
         }
 
@@ -109,45 +123,41 @@ class InventoryFragment : Fragment() {
             val isAcquired = prefs.getBoolean("pokemonAcquired", false)
             val isActiveOnBar = isAcquired && (item.caughtDate == activeOnBarCaughtDate)
 
-            // UI Logika pro tlačítka (Pin/Unpin)
-            holder.btnPin.visibility = if (isActiveOnBar) View.GONE else View.VISIBLE
+            // 1. Nastavení viditelnosti tlačítek pro připnutí (Pin/Unpin)
+            holder.btnPin.visibility   = if (isActiveOnBar) View.GONE else View.VISIBLE
             holder.btnUnpin.visibility = if (isActiveOnBar) View.VISIBLE else View.GONE
 
-            // Levely a XP
+            // 2. Výpočet a zobrazení Levelu a XP progresu
             val prog = PokemonLevelCalc.progressToNextLevel(item.xp)
-            holder.tvName.text = if (item.isShiny) "✨ ${item.name}" else item.name
             holder.tvLevel.text = "Lv.${item.level}"
             holder.pbXp.progress = (prog * 100).toInt()
-
             holder.tvLevel.visibility = View.VISIBLE
-            holder.pbXp.visibility = View.VISIBLE
+            holder.pbXp.visibility    = View.VISIBLE
 
-            // --- UNIFIKOVANÁ LOGIKA NAČÍTÁNÍ OBRÁZKU (Gen 8) ---
-            // Použijeme tvou funkci spriteUrl, která bere data z GitHubu
-            val finalUrl = spriteUrl(item.name, item.isShiny)
+            // 3. Jméno Makromona
+            holder.tvName.text = item.name
 
-            holder.ivSprite.load(finalUrl) {
-                crossfade(true)
-                placeholder(R.drawable.ic_home)
-                error(R.drawable.ic_home)
-            }
+            // 4. KLÍČOVÁ OPRAVA: Načtení správného obrázku podle tvé nové konvence
+            // Posíláme ID (např. "018") i Jméno (např. "Drakirra")
+            holder.ivSprite.setImageResource(makromonDrawableRes(item.makromonId, item.name))
 
-            // --- LISTENERY ---
-
-            // Zámek
-            val lockIcon = if (item.isLocked) android.R.drawable.ic_lock_lock else android.R.drawable.ic_lock_idle_lock
+            // 5. Logika zámku (proti nechtěnému smazání)
+            val lockIcon = if (item.isLocked)
+                android.R.drawable.ic_lock_lock
+            else
+                android.R.drawable.ic_lock_idle_lock
             holder.btnLock.setImageResource(lockIcon)
 
             holder.btnLock.setOnClickListener {
                 lifecycleScope.launch(Dispatchers.IO) {
                     item.isLocked = !item.isLocked
-                    db.capturedPokemonDao().updatePokemon(item)
-                    if (FirebaseRepository.isLoggedIn) FirebaseRepository.uploadCapturedPokemon(item)
+                    db.capturedMakromonDao().updateMakromon(item)
+                    if (FirebaseRepository.isLoggedIn) FirebaseRepository.uploadCapturedMakromon(item)
                     withContext(Dispatchers.Main) { loadData() }
                 }
             }
 
-            // Připnout na lištu (Pin)
+            // 6. Tlačítko Připnout (Pin) na hlavní lištu
             holder.btnPin.setOnClickListener {
                 prefs.edit()
                     .putBoolean("pokemonAcquired", true)
@@ -156,42 +166,47 @@ class InventoryFragment : Fragment() {
                     .putInt("currentOnBarCapturedId", item.id)
                     .apply()
 
-                (requireActivity() as? MainActivity)?.updatePokemonVisibility()
+                (requireActivity() as? MainActivity)?.updateMakromonVisibility()
                 (requireActivity() as? MainActivity)?.refreshStickyNotification()
                 loadData()
-                Toast.makeText(context, "📌 ${item.name} vypuštěn na lištu!", Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, "📌 ${item.name} vybaven!", android.widget.Toast.LENGTH_SHORT).show()
             }
 
-            // Odepnout z lišty (Unpin)
+            // 7. Tlačítko Odepnout (Unpin) z lišty
             holder.btnUnpin.setOnClickListener {
                 prefs.edit()
                     .putBoolean("pokemonAcquired", false)
                     .putLong("currentOnBarCaughtDate", -1L)
                     .apply()
 
-                (requireActivity() as? MainActivity)?.updatePokemonVisibility()
+                (requireActivity() as? MainActivity)?.updateMakromonVisibility()
                 (requireActivity() as? MainActivity)?.refreshStickyNotification()
                 loadData()
-                Toast.makeText(context, "📥 Pokémon schován do kapsy.", Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, "📥 Makromon schován do kapsy.", android.widget.Toast.LENGTH_SHORT).show()
             }
 
-            // Smazat (Delete)
+            // 8. Tlačítko Smazat (Delete)
             holder.btnDelete.setOnClickListener {
                 if (item.isLocked) {
-                    Toast.makeText(context, "Odemkni pokémona před smazáním! 🔒", Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, "Odemkni Makromona před smazáním! 🔒", android.widget.Toast.LENGTH_SHORT).show()
                 } else {
                     lifecycleScope.launch(Dispatchers.IO) {
-                        db.capturedPokemonDao().deletePokemon(item)
+                        db.capturedMakromonDao().deleteMakromon(item)
                         if (FirebaseRepository.isLoggedIn) {
-                            try { FirebaseRepository.deleteCapturedPokemon(item.caughtDate) } catch (e: Exception) { e.printStackTrace() }
+                            try {
+                                FirebaseRepository.deleteCapturedMakromon(item.caughtDate)
+                            } catch (e: Exception) { e.printStackTrace() }
                         }
                         if (isActiveOnBar) {
-                            prefs.edit().putBoolean("pokemonAcquired", false).putLong("currentOnBarCaughtDate", -1L).apply()
+                            prefs.edit()
+                                .putBoolean("pokemonAcquired", false)
+                                .putLong("currentOnBarCaughtDate", -1L)
+                                .apply()
                         }
                         withContext(Dispatchers.Main) {
-                            (requireActivity() as? MainActivity)?.updatePokemonVisibility()
+                            (requireActivity() as? MainActivity)?.updateMakromonVisibility()
                             loadData()
-                            Toast.makeText(context, "🗑️ Pokémon smazán.", Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, "🗑️ Makromon smazán.", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -205,13 +220,14 @@ class InventoryFragment : Fragment() {
         RecyclerView.Adapter<ItemAdapter.VH>() {
 
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val ivSprite: ImageView = v.findViewById(R.id.ivPokemonSprite)
-            val tvName: TextView    = v.findViewById(R.id.tvPokemonName)
+            val ivSprite: ImageView  = v.findViewById(R.id.ivPokemonSprite)
+            val tvName: TextView     = v.findViewById(R.id.tvPokemonName)
             val tvQuantity: TextView = v.findViewById(R.id.tvPokemonLevel)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_captured_pokemon, parent, false)
+            val v = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_captured_pokemon, parent, false)
             return VH(v)
         }
 
@@ -228,6 +244,7 @@ class InventoryFragment : Fragment() {
             holder.tvQuantity.visibility = View.VISIBLE
             holder.tvQuantity.text = "Vlastníš: ${item.quantity} ks"
 
+            // Itemy zatím stále načítají z URL – nemáme lokální drawable pro itemy
             val imageUrl = when (item.itemId) {
                 "poke_ball"  -> "https://img.pokemondb.net/sprites/items/poke-ball.png"
                 "great_ball" -> "https://img.pokemondb.net/sprites/items/great-ball.png"
@@ -271,7 +288,6 @@ class InventoryFragment : Fragment() {
 
             listOf(R.id.btnLock, R.id.btnPinToBar, R.id.btnUnpinFromBar, R.id.btnDeletePokemon, R.id.separator)
                 .forEach { id -> holder.itemView.findViewById<View>(id)?.visibility = View.GONE }
-
             holder.itemView.findViewById<View>(R.id.pbPokemonXp)?.visibility = View.GONE
         }
 

@@ -54,7 +54,7 @@
             android:screenOrientation="portrait" />
 
         <activity
-            android:name=".pokemon.PokemonMapActivity"
+            android:name=".pokemon.MakromonMapActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />

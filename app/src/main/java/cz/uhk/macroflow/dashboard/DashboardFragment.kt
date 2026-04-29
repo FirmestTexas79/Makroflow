@@ -5,16 +5,13 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -24,7 +21,6 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.slider.Slider
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -42,12 +38,7 @@ import cz.uhk.macroflow.training.TrainerFragment
 import cz.uhk.macroflow.training.TrainingTimeManager
 import cz.uhk.macroflow.achievements.AchievementEngine
 import cz.uhk.macroflow.data.CheckInEntity
-import cz.uhk.macroflow.data.StepsEntity
 import cz.uhk.macroflow.data.UserProfileEntity
-import cz.uhk.macroflow.pokemon.EvolutionDialog
-import cz.uhk.macroflow.pokemon.PokedexStatusEntity
-import cz.uhk.macroflow.pokemon.PokemonLevelCalc
-import cz.uhk.macroflow.pokemon.PokemonGrowthManager
 import cz.uhk.macroflow.pokemon.PokemonXpEngine
 
 class DashboardFragment : Fragment() {
@@ -71,7 +62,6 @@ class DashboardFragment : Fragment() {
         val coachCard = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
-        // 👣 ✅ ŽIVÝ ODBĚR KROKŮ PŘES FLOW — Čte to, co MainActivity zapisuje
         val tvTodaySteps = view.findViewById<TextView>(R.id.tvTotalStepsCount)
         val db = AppDatabase.getDatabase(requireContext())
 
@@ -83,8 +73,6 @@ class DashboardFragment : Fragment() {
         }
 
         setupEliteToggle(view)
-
-        //setupEasterEgg(view)
 
         view.findViewById<MaterialCardView>(R.id.cardStartTraining).setOnClickListener {
             parentFragmentManager.beginTransaction()
@@ -112,12 +100,9 @@ class DashboardFragment : Fragment() {
                 view.findViewById<EditText>(R.id.etCheckInWeight)?.setText(weightToShow.toString())
 
                 if (todayCheckIn != null) {
-                    view.findViewById<Slider>(R.id.sliderEnergy).value =
-                        todayCheckIn.energyLevel.toFloat()
-                    view.findViewById<Slider>(R.id.sliderSleep).value =
-                        todayCheckIn.sleepQuality.toFloat()
-                    view.findViewById<Slider>(R.id.sliderHunger).value =
-                        todayCheckIn.hungerLevel.toFloat()
+                    view.findViewById<Slider>(R.id.sliderEnergy).value = todayCheckIn.energyLevel.toFloat()
+                    view.findViewById<Slider>(R.id.sliderSleep).value  = todayCheckIn.sleepQuality.toFloat()
+                    view.findViewById<Slider>(R.id.sliderHunger).value = todayCheckIn.hungerLevel.toFloat()
                 }
 
                 ritualOverlay.visibility = View.VISIBLE
@@ -155,9 +140,7 @@ class DashboardFragment : Fragment() {
                                 timestamp = System.currentTimeMillis()
                             )
                             FirebaseRepository.uploadWater(waterEntity)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
+                        } catch (e: Exception) { e.printStackTrace() }
                     }
                 }
             }
@@ -207,7 +190,7 @@ class DashboardFragment : Fragment() {
         val weightVal = view.findViewById<EditText>(R.id.etCheckInWeight)?.text.toString()
             .toDoubleOrNull() ?: 83.0
         val energy = view.findViewById<Slider>(R.id.sliderEnergy).value.toInt()
-        val sleep = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
+        val sleep  = view.findViewById<Slider>(R.id.sliderSleep).value.toInt()
         val hunger = view.findViewById<Slider>(R.id.sliderHunger).value.toInt()
 
         requireContext()
@@ -215,21 +198,19 @@ class DashboardFragment : Fragment() {
             .edit { putString("weightAkt", weightVal.toString()) }
 
         val checkInEntity = CheckInEntity(
-            date = today,
-            weight = weightVal,
-            energyLevel = energy,
+            date         = today,
+            weight       = weightVal,
+            energyLevel  = energy,
             sleepQuality = sleep,
-            hungerLevel = hunger
+            hungerLevel  = hunger
         )
 
         lifecycleScope.launch(Dispatchers.Main) {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // 1. Zápis, Analytika a Achievementy (Vše v IO, jak to bylo)
             val newAchievements = withContext(Dispatchers.IO) {
                 db.checkInDao().insertCheckIn(checkInEntity)
 
-                // --- PŘIDÁNO: Výpočet a upload analytiky, aby se vytvořila tabulka ---
                 val currentProfile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
                 val updatedProfile = currentProfile.copy(weight = weightVal)
                 db.userProfileDao().saveProfile(updatedProfile)
@@ -237,22 +218,17 @@ class DashboardFragment : Fragment() {
                 val history = db.checkInDao().getAllCheckInsSync()
                 val analyticsResult = try {
                     cz.uhk.macroflow.analytics.BioLogicEngine.calculateFullAnalytics(history)
-                } catch (e: Exception) {
-                    null
-                }
+                } catch (e: Exception) { null }
 
                 analyticsResult?.let { db.analyticsDao().insertAnalytics(it) }
 
                 if (FirebaseRepository.isLoggedIn) {
                     try {
                         FirebaseRepository.uploadCheckIn(checkInEntity)
-                        FirebaseRepository.uploadProfile(updatedProfile) // ✅ PŘIDÁNO
+                        FirebaseRepository.uploadProfile(updatedProfile)
                         analyticsResult?.let { FirebaseRepository.uploadAnalytics(it) }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    } catch (e: Exception) { e.printStackTrace() }
                 }
-                // --------------------------------------------------------------------
 
                 AchievementEngine.checkAll(requireContext())
             }
@@ -260,18 +236,16 @@ class DashboardFragment : Fragment() {
             refreshAllData(requireView())
             Toast.makeText(context, "Rituál úspěšně uložen!", Toast.LENGTH_SHORT).show()
 
-            // Tady už newAchievements bude zase fungovat normálně
             newAchievements.forEach { ach ->
-                Toast.makeText(context, "🏆 Achievement odemčen: ${ach.titleCs}", Toast.LENGTH_LONG)
-                    .show()
+                Toast.makeText(context, "🏆 Achievement odemčen: ${ach.titleCs}", Toast.LENGTH_LONG).show()
             }
 
-            // ✅ Pokémon XP za check-in — přes nový systém (PokemonXpEngine)
+            // XP za check-in přes MakromonXpEngine
             lifecycleScope.launch(Dispatchers.IO) {
                 val xp = PokemonXpEngine.tryAwardGoalXp(requireContext(), PokemonXpEngine.XpGoal.CHECK_IN)
                 if (xp > 0) {
                     withContext(Dispatchers.Main) {
-                        (activity as? MainActivity)?.addXpToActivePokemonRealTime(xp)
+                        (activity as? MainActivity)?.addXpToActiveMakromonRealTime(xp)
                     }
                 }
             }
@@ -331,10 +305,7 @@ class DashboardFragment : Fragment() {
             val initH = existing?.split(":")?.getOrNull(0)?.toIntOrNull() ?: 7
             val initM = existing?.split(":")?.getOrNull(1)?.toIntOrNull() ?: 0
             MakroflowTimePicker.Companion.show(
-                parentFragmentManager,
-                initH,
-                initM,
-                "Čas dnešního tréninku"
+                parentFragmentManager, initH, initM, "Čas dnešního tréninku"
             ) { h, m ->
                 TrainingTimeManager.setTrainingTime(ctx, dayName, String.format("%02d:%02d", h, m))
                 updateWorkoutCard(view)
@@ -347,7 +318,7 @@ class DashboardFragment : Fragment() {
 
     private fun updateWorkoutCard(view: View) {
         val ctx = context ?: return
-        val tvTime = view.findViewById<TextView>(R.id.tvTodayWorkoutPill) ?: return
+        val tvTime  = view.findViewById<TextView>(R.id.tvTodayWorkoutPill) ?: return
         val tvLabel = (tvTime.parent as? ViewGroup)?.getChildAt(0) as? TextView
         val timeStr = TrainingTimeManager.getTrainingTimeForToday(ctx)
         if (timeStr != null) {
@@ -368,7 +339,6 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateMacrosUI(view: View, status: DailyStatus) {
-        // Hlavní kalorie a makra
         view.findViewById<TextView>(R.id.tvCalories)?.text =
             "${status.eatenCal.toInt()} / ${status.target.calories.toInt()}"
         view.findViewById<TextView>(R.id.tvValueProtein)?.text =
@@ -378,25 +348,19 @@ class DashboardFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvValueFat)?.text =
             "${status.eatenT.toInt()}g / ${status.target.fat.toInt()}g"
 
-        // ✅ Makroflow 2.0: Interaktivní Vláknina
         val tvFiber = view.findViewById<TextView>(R.id.tvValueFiber)
-        val eatenFiber = status.eatenFiber
-        val targetFiber = status.target.fiber // Bere se z tvého nového výpočtu v enginu
-
-        // Formátovaný text: "Snědeno / Cíl g"
+        val eatenFiber  = status.eatenFiber
+        val targetFiber = status.target.fiber
         val newFiberText = String.format("%.1f / %.0f g", eatenFiber, targetFiber)
 
         if (tvFiber?.text != newFiberText) {
             tvFiber?.animate()?.alpha(0f)?.setDuration(120)?.withEndAction {
                 tvFiber.text = newFiberText
-
-                // Dynamická změna barvy: Pokud zbývá 0 nebo méně, svítíme barvou brand_primary
                 if (status.fiberLeft <= 0.1) {
                     tvFiber.setTextColor(view.context.getColor(R.color.brand_primary))
                 } else {
                     tvFiber.setTextColor(view.context.getColor(R.color.brand_dark))
                 }
-
                 tvFiber.animate().alpha(1f).setDuration(250).start()
             }?.start()
         }
@@ -423,12 +387,12 @@ class DashboardFragment : Fragment() {
         val cTarget = (cProp * 1000).toInt()
         val pTarget = 1000 - (fTarget + cTarget)
 
-        val fatRot = startAngle
-        val carbsRot = startAngle - (fProp * 360f)
+        val fatRot     = startAngle
+        val carbsRot   = startAngle - (fProp * 360f)
         val proteinRot = carbsRot - (cProp * 360f)
 
-        pbFT.rotation = fatRot; pbFE.rotation = fatRot
-        pbCT.rotation = carbsRot; pbCE.rotation = carbsRot
+        pbFT.rotation = fatRot;     pbFE.rotation = fatRot
+        pbCT.rotation = carbsRot;   pbCE.rotation = carbsRot
         pbPT.rotation = proteinRot; pbPE.rotation = proteinRot
 
         listOf(pbFT, pbCT, pbPT).forEach { it.max = 1000 }
@@ -448,20 +412,17 @@ class DashboardFragment : Fragment() {
 
     private fun setupEliteToggle(view: View) {
         val cardEliteOptions = view.findViewById<MaterialCardView>(R.id.cardEliteOptions)
-        val switchElite =
-            view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchEliteMode)
-        val etWrist = view.findViewById<EditText>(R.id.etEliteWrist)
-        val etBodyFat = view.findViewById<EditText>(R.id.etEliteBF)
+        val switchElite = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchEliteMode)
+        val etWrist     = view.findViewById<EditText>(R.id.etEliteWrist)
+        val etBodyFat   = view.findViewById<EditText>(R.id.etEliteBF)
         val autoDietType = view.findViewById<AutoCompleteTextView>(R.id.autoDietType)
 
         val db = AppDatabase.getDatabase(requireContext())
         var isInitialLoading = true
 
-        // 1. STYLOVÁNÍ
         applySwitchStyles(switchElite)
         setupDietAdapter(autoDietType)
 
-        // 2. NAČTENÍ DAT
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val profile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
 
@@ -478,18 +439,17 @@ class DashboardFragment : Fragment() {
                 cardEliteOptions.visibility = if (profile.isEliteMode) View.VISIBLE else View.GONE
 
                 if (profile.lastWristMeasurement > 0) etWrist?.setText(profile.lastWristMeasurement.toString())
-                if (profile.bodyFatPercentage > 0) etBodyFat?.setText(profile.bodyFatPercentage.toString())
+                if (profile.bodyFatPercentage > 0)    etBodyFat?.setText(profile.bodyFatPercentage.toString())
 
                 val diet = profile.dietType ?: "Vyvážená"
                 autoDietType?.setText(diet, false)
-                updateMacroPreview(view, diet) // Prvotní vykreslení grafu
+                updateMacroPreview(view, diet)
 
                 isInitialLoading = false
                 setupSwitchListener(view, switchElite, cardEliteOptions)
             }
         }
 
-        // 3. LISTENERY
         etWrist?.doAfterTextChanged {
             if (!isInitialLoading) {
                 val value = itToDouble(it)
@@ -507,43 +467,35 @@ class DashboardFragment : Fragment() {
         autoDietType?.setOnItemClickListener { parent, _, pos, _ ->
             if (!isInitialLoading) {
                 val selected = parent.getItemAtPosition(pos).toString()
-                updateMacroPreview(view, selected) // Okamžitá změna grafu
+                updateMacroPreview(view, selected)
                 saveEliteField(true) { it.copy(dietType = selected) }
             }
         }
     }
 
-    /** Funkce, která dynamicky mění šířku barevných segmentů podle zvolené diety */
     private fun updateMacroPreview(view: View, dietType: String) {
         val pieChart = view.findViewById<PieChartView>(R.id.pieChartMacro) ?: return
-
         val tvP = view.findViewById<TextView>(R.id.tvProteinPct)
         val tvS = view.findViewById<TextView>(R.id.tvCarbPct)
         val tvT = view.findViewById<TextView>(R.id.tvFatPct)
 
-        // Definice poměrů B-S-T
         val (p, s, t) = when (dietType) {
-            "Keto" -> Triple(20f, 5f, 75f)
-            "Low Carb" -> Triple(25f, 15f, 60f)
-            "Vegan" -> Triple(15f, 60f, 25f)
+            "Keto"         -> Triple(20f, 5f, 75f)
+            "Low Carb"     -> Triple(25f, 15f, 60f)
+            "Vegan"        -> Triple(15f, 60f, 25f)
             "High Protein" -> Triple(40f, 20f, 40f)
-            else -> Triple(25f, 45f, 30f) // Vyvážená
+            else           -> Triple(25f, 45f, 30f)
         }
 
-        // Aplikace poměrů do grafu. View se samo překreslí.
         pieChart.setRatios(p, s, t)
-
-        // Update textových procent. Tady se text zaručeně obarví tvou barvou.
         tvP?.text = "B: ${p.toInt()}%"
         tvS?.text = "S: ${s.toInt()}%"
         tvT?.text = "T: ${t.toInt()}%"
     }
 
-    /** Pomocná funkce pro konverzi textu na Double */
     private fun itToDouble(text: Any?): Double =
         text.toString().replace(",", ".").toDoubleOrNull() ?: 0.0
 
-    /** Fixuje barvy switche přímo v kódu */
     private fun applySwitchStyles(switch: com.google.android.material.switchmaterial.SwitchMaterial) {
         val states = arrayOf(
             intArrayOf(android.R.attr.state_checked),
@@ -551,16 +503,13 @@ class DashboardFragment : Fragment() {
         )
         val trackColors = intArrayOf(Color.parseColor("#DDA15E"), Color.parseColor("#DAD7CD"))
         val thumbColors = intArrayOf(Color.parseColor("#283618"), Color.parseColor("#606C38"))
-
         switch.trackTintList = ColorStateList(states, trackColors)
         switch.thumbTintList = ColorStateList(states, thumbColors)
     }
 
-    /** Vizuální nastavení dropdownu pro diety */
     private fun setupDietAdapter(autoComplete: AutoCompleteTextView?) {
         val options = listOf("Vyvážená", "Low Carb", "Keto", "Vegan", "High Protein")
-        val adapter = object :
-            ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, options) {
+        val adapter = object : ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, options) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 return (super.getView(position, convertView, parent) as TextView).apply {
                     setTextColor(Color.parseColor("#283618"))
@@ -571,7 +520,6 @@ class DashboardFragment : Fragment() {
         autoComplete?.setAdapter(adapter)
     }
 
-    /** Logika přepínání Elite módu a animace karty */
     private fun setupSwitchListener(
         view: View,
         switch: com.google.android.material.switchmaterial.SwitchMaterial,
@@ -579,13 +527,11 @@ class DashboardFragment : Fragment() {
     ) {
         switch.setOnCheckedChangeListener { _, isChecked ->
             view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-
             if (isChecked) {
                 optionsCard.visibility = View.VISIBLE
                 optionsCard.alpha = 0f
                 optionsCard.animate().alpha(1f).setDuration(300).withEndAction {
-                    val scrollView =
-                        view.findViewById<androidx.core.widget.NestedScrollView>(R.id.dashboardScrollView)
+                    val scrollView = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.dashboardScrollView)
                     scrollView?.post { scrollView.smoothScrollTo(0, optionsCard.bottom) }
                 }.start()
             } else {
@@ -597,7 +543,6 @@ class DashboardFragment : Fragment() {
         }
     }
 
-    /** Hlavní funkce pro ukládání do DB a synchronizaci s UI */
     private fun saveEliteField(
         shouldRefreshUI: Boolean,
         updateBlock: (UserProfileEntity) -> UserProfileEntity
@@ -610,17 +555,11 @@ class DashboardFragment : Fragment() {
             db.userProfileDao().saveProfile(updatedProfile)
 
             if (FirebaseRepository.isLoggedIn) {
-                try {
-                    FirebaseRepository.uploadProfile(updatedProfile)
-                } catch (e: Exception) {
-                }
+                try { FirebaseRepository.uploadProfile(updatedProfile) } catch (e: Exception) { }
             }
 
             withContext(Dispatchers.Main) {
-                if (isAdded && view != null && shouldRefreshUI) {
-                    // TADY se děje ten přepočet maker v celém dashboardu
-                    refreshAllData(requireView())
-                }
+                if (isAdded && view != null && shouldRefreshUI) refreshAllData(requireView())
             }
         }
     }

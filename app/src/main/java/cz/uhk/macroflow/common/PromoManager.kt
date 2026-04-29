@@ -6,12 +6,10 @@ import android.widget.Toast
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
-import cz.uhk.macroflow.pokemon.BattleEngine
-import cz.uhk.macroflow.pokemon.CapturedPokemonEntity
-import cz.uhk.macroflow.pokemon.PokedexStatusEntity
+import cz.uhk.macroflow.pokemon.CapturedMakromonEntity
+import cz.uhk.macroflow.pokemon.MakrodexStatusEntity
 import cz.uhk.macroflow.pokemon.PokemonBattleView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -98,14 +96,14 @@ object PromoManager {
                 val gamePrefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                 val caughtDate = gamePrefs.getLong("currentOnBarCaughtDate", -1L)
                 if (caughtDate != -1L) {
-                    val p = db.capturedPokemonDao().getPokemonByCaughtDate(caughtDate)
+                    val p = db.capturedMakromonDao().getMakromonByCaughtDate(caughtDate)
                     if (p != null) {
                         val updated = p.copy(isShiny = true)
-                        db.capturedPokemonDao().updatePokemon(updated)
-                        if (FirebaseRepository.isLoggedIn) FirebaseRepository.uploadCapturedPokemon(updated)
+                        db.capturedMakromonDao().updateMakromon(updated)
+                        if (FirebaseRepository.isLoggedIn) FirebaseRepository.uploadCapturedMakromon(updated)
 
                         withContext(Dispatchers.Main) {
-                            (context as? MainActivity)?.updatePokemonVisibility()
+                            (context as? MainActivity)?.updateMakromonVisibility()
                             val serviceIntent = Intent(context, CompanionForegroundService::class.java)
                             context.startService(serviceIntent)
                         }
@@ -137,7 +135,7 @@ object PromoManager {
                 val gamePrefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                 val caughtDate = gamePrefs.getLong("currentOnBarCaughtDate", -1L)
                 if (caughtDate != -1L) {
-                    val levels = db.capturedPokemonDao().addExperience(caughtDate, value.toInt())
+                    val levels = db.capturedMakromonDao().addExperience(caughtDate, value.toInt())
 
                     withContext(Dispatchers.Main) {
                         val msg = if (levels.second > levels.first) " 🎊 LEVEL UP! Lv.${levels.second}" else ""
@@ -149,25 +147,25 @@ object PromoManager {
                 }
             }
 
-            "give_pokemon" -> {
-                val pokemonId = String.format("%03d", value)
+            "give_makromon" -> {
+                val makromonId = String.format("%03d", value)
                 val targetLevel = 5
 
                 // 1. Musíme vytvořit dočasnou instanci View, abychom se dostali k té metodě
                 // (Jelikož createPlayerPokemon není v companion objectu)
                 val dummyView = PokemonBattleView(context)
-                val basePoke = dummyView.createPlayerPokemon(pokemonId, targetLevel)
+                val basePoke = dummyView.createPlayerMakromon(makromonId, targetLevel)
 
                 // 2. Získáme displayName z Pokédexu, aby se jmenoval správně (ne MYSTERY)
-                val pokedexEntry = db.pokedexEntryDao().getEntry(pokemonId)
-                val finalName = pokedexEntry?.displayName ?: basePoke.name
+                val makrodexEntry = db.makrodexEntryDao().getEntry(makromonId)
+                val finalName = makrodexEntry?.displayName ?: basePoke.name
 
                 // 3. Převedeme útoky na string
                 // Tohle je klíčové: basePoke už má útoky vygenerované z BattleFactory/GrowthManageru
                 val movesString = basePoke.moves.joinToString(",") { it.name }
 
-                val newCapture = CapturedPokemonEntity(
-                    pokemonId = pokemonId,
+                val newCapture = CapturedMakromonEntity(
+                    makromonId = makromonId,
                     name = finalName.uppercase(),
                     isShiny = false,
                     level = targetLevel,
@@ -177,14 +175,14 @@ object PromoManager {
                 )
 
                 // 4. Uložení do lokální DB
-                db.capturedPokemonDao().insertPokemon(newCapture)
+                db.capturedMakromonDao().insertMakromon(newCapture)
 
                 // 5. Odemčení v Pokédexu (aby uživatel viděl kartu v seznamu)
-                db.pokedexStatusDao().unlockPokemon(PokedexStatusEntity(pokemonId))
+                db.makrodexStatusDao().unlockMakromon(MakrodexStatusEntity(makromonId))
 
                 // 6. Synchronizace
                 if (FirebaseRepository.isLoggedIn) {
-                    FirebaseRepository.uploadCapturedPokemon(newCapture)
+                    FirebaseRepository.uploadCapturedMakromon(newCapture)
                 }
                 success = true
             }

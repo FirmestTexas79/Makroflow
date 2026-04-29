@@ -32,61 +32,58 @@ interface CoinDao {
     }
 }
 
-// --- 🎒 POKÉ-KAPSA (Chycení Pokémoni) ---
-@Entity(tableName = "captured_pokemon")
-data class CapturedPokemonEntity(
+// --- 🎒 MAKRO-KAPSA (Chycení Makromoni) ---
+@Entity(tableName = "captured_pokemon")  // název tabulky zachován pro zpětnou kompatibilitu DB
+data class CapturedMakromonEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    var pokemonId: String,          // Např. "025"
-    var name: String,               // Např. "PIKACHU"
-    val isShiny: Boolean = false,
+    var makromonId: String,         // Např. "012" (Spirra)
+    var name: String,               // Např. "SPIRRA"
+    val isShiny: Boolean = false,   // Zakomentováno v logice, ale pole zachováno v DB
     var isLocked: Boolean = false,
     val caughtDate: Long = System.currentTimeMillis(),
     var moveListStr: String = "",
     var level: Int = 1,
     var xp: Int = 0
-
 )
 
 @Dao
-interface CapturedPokemonDao {
+interface CapturedMakromonDao {
     @Query("SELECT * FROM captured_pokemon ORDER BY caughtDate DESC")
-    fun getAllCaught(): List<CapturedPokemonEntity>
+    fun getAllCaught(): List<CapturedMakromonEntity>
 
-    // ✅ KLÍČOVÉ PRO EVOLUCI: Vyhledání konkrétního kusu v inventáři podle primárního klíče
     @Query("SELECT * FROM captured_pokemon WHERE id = :id LIMIT 1")
-    fun getPokemonById(id: Int): CapturedPokemonEntity?
+    fun getMakromonById(id: Int): CapturedMakromonEntity?
 
-    @Query("SELECT EXISTS(SELECT 1 FROM captured_pokemon WHERE pokemonId = :pokemonId LIMIT 1)")
-    fun hasBeenCaught(pokemonId: String): Boolean
+    @Query("SELECT EXISTS(SELECT 1 FROM captured_pokemon WHERE makromonId = :makromonId LIMIT 1)")
+    fun hasBeenCaught(makromonId: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertPokemon(pokemon: CapturedPokemonEntity)
+    fun insertMakromon(makromon: CapturedMakromonEntity)
 
     @Update
-    fun updatePokemon(pokemon: CapturedPokemonEntity)
+    fun updateMakromon(makromon: CapturedMakromonEntity)
 
     @Delete
-    fun deletePokemon(pokemon: CapturedPokemonEntity)
+    fun deleteMakromon(makromon: CapturedMakromonEntity)
 
-    @Query("DELETE FROM captured_pokemon WHERE pokemonId = :id")
-    fun deletePokemonById(id: String)
+    @Query("DELETE FROM captured_pokemon WHERE makromonId = :id")
+    fun deleteMakromonById(id: String)
 
     @Query("DELETE FROM captured_pokemon")
     fun deleteAllCapturedLocally()
 
     @Query("SELECT * FROM captured_pokemon WHERE caughtDate = :timestamp LIMIT 1")
-    fun getPokemonByCaughtDate(timestamp: Long): CapturedPokemonEntity?
+    fun getMakromonByCaughtDate(timestamp: Long): CapturedMakromonEntity?
 
     @Transaction
-    fun addExperience(timestamp: Long, amount: Int): Pair<Int, Int> { // vrací (starýLevel, novýLevel)
-        val p = getPokemonByCaughtDate(timestamp)
-        if (p != null) {
-            val oldLevel = p.level
-            val newXp = p.xp + amount
-            val newLevel = PokemonLevelCalc.levelFromXp(newXp) // Použijeme tvůj Calc
-
-            val updated = p.copy(xp = newXp, level = newLevel)
-            updatePokemon(updated)
+    fun addExperience(timestamp: Long, amount: Int): Pair<Int, Int> {
+        val m = getMakromonByCaughtDate(timestamp)
+        if (m != null) {
+            val oldLevel = m.level
+            val newXp    = m.xp + amount
+            val newLevel = PokemonLevelCalc.levelFromXp(newXp)
+            val updated  = m.copy(xp = newXp, level = newLevel)
+            updateMakromon(updated)
             return Pair(oldLevel, newLevel)
         }
         return Pair(0, 0)
@@ -129,50 +126,50 @@ interface UserItemDao {
     }
 }
 
-// --- 📖 STATICKÁ ENCYKLOPEDIE (Pokédex tabulka) ---
-@Entity(tableName = "pokedex_entries")
-data class PokedexEntryEntity(
-    @PrimaryKey val pokedexId: String,
-    val webName: String,
-    val displayName: String,
-    val type: String,
-    val macroDesc: String,
-    val unlockedHint: String,
-    val evolveLevel: Int = 0,
-    val evolveToId: String = ""
+// --- 📖 STATICKÁ ENCYKLOPEDIE (Makrodex tabulka) ---
+@Entity(tableName = "pokedex_entries")  // název tabulky zachován pro zpětnou kompatibilitu DB
+data class MakrodexEntryEntity(
+    @PrimaryKey val makrodexId: String,     // Např. "012"
+    val drawableName: String,               // Např. "makromon_spirra" – název drawable zdroje
+    val displayName: String,                // Např. "Spirra"
+    val type: String,                       // Např. "NORMAL"
+    val macroDesc: String,                  // Popis vázaný na fitness téma
+    val unlockedHint: String,               // Nápověda jak ho najít
+    val evolveLevel: Int = 0,               // 0 = nevyvíjí se
+    val evolveToId: String = ""             // ID kam se vyvíjí
 )
 
 @Dao
-interface PokedexEntryDao {
-    @Query("SELECT * FROM pokedex_entries ORDER BY pokedexId ASC")
-    fun getAllEntries(): List<PokedexEntryEntity>
+interface MakrodexEntryDao {
+    @Query("SELECT * FROM pokedex_entries ORDER BY makrodexId ASC")
+    fun getAllEntries(): List<MakrodexEntryEntity>
 
-    @Query("SELECT * FROM pokedex_entries WHERE pokedexId = :id LIMIT 1")
-    fun getEntry(id: String): PokedexEntryEntity?
+    @Query("SELECT * FROM pokedex_entries WHERE makrodexId = :id LIMIT 1")
+    fun getEntry(id: String): MakrodexEntryEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertAll(entries: List<PokedexEntryEntity>)
+    fun insertAll(entries: List<MakrodexEntryEntity>)
 
     @Query("SELECT COUNT(*) FROM pokedex_entries")
     fun getCount(): Int
 }
 
-// --- 📖 TRVALÝ ZÁZNAM POKÉDEXU (Jednou chycen, navždy objeven) ---
-@Entity(tableName = "pokedex_status")
-data class PokedexStatusEntity(
-    @PrimaryKey val pokemonId: String,
+// --- 📖 TRVALÝ ZÁZNAM MAKRODEXU (Jednou chycen, navždy objeven) ---
+@Entity(tableName = "pokedex_status")   // název tabulky zachován pro zpětnou kompatibilitu DB
+data class MakrodexStatusEntity(
+    @PrimaryKey val makromonId: String,
     val unlocked: Boolean = true,
     val unlockedDate: Long = System.currentTimeMillis()
 )
 
 @Dao
-interface PokedexStatusDao {
-    @Query("SELECT pokemonId FROM pokedex_status")
+interface MakrodexStatusDao {
+    @Query("SELECT makromonId FROM pokedex_status")
     fun getUnlockedIds(): List<String>
 
-    @Query("SELECT EXISTS(SELECT 1 FROM pokedex_status WHERE pokemonId = :pokemonId)")
-    fun isUnlocked(pokemonId: String): Boolean
+    @Query("SELECT EXISTS(SELECT 1 FROM pokedex_status WHERE makromonId = :makromonId)")
+    fun isUnlocked(makromonId: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun unlockPokemon(entity: PokedexStatusEntity)
+    fun unlockMakromon(entity: MakrodexStatusEntity)
 }

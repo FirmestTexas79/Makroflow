@@ -4,14 +4,13 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.random.Random
 
-enum class PokemonType {
-    NORMAL, FIRE, WATER, GRASS, ELECTRIC, BUG, FLYING, GHOST, GROUND, PSYCHIC, DRAGON, POISON
+enum class MakromonType {
+    NORMAL, FIRE, WATER, GRASS, ELECTRIC, BUG, FLYING, GHOST, GROUND, PSYCHIC, DRAGON, POISON, FAIRY
 }
 
-// Uprav Move, aby využíval PokemonType místo String
 data class Move(
     val name: String,
-    val type: PokemonType, // 👈 Změna ze String na PokemonType
+    val type: MakromonType,
     val power: Int,
     val accuracy: Int,
     val maxPp: Int,
@@ -20,7 +19,7 @@ data class Move(
 )
 enum class StatEffect { LOWER_ENEMY_ATK, LOWER_ENEMY_DEF }
 
-data class Pokemon(
+data class Makromon(
     val name: String,
     val level: Int,
     val maxHp: Int,
@@ -39,8 +38,8 @@ enum class BattlePhase {
 }
 
 data class BattleState(
-    val player: Pokemon,
-    val enemy: Pokemon,
+    val player: Makromon,
+    val enemy: Makromon,
     var phase: BattlePhase = BattlePhase.INTRO,
     var ballCount: Int = 5,
     var textLine1: String = "",
@@ -49,16 +48,14 @@ data class BattleState(
     var enemyDefMod: Float = 1.0f,
     var enemyVisible: Boolean = true,
     var caught: Boolean = false,
-
-    // --- PROMĚNNÉ PRO SHINY A MECHANIKY ---
-    var isEnemyShiny: Boolean = false,
-    var isPlayerShiny: Boolean = false,
+    // Shiny zatím zakomentováno – nemáme shiny sprity Makromonů
+    // var isEnemyShiny: Boolean = false,
+    // var isPlayerShiny: Boolean = false,
+    var isEnemyShiny: Boolean = false,   // zachováno pro kompatibilitu, vždy false
+    var isPlayerShiny: Boolean = false,  // zachováno pro kompatibilitu, vždy false
     var selectedBallId: String = "poke_ball",
-
-    // --- NOVÉ PROMĚNNÉ PRO ANIMACE (Slide-in a Hvězdičky) ---
-    var introOffset: Float = 1.0f,    // 1.0 = úplně mimo obrazovku, 0.0 = na svých pozicích
-    var shinyAnimFrame: Int = 0,      // 0 = nic, 1-30 = probíhající animace hvězdiček
-
+    var introOffset: Float = 1.0f,
+    var shinyAnimFrame: Int = 0,
     var wobbleCount: Int = 0,
     var wobbleDone: Int = 0,
     var captureSuccess: Boolean = false
@@ -66,16 +63,12 @@ data class BattleState(
 
 object BattleEngine {
 
-    fun initializeStatsForLevel(basePokemon: Pokemon, targetLevel: Int): Pokemon {
-        // Vzorec pro HP: ((2 * Base * Level) / 100) + Level + 10
-        val newMaxHp = ((2 * basePokemon.maxHp * targetLevel) / 100) + targetLevel + 10
-
-        // Vzorec pro ostatní: ((2 * Base * Level) / 100) + 5
-        val newAttack  = ((2 * basePokemon.attack * targetLevel) / 100) + 5
-        val newDefense = ((2 * basePokemon.defense * targetLevel) / 100) + 5
-        val newSpeed   = ((2 * basePokemon.speed * targetLevel) / 100) + 5
-
-        return basePokemon.copy(
+    fun initializeStatsForLevel(baseMakromon: Makromon, targetLevel: Int): Makromon {
+        val newMaxHp = ((2 * baseMakromon.maxHp * targetLevel) / 100) + targetLevel + 10
+        val newAttack  = ((2 * baseMakromon.attack * targetLevel) / 100) + 5
+        val newDefense = ((2 * baseMakromon.defense * targetLevel) / 100) + 5
+        val newSpeed   = ((2 * baseMakromon.speed * targetLevel) / 100) + 5
+        return baseMakromon.copy(
             level = targetLevel,
             maxHp = newMaxHp,
             currentHp = newMaxHp,
@@ -85,54 +78,61 @@ object BattleEngine {
         )
     }
 
-    // Vrací 2.0f (Supereffektivní), 1.0f (Normální), 0.5f (Málo efektivní) nebo 0.0f (Žádný efekt)
-    fun getTypeEffectiveness(moveType: PokemonType, defenderType: PokemonType): Float {
+    fun getTypeEffectiveness(moveType: MakromonType, defenderType: MakromonType): Float {
         return when (moveType) {
-            PokemonType.FIRE -> when (defenderType) {
-                PokemonType.GRASS, PokemonType.BUG -> 2.0f
-                PokemonType.WATER, PokemonType.FIRE -> 0.5f
+            MakromonType.FIRE -> when (defenderType) {
+                MakromonType.GRASS, MakromonType.BUG -> 2.0f
+                MakromonType.WATER, MakromonType.FIRE -> 0.5f
                 else -> 1.0f
             }
-            PokemonType.WATER -> when (defenderType) {
-                PokemonType.FIRE, PokemonType.GROUND -> 2.0f
-                PokemonType.WATER, PokemonType.GRASS -> 0.5f
+            MakromonType.WATER -> when (defenderType) {
+                MakromonType.FIRE, MakromonType.GROUND -> 2.0f
+                MakromonType.WATER, MakromonType.GRASS -> 0.5f
                 else -> 1.0f
             }
-            PokemonType.GRASS -> when (defenderType) {
-                PokemonType.WATER, PokemonType.GROUND -> 2.0f
-                PokemonType.FIRE, PokemonType.GRASS, PokemonType.FLYING, PokemonType.BUG -> 0.5f
+            MakromonType.GRASS -> when (defenderType) {
+                MakromonType.WATER, MakromonType.GROUND -> 2.0f
+                MakromonType.FIRE, MakromonType.GRASS, MakromonType.FLYING, MakromonType.BUG -> 0.5f
                 else -> 1.0f
             }
-            PokemonType.ELECTRIC -> when (defenderType) {
-                PokemonType.WATER, PokemonType.FLYING -> 2.0f
-                PokemonType.GRASS, PokemonType.ELECTRIC -> 0.5f
-                PokemonType.GROUND -> 0.0f // Zemní typy jsou imunní!
+            MakromonType.ELECTRIC -> when (defenderType) {
+                MakromonType.WATER, MakromonType.FLYING -> 2.0f
+                MakromonType.GRASS, MakromonType.ELECTRIC -> 0.5f
+                MakromonType.GROUND -> 0.0f
                 else -> 1.0f
             }
-            PokemonType.NORMAL -> when (defenderType) {
-                PokemonType.GHOST -> 0.0f // Duchové jsou imunní vůči normálním útokům!
+            MakromonType.NORMAL -> when (defenderType) {
+                MakromonType.GHOST -> 0.0f
                 else -> 1.0f
             }
-            // Sem můžeš postupně dopisovat další kombinace (GHOST vs PSYCHIC atd.)
+            MakromonType.FAIRY -> when (defenderType) {
+                MakromonType.DRAGON -> 2.0f
+                MakromonType.FIRE, MakromonType.POISON -> 0.5f
+                else -> 1.0f
+            }
+            MakromonType.DRAGON -> when (defenderType) {
+                MakromonType.DRAGON -> 2.0f
+                MakromonType.FAIRY -> 0.0f
+                else -> 1.0f
+            }
+            MakromonType.GHOST -> when (defenderType) {
+                MakromonType.GHOST, MakromonType.PSYCHIC -> 2.0f
+                MakromonType.NORMAL -> 0.0f
+                else -> 1.0f
+            }
             else -> 1.0f
         }
     }
 
-    // Upravený výpočet damage o násobič typu
-    fun calcDamage(level: Int, power: Int, atk: Int, def: Int, moveType: PokemonType, defenderType: PokemonType): Int {
+    fun calcDamage(level: Int, power: Int, atk: Int, def: Int, moveType: MakromonType, defenderType: MakromonType): Int {
         if (power == 0) return 0
-
         val base = ((2.0 * level / 5.0 + 2.0) * power * (atk.toDouble() / def.toDouble()) / 50.0 + 2.0)
         val rng = 0.85 + Random.nextDouble() * 0.15
-
-        // Získáme násobič podle slabosti/odolnosti
         val typeMultiplier = getTypeEffectiveness(moveType, defenderType)
-
         return max(1, floor(base * rng * typeMultiplier).toInt())
     }
 
-    /** multiplier < 1.0 = těžší chytit (Gengar 0.7), Great Ball > 1.0 */
-    fun calcCaptureResult(enemy: Pokemon, multiplier: Float = 1.0f): Pair<Boolean, Int> {
+    fun calcCaptureResult(enemy: Makromon, multiplier: Float = 1.0f): Pair<Boolean, Int> {
         val hpFraction = enemy.currentHp.toDouble() / enemy.maxHp.toDouble()
         val catchRate = ((1.0 - hpFraction) * 220 + 20) * multiplier
         val catchInt = catchRate.toInt().coerceIn(0, 255)
@@ -151,7 +151,7 @@ object BattleEngine {
         return Random.nextInt(256) < ((playerSpeed * 32) / (enemySpeed + 1) + 30) % 256
     }
 
-    fun enemyChooseMove(enemy: Pokemon): Move {
+    fun enemyChooseMove(enemy: Makromon): Move {
         val available = enemy.moves.filter { it.pp > 0 }
         return if (available.isEmpty()) enemy.moves[0] else available.random()
     }
@@ -159,520 +159,429 @@ object BattleEngine {
 
 object BattleFactory {
 
-    fun attackTackle()     = Move("TACKLE",      PokemonType.NORMAL,  40, 100, 35)
-    fun attackStringShot() = Move("STRING SHOT", PokemonType.BUG,      0,  95, 40, statEffect = StatEffect.LOWER_ENEMY_DEF)
-    fun attackHarden()     = Move("HARDEN",      PokemonType.NORMAL,   0, 100, 30)
-    fun attackGust()       = Move("GUST",        PokemonType.FLYING,  40, 100, 35)
-    // V BattleEngine.kt -> objekt BattleFactory
-    fun attackThunderShock() = Move("THUNDER SHOCK", PokemonType.ELECTRIC, 40, 100, 30)
-    fun attackQuickAttack()  = Move("QUICK ATTACK",  PokemonType.NORMAL,   40, 100, 30)
-    fun attackSlam()         = Move("SLAM",          PokemonType.NORMAL,   80,  75, 20)
-    fun attackThunderbolt()  = Move("THUNDERBOLT",   PokemonType.ELECTRIC, 90, 100, 15)
-    fun attackThunder()      = Move("THUNDER",       PokemonType.ELECTRIC, 110, 70, 10)
+    // ── SDÍLENÉ ÚTOKY ─────────────────────────────────────────────────
 
+    // NORMAL
+    fun attackTackle()       = Move("TACKLE",       MakromonType.NORMAL,  40, 100, 35)
+    fun attackScratch()      = Move("SCRATCH",      MakromonType.NORMAL,  40, 100, 35)
+    fun attackSlash()        = Move("SLASH",        MakromonType.NORMAL,  70, 100, 20)
+    fun attackGrowl()        = Move("GROWL",        MakromonType.NORMAL,   0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
+    fun attackHarden()       = Move("HARDEN",       MakromonType.NORMAL,   0, 100, 30)
+    fun attackTailWhip()     = Move("TAIL WHIP",    MakromonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
+    fun attackLeer()         = Move("LEER",         MakromonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
+    fun attackQuickAttack()  = Move("QUICK ATTACK", MakromonType.NORMAL,  40, 100, 30)
+    fun attackSlam()         = Move("SLAM",         MakromonType.NORMAL,  80,  75, 20)
+    fun attackBite()         = Move("BITE",         MakromonType.NORMAL,  60, 100, 25)
+    fun attackCrunch()       = Move("CRUNCH",       MakromonType.NORMAL,  80, 100, 15)
+    fun attackSmokescreen()  = Move("SMOKESCREEN",  MakromonType.NORMAL,   0, 100, 20)
+    fun attackHyperFang()    = Move("HYPER FANG",   MakromonType.NORMAL,  80,  90, 15)
+    fun attackFuryAttack()   = Move("FURY ATTACK",  MakromonType.NORMAL,  15,  85, 20)
 
-    // V BattleEngine.kt -> objekt BattleFactory
+    // FIRE
+    fun attackEmber()        = Move("EMBER",        MakromonType.FIRE,  40, 100, 25)
+    fun attackFireFang()     = Move("FIRE FANG",    MakromonType.FIRE,  65,  95, 15)
+    fun attackFlamethrower() = Move("FLAMETHROWER", MakromonType.FIRE,  90, 100, 15)
+    fun attackFireBlast()    = Move("FIRE BLAST",   MakromonType.FIRE, 110,  85,  5)
+    fun attackHeatWave()     = Move("HEAT WAVE",    MakromonType.FIRE,  95,  90, 10)
 
-    // --- NORMAL MOVES ---
-    fun attackScratch()    = Move("SCRATCH",    PokemonType.NORMAL, 40, 100, 35)
-    fun attackSlash()      = Move("SLASH",      PokemonType.NORMAL, 70, 100, 20)
-    fun attackGrowl()      = Move("GROWL",      PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
-    fun attackSmokescreen() = Move("SMOKESCREEN", PokemonType.NORMAL,  0, 100, 20)
-    fun attackScaryFace()  = Move("SCARY FACE",  PokemonType.NORMAL,  0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
+    // WATER
+    fun attackWaterGun()     = Move("WATER GUN",    MakromonType.WATER,  40, 100, 25)
+    fun attackWaterPulse()   = Move("WATER PULSE",  MakromonType.WATER,  60, 100, 20)
+    fun attackHydroPump()    = Move("HYDRO PUMP",   MakromonType.WATER, 110,  80,  5)
+    fun attackAquaTail()     = Move("AQUA TAIL",    MakromonType.WATER,  90,  90, 10)
+    fun attackBubbleBeam()   = Move("BUBBLE BEAM",  MakromonType.WATER,  65, 100, 20)
 
-    // --- FIRE MOVES ---
-    fun attackEmber()        = Move("EMBER",        PokemonType.FIRE, 40, 100, 25)
-    fun attackFireFang()     = Move("FIRE FANG",     PokemonType.FIRE, 65,  95, 15)
-    fun attackFlamethrower() = Move("FLAMETHROWER", PokemonType.FIRE, 90, 100, 15)
-    fun attackFireBlast()    = Move("FIRE BLAST",    PokemonType.FIRE, 110, 85, 5)
+    // GRASS
+    fun attackVineWhip()     = Move("VINE WHIP",    MakromonType.GRASS,  45, 100, 25)
+    fun attackRazorLeaf()    = Move("RAZOR LEAF",   MakromonType.GRASS,  55,  95, 25)
+    fun attackSeedBomb()     = Move("SEED BOMB",    MakromonType.GRASS,  80, 100, 15)
+    fun attackSolarBeam()    = Move("SOLAR BEAM",   MakromonType.GRASS, 120, 100, 10)
+    fun attackLeafBlade()    = Move("LEAF BLADE",   MakromonType.GRASS,  90, 100, 15)
+    fun attackSleepPowder()  = Move("SLEEP POWDER", MakromonType.GRASS,   0,  75, 20)
 
-    // --- FLYING & DRAGON MOVES ---
-    fun attackWingAttack() = Move("WING ATTACK", PokemonType.FLYING, 60, 100, 35)
-    fun attackDragonClaw() = Move("DRAGON CLAW", PokemonType.FLYING, 80, 100, 15)
+    // GHOST
+    fun attackShadowBall()   = Move("SHADOW BALL",  MakromonType.GHOST,  65,  80, 15)
+    fun attackShadowPunch()  = Move("SHADOW PUNCH", MakromonType.GHOST,  60, 100, 20)
+    fun attackLick()         = Move("LICK",         MakromonType.GHOST,  30, 100, 30)
+    fun attackNightShade()   = Move("NIGHT SHADE",  MakromonType.GHOST,  40,  95, 15)
+    fun attackHex()          = Move("HEX",          MakromonType.GHOST,  65, 100, 10)
 
-    // --- GROUND MOVES ---
-    fun attackMudSlap()    = Move("MUD-SLAP",    PokemonType.GROUND, 20, 100, 10)
-    fun attackMagnitude()  = Move("MAGNITUDE",   PokemonType.GROUND, 50, 100, 30)
-    fun attackDig()        = Move("DIG",         PokemonType.GROUND, 80, 100, 10)
-    fun attackEarthquake() = Move("EARTHQUAKE",  PokemonType.GROUND, 100, 100, 10)
-    fun attackSandAttack() = Move("SAND ATTACK", PokemonType.GROUND,  0, 100, 15, statEffect = StatEffect.LOWER_ENEMY_ATK)
+    // FAIRY
+    fun attackDazzlingGleam() = Move("DAZZL.GLEAM", MakromonType.FAIRY,  80, 100, 10)
+    fun attackMoonblast()     = Move("MOONBLAST",   MakromonType.FAIRY,  95, 100, 15)
+    fun attackCharm()         = Move("CHARM",       MakromonType.FAIRY,   0, 100, 20, statEffect = StatEffect.LOWER_ENEMY_ATK)
+    fun attackPlayRough()     = Move("PLAY ROUGH",  MakromonType.FAIRY,  90,  90, 10)
+    fun attackBabyDollEyes()  = Move("BABY-DOLL",   MakromonType.FAIRY,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_ATK)
 
-    fun attackVineWhip()    = Move("VINE WHIP",    PokemonType.GRASS,  45, 100, 25)
-    fun attackRazorLeaf()   = Move("RAZOR LEAF",   PokemonType.GRASS,  55,  95, 25)
-    fun attackSolarBeam()   = Move("SOLAR BEAM",   PokemonType.GRASS, 120, 100, 10)
-    fun attackSleepPowder() = Move("SLEEP POWDER", PokemonType.GRASS,   0,  75, 20) // Status útok
-    fun attackSeedBomb()    = Move("SEED BOMB",    PokemonType.GRASS,  80, 100, 15)
+    // DRAGON
+    fun attackDragonClaw()   = Move("DRAGON CLAW",  MakromonType.DRAGON,  80, 100, 15)
+    fun attackDragonBreath() = Move("DRAGONBREATH", MakromonType.DRAGON,  60, 100, 20)
+    fun attackDragonPulse()  = Move("DRAGON PULSE", MakromonType.DRAGON,  85,100, 10)
+    fun attackOutrage()      = Move("OUTRAGE",      MakromonType.DRAGON, 120, 100, 10)
 
+    // GROUND
+    fun attackSandAttack()   = Move("SAND ATTACK",  MakromonType.GROUND,   0, 100, 15, statEffect = StatEffect.LOWER_ENEMY_ATK)
+    fun attackMudSlap()      = Move("MUD-SLAP",     MakromonType.GROUND,  20, 100, 10)
+    fun attackDig()          = Move("DIG",          MakromonType.GROUND,  80, 100, 10)
+    fun attackEarthquake()   = Move("EARTHQUAKE",   MakromonType.GROUND, 100, 100, 10)
 
-    fun attackTailWhip()    = Move("TAIL WHIP",    PokemonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
-    fun attackWaterGun()    = Move("WATER GUN",    PokemonType.WATER,   40, 100, 25)
-    fun attackBite()        = Move("BITE",         PokemonType.NORMAL,  60, 100, 25)
-    fun attackWaterPulse()  = Move("WATER PULSE",  PokemonType.WATER,   60, 100, 20)
-    fun attackHydroPump()   = Move("HYDRO PUMP",   PokemonType.WATER,  110,  80,  5)
+    // PSYCHIC
+    fun attackPsychic()      = Move("PSYCHIC",      MakromonType.PSYCHIC, 90,  90, 10)
+    fun attackHypnosis()     = Move("HYPNOSIS",     MakromonType.PSYCHIC,  0,  60, 20)
 
-    fun attackPoisonSting() = Move("POISON STING", PokemonType.BUG, 15, 100, 35)
-    fun attackFuryAttack()  = Move("FURY ATTACK",  PokemonType.NORMAL, 15, 85, 20)
-    fun attackTwineedle()   = Move("TWINEEDLE",    PokemonType.BUG, 25, 100, 20)
-    fun attackPinMissile()  = Move("PIN MISSILE",  PokemonType.BUG, 25, 95, 20)
+    // ELECTRIC
+    fun attackThunderShock() = Move("THUNDER SHOCK",MakromonType.ELECTRIC,  40, 100, 30)
+    fun attackThunderbolt()  = Move("THUNDERBOLT",  MakromonType.ELECTRIC,  90, 100, 15)
 
-    fun attackAirSlash()    = Move("AIR SLASH",     PokemonType.FLYING, 75,  95, 15)
-    fun attackHurricane()   = Move("HURRICANE",     PokemonType.FLYING, 110, 70, 10)
+    // POISON
+    fun attackPoisonSting()  = Move("POISON STING", MakromonType.POISON,  15, 100, 35)
+    fun attackSludgeBomb()   = Move("SLUDGE BOMB",  MakromonType.POISON,  90, 100, 10)
 
-    fun attackHyperFang()  = Move("HYPER FANG",  PokemonType.NORMAL, 80,  90, 15)
-    fun attackSuperFang()  = Move("SUPER FANG",  PokemonType.NORMAL, 1,   90, 10) // V engine by měl brát 50% HP
-    fun attackCrunch()     = Move("CRUNCH",      PokemonType.NORMAL, 80, 100, 15)
-    fun attackPeck()       = Move("PECK",         PokemonType.FLYING, 35, 100, 35)
-    fun attackDrillPeck()  = Move("DRILL PECK",   PokemonType.FLYING, 80, 100, 20)
-    fun attackAcid()       = Move("ACID",         PokemonType.POISON, 40, 100, 30)
-    fun attackLeer()       = Move("LEER",         PokemonType.NORMAL,  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
-    fun attackSludgeBomb() = Move("SLUDGE BOMB",   PokemonType.POISON, 90, 100, 10)
-    // ── COMMON ────────────────────────────────────────────────────────
+    // BUG
+    fun attackStringShot()   = Move("STRING SHOT",  MakromonType.BUG,      0,  95, 40, statEffect = StatEffect.LOWER_ENEMY_DEF)
 
-    // --- 🌿 BULBASAUR RODINA ---
+    // FLYING
+    fun attackGust()         = Move("GUST",         MakromonType.FLYING,  40, 100, 35)
+    fun attackWingAttack()   = Move("WING ATTACK",  MakromonType.FLYING,  60, 100, 35)
 
-    fun createBulbasaur() = Pokemon(
-        name = "BULBASAUR", level = 1,
-        maxHp = 45, attack = 49, defense = 49, speed = 45,
-        moves = listOf(attackTackle(), attackGrowl())
-    )
+    // ── STARTEŘI (01-09) ──────────────────────────────────────────────
 
-    fun createIvysaur() = Pokemon(
-        name = "IVYSAUR", level = 1,
-        maxHp = 60, attack = 62, defense = 63, speed = 60,
-        moves = listOf(attackTackle(), attackGrowl(), attackVineWhip())
-    )
-
-    fun createVenusaur() = Pokemon(
-        name = "VENUSAUR", level = 1,
-        maxHp = 80, attack = 82, defense = 83, speed = 80,
-        moves = listOf(attackVineWhip(), attackRazorLeaf(), attackSleepPowder())
-    )
-
-    fun createSquirtle() = Pokemon(
-        name = "SQUIRTLE", level = 1,
-        maxHp = 44, attack = 48, defense = 65, speed = 43,
-        moves = listOf(attackTackle(), attackTailWhip())
-    )
-
-    fun createWartortle() = Pokemon(
-        name = "WARTORTLE", level = 1,
-        maxHp = 59, attack = 63, defense = 80, speed = 58,
-        moves = listOf(attackTackle(), attackTailWhip(), attackWaterGun())
-    )
-
-    fun createBlastoise() = Pokemon(
-        name = "BLASTOISE", level = 1,
-        maxHp = 79, attack = 83, defense = 100, speed = 78,
-        moves = listOf(attackWaterGun(), attackBite(), attackWaterPulse())
-    )
-
-    fun createCharmander() = Pokemon(
-        name = "CHARMANDER", level = 1,
+    // 01 - Ignar (ohnivá ještěrka)
+    fun createIgnar() = Makromon(
+        name = "IGNAR", level = 1,
         maxHp = 39, attack = 52, defense = 43, speed = 65,
         moves = listOf(attackScratch(), attackGrowl())
     )
 
-    fun createCharmeleon() = Pokemon(
-        name = "CHARMELEON", level = 1,
+    // 02 - Ignaroc (střední evoluce) – sprite zatím chybí, placeholder
+    fun createIgnaroc() = Makromon(
+        name = "IGNAROC", level = 1,
         maxHp = 58, attack = 64, defense = 58, speed = 80,
         moves = listOf(attackScratch(), attackGrowl(), attackEmber())
     )
 
-    fun createCharizard() = Pokemon(
-        name = "CHARIZARD", level = 1,
+    // 03 - Ignaroth (finální dračí forma) – sprite zatím chybí, placeholder
+    fun createIgnaroth() = Makromon(
+        name = "IGNAROTH", level = 1,
         maxHp = 78, attack = 84, defense = 78, speed = 100,
-        moves = listOf(attackEmber(), attackWingAttack(), attackDragonClaw())
+        moves = listOf(attackEmber(), attackDragonClaw(), attackFlamethrower())
     )
 
-    // --- 🐛 CATERPIE SHABLONY S PARAMETREM LEVEL ---
-    fun createCaterpie(level: Int = 1) = Pokemon(
-        name = "CATERPIE", level = level, maxHp = 22, attack = 6, defense = 7, speed = 9,
-        moves = mutableListOf(attackTackle(), attackStringShot())
+    // 04 - Aqulin (malý vydří s ploutví)
+    fun createAqulin() = Makromon(
+        name = "AQULIN", level = 1,
+        maxHp = 44, attack = 48, defense = 65, speed = 55,
+        moves = listOf(attackTackle(), attackWaterGun())
     )
 
-    fun createMetapod(level: Int = 3) = Pokemon(
-        name = "METAPOD", level = level, maxHp = 28, attack = 5, defense = 15, speed = 6,
-        moves = mutableListOf(attackTackle(), attackHarden())
+    // 05 - Aqulind (střední evoluce) – sprite zatím chybí, placeholder
+    fun createAqlind() = Makromon(
+        name = "AQULIND", level = 1,
+        maxHp = 59, attack = 63, defense = 80, speed = 68,
+        moves = listOf(attackWaterGun(), attackBubbleBeam(), attackBite())
     )
 
-    fun createButterfree(level: Int = 5) = Pokemon(
-        name = "BUTTERFREE", level = level, maxHp = 35, attack = 12, defense = 10, speed = 16,
-        moves = mutableListOf(attackGust(), attackHarden())
+    // 06 - Aqulinox (bojovná vodní forma) – sprite zatím chybí, placeholder
+    fun createAqulinox() = Makromon(
+        name = "AQULINOX", level = 1,
+        maxHp = 79, attack = 83, defense = 100, speed = 78,
+        moves = listOf(attackWaterPulse(), attackAquaTail(), attackHydroPump())
     )
 
-    // --- 🐛 WEEDLE RODINA ---
-    fun createWeedle() = Pokemon(
-        name = "WEEDLE", level = 1,
-        maxHp = 40, attack = 35, defense = 30, speed = 50,
-        moves = listOf(attackPoisonSting(), attackStringShot())
-    )
-    fun createKakuna() = Pokemon(
-        name = "KAKUNA", level = 1,
-        maxHp = 45, attack = 25, defense = 50, speed = 35,
-        moves = listOf(attackHarden())
-    )
-    fun createBeedrill() = Pokemon(
-        name = "BEEDRILL", level = 1,
-        maxHp = 65, attack = 90, defense = 40, speed = 75,
-        moves = listOf(attackFuryAttack(), attackTwineedle())
+    // 07 - Flori (jelínek s listovou korunou)
+    fun createFlori() = Makromon(
+        name = "FLORI", level = 1,
+        maxHp = 45, attack = 49, defense = 49, speed = 45,
+        moves = listOf(attackTackle(), attackGrowl())
     )
 
-    fun createPidgey() = Pokemon(
-        name = "PIDGEY", level = 1,
-        maxHp = 40, attack = 45, defense = 40, speed = 56,
-        moves = listOf(attackTackle(), attackSandAttack())
+    // 08 - Florind (střední evoluce) – sprite zatím chybí, placeholder
+    fun createFlorind() = Makromon(
+        name = "FLORIND", level = 1,
+        maxHp = 60, attack = 62, defense = 63, speed = 60,
+        moves = listOf(attackTackle(), attackVineWhip(), attackRazorLeaf())
     )
 
-    fun createPidgeotto() = Pokemon(
-        name = "PIDGEOTTO", level = 1,
-        maxHp = 63, attack = 60, defense = 55, speed = 71,
-        moves = listOf(attackTackle(), attackGust(), attackSandAttack())
+    // 09 - Florindra (finální stromová forma) – sprite zatím chybí, placeholder
+    fun createFlorindra() = Makromon(
+        name = "FLORINDRA", level = 1,
+        maxHp = 80, attack = 82, defense = 83, speed = 80,
+        moves = listOf(attackRazorLeaf(), attackLeafBlade(), attackSolarBeam())
     )
 
-    fun createPidgeot() = Pokemon(
-        name = "PIDGEOT", level = 1,
-        maxHp = 83, attack = 80, defense = 75, speed = 101,
-        moves = listOf(attackGust(), attackSandAttack(), attackWingAttack(), attackDragonClaw())
-    )
+    // ── SPECIÁLNÍ (10-11) ─────────────────────────────────────────────
 
-    // --- 🐀 RATTATA RODINA ---
-    fun createRattata() = Pokemon(
-        name = "RATTATA", level = 1,
-        maxHp = 30, attack = 56, defense = 35, speed = 72,
-        moves = listOf(attackTackle(), attackTailWhip())
-    )
-
-    fun createRaticate() = Pokemon(
-        name = "RATICATE", level = 1,
-        maxHp = 55, attack = 81, defense = 60, speed = 97,
-        moves = listOf(attackTackle(), attackQuickAttack(), attackHyperFang())
-    )
-
-    fun createSpearow() = Pokemon(
-        name = "SPEAROW", level = 1,
-        maxHp = 40, attack = 60, defense = 30, speed = 70,
-        moves = listOf(attackPeck(), attackGrowl())
-    )
-
-    fun createFearow() = Pokemon(
-        name = "FEAROW", level = 1,
-        maxHp = 65, attack = 90, defense = 65, speed = 100,
-        moves = listOf(attackPeck(), attackLeer(), attackFuryAttack())
-    )
-
-    // --- 🐍 EKANS RODINA (Poison) ---
-    fun createEkans() = Pokemon(
-        name = "EKANS", level = 1,
-        maxHp = 35, attack = 60, defense = 44, speed = 55,
-        moves = listOf(Move("WRAP", PokemonType.NORMAL, 15, 90, 20), attackPoisonSting())
-    )
-
-    fun createArbok() = Pokemon(
-        name = "ARBOK", level = 1,
-        maxHp = 60, attack = 95, defense = 69, speed = 80,
-        moves = listOf(attackBite(), attackAcid())
-    )
-
-
-    // ── HRÁČŮV POKÉMON ────────────────────────────────────────────────
-    fun createMew() = Pokemon(
-        name = "MEW", level = 5, maxHp = 35, attack = 12, defense = 10, speed = 15,
+    // 10 - Umbex (temná kulička – smutná ale dobrá)
+    fun createUmbex() = Makromon(
+        name = "UMBEX", level = 8,
+        maxHp = 30, attack = 14, defense = 12, speed = 16,
         moves = listOf(
-            Move("BAFIKYBAF",  PokemonType.NORMAL,  40, 100, 35),
-            Move("MEGA PUNCH", PokemonType.NORMAL,  80,  85, 20),
-            Move("GROWL",      PokemonType.NORMAL,   0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
-            Move("TAIL WHIP",  PokemonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
+            attackShadowBall(),
+            attackLick(),
+            attackNightShade(),
+            Move("SPITE", MakromonType.GHOST, 0, 100, 10)
         )
     )
 
-
-
-    // --- 🪨 DIGLETT LINE ---
-    fun createDiglett(level: Int = 5) = Pokemon(
-        name = "DIGLETT",
-        level = level,
-        maxHp = 20,
-        attack = 10,  // Zvýšen útok pro agresivnější gameplay
-        defense = 5,
-        speed = 14,
-        moves = mutableListOf(attackScratch(), attackSandAttack(), attackMudSlap())
-    )
-
-    fun createDugtrio(level: Int = 10) = Pokemon(
-        name = "DUGTRIO",
-        level = level,
-        maxHp = 45,
-        attack = 22, // Pořádná síla
-        defense = 12,
-        speed = 25,  // Velmi rychlý
-        moves = mutableListOf(attackMagnitude(), attackDig(), attackSlash(), attackSandAttack())
-    )
-
-    fun createPikachu() = Pokemon(
-        name = "PIKACHU", level = 6, maxHp = 25, attack = 11, defense = 6, speed = 18,
+    // 11 - Lumex (světlá kulička – zářivá ale zlá) – sprite zatím chybí, placeholder
+    fun createLumex() = Makromon(
+        name = "LUMEX", level = 8,
+        maxHp = 28, attack = 16, defense = 10, speed = 20,
         moves = listOf(
-            Move("THUNDER SHOCK", PokemonType.ELECTRIC, 40, 100, 30),
-            Move("QUICK ATTACK",  PokemonType.NORMAL,   40, 100, 30),
-            Move("TAIL WHIP",     PokemonType.NORMAL,    0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
-            Move("GROWL",         PokemonType.NORMAL,    0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
+            attackDazzlingGleam(),
+            attackHex(),
+            attackCharm(),
+            Move("DARK PULSE", MakromonType.GHOST, 80, 100, 15)
         )
     )
 
-    fun createRaichu(level: Int = 10) = Pokemon(
-        name = "RAICHU", level = level, maxHp = 35, attack = 16, defense = 11, speed = 21,
-        moves = mutableListOf(
-            Move("THUNDER SHOCK", PokemonType.ELECTRIC, 40, 100, 30),
-            Move("QUICK ATTACK", PokemonType.NORMAL, 40, 100, 30)
-        )
+    // ── SPIRRA RODINA (12-19) ─────────────────────────────────────────
+
+    // 12 - Spirra (béžová veverka – základ)
+    fun createSpirra() = Makromon(
+        name = "SPIRRA", level = 1,
+        maxHp = 35, attack = 40, defense = 35, speed = 55,
+        moves = listOf(attackTackle(), attackGrowl())
     )
 
-    fun createEevee() = Pokemon(
-        name = "EEVEE", level = 5, maxHp = 24, attack = 9, defense = 8, speed = 13,
+    // 13 - Flamirra (ohnivá veverka)
+    fun createFlamirra() = Makromon(
+        name = "FLAMIRRA", level = 1,
+        maxHp = 38, attack = 55, defense = 35, speed = 65,
+        moves = listOf(attackTackle(), attackEmber(), attackFireFang())
+    )
+
+    // 14 - Aquirra (vodní veverka)
+    fun createAquirra() = Makromon(
+        name = "AQUIRRA", level = 1,
+        maxHp = 42, attack = 45, defense = 50, speed = 55,
+        moves = listOf(attackTackle(), attackWaterGun(), attackBubbleBeam())
+    )
+
+    // 15 - Verdirra (grass veverka)
+    fun createVerdirra() = Makromon(
+        name = "VERDIRRA", level = 1,
+        maxHp = 40, attack = 48, defense = 45, speed = 50,
+        moves = listOf(attackTackle(), attackVineWhip(), attackRazorLeaf())
+    )
+
+    // 16 - Shadirra (dark/ghost veverka)
+    fun createShadirra() = Makromon(
+        name = "SHADIRRA", level = 1,
+        maxHp = 35, attack = 50, defense = 30, speed = 65,
+        moves = listOf(attackTackle(), attackShadowBall(), attackLick())
+    )
+
+    // 17 - Charmirra (fairy veverka)
+    fun createCharmirra() = Makromon(
+        name = "CHARMIRRA", level = 1,
+        maxHp = 38, attack = 42, defense = 42, speed = 55,
+        moves = listOf(attackTackle(), attackCharm(), attackDazzlingGleam())
+    )
+
+    // 18 - Glacirra (ledová veverka) – sprite zatím chybí, placeholder
+    fun createGlacirra() = Makromon(
+        name = "GLACIRRA", level = 1,
+        maxHp = 40, attack = 45, defense = 48, speed = 50,
         moves = listOf(
-            Move("TACKLE",    PokemonType.NORMAL, 40, 100, 35),
-            Move("SAND ATK",  PokemonType.NORMAL,  0,  85, 15),
-            Move("GROWL",     PokemonType.NORMAL,  0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK),
-            Move("TAIL WHIP", PokemonType.NORMAL,  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
+            attackTackle(),
+            Move("ICE SHARD", MakromonType.NORMAL, 40, 100, 30),
+            Move("BLIZZARD",  MakromonType.WATER,  110, 70, 5)
         )
     )
 
-    // ── RARE ──────────────────────────────────────────────────────────
+    // 19 - Drakirra (dragon veverka – skrytá evoluce)
+    fun createDrakirra() = Makromon(
+        name = "DRAKIRRA", level = 1,
+        maxHp = 45, attack = 60, defense = 45, speed = 60,
+        moves = listOf(attackDragonBreath(), attackDragonClaw(), attackOutrage())
+    )
 
+    // ── OSTATNÍ MAKROMONI (20-31) ─────────────────────────────────────
 
+    // 20 - Finlet (malá akvarijní rybka)
+    fun createFinlet() = Makromon(
+        name = "FINLET", level = 1,
+        maxHp = 20, attack = 8, defense = 8, speed = 40,
+        moves = listOf(attackTackle(), attackWaterGun())
+    )
 
-    fun createGastly() = Pokemon(
-        name = "GASTLY", level = 7, maxHp = 22, attack = 13, defense = 5, speed = 16,
+    // 21 - Serpfin (obří rybohadí monstrum) – sprite zatím chybí, placeholder
+    fun createSerpfin() = Makromon(
+        name = "SERPFIN", level = 1,
+        maxHp = 65, attack = 25, defense = 20, speed = 15,
+        moves = listOf(attackAquaTail(), attackHydroPump(), attackSandAttack())
+    )
+
+    // 22 - Mycit (malá koloniální myška s krystalky)
+    fun createMycit() = Makromon(
+        name = "MYCIT", level = 1,
+        maxHp = 28, attack = 35, defense = 30, speed = 45,
         moves = listOf(
-            Move("LICK",      PokemonType.GHOST,   30, 100, 30),
-            Move("HYPNOSIS",  PokemonType.PSYCHIC,  0,  60, 20),
-            Move("NIGHT SHADE",PokemonType.GHOST,  40,  95, 15),
-            Move("SPITE",     PokemonType.GHOST,    0, 100, 10)
+            attackTackle(),
+            Move("CRYSTAL SHARD", MakromonType.NORMAL, 35, 100, 30)
         )
     )
 
-
-
-    // ── EPIC ──────────────────────────────────────────────────────────
-
-
-    fun createPorygon() = Pokemon(
-        name = "PORYGON", level = 12, maxHp = 42, attack = 15, defense = 16, speed = 11,
+    // 23 - Mydrus (druidský vůdce, pozřený jedem) – sprite zatím chybí, placeholder
+    fun createMydrus() = Makromon(
+        name = "MYDRUS", level = 1,
+        maxHp = 55, attack = 60, defense = 50, speed = 35,
         moves = listOf(
-            Move("TRI ATTACK", PokemonType.NORMAL,  80, 100, 10),
-            Move("PSYBEAM",    PokemonType.PSYCHIC, 65, 100, 20),
-            Move("SHARPEN",    PokemonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
-            Move("TACKLE",     PokemonType.NORMAL,  40, 100, 35)
+            attackPoisonSting(),
+            attackSludgeBomb(),
+            Move("TOXIC AURA", MakromonType.POISON, 70, 90, 15),
+            attackSmokescreen()
         )
     )
 
-    fun createHaunter() = Pokemon(
-        name = "HAUNTER", level = 9, maxHp = 26, attack = 15, defense = 6, speed = 18,
+    // 24 - Soulu – sprite zatím chybí, placeholder
+    fun createSoulu() = Makromon(
+        name = "SOULU", level = 1,
+        maxHp = 25, attack = 12, defense = 8, speed = 18,
+        moves = listOf(attackLick(), attackNightShade())
+    )
+
+    // 25 - Soulex – sprite zatím chybí, placeholder
+    fun createSoulex() = Makromon(
+        name = "SOULEX", level = 1,
+        maxHp = 35, attack = 16, defense = 12, speed = 22,
+        moves = listOf(attackShadowPunch(), attackLick(), attackHypnosis())
+    )
+
+    // 26 - Soulord – sprite zatím chybí, placeholder
+    fun createSoulord() = Makromon(
+        name = "SOULORD", level = 1,
+        maxHp = 50, attack = 22, defense = 18, speed = 28,
+        moves = listOf(attackShadowBall(), attackShadowPunch(), attackHex(), attackPsychic())
+    )
+
+    // 27 - Phantil – sprite zatím chybí, placeholder
+    fun createPhantil() = Makromon(
+        name = "PHANTIL", level = 1,
+        maxHp = 22, attack = 10, defense = 8, speed = 20,
+        moves = listOf(attackTackle(), attackWaterGun())
+    )
+
+    // 28 - Phantius – sprite zatím chybí, placeholder
+    fun createPhantius() = Makromon(
+        name = "PHANTIUS", level = 1,
+        maxHp = 38, attack = 16, defense = 14, speed = 25,
+        moves = listOf(attackWaterPulse(), attackShadowBall(), attackBite())
+    )
+
+    // 29 - Phantiax – sprite zatím chybí, placeholder
+    fun createPhantiax() = Makromon(
+        name = "PHANTIAX", level = 1,
+        maxHp = 60, attack = 25, defense = 20, speed = 30,
+        moves = listOf(attackHydroPump(), attackShadowBall(), attackDragonPulse(), attackHex())
+    )
+
+    // 30 - Gudwin (tlustý medvěd s váčkem – moudrý rádce, ale i bojovník)
+    fun createGudwin() = Makromon(
+        name = "GUDWIN", level = 10,
+        maxHp = 55, attack = 14, defense = 18, speed = 8,
         moves = listOf(
-            Move("SHADOW PUNCH", PokemonType.GHOST,   60, 100, 20),
-            Move("LICK",         PokemonType.GHOST,   30, 100, 30),
-            Move("HYPNOSIS",     PokemonType.PSYCHIC,  0,  60, 20),
-            Move("CURSE",        PokemonType.GHOST,    0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
+            Move("BODY SLAM",  MakromonType.NORMAL, 85, 85, 15),
+            attackTackle(),
+            Move("LULLABY",    MakromonType.NORMAL,  0, 80, 15, statEffect = StatEffect.LOWER_ENEMY_ATK),
+            Move("WISE WORDS", MakromonType.NORMAL,  0, 100, 20, statEffect = StatEffect.LOWER_ENEMY_DEF)
         )
     )
 
-    fun createGengar() = Pokemon(
-        name = "GENGAR", level = 10, maxHp = 30, attack = 16, defense = 7, speed = 20,
+    // 31 - Axlu (růžový axolotl – tvář aplikace)
+    fun createAxlu() = Makromon(
+        name = "AXLU", level = 5,
+        maxHp = 35, attack = 12, defense = 12, speed = 15,
         moves = listOf(
-            Move("SHADOW BALL", PokemonType.GHOST,   65,  80, 15),
-            Move("LICK",        PokemonType.GHOST,   30, 100, 30),
-            Move("HYPNOSIS",    PokemonType.PSYCHIC,  0,  60, 20),
-            Move("CURSE",       PokemonType.GHOST,    0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_DEF)
+            attackTackle(),
+            attackWaterGun(),
+            attackCharm(),
+            Move("REGENERATE", MakromonType.NORMAL, 0, 100, 10)
         )
     )
 
-    fun createKangaskhan(level: Int = 1) = Pokemon(
-        name = "KANGASKHAN", level = level, maxHp = 45, attack = 15, defense = 12, speed = 14,
-        moves = mutableListOf(
-            Move("TACKLE", PokemonType.NORMAL, 40, 100, 35),
-            Move("BITE", PokemonType.NORMAL, 60, 100, 25)
-        )
-    )
+    // ── POMOCNÉ FUNKCE ────────────────────────────────────────────────
 
-    fun createSnorlax() = Pokemon(
-        name = "SNORLAX", level = 10, maxHp = 50, attack = 14, defense = 10, speed = 5,
-        moves = listOf(
-            Move("BODY SLAM", PokemonType.NORMAL, 85,  85, 15),
-            Move("TACKLE",    PokemonType.NORMAL, 40, 100, 35),
-            Move("AMNESIA",   PokemonType.PSYCHIC, 0, 100, 20),
-            Move("YAWN",      PokemonType.NORMAL,  0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_ATK)
-        )
-    )
-
-    fun createLapras(level: Int = 15) = Pokemon(
-        name = "LAPRAS",
-        level = level,
-        maxHp = 55, // Vysoké základní HP
-        attack = 15,
-        defense = 14,
-        speed = 12,
-        moves = listOf(
-            Move("WATER GUN", PokemonType.WATER, 40, 100, 25),
-            Move("BODY SLAM", PokemonType.NORMAL, 85, 85, 15),
-            Move("SING",      PokemonType.NORMAL,  0,  55, 15), // Uspávací útok (v budoucnu můžeš přidat efekt)
-            Move("HYDRO PUMP", PokemonType.WATER, 110, 80, 5)
-        )
-    )
-
-
-    fun createDitto(level: Int = 10) = Pokemon(
-        name = "DITTO",
-        level = level,
-        maxHp = 48,
-        attack = 15,
-        defense = 15,
-        speed = 15,
-        moves = listOf(
-            Move("TRANSFORM", PokemonType.NORMAL, 0, 100, 10)
-        )
-    )
-
-    // ── LEGENDARY ─────────────────────────────────────────────────────
-
-
-    fun createMewtwo() = Pokemon(
-        name = "MEWTWO", level = 18, maxHp = 45, attack = 24, defense = 14, speed = 22,
-        moves = listOf(
-            Move("PSYCHIC",   PokemonType.PSYCHIC, 90,  90, 10),
-            Move("SWIFT",     PokemonType.NORMAL,  60, 100, 20),
-            Move("BARRIER",   PokemonType.PSYCHIC,  0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF),
-            Move("RECOVER",   PokemonType.NORMAL,   0, 100, 10)
-        )
-    )
-
-    // ── MYTHIC ────────────────────────────────────────────────────────
-
-    fun createWildMew() = Pokemon(
-        name = "MEW", level = 20, maxHp = 42, attack = 18, defense = 18, speed = 20,
-        moves = listOf(
-            Move("PSYCHIC",    PokemonType.PSYCHIC, 90,  90, 10),
-            Move("MEGA PUNCH", PokemonType.NORMAL,  80,  85, 20),
-            Move("TRANSFORM",  PokemonType.NORMAL,   0, 100, 10),
-            Move("SOFTBOILED", PokemonType.NORMAL,   0, 100, 10)
-        )
-    )
-
-    // ── Konstanty ─────────────────────────────────────────────────────
-    const val GENGAR_CATCH_PENALTY   = 0.7f   // těžší chytit
-    const val MEWTWO_CATCH_PENALTY   = 0.4f   // velmi těžké
-    const val CHARIZARD_CATCH_PENALTY = 0.55f
-
-    const val CHARMELEON_CATCH_PENALTY = 0.75f
-    const val SNORLAX_CATCH_PENALTY  = 0.6f
-    const val MEW_CATCH_PENALTY      = 0.3f   // nejtěžší
-
-    /** Vrátí catch multiplier pro daného nepřítele */
-    fun catchMultiplier(pokemon: Pokemon): Float = when (pokemon.name) {
-        "GENGAR"    -> GENGAR_CATCH_PENALTY
-        "MEWTWO"    -> MEWTWO_CATCH_PENALTY
-        "CHARIZARD" -> CHARIZARD_CATCH_PENALTY
-        "SNORLAX"   -> SNORLAX_CATCH_PENALTY
-        "MEW"       -> MEW_CATCH_PENALTY
-        "CHARMELEON"->CHARMELEON_CATCH_PENALTY
+    /** Vrátí catch multiplier – těžší Makromoni mají nižší hodnotu */
+    fun catchMultiplier(makromon: Makromon): Float = when (makromon.name) {
+        "UMBEX"     -> 0.7f
+        "LUMEX"     -> 0.7f
+        "DRAKIRRA"  -> 0.55f
+        "SERPFIN"   -> 0.65f
+        "MYDRUS"    -> 0.65f
+        "SOULORD"   -> 0.6f
+        "PHANTIAX"  -> 0.6f
+        "GUDWIN"    -> 0.75f
+        "AXLU"      -> 0.3f  // Nejtěžší – tvář aplikace
         else        -> 1.0f
     }
 
-    /** Vrátí pokédex ID pro daného nepřítele */
-    /** Vrátí pokédex ID pro daného nepřítele */
-    fun pokedexId(pokemon: Pokemon): String = when (pokemon.name) {
-
-
-
-
-        "BULBASAUR" -> "001"
-        "IVYSAUR"   -> "002"
-        "VENUSAUR"  -> "003"
-        "CHARMANDER"-> "004"
-        "CHARMELEON"-> "005"
-        "CHARIZARD" -> "006"
-        "SQUIRTLE"  -> "007"
-        "WARTORTLE" -> "008"
-        "BLASTOISE" -> "009"
-        "CATERPIE"  -> "010"
-        "METAPOD"   -> "011"
-        "BUTTERFREE"-> "012"
-        "WEEDLE"    -> "013"
-        "KAKUNA"    -> "014"
-        "BEEDRILL"  -> "015"
-        "PIDGEY"    -> "016"
-        "PIDGEOTTO" -> "017"
-        "PIDGEOT"   -> "018"
-        "RATTATA"   -> "019"
-        "RATICATE"  -> "020"
-        "SPEAROW"   -> "021"
-        "FEAROW"    -> "022"
-        "EKANS"     -> "023"
-        "ARBOK"     -> "024"
-        "PIKACHU"   -> "025"
-        "RAICHU"    -> "026"
-        "DIGLETT"   -> "050"
-        "DUGTRIO"   -> "051"
-        "GASTLY"    -> "092"
-        "HAUNTER"   -> "093"
-        "GENGAR"    -> "094"
-        "KANGASKHAN"-> "115"
-        "LAPRAS"    -> "131"
-        "DITTO"     -> "132"
-        "EEVEE"     -> "133"
-        "PORYGON"   -> "137"
-        "SNORLAX"   -> "143"
-        "MEWTWO"    -> "150"
-        "MEW"       -> "151"
+    /** Vrátí Makrodex ID pro daného Makromona */
+    fun makrodexId(makromon: Makromon): String = when (makromon.name) {
+        "IGNAR"     -> "001"
+        "IGNAROC"   -> "002"
+        "IGNAROTH"  -> "003"
+        "AQULIN"    -> "004"
+        "AQULIND"   -> "005"
+        "AQULINOX"  -> "006"
+        "FLORI"     -> "007"
+        "FLORIND"   -> "008"
+        "FLORINDRA" -> "009"
+        "UMBEX"     -> "010"
+        "LUMEX"     -> "011"
+        "SPIRRA"    -> "012"
+        "FLAMIRRA"  -> "013"
+        "AQUIRRA"   -> "014"
+        "VERDIRRA"  -> "015"
+        "SHADIRRA"  -> "016"
+        "CHARMIRRA" -> "017"
+        "GLACIRRA"  -> "018"
+        "DRAKIRRA"  -> "019"
+        "FINLET"    -> "020"
+        "SERPFIN"   -> "021"
+        "MYCIT"     -> "022"
+        "MYDRUS"    -> "023"
+        "SOULU"     -> "024"
+        "SOULEX"    -> "025"
+        "SOULORD"   -> "026"
+        "PHANTIL"   -> "027"
+        "PHANTIUS"  -> "028"
+        "PHANTIAX"  -> "029"
+        "GUDWIN"    -> "030"
+        "AXLU"      -> "031"
         else        -> "000"
     }
 
-    /** Vrátí webName pro načítání sprite z pokemondb.net */
-    fun webName(pokemon: Pokemon): String = when (pokemon.name) {
+    /**
+     * Vrátí název drawable zdroje pro daného Makromona.
+     * Formát: "makromon_ID_jmeno" (např. "makromon_18_drakirra")
+     */
+    fun drawableName(makromon: Makromon): String {
+        // 1. Získáme ID (např. "001" nebo "018")
+        val fullId = makrodexId(makromon)
 
-        "BULBASAUR"  -> "bulbasaur"
-        "IVYSAUR"    -> "ivysaur"
-        "VENUSAUR"   -> "venusaur"
-        "CHARMANDER" -> "charmander"
-        "CHARMELEON" -> "charmeleon"
-        "CHARIZARD"  -> "charizard"
-        "SQUIRTLE"   -> "squirtle"
-        "WARTORTLE"  -> "wartortle"
-        "BLASTOISE"  -> "blastoise"
-        "CATERPIE"   -> "caterpie"
-        "METAPOD"    -> "metapod"
-        "BUTTERFREE" -> "butterfree"
-        "WEEDLE"     -> "weedle"
-        "KAKUNA"     -> "kakuna"
-        "BEEDRILL"   -> "beedrill"
-        "PIDGEY"     -> "pidgey"
-        "PIDGEOTTO"  -> "pidgeotto"
-        "PIDGEOT"    -> "pidgeot"
-        "RATTATA"    -> "rattata"
-        "RATICATE"   -> "raticate"
-        "SPEAROW"    -> "spearow"
-        "FEAROW"     -> "fearow"
-        "EKANS"      -> "ekans"
-        "ARBOK"      -> "arbok"
+        // 2. Ořízneme ID na dvě cifry (např. "018" -> "18")
+        // Pokud máš ID 1-9 jako "001", "002", tak takeLast(2) udělá "01", "02"
+        val shortId = if (fullId.length >= 3) fullId.takeLast(2) else fullId
 
+        // 3. Jméno převedeme na malá písmena
+        val namePart = makromon.name.lowercase().trim()
 
-        "PORYGON"    -> "porygon"
+        // 4. Seznam jmen, pro která už máš v res/drawable složce fyzicky soubor
+        val existingSprites = listOf(
+            "ignar", "aqulin", "flori", "umbex", "spirra",
+            "flamirra", "aquirra", "verdirra", "shadirra",
+            "charmirra", "drakirra", "finlet", "mycit",
+            "gudwin", "axlu"
+        )
 
-        "DIGLETT"    -> "diglett"
-        "DUGTRIO"    -> "dugtrio"
-        "PIKACHU"    -> "pikachu"
-        "RAICHU"     -> "raichu"
-        "EEVEE"      -> "eevee"
-
-
-        "GASTLY"    -> "gastly"
-        "HAUNTER"   -> "haunter"
-        "GENGAR"    -> "gengar"
-        "KANGASKHAN"-> "kangaskhan"
-        "LAPRAS"    -> "lapras"
-        "DITTO"     -> "ditto"
-        "SNORLAX"   -> "snorlax"
-
-        "MEWTWO"    -> "mewtwo"
-        "MEW"       -> "mew"
-        else        -> "missingno"
+        // Pokud ho máš v seznamu, složíme název: makromon_18_drakirra
+        return if (existingSprites.contains(namePart)) {
+            "makromon_${shortId}_${namePart}"
+        } else {
+            // Fallback, pokud sprite ještě neexistuje
+            "ic_home"
+        }
     }
 }

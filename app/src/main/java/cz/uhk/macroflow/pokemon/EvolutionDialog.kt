@@ -19,7 +19,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import coil.load
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
@@ -30,10 +29,10 @@ import kotlinx.coroutines.withContext
 
 class EvolutionDialog(
     context: Context,
-    private val capturedPokemonId: Int, // Primární klíč z tabulky captured_pokemon
-    private val oldId: String,          // "010"
-    private val newId: String,          // "011"
-    private val newMoveToLearn: Move?,  // Útok, který se má naučit (např. Harden)
+    private val capturedMakromonId: Int, // Primární klíč z tabulky captured_makromon
+    private val oldId: String,          // Např. "001"
+    private val newId: String,          // Např. "002"
+    private val newMoveToLearn: Move?,
     private val onComplete: () -> Unit
 ) : Dialog(context) {
 
@@ -47,7 +46,7 @@ class EvolutionDialog(
     private lateinit var btnCancelLearning: Button
 
     private val db = AppDatabase.getDatabase(context)
-    private lateinit var activePokemon: CapturedPokemonEntity
+    private lateinit var activeMakromon: CapturedMakromonEntity
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,12 +59,12 @@ class EvolutionDialog(
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
 
-        ivEvoSprite = findViewById(R.id.ivEvoSprite)
+        ivEvoSprite     = findViewById(R.id.ivEvoSprite)
         ivEvoSilhouette = findViewById(R.id.ivEvoSilhouette)
-        tvEvoText = findViewById(R.id.tvEvoText)
+        tvEvoText       = findViewById(R.id.tvEvoText)
         llMoveSelection = findViewById(R.id.llMoveSelection)
         tvNewMovePrompt = findViewById(R.id.tvNewMovePrompt)
-        llCurrentMoves = findViewById(R.id.llCurrentMoves)
+        llCurrentMoves  = findViewById(R.id.llCurrentMoves)
         btnCancelLearning = findViewById(R.id.btnCancelLearning)
 
         loadData()
@@ -74,26 +73,23 @@ class EvolutionDialog(
     private fun loadData() {
         dialogScope.launch {
             try {
-                // 1. Najdeme konkrétního pokémona v inventáři podle ID
-                val pokemonInDb = withContext(Dispatchers.IO) {
-                    db.capturedPokemonDao().getPokemonById(capturedPokemonId)
+                val makromonInDb = withContext(Dispatchers.IO) {
+                    db.capturedMakromonDao().getMakromonById(capturedMakromonId)
                 }
 
-                if (pokemonInDb != null) {
-                    activePokemon = pokemonInDb
+                if (makromonInDb != null) {
+                    activeMakromon = makromonInDb
 
-                    // 2. Načteme data z pokedex_entries podle pokemonId (staré) a newId (nové)
-                    // ✅ OPRAVA: Používáme přímo ID z objektu, aby to sedělo
                     val oldEntry = withContext(Dispatchers.IO) {
-                        db.pokedexEntryDao().getEntry(pokemonInDb.pokemonId)
+                        db.makrodexEntryDao().getEntry(makromonInDb.makromonId)
                     }
                     val newEntry = withContext(Dispatchers.IO) {
-                        db.pokedexEntryDao().getEntry(newId)
+                        db.makrodexEntryDao().getEntry(newId)
                     }
 
                     startEvolutionAnimation(oldEntry, newEntry)
                 } else {
-                    Log.e("EVO_DEBUG", "Pokémon s ID $capturedPokemonId nenalezen v DB")
+                    Log.e("EVO_DEBUG", "Makromon s ID $capturedMakromonId nenalezen v DB")
                     dismiss()
                     onComplete()
                 }
@@ -105,14 +101,11 @@ class EvolutionDialog(
         }
     }
 
-    private fun startEvolutionAnimation(oldEntry: PokedexEntryEntity?, newEntry: PokedexEntryEntity?) {
-        // ✅ OPRAVA FALLBACKŮ: Pokud entry chybí, použijeme aspoň ID, ne natvrdo "caterpie"
-        val oldName = oldEntry?.displayName ?: "Pokémon"
+    private fun startEvolutionAnimation(oldEntry: MakrodexEntryEntity?, newEntry: MakrodexEntryEntity?) {
+        val oldName = oldEntry?.displayName ?: "Makromon"
         val newName = newEntry?.displayName ?: "Nová Forma"
-        val oldWebName = oldEntry?.webName ?: oldId
-        val newWebName = newEntry?.webName ?: newId
 
-        tvEvoText.text = "Co se to děje? Tvoje $oldName začíná záryt!"
+        tvEvoText.text = "Co se to děje? Tvůj $oldName začíná měnit formu!"
 
         ivEvoSprite.alpha = 1f
         ivEvoSprite.visibility = View.VISIBLE
@@ -120,32 +113,28 @@ class EvolutionDialog(
         ivEvoSilhouette.alpha = 0f
         ivEvoSilhouette.visibility = View.VISIBLE
 
-        val oldUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/$oldWebName.png"
-        val newUrl = "https://img.pokemondb.net/sprites/firered-leafgreen/normal/$newWebName.png"
+        // Načtení starého spritu z lokálního drawable
+        val oldDrawable = oldEntry?.drawableName ?: "ic_home"
+        val oldResId = context.resources.getIdentifier(oldDrawable, "drawable", context.packageName)
+        val oldFinalResId = if (oldResId != 0) oldResId else R.drawable.ic_home
 
-        ivEvoSprite.load(oldUrl) {
-            listener(onSuccess = { _, _ ->
-                ivEvoSilhouette.load(oldUrl)
-                runEvoAnimator(oldName, newName, newUrl, newEntry)
-            }, onError = { _, _ ->
-                // I při chybě obrázku animaci spustíme
-                runEvoAnimator(oldName, newName, newUrl, newEntry)
-            })
-        }
+        ivEvoSprite.setImageResource(oldFinalResId)
+        ivEvoSilhouette.setImageResource(oldFinalResId)
+
+        runEvoAnimator(oldName, newName, newEntry)
     }
 
-    private fun runEvoAnimator(oldName: String, newName: String, newSpriteUrl: String, newEntry: PokedexEntryEntity?) {
+    private fun runEvoAnimator(oldName: String, newName: String, newEntry: MakrodexEntryEntity?) {
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 3000
             addUpdateListener { anim ->
-                val p = anim.animatedFraction
+                val p   = anim.animatedFraction
                 val sin = Math.sin(p * Math.PI * 30 * p)
-
                 if (sin > 0) {
-                    ivEvoSprite.alpha = 1f
+                    ivEvoSprite.alpha     = 1f
                     ivEvoSilhouette.alpha = 0f
                 } else {
-                    ivEvoSprite.alpha = 0f
+                    ivEvoSprite.alpha     = 0f
                     ivEvoSilhouette.alpha = 1f
                 }
             }
@@ -155,30 +144,31 @@ class EvolutionDialog(
             override fun onAnimationEnd(animation: Animator) {
                 ivEvoSprite.alpha = 1f
                 ivEvoSilhouette.visibility = View.GONE
-                ivEvoSprite.load(newSpriteUrl)
-                tvEvoText.text = "Gratulace! Tvoje $oldName se vyvinula v $newName!"
+
+                // Načtení nového spritu z lokálního drawable
+                val newDrawable = newEntry?.drawableName ?: "ic_home"
+                val newResId = context.resources.getIdentifier(newDrawable, "drawable", context.packageName)
+                ivEvoSprite.setImageResource(if (newResId != 0) newResId else R.drawable.ic_home)
+
+                tvEvoText.text = "Gratulace! Tvůj $oldName se vyvinul v $newName!"
 
                 dialogScope.launch {
                     try {
                         withContext(Dispatchers.IO) {
-                            // UPDATE OBJEKTU
-                            activePokemon.pokemonId = newId
-                            activePokemon.name = newEntry?.displayName?.uppercase() ?: newName.uppercase()
+                            activeMakromon.makromonId = newId
+                            activeMakromon.name = newEntry?.displayName?.uppercase() ?: newName.uppercase()
 
-                            // 1. Zápis do lokální DB
-                            db.capturedPokemonDao().updatePokemon(activePokemon)
+                            db.capturedMakromonDao().updateMakromon(activeMakromon)
 
-                            // 2. 🔥 KLÍČOVÝ ZÁPIS DO FIREBASE (bez toho se evoluce ztratí)
                             if (FirebaseRepository.isLoggedIn) {
-                                FirebaseRepository.uploadCapturedPokemon(activePokemon)
+                                FirebaseRepository.uploadCapturedMakromon(activeMakromon)
                             }
 
-                            // Update SharedPreferences pro widget/lištu
                             val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                             if (prefs.getString("currentOnBarId", "") == oldId) {
                                 prefs.edit()
                                     .putString("currentOnBarId", newId)
-                                    .putString("currentOnBarName", activePokemon.name)
+                                    .putString("currentOnBarName", activeMakromon.name)
                                     .apply()
                             }
                         }
@@ -198,47 +188,35 @@ class EvolutionDialog(
     }
 
     private fun showMoveLearning(newMove: Move) {
-        val currentMoves = activePokemon.moveListStr.split(",")
+        val currentMoves = activeMakromon.moveListStr.split(",")
             .filter { it.isNotEmpty() }
             .toMutableList()
 
         if (currentMoves.contains(newMove.name)) {
-            ivEvoSprite.postDelayed({
-                dismiss()
-                onComplete()
-            }, 1500)
+            ivEvoSprite.postDelayed({ dismiss(); onComplete() }, 1500)
             return
         }
 
         if (currentMoves.size < 4) {
-            // ✅ AUTOMATICKÉ UČENÍ (Méně než 4 útoky) - obrázek ponecháme viditelný!
             llMoveSelection.visibility = View.VISIBLE
-
             currentMoves.add(newMove.name)
-            activePokemon.moveListStr = currentMoves.joinToString(",")
+            activeMakromon.moveListStr = currentMoves.joinToString(",")
 
             dialogScope.launch {
                 withContext(Dispatchers.IO) {
-                    db.capturedPokemonDao().updatePokemon(activePokemon)
+                    db.capturedMakromonDao().updateMakromon(activeMakromon)
                 }
-
-                tvNewMovePrompt.text = "✅ ${activePokemon.name} se automaticky naučil ${newMove.name}!"
+                tvNewMovePrompt.text = "✅ ${activeMakromon.name} se automaticky naučil ${newMove.name}!"
                 llCurrentMoves.removeAllViews()
-
                 btnCancelLearning.text = "Pokračovat"
                 btnCancelLearning.visibility = View.VISIBLE
-                btnCancelLearning.setOnClickListener {
-                    dismiss()
-                    onComplete()
-                }
+                btnCancelLearning.setOnClickListener { dismiss(); onComplete() }
             }
         } else {
-            // 🔥 PLNO (4 útoky) - Skryjeme evoluční obrázek, aby byl prostor na tlačítka "co zapomenout"
-            ivEvoSprite.visibility = View.GONE
+            ivEvoSprite.visibility    = View.GONE
             ivEvoSilhouette.visibility = View.GONE
-
             llMoveSelection.visibility = View.VISIBLE
-            tvNewMovePrompt.text = "${activePokemon.name} se chce naučit ${newMove.name}! Vyber útok k zapomnění:"
+            tvNewMovePrompt.text = "${activeMakromon.name} se chce naučit ${newMove.name}! Vyber útok k zapomnění:"
             llCurrentMoves.removeAllViews()
 
             currentMoves.forEachIndexed { index, moveName ->
@@ -246,25 +224,24 @@ class EvolutionDialog(
                     text = moveName
                     backgroundTintList = ColorStateList.valueOf(Color.parseColor("#424242"))
                     setTextColor(Color.WHITE)
-                    setOnClickListener {
-                        confirmForgetMove(index, moveName, newMove, currentMoves)
-                    }
+                    setOnClickListener { confirmForgetMove(index, moveName, newMove, currentMoves) }
                 }
                 llCurrentMoves.addView(btn)
             }
 
             btnCancelLearning.visibility = View.VISIBLE
             btnCancelLearning.text = "Zrušit učení"
-            btnCancelLearning.setOnClickListener {
-                dismiss()
-                onComplete()
-            }
+            btnCancelLearning.setOnClickListener { dismiss(); onComplete() }
         }
     }
 
-    private fun confirmForgetMove(indexToForget: Int, moveNameOld: String, moveNew: Move, currentMoves: List<String>) {
+    private fun confirmForgetMove(
+        indexToForget: Int,
+        moveNameOld: String,
+        moveNew: Move,
+        currentMoves: List<String>
+    ) {
         tvNewMovePrompt.text = "Opravdu chceš zapomenout útok $moveNameOld a naučit se ${moveNew.name}?"
-
         llCurrentMoves.removeAllViews()
 
         val btnYes = Button(context).apply {
@@ -272,22 +249,14 @@ class EvolutionDialog(
             backgroundTintList = ColorStateList.valueOf(Color.parseColor("#DDA15E"))
             setOnClickListener {
                 val updatedMoves = currentMoves.toMutableList()
-                if (indexToForget < updatedMoves.size) {
-                    updatedMoves[indexToForget] = moveNew.name
-                }
-                activePokemon.moveListStr = updatedMoves.joinToString(",")
+                if (indexToForget < updatedMoves.size) updatedMoves[indexToForget] = moveNew.name
+                activeMakromon.moveListStr = updatedMoves.joinToString(",")
 
-                saveMoveQuietly(activePokemon) {
-                    // 🔥 VRÁCENÍ OBRÁZKU - Po vyřešení zápisu obrázek zase ukážeme nahoře!
+                saveMoveQuietly(activeMakromon) {
                     ivEvoSprite.visibility = View.VISIBLE
-
-                    tvNewMovePrompt.text = "Útok úspěšně zapomenut! ${activePokemon.name} se naučil ${moveNew.name}!"
+                    tvNewMovePrompt.text = "Útok úspěšně zapomenut! ${activeMakromon.name} se naučil ${moveNew.name}!"
                     llCurrentMoves.removeAllViews()
-
-                    ivEvoSprite.postDelayed({
-                        dismiss()
-                        onComplete()
-                    }, 2000)
+                    ivEvoSprite.postDelayed({ dismiss(); onComplete() }, 2000)
                 }
             }
         }
@@ -295,19 +264,17 @@ class EvolutionDialog(
         val btnNo = Button(context).apply {
             text = "NE, zrušit"
             backgroundTintList = ColorStateList.valueOf(Color.parseColor("#BC6C25"))
-            setOnClickListener {
-                showMoveLearning(moveNew)
-            }
+            setOnClickListener { showMoveLearning(moveNew) }
         }
 
         llCurrentMoves.addView(btnYes)
         llCurrentMoves.addView(btnNo)
     }
 
-    private fun saveMoveQuietly(pokemon: CapturedPokemonEntity, onSaved: () -> Unit) {
+    private fun saveMoveQuietly(makromon: CapturedMakromonEntity, onSaved: () -> Unit) {
         dialogScope.launch {
             withContext(Dispatchers.IO) {
-                db.capturedPokemonDao().updatePokemon(pokemon)
+                db.capturedMakromonDao().updateMakromon(makromon)
             }
             onSaved()
         }

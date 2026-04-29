@@ -6,7 +6,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
@@ -35,8 +34,8 @@ import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.history.HistoryFragment
 import cz.uhk.macroflow.nutrition.SnackFragment
 import cz.uhk.macroflow.pokemon.InventoryFragment
-import cz.uhk.macroflow.pokemon.PokedexFragment
-import cz.uhk.macroflow.pokemon.PokemonMapActivity
+import cz.uhk.macroflow.pokemon.MakrodexFragment
+import cz.uhk.macroflow.pokemon.MakromonMapActivity
 import cz.uhk.macroflow.profile.ProfileFragment
 import cz.uhk.macroflow.training.PlanFragment
 import kotlinx.coroutines.Dispatchers
@@ -64,13 +63,13 @@ class MainActivity : AppCompatActivity() {
     // Každý controller zapouzdřuje jednu logickou oblast a drží si vlastní stav
 
     /** Řídí zobrazení, načítání spritu a animaci Pokémona na spodní liště */
-    private lateinit var pokemonBarController: PokemonBarController
+    private lateinit var makromonBarController: MakromonBarController
 
     /** Řídí fialový částicový efekt kolem FAB (Ghost Plate / Lure) */
     private lateinit var lureSmokeController: LureSmokeController
 
     /** Řídí denní XP odměnu a real-time přidávání XP aktivnímu Pokémonovi */
-    private lateinit var pokemonXpController: PokemonXpController
+    private lateinit var makromonXpController: MakromonXpController
 
     companion object {
         private const val REQ_NOTIFICATION_PERMISSION = 100
@@ -87,10 +86,10 @@ class MainActivity : AppCompatActivity() {
 
         // ── Inicializace controllerů ──────────────────────────────────
         // Musí být hned po setContentView, aby měly přístup k views
-        val ivPokemon = findViewById<ImageView>(R.id.ivDiglettBottomBar)
-        pokemonBarController = PokemonBarController(this, ivPokemon, lifecycleScope)
+        val ivMakromon = findViewById<ImageView>(R.id.ivDiglettBottomBar)
+        makromonBarController = MakromonBarController(this, ivMakromon, lifecycleScope)
         lureSmokeController  = LureSmokeController(this)
-        pokemonXpController  = PokemonXpController(this, lifecycleScope)
+        makromonXpController  = MakromonXpController(this, lifecycleScope)
 
         // ── Notifikační kanály (musí být před startem service) ────────
         MakroflowNotifications.createChannels(this)
@@ -120,7 +119,7 @@ class MainActivity : AppCompatActivity() {
         requestPermissionsAndSchedule()
 
         // ── Pokemon bar (po prvním layoutu, aby měly views rozměry) ──
-        window.decorView.post { updatePokemonVisibility() }
+        window.decorView.post { updateMakromonVisibility() }
 
         // ── Kroky — načteme ranní stav z DB do RAM ────────────────────
         loadTodayStepsFromDb()
@@ -149,15 +148,15 @@ class MainActivity : AppCompatActivity() {
 
         checkAchievementsDelayed()
         runItemSpawner()
-        updatePokemonVisibility()
+        updateMakromonVisibility()
     }
 
     override fun onResume() {
         super.onResume()
         // Refresh Pokémona (mohl se změnit zatímco jsme byli v jiné aktivitě)
-        updatePokemonVisibility()
+        updateMakromonVisibility()
         // Denní XP — controller si hlídá aby se nedalo vícekrát za den
-        pokemonXpController.awardDailyXp()
+        makromonXpController.awardDailyXp()
         // Zkontrolujeme zda je Ghost Plate stále aktivní
         runItemSpawner()
     }
@@ -170,7 +169,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         // Zastavíme animaci Pokémona aby nedošlo k memory leaku
-        pokemonBarController.stop()
+        makromonBarController.stop()
         // Zastavíme částicový efekt a vyčistíme overlay
         lureSmokeController.stop()
     }
@@ -201,16 +200,16 @@ class MainActivity : AppCompatActivity() {
      * Přidá XP aktivnímu Pokémonovi v reálném čase.
      * Volají fragmenty přes: (activity as? MainActivity)?.addXpToActivePokemonRealTime(xp)
      */
-    fun addXpToActivePokemonRealTime(xpAmount: Int) {
-        pokemonXpController.addXpRealTime(xpAmount)
+    fun addXpToActiveMakromonRealTime(xpAmount: Int) {
+        makromonXpController.addXpRealTime(xpAmount)
     }
 
     /**
      * Refreshne vizuál Pokémona na spodní liště.
      * Volají fragmenty po změně aktivního Pokémona (nasazení, evoluce, shiny).
      */
-    fun updatePokemonVisibility() {
-        pokemonBarController.refresh()
+    fun updateMakromonVisibility() {
+        makromonBarController.refresh()
     }
 
     /**
@@ -233,9 +232,9 @@ class MainActivity : AppCompatActivity() {
      * Otevře mapu Pokémon soubojů jako novou aktivitu.
      * Spouští se long-pressem na FAB (2 sekundy).
      */
-    fun openPokemonBattle() {
+    fun openMakromonBattle() {
         lureSmokeController.stop()
-        val intent = Intent(this, PokemonMapActivity::class.java)
+        val intent = Intent(this, MakromonMapActivity::class.java)
         startActivity(intent)
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
@@ -322,7 +321,7 @@ class MainActivity : AppCompatActivity() {
                         isLongPressTriggered = true
                         v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                         v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start()
-                        openPokemonBattle()
+                        openMakromonBattle()
                         holdRunnable = null
                     }
                     v.postDelayed(holdRunnable!!, 2000L)
@@ -381,7 +380,7 @@ class MainActivity : AppCompatActivity() {
 
             when (item.itemId) {
                 // ── Sbírka ────────────────────────────────────────────
-                R.id.nav_pokedex       -> replaceFragment(PokedexFragment())
+                R.id.nav_pokedex       -> replaceFragment(MakrodexFragment())
                 R.id.nav_inventory     -> replaceFragment(InventoryFragment())
                 R.id.nav_generate_report -> showReportSetupDialog()
 
@@ -440,7 +439,7 @@ class MainActivity : AppCompatActivity() {
 
             // Zastavení animací (musí být na Main)
             withContext(Dispatchers.Main) {
-                pokemonBarController.hide()
+                makromonBarController.hide()
                 lureSmokeController.stop()
             }
 

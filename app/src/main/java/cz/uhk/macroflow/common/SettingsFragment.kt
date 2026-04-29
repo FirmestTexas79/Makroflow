@@ -1,7 +1,6 @@
 package cz.uhk.macroflow.common
 
 import android.app.AlertDialog
-import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -18,7 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
-import cz.uhk.macroflow.pokemon.CapturedPokemonEntity
+import cz.uhk.macroflow.pokemon.CapturedMakromonEntity
 import cz.uhk.macroflow.pokemon.SpawnManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -62,29 +61,29 @@ class SettingsFragment : Fragment() {
 
             lifecycleScope.launch(Dispatchers.IO) {
                 // 1. Zkusíme najít v Pokédexu (v databázi)
-                var pokedexEntry = db.pokedexEntryDao().getEntry(typedId)
-                var pokemonName = pokedexEntry?.displayName
+                var makrodexEntry = db.makrodexEntryDao().getEntry(typedId)
+                var makromonName = makrodexEntry?.displayName
 
                 // 🔍 ZÁCHRANNÁ BRZDA: Pokud v DB není, vytáhneme jméno ze SpawnManageru!
-                if (pokemonName == null) {
+                if (makromonName == null) {
                     val spawnEntry = SpawnManager.findById(typedId)
                     if (spawnEntry != null) {
-                        pokemonName = spawnEntry.name
+                        makromonName = spawnEntry.name
                     }
                 }
 
-                if (pokemonName != null) {
-                    val newCapture = CapturedPokemonEntity(
-                        pokemonId = typedId,
-                        name = pokemonName.uppercase(),
+                if (makromonName != null) {
+                    val newCapture = CapturedMakromonEntity(
+                        makromonId = typedId,
+                        name = makromonName.uppercase(),
                         isShiny = false,
                         isLocked = false,
                         caughtDate = System.currentTimeMillis()
                     )
-                    db.capturedPokemonDao().insertPokemon(newCapture)
+                    db.capturedMakromonDao().insertMakromon(newCapture)
 
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "✅ $pokemonName přidán do Poké-kapsy!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "✅ $makromonName přidán do Poké-kapsy!", Toast.LENGTH_SHORT).show()
                         etCheatId?.text?.clear()
                     }
                 } else {
@@ -158,14 +157,14 @@ class SettingsFragment : Fragment() {
         }
 
         val tvTitle = TextView(ctx).apply {
-            text = "📝 Editovat Pokédex v DB"
+            text = "📝 Editovat Makrodex v DB"
             textSize = 18f
             setTextColor(Color.parseColor("#283618"))
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, 0, 16)
         }
 
-        val etId = EditText(ctx).apply { hint = "ID Pokémona (např. 050)" }
+        val etId = EditText(ctx).apply { hint = "ID Makromona (např. 050)" }
         val etType = EditText(ctx).apply { hint = "Nový typ (např. ZEMĚ / VLÁKNINA)" }
         val etDesc = EditText(ctx).apply {
             hint = "Nový nutriční popisek..."
@@ -186,7 +185,7 @@ class SettingsFragment : Fragment() {
                 val desc = etDesc.text.toString().trim()
 
                 if (id.isNotEmpty() && type.isNotEmpty() && desc.isNotEmpty()) {
-                    saveNewPokedexData(id, type, desc)
+                    saveNewMakrodexData(id, type, desc)
                 } else {
                     Toast.makeText(ctx, "Musíš vyplnit všechna pole!", Toast.LENGTH_SHORT).show()
                 }
@@ -195,9 +194,9 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
-    private fun saveNewPokedexData(pokedexId: String, newType: String, newDesc: String) {
+    private fun saveNewMakrodexData(pokedexId: String, newType: String, newDesc: String) {
         lifecycleScope.launch(Dispatchers.IO) {
-            val dao = db.pokedexEntryDao()
+            val dao = db.makrodexEntryDao()
             val existingEntry = dao.getEntry(pokedexId)
 
             if (existingEntry != null) {
