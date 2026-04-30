@@ -28,32 +28,24 @@ class MovementEngine(
 
     data class Waypoint(val id: String, val pos: PointF, val neighbors: List<String>)
 
-    // --- NAVIGAČNÍ GRAF PODLE TVÉHO GRIDU ---
-    private val navigationGraph = listOf(
-        Waypoint("les",        PointF(0.460f, 0.120f), listOf("spawn")),
-        Waypoint("spawn",      PointF(0.480f, 0.275f), listOf("les", "krizovatka_hlavni")),
-        Waypoint("krizovatka_hlavni", PointF(0.480f, 0.340f), listOf("spawn", "rozbocka_zapad", "prah_pokedex")),
+    // Změněno na var, aby bylo možné nahrát graf jiného biomu
+    var navigationGraph: List<Waypoint> = emptyList()
 
-        // Pokedex větev (východ)
-        Waypoint("prah_pokedex", PointF(0.650f, 0.340f), listOf("krizovatka_hlavni", "pokedex")),
-        Waypoint("pokedex",      PointF(0.650f, 0.300f), listOf("prah_pokedex")),
-
-        // Domov a Obchod větev (západ)
-        Waypoint("rozbocka_zapad", PointF(0.370f, 0.340f), listOf("krizovatka_hlavni", "prah_domova", "roh_obchod")),
-        Waypoint("prah_domova",    PointF(0.255f, 0.340f), listOf("rozbocka_zapad", "domov")),
-        Waypoint("domov",          PointF(0.255f, 0.300f), listOf("prah_domova")),
-
-        // Obchod větev (jih)
-        Waypoint("roh_obchod",     PointF(0.370f, 0.505f), listOf("rozbocka_zapad", "prah_obchodu")),
-        Waypoint("prah_obchodu",   PointF(0.640f, 0.505f), listOf("roh_obchod", "obchod")),
-        Waypoint("obchod",         PointF(0.640f, 0.480f), listOf("prah_obchodu"))
-    )
-
-    private var currentPosition = PointF(0.480f, 0.275f) // Start na Spawnu
+    private var currentPosition = PointF(0.480f, 0.275f)
     var isWalking = false
     var currentSpeed = NORMAL_SPEED
     private val handler = Handler(Looper.getMainLooper())
     private var currentDirection = 0
+
+    /**
+     * Klíčová metoda pro přepínání biomů.
+     * Přemaže graf a resetuje postavičku na novou startovní pozici.
+     */
+    fun updateBiome(newGraph: List<Waypoint>, startPos: PointF) {
+        cancel()
+        this.navigationGraph = newGraph
+        resetToPosition(startPos)
+    }
 
     fun walkToNode(targetId: String, onFinished: () -> Unit = {}) {
         if (isWalking) return
@@ -61,12 +53,13 @@ class MovementEngine(
         val path = findPath(startNode, targetId)
         if (path != null) {
             val pixelPoints = path.map { id ->
-                val wp = navigationGraph.find { it.id == id }!!
+                val wp = navigationGraph.find { it.id == id } ?: return@map PointF(0f, 0f)
                 PointF(wp.pos.x * mapBackground.width, wp.pos.y * mapBackground.height)
             }
             isWalking = true
             processNextMove(0, pixelPoints) {
-                currentPosition = navigationGraph.find { it.id == targetId }!!.pos
+                val finalNode = navigationGraph.find { it.id == targetId }
+                if (finalNode != null) currentPosition = finalNode.pos
                 onFinished()
             }
         }
@@ -76,13 +69,15 @@ class MovementEngine(
         val distances = mutableMapOf<String, Float>().withDefault { Float.MAX_VALUE }
         val previous = mutableMapOf<String, String?>()
         val nodes = PriorityQueue<Pair<String, Float>>(compareBy { it.second })
+
         distances[startId] = 0f
         nodes.add(startId to 0f)
+
         while (nodes.isNotEmpty()) {
             val (current, dist) = nodes.poll()!!
             if (current == endId) break
             navigationGraph.find { it.id == current }?.neighbors?.forEach { neighborId ->
-                val neighborNode = navigationGraph.find { it.id == neighborId }!!
+                val neighborNode = navigationGraph.find { it.id == neighborId } ?: return@forEach
                 val alt = dist + getDistance(navigationGraph.find { it.id == current }!!.pos, neighborNode.pos)
                 if (alt < distances.getValue(neighborId)) {
                     distances[neighborId] = alt
@@ -114,13 +109,17 @@ class MovementEngine(
         val tY = points[index].y - ashView.height.toFloat()
         val dx = tX - ashView.x
         val dy = tY - ashView.y
+
         currentDirection = if (abs(dx) > abs(dy)) (if (dx > 0) 3 else 2) else (if (dy > 0) 0 else 1)
         startAnimationLoop()
+
         val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
         ashView.animate().x(tX).y(tY).setDuration((dist * currentSpeed).toLong())
             .setInterpolator(LinearInterpolator())
             .setListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(a: Animator) { if (isWalking) processNextMove(index + 1, points, onFinished) }
+                override fun onAnimationEnd(a: Animator) {
+                    if (isWalking) processNextMove(index + 1, points, onFinished)
+                }
             }).start()
     }
 
@@ -130,7 +129,7 @@ class MovementEngine(
             override fun run() {
                 if (!isWalking) return
                 updateSprite(if (System.currentTimeMillis() % 400 < 200) 0 else 2, currentDirection)
-                handler.postDelayed(this, 110)
+                handler.postDelayed(this, ANIM_FRAME_MS)
             }
         }
         handler.post(runnable)
@@ -166,5 +165,9 @@ class MovementEngine(
         return result
     }
 
-    fun cancel() { ashView.animate().cancel(); isWalking = false; handler.removeCallbacksAndMessages(null) }
+    fun cancel() {
+        ashView.animate().cancel()
+        isWalking = false
+        handler.removeCallbacksAndMessages(null)
+    }
 }

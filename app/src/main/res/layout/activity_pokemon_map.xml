@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- Mapa, fitXY = přesně na rozměry view -->
+        <!-- Mapa -->
         <ImageView
             android:id="@+id/mapBackground"
             android:layout_width="match_parent"
@@ -19,46 +19,95 @@
             android:scaleType="fitXY"
             android:src="@drawable/poketown" />
 
-        <!--
-            HOTSPOTY — elevation 25dp (vyšší než fragment container 20dp).
-            Díky tomu dostávají touch eventy i když je nad mapou prázdný container.
-            Jakmile je fragment otevřen, Activity hotspoty programově zakáže
-            (setClickable(false)) a opět povolí při zavření.
-        -->
-        <View
-            android:id="@+id/hotspotForest"
+        <!-- KONTEJNER PRO MĚSTO (TOWN) -->
+        <FrameLayout
+            android:id="@+id/townHotspots"
             android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:layout_alignParentTop="true"
-            android:background="@android:color/transparent"
-            android:elevation="25dp" />
+            android:layout_height="match_parent"
+            android:visibility="visible">
 
-        <View
-            android:id="@+id/hotspotHome"
-            android:layout_width="130dp"
-            android:layout_height="110dp"
-            android:layout_alignParentStart="true"
-            android:layout_marginTop="155dp"
-            android:background="@android:color/transparent"
-            android:elevation="25dp" />
+            <View
+                android:id="@+id/hotspotForest"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:layout_gravity="top"
+                android:background="@android:color/transparent"
+                android:elevation="25dp" />
 
-        <View
-            android:id="@+id/hotspotPokedex"
-            android:layout_width="130dp"
-            android:layout_height="110dp"
-            android:layout_alignParentEnd="true"
-            android:layout_marginTop="155dp"
-            android:background="@android:color/transparent"
-            android:elevation="25dp" />
+            <View
+                android:id="@+id/hotspotHome"
+                android:layout_width="130dp"
+                android:layout_height="110dp"
+                android:layout_marginTop="155dp"
+                android:background="@android:color/transparent"
+                android:elevation="25dp" />
 
-        <View
-            android:id="@+id/hotspotShop"
-            android:layout_width="180dp"
-            android:layout_height="130dp"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="280dp"
-            android:background="@android:color/transparent"
-            android:elevation="25dp" />
+            <View
+                android:id="@+id/hotspotPokedex"
+                android:layout_width="130dp"
+                android:layout_height="110dp"
+                android:layout_gravity="end"
+                android:layout_marginTop="155dp"
+                android:background="@android:color/transparent"
+                android:elevation="25dp" />
+
+            <View
+                android:id="@+id/hotspotShop"
+                android:layout_width="180dp"
+                android:layout_height="130dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="280dp"
+                android:background="@android:color/transparent"
+                android:elevation="25dp" />
+        </FrameLayout>
+
+        <!-- KONTEJNER PRO LOUKU (MEADOW) -->
+        <FrameLayout
+            android:id="@+id/meadowHotspots"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <!-- Přechod zpět do Town (dole) -->
+            <View
+                android:id="@+id/hotspotMeadowToTown"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:layout_gravity="bottom"
+                android:background="@android:color/transparent"
+                android:elevation="25dp" />
+
+            <!-- Křoví 1 (vlevo) -->
+            <View
+                android:id="@+id/hotspotBush1"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_marginTop="180dp"
+                android:layout_marginStart="40dp"
+                android:background="@android:color/transparent"
+                android:elevation="25dp" />
+
+            <!-- Křoví 2 (vpravo) -->
+            <View
+                android:id="@+id/hotspotBush2"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_marginTop="180dp"
+                android:layout_gravity="end"
+                android:layout_marginEnd="40dp"
+                android:background="@android:color/transparent"
+                android:elevation="25dp" />
+
+            <!-- Křoví 3 (střed nahoře) -->
+            <View
+                android:id="@+id/hotspotBush3"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="80dp"
+                android:background="@android:color/transparent"
+                android:elevation="25dp" />
+        </FrameLayout>
 
         <!-- Ash sprite -->
         <ImageView
@@ -68,7 +117,7 @@
             android:scaleType="fitCenter"
             android:elevation="10dp" />
 
-        <!-- Companion — vlevo nahoře -->
+        <!-- Companion -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -119,7 +168,7 @@
             </FrameLayout>
         </LinearLayout>
 
-        <!-- Tlačítka vpravo nahoře -->
+        <!-- Tlačítka -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -156,13 +205,7 @@
                 android:elevation="4dp" />
         </LinearLayout>
 
-        <!--
-            Fragment container — elevation 20dp.
-            Vizuálně překryje Ashe (10dp), tlačítka (15dp) i companion (15dp)
-            jakmile je fragment otevřen.
-            Hotspoty (25dp) jsou sice výše v touch hierarchii, ale Activity
-            je deaktivuje (isClickable = false) dokud je fragment otevřen.
-        -->
+        <!-- Fragment container -->
         <FrameLayout
             android:id="@+id/mapFragmentContainer"
             android:layout_width="match_parent"
@@ -171,7 +214,7 @@
 
     </RelativeLayout>
 
-    <!-- Tutorial overlay — nejvýše ze všeho -->
+    <!-- Tutorial overlay -->
     <FrameLayout
         android:id="@+id/tutorialOverlay"
         android:layout_width="match_parent"
@@ -219,5 +262,4 @@
                 android:fontFamily="sans-serif-medium" />
         </LinearLayout>
     </FrameLayout>
-
 </FrameLayout>

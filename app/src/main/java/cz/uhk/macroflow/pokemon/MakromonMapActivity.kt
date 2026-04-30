@@ -22,14 +22,16 @@ class MakromonMapActivity : AppCompatActivity() {
     private lateinit var tutorialManager:  TutorialManager
     private lateinit var companionManager: CompanionManager
 
+    private lateinit var townHotspots:     View
+    private lateinit var meadowHotspots:   View
+
     private var lastClickTime = 0L
     private var lastClickedId = -1
+    private var currentBiome = BiomeType.TOWN
 
     private val hotspotIds = listOf(
-        R.id.hotspotForest,
-        R.id.hotspotHome,
-        R.id.hotspotPokedex,
-        R.id.hotspotShop
+        R.id.hotspotForest, R.id.hotspotHome, R.id.hotspotPokedex, R.id.hotspotShop,
+        R.id.hotspotMeadowToTown, R.id.hotspotBush1, R.id.hotspotBush2, R.id.hotspotBush3
     )
 
     companion object {
@@ -40,7 +42,9 @@ class MakromonMapActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pokemon_map)
 
-        mapBackground = findViewById(R.id.mapBackground)
+        mapBackground  = findViewById(R.id.mapBackground)
+        townHotspots   = findViewById(R.id.townHotspots)
+        meadowHotspots = findViewById(R.id.meadowHotspots)
 
         val ashView = findViewById<ImageView>(R.id.ashView).also {
             it.layoutParams.width  = (28 * resources.displayMetrics.density).toInt()
@@ -74,8 +78,8 @@ class MakromonMapActivity : AppCompatActivity() {
         }
 
         mapBackground.post {
-            movementEngine.resetToPosition(PointF(0.480f, 0.275f)) // Reset na Spawn
-            setupHotspots()
+            // Výchozí stav: TOWN
+            changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), animate = false)
 
             when (intent.getStringExtra("TARGET_LOCATION")) {
                 "POKEDEX"   -> findViewById<View>(R.id.hotspotPokedex).performClick()
@@ -86,9 +90,54 @@ class MakromonMapActivity : AppCompatActivity() {
         companionManager.refresh()
     }
 
-    private fun setupHotspots() {
+    /**
+     * Hlavní metoda pro změnu lokace.
+     * Implementuje vizuální přechod a aktualizaci navigačního enginu.
+     */
+    private fun changeBiome(newBiome: BiomeType, startPos: PointF, animate: Boolean = true) {
+        val transitionAction = {
+            currentBiome = newBiome
+
+            when (newBiome) {
+                BiomeType.TOWN -> {
+                    // Opraveno na poketown (odpovídá poketown.webp)
+                    mapBackground.setImageResource(R.drawable.poketown)
+                    townHotspots.visibility = View.VISIBLE
+                    meadowHotspots.visibility = View.GONE
+                    movementEngine.updateBiome(BiomeRegistry.TOWN_GRAPH, startPos)
+                    setupTownHotspots()
+                }
+                BiomeType.MEADOW -> {
+                    // Opraveno na meadow (odpovídá meadow.png)
+                    mapBackground.setImageResource(R.drawable.meadow)
+                    townHotspots.visibility = View.GONE
+                    meadowHotspots.visibility = View.VISIBLE
+                    movementEngine.updateBiome(BiomeRegistry.MEADOW_GRAPH, startPos)
+                    setupMeadowHotspots()
+                }
+                else -> {}
+            }
+        }
+
+        if (animate) {
+            // Animujeme celý RelativeLayout, aby zmizela mapa i hotspoty najednou
+            findViewById<View>(R.id.mapMainContent).animate()
+                .alpha(0f)
+                .setDuration(400)
+                .withEndAction {
+                    transitionAction()
+                    findViewById<View>(R.id.mapMainContent).animate().alpha(1f).setDuration(400).start()
+                }.start()
+        } else {
+            transitionAction()
+        }
+    }
+
+    private fun setupTownHotspots() {
         findViewById<View>(R.id.hotspotForest).setOnClickListener {
-            handleHotspotClick(R.id.hotspotForest, "les") { replaceMapContent(PokemonBattleFragment()) }
+            handleHotspotClick(R.id.hotspotForest, "les") {
+                changeBiome(BiomeType.MEADOW, PointF(0.500f, 0.850f))
+            }
         }
         findViewById<View>(R.id.hotspotHome).setOnClickListener {
             handleHotspotClick(R.id.hotspotHome, "domov") { replaceMapContent(InventoryFragment()) }
@@ -98,6 +147,27 @@ class MakromonMapActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.hotspotShop).setOnClickListener {
             handleHotspotClick(R.id.hotspotShop, "obchod") { replaceMapContent(PokemonShopFragment()) }
+        }
+    }
+
+    private fun setupMeadowHotspots() {
+        findViewById<View>(R.id.hotspotMeadowToTown).setOnClickListener {
+            handleHotspotClick(R.id.hotspotMeadowToTown, "vstup_z_town") {
+                changeBiome(BiomeType.TOWN, PointF(0.460f, 0.150f))
+            }
+        }
+
+        // Encounter logiky pro křoví
+        val bushIds = listOf(R.id.hotspotBush1 to "krovi1", R.id.hotspotBush2 to "krovi2", R.id.hotspotBush3 to "krovi3")
+        bushIds.forEach { (viewId, nodeName) ->
+            findViewById<View>(viewId).setOnClickListener {
+                handleHotspotClick(viewId, nodeName) {
+                    // 75% šance na spawn Makromona
+                    if ((1..100).random() <= 75) {
+                        replaceMapContent(PokemonBattleFragment())
+                    }
+                }
+            }
         }
     }
 
