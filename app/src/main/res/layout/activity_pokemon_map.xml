@@ -18,7 +18,6 @@
             android:scaleType="centerCrop"
             android:src="@drawable/poketown" />
 
-        <!-- Kontejnery ponechány pro kompatibilitu -->
         <FrameLayout android:id="@+id/townHotspots" android:layout_width="match_parent" android:layout_height="match_parent" />
         <FrameLayout android:id="@+id/meadowHotspots" android:layout_width="match_parent" android:layout_height="match_parent" />
 
@@ -57,6 +56,17 @@
             <ImageButton android:id="@+id/btnExitMap" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginBottom="12dp" android:background="@drawable/bg_status_pill" android:backgroundTint="#283618" android:src="@android:drawable/ic_menu_close_clear_cancel" app:tint="#FEFAE0" />
             <ImageButton android:id="@+id/btnStartTutorial" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_status_pill" android:backgroundTint="#606C38" android:src="@android:drawable/ic_menu_help" app:tint="#FEFAE0" />
         </LinearLayout>
+
+        <!-- Progress bar vpravo uprostřed (v ose Y) -->
+        <cz.uhk.macroflow.pokemon.ui.StepProgressBar
+            android:id="@+id/stepProgressBar"
+            android:layout_width="140dp"
+            android:layout_height="24dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="16dp"
+            android:visibility="gone"
+            android:elevation="15dp" />
 
         <FrameLayout android:id="@+id/mapFragmentContainer" android:layout_width="match_parent" android:layout_height="match_parent" android:elevation="20dp" />
     </RelativeLayout>

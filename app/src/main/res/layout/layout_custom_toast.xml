@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="24dp">
+
+    <LinearLayout
+        android:layout_width="280dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_gameboy_toast"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/toastText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:textColor="#283618"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:text="Tohle by jsi na jeden zátah neušel, zkus se trochu víc ještě projít!" />
+
+    </LinearLayout>
+</FrameLayout>

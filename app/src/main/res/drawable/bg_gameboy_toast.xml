@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Barva pozadí okna (FEFAE0 z tvého manuálu) -->
+    <solid android:color="#FEFAE0" />
+
+    <!-- Tlustý retro okraj (283618 z tvého manuálu) -->
+    <stroke
+        android:width="4dp"
+        android:color="#283618" />
+
+    <!-- Mírné zaoblení rohů pro "pixel art" efekt -->
+    <corners android:radius="2dp" />
+
+    <padding
+        android:bottom="12dp"
+        android:left="16dp"
+        android:right="16dp"
+        android:top="12dp" />
+</shape>

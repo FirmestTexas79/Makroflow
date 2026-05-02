@@ -7,12 +7,15 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -21,6 +24,14 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.pokemon.ui.StepProgressBar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.math.sqrt
 
 class MakromonMapActivity : AppCompatActivity() {
@@ -29,13 +40,17 @@ class MakromonMapActivity : AppCompatActivity() {
     private lateinit var movementEngine:   MovementEngine
     private lateinit var tutorialManager:  TutorialManager
     private lateinit var companionManager: CompanionManager
+    private lateinit var stepProgressBar:  StepProgressBar
 
     private var lastClickTime = 0L
     private var lastClickedNode = ""
     private var currentBiome = BiomeType.TOWN
 
+    private var currentDailySteps = 0
+    private val STEP_GOAL_FOR_MOUNTAINS = 5000
+
     private val clickableNodes = listOf(
-        "les", "domov", "pokedex", "obchod",
+        "les", "domov", "pokedex", "obchod", "hory",
         "vstup_z_town", "krovi1", "krovi2", "voda"
     )
 
@@ -49,6 +64,8 @@ class MakromonMapActivity : AppCompatActivity() {
         setContentView(R.layout.activity_pokemon_map)
 
         mapBackground = findViewById(R.id.mapBackground)
+        stepProgressBar = findViewById(R.id.stepProgressBar)
+
         val ashView = findViewById<ImageView>(R.id.ashView).also {
             it.layoutParams.width  = (28 * resources.displayMetrics.density).toInt()
             it.layoutParams.height = (42 * resources.displayMetrics.density).toInt()
@@ -74,7 +91,26 @@ class MakromonMapActivity : AppCompatActivity() {
             changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), animate = false)
             intent.getStringExtra("TARGET_LOCATION")?.let { triggerHotspotAction(it.lowercase()) }
         }
+
         companionManager.refresh()
+        startStepSyncLoop()
+    }
+
+    private fun startStepSyncLoop() {
+        lifecycleScope.launch {
+            val db = AppDatabase.getDatabase(applicationContext)
+            while (true) {
+                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                val steps = withContext(Dispatchers.IO) {
+                    db.stepsDao().getStepsForDateSync(todayStr)?.count ?: 0
+                }
+
+                currentDailySteps = steps
+                stepProgressBar.setProgress(currentDailySteps, STEP_GOAL_FOR_MOUNTAINS)
+
+                delay(2000)
+            }
+        }
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -108,6 +144,13 @@ class MakromonMapActivity : AppCompatActivity() {
 
         val action = {
             when (nodeName) {
+                "hory" -> {
+                    if (currentDailySteps >= STEP_GOAL_FOR_MOUNTAINS) {
+                        changeBiome(BiomeType.MOUNTAINS, PointF(0.450f, 0.350f))
+                    } else {
+                        showStepWarningToast()
+                    }
+                }
                 "les" -> changeBiome(BiomeType.MEADOW, PointF(0.340f, 0.640f))
                 "domov" -> replaceMapContent(InventoryFragment())
                 "pokedex" -> replaceMapContent(MakrodexFragment())
@@ -115,10 +158,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 "vstup_z_town" -> changeBiome(BiomeType.TOWN, PointF(0.46f, 0.15f))
                 "krovi1", "krovi2", "voda" -> {
                     if ((1..100).random() <= 75) {
-                        // Určení biomu pro souboj
                         val encounterBiome = if (nodeName == "voda") BiomeType.WATER else currentBiome
-
-                        // Uložení biomu pro BattleView
                         getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                             .edit()
                             .putString("LAST_BIOME", encounterBiome.name)
@@ -152,10 +192,27 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    private fun showStepWarningToast() {
+        val layout = layoutInflater.inflate(R.layout.layout_custom_toast, null)
+        val text: TextView = layout.findViewById(R.id.toastText)
+        text.text = "Tohle by jsi na jeden zátah neušel, zkus se trochu víc ještě projít!"
+
+        with (Toast(applicationContext)) {
+            setGravity(Gravity.CENTER, 0, 0)
+            duration = Toast.LENGTH_LONG
+            view = layout
+            show()
+        }
+    }
+
     private fun changeBiome(newBiome: BiomeType, startPos: PointF, animate: Boolean = true) {
         val container = findViewById<ViewGroup>(R.id.mapMainContent)
         val transitionAction = {
             currentBiome = newBiome
+
+            // --- OPRAVA: Vidět jen v Meadow ---
+            stepProgressBar.visibility = if (newBiome == BiomeType.MEADOW) View.VISIBLE else View.GONE
+
             when (newBiome) {
                 BiomeType.TOWN -> {
                     mapBackground.setImageResource(R.drawable.poketown)
@@ -164,6 +221,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 BiomeType.MEADOW -> {
                     mapBackground.setImageResource(R.drawable.meadow)
                     movementEngine.updateBiome(BiomeRegistry.MEADOW_GRAPH, startPos)
+                }
+                BiomeType.MOUNTAINS -> {
+                    mapBackground.setImageResource(R.drawable.poketown)
+                    movementEngine.updateBiome(BiomeRegistry.TOWN_GRAPH, startPos)
                 }
                 else -> {}
             }
