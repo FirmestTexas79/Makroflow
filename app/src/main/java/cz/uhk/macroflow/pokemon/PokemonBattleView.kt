@@ -72,7 +72,11 @@ class PokemonBattleView @JvmOverloads constructor(
 
         val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
         val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
-        val backupMakromonId = prefs.getString("currentOnBarId", "012") ?: "012" // Spirra jako fallback
+        val backupMakromonId = prefs.getString("currentOnBarId", "012") ?: "012"
+
+        // --- 🌍 NAČTENÍ AKTUÁLNÍHO BIOMU ---
+        val biomeStr = prefs.getString("LAST_BIOME", BiomeType.TOWN.name)
+        val currentBiome = BiomeType.valueOf(biomeStr!!)
 
         Thread {
             val db = AppDatabase.getDatabase(context)
@@ -83,18 +87,15 @@ class PokemonBattleView @JvmOverloads constructor(
 
             val mId = caughtEntity?.makromonId ?: backupMakromonId
             val playerLevel = caughtEntity?.level ?: 1
-            // Shiny zatím vždy false – odkomentuj až budou shiny sprity:
-            // val playerIsShiny = caughtEntity?.isShiny ?: false
             val playerIsShiny = false
 
             val playerWithStats = createPlayerMakromon(mId, playerLevel)
 
-            val baseEnemy = SpawnManager.rollWildEncounter(context)
+            // --- 🎲 OPRAVENÝ ROLL S BIOMEM ---
+            val baseEnemy = SpawnManager.rollWildEncounter(context, currentBiome)
+
             val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
-
-            // Shiny šance zakomentována – odkomentuj až budou shiny sprity:
-            // val enemyIsShiny = Random.nextInt(5) == 0
             val enemyIsShiny = false
 
             val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
@@ -110,7 +111,6 @@ class PokemonBattleView @JvmOverloads constructor(
 
                 handler.post(cursorTick)
 
-                // Změna tady: posíláme celý objekt 'enemyWithStats' a 'playerWithStats'
                 loadMakromonSprite(enemyWithStats, isPlayer = false)
                 loadMakromonSprite(playerWithStats, isPlayer = true)
 
@@ -721,14 +721,11 @@ class PokemonBattleView @JvmOverloads constructor(
 
         val mId = BattleFactory.makrodexId(gs.enemy)
 
-        // Shiny zatím vždy false – odkomentuj až budou shiny sprity:
-        // val entity = CapturedMakromonEntity(makromonId = mId, name = gs.enemy.name,
-        //     level = gs.enemy.level, isShiny = gs.isEnemyShiny, caughtDate = System.currentTimeMillis())
         val entity = CapturedMakromonEntity(
             makromonId = mId,
             name       = gs.enemy.name,
             level      = gs.enemy.level,
-            isShiny    = false, // Shiny zatím zakomentováno
+            isShiny    = false,
             caughtDate = System.currentTimeMillis()
         )
 
@@ -746,23 +743,22 @@ class PokemonBattleView @JvmOverloads constructor(
             val isAcquired = prefs.getBoolean("makromonAcquired", false)
 
             handler.post {
-                // Shiny prefix zakomentován – odkomentuj až budou shiny sprity:
-                // val shinyPrefix = if (gs.isEnemyShiny) "✨ " else ""
                 setText("CAUGHT ${gs.enemy.name.take(7)}!", "")
                 busy = false
 
                 if (isAcquired) {
-                    val rarity = SpawnManager.allEntries.find { it.id == mId }?.rarity
-                    var xpReward = when (rarity) {
+                    // --- 🏆 XP ODMĚNA PODLE RARITY Z NOVÉHO POOLU ---
+                    val spawnEntry = SpawnManager.allEntries.find { it.id == mId }
+                    val rarity = spawnEntry?.rarity ?: Rarity.COMMON
+
+                    val xpReward = when (rarity) {
                         Rarity.COMMON    -> 20
                         Rarity.RARE      -> 50
                         Rarity.EPIC      -> 100
                         Rarity.LEGENDARY -> 250
                         Rarity.MYTHIC    -> 500
-                        else             -> 20
                     }
-                    // Shiny bonus zakomentován – odkomentuj až budou shiny sprity:
-                    // if (gs.isEnemyShiny) xpReward *= 2
+
                     awardXpToActiveMakromon(xpReward)
                 }
                 pendingAction = { onCaught?.invoke() }

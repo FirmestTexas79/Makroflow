@@ -53,15 +53,12 @@ object Conditions {
     }
 }
 
-// 💡 Sem můžeš v budoucnu jednoduše přidávat:
-// val CALORIE_GOAL_MET = object : SpawnCondition { ... }
-// val PROTEIN_GOAL_MET = object : SpawnCondition { ... }
-
-// --- 📦 DATOVÁ TŘÍDA PRO POOL ---
+// --- 📦 DATOVÁ TŘÍDA PRO POOL S BIOMY ---
 data class SpawnPool(
     val id: String,
     val name: String,
     val rarity: Rarity,
+    val biomes: List<BiomeType>,
     val conditions: List<SpawnCondition>,
     val createMakromon: () -> Makromon
 )
@@ -69,67 +66,65 @@ data class SpawnPool(
 // --- 🧠 CENTRÁLNÍ MOZEK SPAWNOVÁNÍ ---
 object SpawnManager {
 
+    private val ALL_BIOMES = BiomeType.values().toList()
+
     private val POOL: List<SpawnPool> = listOf(
 
-        // ── COMMON ────────────────────────────────────────────────────
-        // Základní starteři a jejich první evoluce jsou nejčastější
-        SpawnPool("012", "SPIRRA",   Rarity.COMMON, listOf(Conditions.ALWAYS))      { BattleFactory.createSpirra() },
-        SpawnPool("020", "FINLET",   Rarity.COMMON, listOf(Conditions.ALWAYS))      { BattleFactory.createFinlet() },
-        SpawnPool("022", "MYCIT",    Rarity.COMMON, listOf(Conditions.ALWAYS))      { BattleFactory.createMycit() },
-        SpawnPool("001", "IGNAR",    Rarity.COMMON, listOf(Conditions.ALWAYS))      { BattleFactory.createIgnar() },
-        SpawnPool("004", "AQULIN",   Rarity.COMMON, listOf(Conditions.ALWAYS))      { BattleFactory.createAqulin() },
-        SpawnPool("007", "FLORI",    Rarity.COMMON, listOf(Conditions.ALWAYS))      { BattleFactory.createFlori() },
+        // ── TOWN (Město) ──────────────────────────────────────────────
+        SpawnPool("012", "SPIRRA",   Rarity.COMMON, listOf(BiomeType.TOWN), listOf(Conditions.ALWAYS))      { BattleFactory.createSpirra() },
+        SpawnPool("001", "IGNAR",    Rarity.COMMON, listOf(BiomeType.TOWN), listOf(Conditions.ALWAYS))      { BattleFactory.createIgnar() },
+        SpawnPool("013", "FLAMIRRA",  Rarity.RARE,   listOf(BiomeType.TOWN), listOf(Conditions.ALWAYS))       { BattleFactory.createFlamirra() },
+        SpawnPool("017", "CHARMIRRA", Rarity.RARE,   listOf(BiomeType.TOWN), listOf(Conditions.ALWAYS))       { BattleFactory.createCharmirra() },
+        SpawnPool("002", "IGNAROC",   Rarity.RARE,   listOf(BiomeType.TOWN), listOf(Conditions.ALWAYS))       { BattleFactory.createIgnaroc() },
+        SpawnPool("010", "UMBEX",     Rarity.EPIC,   listOf(BiomeType.TOWN), listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createUmbex() },
+        SpawnPool("011", "LUMEX",     Rarity.LEGENDARY, listOf(BiomeType.TOWN), listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createLumex() },
 
-        // ── RARE ──────────────────────────────────────────────────────
-        SpawnPool("013", "FLAMIRRA",  Rarity.RARE, listOf(Conditions.ALWAYS))       { BattleFactory.createFlamirra() },
-        SpawnPool("014", "AQUIRRA",   Rarity.RARE, listOf(Conditions.ALWAYS))       { BattleFactory.createAquirra() },
-        SpawnPool("015", "VERDIRRA",  Rarity.RARE, listOf(Conditions.ALWAYS))       { BattleFactory.createVerdirra() },
-        SpawnPool("017", "CHARMIRRA", Rarity.RARE, listOf(Conditions.ALWAYS))       { BattleFactory.createCharmirra() },
-        SpawnPool("002", "IGNAROC",   Rarity.RARE, listOf(Conditions.ALWAYS))       { BattleFactory.createIgnaroc() },
-        SpawnPool("005", "AQULIND",   Rarity.RARE, listOf(Conditions.ALWAYS))       { BattleFactory.createAqlind() },
-        SpawnPool("008", "FLORIND",   Rarity.RARE, listOf(Conditions.ALWAYS))       { BattleFactory.createFlorind() },
-        SpawnPool("021", "SERPFIN",   Rarity.RARE, listOf(Conditions.MinCheckInCount(3))) { BattleFactory.createSerpfin() },
-        SpawnPool("027", "PHANTIL",   Rarity.RARE, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createPhantil() },
-        SpawnPool("024", "SOULU",     Rarity.RARE, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createSoulu() },
+        // ── MEADOW (Les/Louka) ─────────────────────────────────────────
+        SpawnPool("022", "MYCIT",    Rarity.COMMON, listOf(BiomeType.MEADOW), listOf(Conditions.ALWAYS))      { BattleFactory.createMycit() },
+        SpawnPool("007", "FLORI",    Rarity.COMMON, listOf(BiomeType.MEADOW), listOf(Conditions.ALWAYS))      { BattleFactory.createFlori() },
+        SpawnPool("015", "VERDIRRA",  Rarity.RARE,   listOf(BiomeType.MEADOW), listOf(Conditions.ALWAYS))       { BattleFactory.createVerdirra() },
+        SpawnPool("008", "FLORIND",   Rarity.RARE,   listOf(BiomeType.MEADOW), listOf(Conditions.ALWAYS))       { BattleFactory.createFlorind() },
+        SpawnPool("023", "MYDRUS",    Rarity.EPIC,   listOf(BiomeType.MEADOW), listOf(Conditions.MinCheckInCount(5)))  { BattleFactory.createMydrus() },
+        SpawnPool("009", "FLORINDRA", Rarity.EPIC,   listOf(BiomeType.MEADOW), listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createFlorindra() },
+        SpawnPool("030", "GUDWIN",    Rarity.EPIC,   listOf(BiomeType.MEADOW), listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createGudwin() },
 
-        // ── EPIC ──────────────────────────────────────────────────────
-        SpawnPool("016", "SHADIRRA",  Rarity.EPIC, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createShadirra() },
-        SpawnPool("018", "GLACIRRA",  Rarity.EPIC, listOf(Conditions.ALWAYS))       { BattleFactory.createGlacirra() },
-        SpawnPool("003", "IGNAROTH",  Rarity.EPIC, listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createIgnaroth() },
-        SpawnPool("006", "AQULINOX",  Rarity.EPIC, listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createAqulinox() },
-        SpawnPool("009", "FLORINDRA", Rarity.EPIC, listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createFlorindra() },
-        SpawnPool("010", "UMBEX",     Rarity.EPIC, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createUmbex() },
-        SpawnPool("023", "MYDRUS",    Rarity.EPIC, listOf(Conditions.MinCheckInCount(5)))  { BattleFactory.createMydrus() },
-        SpawnPool("025", "SOULEX",    Rarity.EPIC, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createSoulex() },
-        SpawnPool("028", "PHANTIUS",  Rarity.EPIC, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createPhantius() },
-        SpawnPool("030", "GUDWIN",    Rarity.EPIC, listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createGudwin() },
+        // ── WATER (Voda) ──────────────────────────────────────────────
+        SpawnPool("020", "FINLET",   Rarity.COMMON, listOf(BiomeType.WATER), listOf(Conditions.ALWAYS))      { BattleFactory.createFinlet() },
+        SpawnPool("004", "AQULIN",   Rarity.COMMON, listOf(BiomeType.WATER), listOf(Conditions.ALWAYS))      { BattleFactory.createAqulin() },
+        SpawnPool("014", "AQUIRRA",   Rarity.RARE,   listOf(BiomeType.WATER), listOf(Conditions.ALWAYS))       { BattleFactory.createAquirra() },
+        SpawnPool("005", "AQULIND",   Rarity.RARE,   listOf(BiomeType.WATER), listOf(Conditions.ALWAYS))       { BattleFactory.createAqlind() },
+        SpawnPool("021", "SERPFIN",   Rarity.RARE,   listOf(BiomeType.WATER), listOf(Conditions.MinCheckInCount(3))) { BattleFactory.createSerpfin() },
+        SpawnPool("006", "AQULINOX",  Rarity.EPIC,   listOf(BiomeType.WATER), listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createAqulinox() },
 
-        // ── LEGENDARY ─────────────────────────────────────────────────
-        SpawnPool("011", "LUMEX",     Rarity.LEGENDARY, listOf(Conditions.NIGHT_ONLY))              { BattleFactory.createLumex() },
-        SpawnPool("019", "DRAKIRRA",  Rarity.LEGENDARY, listOf(Conditions.MinCheckInCount(30)))     { BattleFactory.createDrakirra() },
-        SpawnPool("026", "SOULORD",   Rarity.LEGENDARY, listOf(Conditions.MinCheckInCount(20), Conditions.NIGHT_ONLY)) { BattleFactory.createSoulord() },
-        SpawnPool("029", "PHANTIAX",  Rarity.LEGENDARY, listOf(Conditions.MinCheckInCount(20)))     { BattleFactory.createPhantiax() },
+        // ── NIGHT / GHOST (Všude v noci) ────────────────────────────────
+        SpawnPool("027", "PHANTIL",   Rarity.RARE,   ALL_BIOMES, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createPhantil() },
+        SpawnPool("024", "SOULU",     Rarity.RARE,   ALL_BIOMES, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createSoulu() },
+        SpawnPool("016", "SHADIRRA",  Rarity.EPIC,   ALL_BIOMES, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createShadirra() },
+        SpawnPool("025", "SOULEX",    Rarity.EPIC,   ALL_BIOMES, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createSoulex() },
+        SpawnPool("028", "PHANTIUS",  Rarity.EPIC,   ALL_BIOMES, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createPhantius() },
+        SpawnPool("026", "SOULORD",   Rarity.LEGENDARY, ALL_BIOMES, listOf(Conditions.MinCheckInCount(20), Conditions.NIGHT_ONLY)) { BattleFactory.createSoulord() },
 
-        // ── MYTHIC ────────────────────────────────────────────────────
-        // Axlu je tvář aplikace – extrémně vzácný, ale chytitelný
-        SpawnPool("031", "AXLU",      Rarity.MYTHIC, listOf(Conditions.MinCheckInCount(50)))        { BattleFactory.createAxlu() }
+        // ── LEGENDARY & MYTHIC ────────────────────────────────────────
+        SpawnPool("018", "GLACIRRA",  Rarity.EPIC,   ALL_BIOMES, listOf(Conditions.ALWAYS))       { BattleFactory.createGlacirra() },
+        SpawnPool("003", "IGNAROTH",  Rarity.EPIC,   listOf(BiomeType.TOWN), listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createIgnaroth() },
+        SpawnPool("019", "DRAKIRRA",  Rarity.LEGENDARY, ALL_BIOMES, listOf(Conditions.MinCheckInCount(30)))     { BattleFactory.createDrakirra() },
+        SpawnPool("029", "PHANTIAX",  Rarity.LEGENDARY, ALL_BIOMES, listOf(Conditions.MinCheckInCount(20)))     { BattleFactory.createPhantiax() },
+        SpawnPool("031", "AXLU",      Rarity.MYTHIC, ALL_BIOMES, listOf(Conditions.MinCheckInCount(50)))        { BattleFactory.createAxlu() }
     )
 
-    fun getActivePool(context: Context): List<SpawnPool> =
-        POOL.filter { spawn -> spawn.conditions.all { it.isMet(context) } }
-
-    fun rollWildEncounter(context: Context): Makromon {
+    fun rollWildEncounter(context: Context, currentBiome: BiomeType): Makromon {
         val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
 
-        // Ghost Plate aktivuje Shadirru (temná veverka) místo Gengara
         if (prefs.getBoolean("ghostPlateActive", false)) {
             prefs.edit().putBoolean("ghostPlateActive", false).apply()
             return BattleFactory.createShadirra()
         }
 
-        val active = getActivePool(context)
+        // Filtrování podle biomu a podmínek
+        val active = POOL.filter { spawn ->
+            spawn.biomes.contains(currentBiome) && spawn.conditions.all { it.isMet(context) }
+        }
 
-        // Záchranný fallback – pokud je pool prázdný, spawnuje se Spirra
         if (active.isEmpty()) return BattleFactory.createSpirra()
 
         val totalWeight = active.sumOf { it.rarity.weight }
@@ -140,11 +135,9 @@ object SpawnManager {
             if (roll < 0) return spawn.createMakromon()
         }
 
-        // Druhý fallback – sem by se nemělo nikdy dojít
         return BattleFactory.createSpirra()
     }
 
     fun findById(id: String): SpawnPool? = POOL.find { it.id == id }
-
     val allEntries: List<SpawnPool> get() = POOL
 }

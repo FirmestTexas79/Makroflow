@@ -1,9 +1,16 @@
 package cz.uhk.macroflow.pokemon
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.PointF
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.activity.addCallback
@@ -14,6 +21,7 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import cz.uhk.macroflow.R
+import kotlin.math.sqrt
 
 class MakromonMapActivity : AppCompatActivity() {
 
@@ -22,42 +30,34 @@ class MakromonMapActivity : AppCompatActivity() {
     private lateinit var tutorialManager:  TutorialManager
     private lateinit var companionManager: CompanionManager
 
-    private lateinit var townHotspots:     View
-    private lateinit var meadowHotspots:   View
-
     private var lastClickTime = 0L
-    private var lastClickedId = -1
+    private var lastClickedNode = ""
     private var currentBiome = BiomeType.TOWN
 
-    private val hotspotIds = listOf(
-        R.id.hotspotForest, R.id.hotspotHome, R.id.hotspotPokedex, R.id.hotspotShop,
-        R.id.hotspotMeadowToTown, R.id.hotspotBush1, R.id.hotspotBush2, R.id.hotspotBush3
+    private val clickableNodes = listOf(
+        "les", "domov", "pokedex", "obchod",
+        "vstup_z_town", "krovi1", "krovi2", "voda"
     )
 
     companion object {
         private const val DOUBLE_CLICK_TIME = 300L
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pokemon_map)
 
-        mapBackground  = findViewById(R.id.mapBackground)
-        townHotspots   = findViewById(R.id.townHotspots)
-        meadowHotspots = findViewById(R.id.meadowHotspots)
-
+        mapBackground = findViewById(R.id.mapBackground)
         val ashView = findViewById<ImageView>(R.id.ashView).also {
             it.layoutParams.width  = (28 * resources.displayMetrics.density).toInt()
             it.layoutParams.height = (42 * resources.displayMetrics.density).toInt()
             it.requestLayout()
         }
 
-        val imageLoader = ImageLoader.Builder(this)
-            .components {
-                if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory())
-                else add(GifDecoder.Factory())
-            }
-            .build()
+        val imageLoader = ImageLoader.Builder(this).components {
+            if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory()) else add(GifDecoder.Factory())
+        }.build()
 
         movementEngine = MovementEngine(this, ashView, mapBackground)
         tutorialManager = TutorialManager(this, findViewById(R.id.tutorialOverlay), findViewById(R.id.tutorialText), findViewById(R.id.tutorialTeacher), imageLoader)
@@ -67,132 +67,138 @@ class MakromonMapActivity : AppCompatActivity() {
         findViewById<View>(R.id.btnExitMap).setOnClickListener { finish() }
 
         onBackPressedDispatcher.addCallback(this) {
-            if (supportFragmentManager.backStackEntryCount > 0) supportFragmentManager.popBackStack()
-            else finish()
-        }
-
-        supportFragmentManager.addOnBackStackChangedListener {
-            val fragmentOpen = supportFragmentManager.backStackEntryCount > 0
-            setHotspotsEnabled(!fragmentOpen)
-            if (!fragmentOpen) companionManager.refresh()
+            if (supportFragmentManager.backStackEntryCount > 0) supportFragmentManager.popBackStack() else finish()
         }
 
         mapBackground.post {
-            // Výchozí stav: TOWN
             changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), animate = false)
-
-            when (intent.getStringExtra("TARGET_LOCATION")) {
-                "POKEDEX"   -> findViewById<View>(R.id.hotspotPokedex).performClick()
-                "INVENTORY" -> findViewById<View>(R.id.hotspotHome).performClick()
-                "SHOP"      -> findViewById<View>(R.id.hotspotShop).performClick()
-            }
+            intent.getStringExtra("TARGET_LOCATION")?.let { triggerHotspotAction(it.lowercase()) }
         }
         companionManager.refresh()
     }
 
-    /**
-     * Hlavní metoda pro změnu lokace.
-     * Implementuje vizuální přechod a aktualizaci navigačního enginu.
-     */
-    private fun changeBiome(newBiome: BiomeType, startPos: PointF, animate: Boolean = true) {
-        val transitionAction = {
-            currentBiome = newBiome
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_UP) {
+            val mapContent = findViewById<View>(R.id.mapMainContent)
+            val location = IntArray(2)
+            mapContent.getLocationOnScreen(location)
 
-            when (newBiome) {
-                BiomeType.TOWN -> {
-                    // Opraveno na poketown (odpovídá poketown.webp)
-                    mapBackground.setImageResource(R.drawable.poketown)
-                    townHotspots.visibility = View.VISIBLE
-                    meadowHotspots.visibility = View.GONE
-                    movementEngine.updateBiome(BiomeRegistry.TOWN_GRAPH, startPos)
-                    setupTownHotspots()
-                }
-                BiomeType.MEADOW -> {
-                    // Opraveno na meadow (odpovídá meadow.png)
-                    mapBackground.setImageResource(R.drawable.meadow)
-                    townHotspots.visibility = View.GONE
-                    meadowHotspots.visibility = View.VISIBLE
-                    movementEngine.updateBiome(BiomeRegistry.MEADOW_GRAPH, startPos)
-                    setupMeadowHotspots()
-                }
-                else -> {}
+            val relX = (event.rawX - location[0]) / mapContent.width
+            val relY = (event.rawY - location[1]) / mapContent.height
+
+            val clickedWaypoint = movementEngine.navigationGraph.find { waypoint ->
+                clickableNodes.contains(waypoint.id) &&
+                        sqrt(Math.pow((waypoint.pos.x - relX).toDouble(), 2.0) +
+                                Math.pow((waypoint.pos.y - relY).toDouble(), 2.0)) < 0.1
+            }
+
+            if (clickedWaypoint != null && !tutorialManager.isVisible() && supportFragmentManager.backStackEntryCount == 0) {
+                triggerHotspotAction(clickedWaypoint.id)
             }
         }
-
-        if (animate) {
-            // Animujeme celý RelativeLayout, aby zmizela mapa i hotspoty najednou
-            findViewById<View>(R.id.mapMainContent).animate()
-                .alpha(0f)
-                .setDuration(400)
-                .withEndAction {
-                    transitionAction()
-                    findViewById<View>(R.id.mapMainContent).animate().alpha(1f).setDuration(400).start()
-                }.start()
-        } else {
-            transitionAction()
-        }
+        return super.dispatchTouchEvent(event)
     }
 
-    private fun setupTownHotspots() {
-        findViewById<View>(R.id.hotspotForest).setOnClickListener {
-            handleHotspotClick(R.id.hotspotForest, "les") {
-                changeBiome(BiomeType.MEADOW, PointF(0.500f, 0.850f))
-            }
-        }
-        findViewById<View>(R.id.hotspotHome).setOnClickListener {
-            handleHotspotClick(R.id.hotspotHome, "domov") { replaceMapContent(InventoryFragment()) }
-        }
-        findViewById<View>(R.id.hotspotPokedex).setOnClickListener {
-            handleHotspotClick(R.id.hotspotPokedex, "pokedex") { replaceMapContent(MakrodexFragment()) }
-        }
-        findViewById<View>(R.id.hotspotShop).setOnClickListener {
-            handleHotspotClick(R.id.hotspotShop, "obchod") { replaceMapContent(PokemonShopFragment()) }
-        }
-    }
+    private fun triggerHotspotAction(nodeName: String) {
+        val now = System.currentTimeMillis()
+        val isDoubleClick = (nodeName == lastClickedNode && now - lastClickTime < DOUBLE_CLICK_TIME)
 
-    private fun setupMeadowHotspots() {
-        findViewById<View>(R.id.hotspotMeadowToTown).setOnClickListener {
-            handleHotspotClick(R.id.hotspotMeadowToTown, "vstup_z_town") {
-                changeBiome(BiomeType.TOWN, PointF(0.460f, 0.150f))
-            }
-        }
+        lastClickTime = now
+        lastClickedNode = nodeName
 
-        // Encounter logiky pro křoví
-        val bushIds = listOf(R.id.hotspotBush1 to "krovi1", R.id.hotspotBush2 to "krovi2", R.id.hotspotBush3 to "krovi3")
-        bushIds.forEach { (viewId, nodeName) ->
-            findViewById<View>(viewId).setOnClickListener {
-                handleHotspotClick(viewId, nodeName) {
-                    // 75% šance na spawn Makromona
+        val action = {
+            when (nodeName) {
+                "les" -> changeBiome(BiomeType.MEADOW, PointF(0.340f, 0.640f))
+                "domov" -> replaceMapContent(InventoryFragment())
+                "pokedex" -> replaceMapContent(MakrodexFragment())
+                "obchod" -> replaceMapContent(PokemonShopFragment())
+                "vstup_z_town" -> changeBiome(BiomeType.TOWN, PointF(0.46f, 0.15f))
+                "krovi1", "krovi2", "voda" -> {
                     if ((1..100).random() <= 75) {
+                        // Určení biomu pro souboj
+                        val encounterBiome = if (nodeName == "voda") BiomeType.WATER else currentBiome
+
+                        // Uložení biomu pro BattleView
+                        getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("LAST_BIOME", encounterBiome.name)
+                            .apply()
+
                         replaceMapContent(PokemonBattleFragment())
                     }
                 }
             }
         }
-    }
 
-    private fun handleHotspotClick(id: Int, targetNode: String, onFinished: () -> Unit) {
-        if (tutorialManager.isVisible()) return
-        val now = System.currentTimeMillis()
-        if (id == lastClickedId && now - lastClickTime < DOUBLE_CLICK_TIME) {
+        if (isDoubleClick) {
             movementEngine.cancel()
+            action()
             movementEngine.currentSpeed = MovementEngine.FAST_SPEED
-            onFinished()
-            movementEngine.walkToNode(targetNode)
+            movementEngine.walkToNode(nodeName)
         } else {
-            movementEngine.currentSpeed = MovementEngine.NORMAL_SPEED
-            movementEngine.walkToNode(targetNode, onFinished)
+            val targetNode = movementEngine.navigationGraph.find { it.id == nodeName }
+            val currentPos = movementEngine.getCurrentPosition()
+            val dist = if (targetNode != null) {
+                sqrt(Math.pow((targetNode.pos.x - currentPos.x).toDouble(), 2.0) +
+                        Math.pow((targetNode.pos.y - currentPos.y).toDouble(), 2.0))
+            } else 1.0
+
+            if (dist < 0.08) {
+                action()
+            } else {
+                movementEngine.currentSpeed = MovementEngine.NORMAL_SPEED
+                movementEngine.walkToNode(nodeName) { action() }
+            }
         }
-        lastClickTime = now
-        lastClickedId = id
     }
 
-    private fun setHotspotsEnabled(enabled: Boolean) {
-        hotspotIds.forEach { id -> findViewById<View>(id)?.apply { isClickable = enabled; isFocusable = enabled } }
+    private fun changeBiome(newBiome: BiomeType, startPos: PointF, animate: Boolean = true) {
+        val container = findViewById<ViewGroup>(R.id.mapMainContent)
+        val transitionAction = {
+            currentBiome = newBiome
+            when (newBiome) {
+                BiomeType.TOWN -> {
+                    mapBackground.setImageResource(R.drawable.poketown)
+                    movementEngine.updateBiome(BiomeRegistry.TOWN_GRAPH, startPos)
+                }
+                BiomeType.MEADOW -> {
+                    mapBackground.setImageResource(R.drawable.meadow)
+                    movementEngine.updateBiome(BiomeRegistry.MEADOW_GRAPH, startPos)
+                }
+                else -> {}
+            }
+            drawDebugNodes(container)
+        }
+
+        if (animate) {
+            container.animate().alpha(0f).setDuration(400).withEndAction {
+                transitionAction()
+                container.animate().alpha(1f).setDuration(400).start()
+            }.start()
+        } else {
+            transitionAction()
+        }
+    }
+
+    private fun drawDebugNodes(container: ViewGroup) {
+        container.findViewWithTag<View>("debug_layer")?.let { container.removeView(it) }
+        val debugLayer = FrameLayout(this).apply {
+            tag = "debug_layer"
+            layoutParams = FrameLayout.LayoutParams(container.width, container.height)
+        }
+        movementEngine.navigationGraph.forEach { waypoint ->
+            debugLayer.addView(View(this).apply {
+                background = ColorDrawable(if (clickableNodes.contains(waypoint.id)) Color.GREEN else Color.RED)
+                alpha = 0.4f
+                layoutParams = FrameLayout.LayoutParams(40, 40)
+                x = waypoint.pos.x * container.width - 20
+                y = waypoint.pos.y * container.height - 20
+            })
+        }
+        container.addView(debugLayer)
     }
 
     private fun replaceMapContent(fragment: Fragment) {
-        setHotspotsEnabled(false)
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
             .replace(R.id.mapFragmentContainer, fragment)

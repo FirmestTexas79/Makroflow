@@ -28,19 +28,15 @@ class MovementEngine(
 
     data class Waypoint(val id: String, val pos: PointF, val neighbors: List<String>)
 
-    // Změněno na var, aby bylo možné nahrát graf jiného biomu
     var navigationGraph: List<Waypoint> = emptyList()
-
     private var currentPosition = PointF(0.480f, 0.275f)
     var isWalking = false
     var currentSpeed = NORMAL_SPEED
     private val handler = Handler(Looper.getMainLooper())
     private var currentDirection = 0
 
-    /**
-     * Klíčová metoda pro přepínání biomů.
-     * Přemaže graf a resetuje postavičku na novou startovní pozici.
-     */
+    fun getCurrentPosition(): PointF = currentPosition
+
     fun updateBiome(newGraph: List<Waypoint>, startPos: PointF) {
         cancel()
         this.navigationGraph = newGraph
@@ -48,18 +44,32 @@ class MovementEngine(
     }
 
     fun walkToNode(targetId: String, onFinished: () -> Unit = {}) {
-        if (isWalking) return
+        if (isWalking) {
+            ashView.animate().cancel()
+            handler.removeCallbacksAndMessages(null)
+        }
+
         val startNode = findClosestNode(currentPosition)
+        if (startNode == targetId) {
+            isWalking = false
+            updateSprite(1, currentDirection)
+            onFinished()
+            return
+        }
+
         val path = findPath(startNode, targetId)
         if (path != null) {
             val pixelPoints = path.map { id ->
                 val wp = navigationGraph.find { it.id == id } ?: return@map PointF(0f, 0f)
                 PointF(wp.pos.x * mapBackground.width, wp.pos.y * mapBackground.height)
             }
+
             isWalking = true
             processNextMove(0, pixelPoints) {
                 val finalNode = navigationGraph.find { it.id == targetId }
                 if (finalNode != null) currentPosition = finalNode.pos
+                isWalking = false
+                updateSprite(1, currentDirection)
                 onFinished()
             }
         }
@@ -100,24 +110,28 @@ class MovementEngine(
 
     private fun processNextMove(index: Int, points: List<PointF>, onFinished: () -> Unit) {
         if (index >= points.size) {
-            isWalking = false
-            updateSprite(1, currentDirection)
             onFinished()
             return
         }
-        val tX = points[index].x - ashView.width / 2f
-        val tY = points[index].y - ashView.height.toFloat()
-        val dx = tX - ashView.x
-        val dy = tY - ashView.y
+
+        val targetX = points[index].x - ashView.width / 2f
+        val targetY = points[index].y - ashView.height.toFloat()
+        val dx = targetX - ashView.x
+        val dy = targetY - ashView.y
 
         currentDirection = if (abs(dx) > abs(dy)) (if (dx > 0) 3 else 2) else (if (dy > 0) 0 else 1)
         startAnimationLoop()
 
         val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
-        ashView.animate().x(tX).y(tY).setDuration((dist * currentSpeed).toLong())
+
+        ashView.animate()
+            .x(targetX).y(targetY)
+            .setDuration((dist * currentSpeed).toLong())
             .setInterpolator(LinearInterpolator())
             .setListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(a: Animator) {
+                    ashView.x = targetX
+                    ashView.y = targetY
                     if (isWalking) processNextMove(index + 1, points, onFinished)
                 }
             }).start()
