@@ -18,7 +18,6 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
@@ -29,9 +28,9 @@ import kotlinx.coroutines.withContext
 
 class EvolutionDialog(
     context: Context,
-    private val capturedMakromonId: Int, // Primární klíč z tabulky captured_makromon
-    private val oldId: String,          // Např. "001"
-    private val newId: String,          // Např. "002"
+    private val capturedMakromonId: Int,
+    private val oldId: String,
+    private val newId: String,
     private val newMoveToLearn: Move?,
     private val onComplete: () -> Unit
 ) : Dialog(context) {
@@ -59,15 +58,25 @@ class EvolutionDialog(
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
 
-        ivEvoSprite     = findViewById(R.id.ivEvoSprite)
-        ivEvoSilhouette = findViewById(R.id.ivEvoSilhouette)
-        tvEvoText       = findViewById(R.id.tvEvoText)
-        llMoveSelection = findViewById(R.id.llMoveSelection)
-        tvNewMovePrompt = findViewById(R.id.tvNewMovePrompt)
-        llCurrentMoves  = findViewById(R.id.llCurrentMoves)
+        ivEvoSprite       = findViewById(R.id.ivEvoSprite)
+        ivEvoSilhouette   = findViewById(R.id.ivEvoSilhouette)
+        tvEvoText         = findViewById(R.id.tvEvoText)
+        llMoveSelection   = findViewById(R.id.llMoveSelection)
+        tvNewMovePrompt   = findViewById(R.id.tvNewMovePrompt)
+        llCurrentMoves    = findViewById(R.id.llCurrentMoves)
         btnCancelLearning = findViewById(R.id.btnCancelLearning)
 
         loadData()
+    }
+
+    // Sestaví název drawable stejně jako MakrodexFragment a MakrodexAdapter
+    private fun spriteResId(entry: MakrodexEntryEntity?): Int {
+        if (entry == null) return R.drawable.ic_home
+        val shortId     = if (entry.makrodexId.length >= 3) entry.makrodexId.takeLast(2) else entry.makrodexId
+        val namePart    = entry.displayName.lowercase().trim()
+        val dynamicName = "makromon_${shortId}_$namePart"
+        val resId       = context.resources.getIdentifier(dynamicName, "drawable", context.packageName)
+        return if (resId != 0) resId else R.drawable.ic_home
     }
 
     private fun loadData() {
@@ -107,19 +116,15 @@ class EvolutionDialog(
 
         tvEvoText.text = "Co se to děje? Tvůj $oldName začíná měnit formu!"
 
-        ivEvoSprite.alpha = 1f
+        ivEvoSprite.alpha     = 1f
         ivEvoSprite.visibility = View.VISIBLE
         ivEvoSilhouette.colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
-        ivEvoSilhouette.alpha = 0f
+        ivEvoSilhouette.alpha     = 0f
         ivEvoSilhouette.visibility = View.VISIBLE
 
-        // Načtení starého spritu z lokálního drawable
-        val oldDrawable = oldEntry?.drawableName ?: "ic_home"
-        val oldResId = context.resources.getIdentifier(oldDrawable, "drawable", context.packageName)
-        val oldFinalResId = if (oldResId != 0) oldResId else R.drawable.ic_home
-
-        ivEvoSprite.setImageResource(oldFinalResId)
-        ivEvoSilhouette.setImageResource(oldFinalResId)
+        val oldResId = spriteResId(oldEntry)
+        ivEvoSprite.setImageResource(oldResId)
+        ivEvoSilhouette.setImageResource(oldResId)
 
         runEvoAnimator(oldName, newName, newEntry)
     }
@@ -142,21 +147,17 @@ class EvolutionDialog(
 
         animator.addListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
-                ivEvoSprite.alpha = 1f
+                ivEvoSprite.alpha          = 1f
                 ivEvoSilhouette.visibility = View.GONE
 
-                // Načtení nového spritu z lokálního drawable
-                val newDrawable = newEntry?.drawableName ?: "ic_home"
-                val newResId = context.resources.getIdentifier(newDrawable, "drawable", context.packageName)
-                ivEvoSprite.setImageResource(if (newResId != 0) newResId else R.drawable.ic_home)
-
-                tvEvoText.text = "Gratulace! Tvůj $oldName se vyvinul v $newName!"
+                ivEvoSprite.setImageResource(spriteResId(newEntry))
+                tvEvoText.text = "Gratulace! Tvůj $oldName se vyvinul v ${newEntry?.displayName ?: "Nová Forma"}!"
 
                 dialogScope.launch {
                     try {
                         withContext(Dispatchers.IO) {
                             activeMakromon.makromonId = newId
-                            activeMakromon.name = newEntry?.displayName?.uppercase() ?: newName.uppercase()
+                            activeMakromon.name = newEntry?.displayName?.uppercase() ?: newId.uppercase()
 
                             db.capturedMakromonDao().updateMakromon(activeMakromon)
 
@@ -213,7 +214,7 @@ class EvolutionDialog(
                 btnCancelLearning.setOnClickListener { dismiss(); onComplete() }
             }
         } else {
-            ivEvoSprite.visibility    = View.GONE
+            ivEvoSprite.visibility     = View.GONE
             ivEvoSilhouette.visibility = View.GONE
             llMoveSelection.visibility = View.VISIBLE
             tvNewMovePrompt.text = "${activeMakromon.name} se chce naučit ${newMove.name}! Vyber útok k zapomnění:"

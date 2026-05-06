@@ -1,5 +1,6 @@
 package cz.uhk.macroflow.pokemon
 
+import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
@@ -188,9 +189,12 @@ class MakrodexFragment : Fragment() {
                                     oldId          = entry.makrodexId,
                                     newId          = profile.evolutionToId,
                                     newMoveToLearn = moveForEvo,
-                                    onComplete     = {
+                                    onComplete = {
                                         isFirstLoad = true
                                         loadMakrodex()
+                                        // Vynutíme přenačtení spritu na liště
+                                        requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+                                            .edit().putString("currentOnBarId", "").apply()
                                         (activity as? MainActivity)?.updateMakromonVisibility()
                                     }
                                 ).show()

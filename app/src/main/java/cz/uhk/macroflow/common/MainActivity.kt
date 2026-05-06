@@ -166,6 +166,7 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus) hideStatusBar()
     }
 
+
     override fun onDestroy() {
         super.onDestroy()
         // Zastavíme animaci Pokémona aby nedošlo k memory leaku

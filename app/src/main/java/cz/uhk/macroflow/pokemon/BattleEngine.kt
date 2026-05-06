@@ -570,9 +570,9 @@ object BattleFactory {
 
         // 4. Seznam jmen, pro která už máš v res/drawable složce fyzicky soubor
         val existingSprites = listOf(
-            "ignar", "aqulin", "flori", "umbex", "spirra",
+            "ignar", "ignaroc", "ignaroth", "aqulin", "flori", "umbex", "spirra",
             "flamirra", "aquirra", "verdirra", "shadirra",
-            "charmirra", "drakirra", "finlet", "mycit",
+            "charmirra", "drakirra", "finlet", "serpfin", "mycit", "soulu",
             "gudwin", "axlu"
         )
 

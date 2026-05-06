@@ -23,6 +23,12 @@ import kotlinx.coroutines.withContext
  * - Nastavení click listeneru pro tap reakce Makromona
  * - Retry logika pokud Makromon v DB ještě není (čeká 3s a zkusí znovu)
  *
+ * Klíč pro detekci změny: "${caughtDate}_${makromonId}"
+ * — caughtDate identifikuje konkrétního jedince, makromonId detekuje evoluci.
+ *
+ * Drawable konvence: makromon_${shortId}_${name}  např. makromon_02_ignaroc
+ * — stejný formát jako MakrodexFragment, MakrodexAdapter a WandererFactory.
+ *
  * Shiny logika zakomentována – odkomentuj až budou hotové shiny sprity:
  * val spriteType = if (caught.isShiny) "shiny" else "regular"
  */
@@ -34,9 +40,10 @@ class MakromonBarController(
 
     private var behavior: PokemonBehavior? = null
 
-    // Klíč pro detekci změny Makromona (caughtDate)
+    // Klíč pro detekci změny Makromona.
+    // Obsahuje caughtDate (identifikuje jedince) + makromonId (detekuje evoluci).
     // Shiny zatím není součástí klíče – odkomentuj až budou shiny sprity:
-    // private var lastLoadedKey: String = "" // "${caught.caughtDate}_${caught.isShiny}"
+    // private var lastLoadedKey: String = "" // "${caught.caughtDate}_${caught.makromonId}_${caught.isShiny}"
     private var lastLoadedKey: String = ""
 
     fun refresh() {
@@ -60,28 +67,32 @@ class MakromonBarController(
                     return@withContext
                 }
 
-                // Shiny zatím není součástí klíče
-                // Odkomentuj až budou shiny sprity: "${caught.caughtDate}_${caught.isShiny}"
-                val uniqueKey = "${caught.caughtDate}"
+                // Klíč obsahuje makromonId aby se detekovala evoluce
+                // Shiny zatím není součástí klíče — odkomentuj až budou hotové sprity:
+                // val uniqueKey = "${caught.caughtDate}_${caught.makromonId}_${caught.isShiny}"
+                val uniqueKey = "${caught.caughtDate}_${caught.makromonId}"
 
                 if (uniqueKey == lastLoadedKey) {
+                    // Stejný Makromon ve stejné formě — jen zajistíme viditelnost
                     ivPokemon.visibility = View.VISIBLE
                     if (behavior == null) startBehavior(caught.makromonId)
                     setupClickListener()
                     return@withContext
                 }
 
-                // Nový Makromon – přenačteme sprite z lokálního drawable
+                // Nový Makromon nebo evoluce — přenačteme sprite z lokálního drawable
                 lastLoadedKey = uniqueKey
                 stop()
                 ivPokemon.visibility = View.INVISIBLE
 
-                // Sestavení názvu drawable z názvu Makromona
-                // Konvence: makromon_spirra, makromon_ignar, atd.
+                // Sestavení názvu drawable — stejná konvence jako MakrodexFragment a WandererFactory
+                // Formát: makromon_${shortId}_${name}  např. makromon_02_ignaroc
                 // Shiny verze zakomentována – odkomentuj až budou hotové sprity:
-                // val drawableName = if (caught.isShiny) "makromon_${name}_shiny" else "makromon_$name"
+                // val drawableName = if (caught.isShiny) "makromon_${shortId}_${name}_shiny" else "makromon_${shortId}_$name"
+                val shortId = if (caught.makromonId.length >= 3) caught.makromonId.takeLast(2) else caught.makromonId
                 val name = caught.name.lowercase().trim().replace(" ", "_")
-                val drawableName = "makromon_$name"
+                val drawableName = "makromon_${shortId}_$name"
+
                 val resId = activity.resources.getIdentifier(
                     drawableName, "drawable", activity.packageName
                 )
