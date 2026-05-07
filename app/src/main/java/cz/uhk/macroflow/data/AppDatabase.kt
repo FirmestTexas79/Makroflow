@@ -28,9 +28,10 @@ import kotlin.concurrent.thread
         MakromonXpEntity::class,
         StepsEntity::class,
         AnalyticsCacheEntity::class,
-        SnackUsageEntity::class
+        SnackUsageEntity::class,
+        QuestProgressEntity::class
     ],
-    version = 32,
+    version = 33,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -50,6 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun makromonXpDao(): MakromonXpDao
     abstract fun stepsDao(): StepsDao
     abstract fun analyticsDao(): AnalyticsDao
+    abstract fun questDao(): QuestDao
 
     companion object {
         @Volatile

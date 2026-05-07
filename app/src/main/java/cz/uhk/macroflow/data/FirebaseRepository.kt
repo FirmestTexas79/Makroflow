@@ -431,6 +431,35 @@ object FirebaseRepository {
         }
     }
 
+
+    // ========== QUESTY ==========
+
+    suspend fun uploadQuestProgress(progress: QuestProgressEntity) {
+        if (!isLoggedIn) return
+        val data = mapOf(
+            "currentStageIndex" to progress.currentStageIndex,
+            "isCompleted"      to progress.isCompleted,
+            "metadata"         to progress.metadata,
+            "lastUpdated"      to progress.lastUpdated
+        )
+        userDoc().collection("quest_progress").document(progress.questId)
+            .set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun downloadAllQuestProgress(): List<QuestProgressEntity> {
+        if (!isLoggedIn) return emptyList()
+        val snaps = userDoc().collection("quest_progress").get().await()
+        return snaps.documents.mapNotNull { doc ->
+            QuestProgressEntity(
+                questId           = doc.id,
+                currentStageIndex = (doc.getLong("currentStageIndex") ?: 0L).toInt(),
+                isCompleted       = doc.getBoolean("isCompleted") ?: false,
+                metadata          = doc.getString("metadata") ?: "",
+                lastUpdated       = doc.getLong("lastUpdated") ?: System.currentTimeMillis()
+            )
+        }
+    }
+
     // ========== SYNC: LOCAL → CLOUD ==========
 
     suspend fun syncLocalDataToCloud(context: Context) {
@@ -474,6 +503,8 @@ object FirebaseRepository {
         localDb.makrodexStatusDao().getUnlockedIds().forEach { uploadMakrodexStatus(it) }
         localDb.achievementDao().getAllUnlocked().forEach   { uploadAchievement(it) }
 
+        localDb.questDao().getAllQuests().forEach { uploadQuestProgress(it) }
+
         Log.d("FB_SYNC", "Upload dokončen")
     }
 
@@ -500,6 +531,8 @@ object FirebaseRepository {
             val makromonXp    = downloadAllMakromonXp()
             val steps        = downloadAllSteps()
             val analytics    = downloadAllAnalytics()
+
+            val questProgress = downloadAllQuestProgress()
 
             profile?.let { localDb.userProfileDao().saveProfile(it) }
             if (plan.isNotEmpty()) {
@@ -542,6 +575,8 @@ object FirebaseRepository {
             makromonXp.forEach    { localDb.makromonXpDao().setXp(it) }
             steps.forEach        { localDb.stepsDao().insertSteps(it) }
 
+            questProgress.forEach { localDb.questDao().saveQuestProgress(it) }
+
             if (analytics.isNotEmpty()) {
                 localDb.analyticsDao().deleteAllLocally()
                 localDb.analyticsDao().insertAll(analytics)
@@ -564,7 +599,8 @@ object FirebaseRepository {
         // Smazání všech kolekcí uživatele
         listOf(
             "profiles", "checkIns", "bodyMetrics", "analytics",
-            "capturedMakromon", "water", "consumedSnacks", "trainingPlans"
+            "capturedMakromon", "water", "consumedSnacks", "trainingPlans",
+            "quest_progress"
         ).forEach { collection ->
             try {
                 val docs = db.collection("users").document(uid)

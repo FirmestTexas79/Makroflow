@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E6000000"
+    android:clickable="true"
+    android:focusable="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/journalPaperBody"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="150dp"
+        android:layout_marginBottom="150dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/aged_paper_bg"
+        android:elevation="12dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:id="@+id/leftPage"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingStart="32dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="36dp"
+            android:paddingBottom="24dp"
+            app:layout_constraintHorizontal_weight="1"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/bindingShadowContainer">
+
+            <TextView
+                android:id="@+id/chapterTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/jersey_15"
+                android:textSize="20sp"
+                android:textColor="@color/journal_chapter_title_ink"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="8dp"/>
+
+            <ImageView
+                android:id="@+id/npcPortrait"
+                android:layout_width="70dp"
+                android:layout_height="70dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="8dp"
+                android:scaleType="fitCenter"/>
+
+            <TextView
+                android:id="@+id/taskListText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/jersey_15"
+                android:textSize="14sp"
+                android:textColor="#BC6C25"
+                android:gravity="center"
+                android:layout_marginBottom="8dp"
+                android:textStyle="bold" />
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scrollbars="none">
+                <TextView
+                    android:id="@+id/storyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/jersey_15"
+                    android:textSize="14sp"
+                    android:textColor="@color/journal_ink"
+                    android:lineSpacingExtra="1dp"/>
+            </ScrollView>
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/bindingShadowContainer"
+            android:layout_width="36dp"
+            android:layout_height="match_parent"
+            app:layout_constraintStart_toEndOf="@id/leftPage"
+            app:layout_constraintEnd_toStartOf="@+id/rightPage">
+            <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/journal_spine_gradient"/>
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/rightPage"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="32dp"
+            android:paddingTop="36dp"
+            android:paddingBottom="24dp"
+            app:layout_constraintHorizontal_weight="1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/bindingShadowContainer">
+
+            <TextView
+                android:id="@+id/dateText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/jersey_15"
+                android:textSize="12sp"
+                android:textColor="@color/journal_ink"
+                android:layout_gravity="end"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Postup úkolu:"
+                android:fontFamily="@font/jersey_15"
+                android:textSize="16sp"
+                android:textColor="@color/journal_chapter_title_ink"
+                android:layout_marginBottom="4dp"/>
+
+            <LinearLayout
+                android:id="@+id/journalQuestProgressLine"
+                android:layout_width="match_parent"
+                android:layout_height="18dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Deník fází:"
+                android:fontFamily="@font/jersey_15"
+                android:textSize="16sp"
+                android:textColor="@color/journal_chapter_title_ink"
+                android:layout_marginBottom="6dp"/>
+
+            <TextView
+                android:id="@+id/tvQuestStagesList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/jersey_15"
+                android:textSize="14sp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="@color/journal_ink" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btnCloseJournal"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:tint="@color/journal_ink" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

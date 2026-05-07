@@ -57,13 +57,31 @@ class PokemonBattleFragment : Fragment() {
             ).also { it.bottomMargin = (6 * dp).toInt() }
         }
 
+        // V onCreateView fragmentu uprav onCaught takto:
         val battleView = PokemonBattleView(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
+            // V onCreateView fragmentu uprav onCaught:
             onCaught = {
-                (requireActivity() as? MainActivity)?.updateMakromonVisibility()
+                val prefs = ctx.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+
+                // Tady je ten trik: pokud v prefs JE force encounter,
+                // pošleme "starter_bush", jinak pošleme "wild"
+                val isFromQuestBush = prefs.contains("FORCE_ENCOUNTER_ID")
+                val source = if (isFromQuestBush) "starter_bush" else "wild"
+
+                // Zavoláme manažer (Ujisti se, že v MakromonMapActivity je questManager public)
+                (activity as? MakromonMapActivity)?.let { mapActivity ->
+                    mapActivity.questManager.onMakromonCaught(source)
+                }
+
+                // Odstraníme příznak až POTÉ, co jsme ho použili
+                prefs.edit().remove("FORCE_ENCOUNTER_ID").apply()
+
+                (requireActivity() as? cz.uhk.macroflow.common.MainActivity)?.updateMakromonVisibility()
+
                 view?.postDelayed({ safeClose() }, 2000)
             }
         }
@@ -86,7 +104,7 @@ class PokemonBattleFragment : Fragment() {
         battleContent.addView(closeBtn)
         root.addView(battleContent)
 
-        // ── INTRO OVERLAY ─────────────────────────────────────────────────────
+        // ── INTRO OVERLAY (Křoví a Animace) ──────────────────────────────────
         val introOverlay = buildIntroOverlay(ctx, dp, battleContent)
         root.addView(introOverlay)
 

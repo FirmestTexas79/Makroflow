@@ -79,6 +79,8 @@
     <color name="retro_terminal_black">#0D1208</color>
     <color name="brand_dark_alpha15">#26283618</color>
 
+    <color name="journal_ink">@color/brand_dark</color> <color name="journal_chapter_title_ink">@color/brand_accent_deep</color> <color name="journal_spine_leather">#1B2410</color>
+
     <string name="app_name_caps">MAKROFLOW</string>
     <string name="app_tagline">Tvůj inteligentní nutriční\na tréninkový asistent</string>
     <string name="login_google">Přihlásit se přes Google</string>
