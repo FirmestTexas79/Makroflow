@@ -355,7 +355,7 @@ object BattleFactory {
     fun createAquirra() = Makromon(
         name = "AQUIRRA", level = 1,
         maxHp = 42, attack = 45, defense = 50, speed = 55,
-        moves = listOf(attackTackle(), attackWaterGun(), attackBubbleBeam())
+        moves = listOf( attackWaterGun(), attackTackle(), attackBubbleBeam())
     )
 
     // 15 - Verdirra (grass veverka)
@@ -403,7 +403,7 @@ object BattleFactory {
     fun createFinlet() = Makromon(
         name = "FINLET", level = 1,
         maxHp = 20, attack = 8, defense = 8, speed = 40,
-        moves = listOf(attackTackle(), attackWaterGun())
+        moves = listOf(attackWaterGun(), attackTackle())
     )
 
     // 21 - Serpfin (obří rybohadí monstrum) – sprite zatím chybí, placeholder
@@ -494,8 +494,8 @@ object BattleFactory {
         name = "AXLU", level = 5,
         maxHp = 35, attack = 12, defense = 12, speed = 15,
         moves = listOf(
-            attackTackle(),
             attackWaterGun(),
+            attackTackle(),
             attackCharm(),
             Move("REGENERATE", MakromonType.NORMAL, 0, 100, 10)
         )
@@ -570,9 +570,9 @@ object BattleFactory {
 
         // 4. Seznam jmen, pro která už máš v res/drawable složce fyzicky soubor
         val existingSprites = listOf(
-            "ignar", "ignaroc", "ignaroth", "aqulin", "flori", "umbex", "spirra",
+            "ignar", "ignaroc", "ignaroth", "aqulin", "flori", "florind", "umbex", "spirra",
             "flamirra", "aquirra", "verdirra", "shadirra",
-            "charmirra", "drakirra", "finlet", "serpfin", "mycit", "soulu",
+            "charmirra", "drakirra", "finlet", "serpfin", "mycit", "mydrus", "soulu", "soulex", "soulord",
             "gudwin", "axlu"
         )
 

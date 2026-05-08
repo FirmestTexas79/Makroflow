@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +29,7 @@ import cz.uhk.macroflow.data.SnackEntity
 import cz.uhk.macroflow.data.GeminiRepository
 import cz.uhk.macroflow.data.FoodAIResult
 import cz.uhk.macroflow.dashboard.MacroCalculator
+import cz.uhk.macroflow.pokemon.MakromonMapActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -763,7 +765,6 @@ class SnackFragment : Fragment() {
 
         etWeight.addTextChangedListener { recalcAndDisplay() }
 
-        // ... uvnitř showConsumeDialog v btnConfirm.setOnClickListener
         btnConfirm.setOnClickListener {
             val g = etWeight.text.toString().toFloatOrNull() ?: defaultGrams
             val p = (snack.p / defaultGrams) * g
@@ -774,7 +775,7 @@ class SnackFragment : Fragment() {
             val kj = (p * 17f) + (s * 17f) + (t * 38f)
 
             lifecycleScope.launch(Dispatchers.IO) {
-                // Uložení konzumace
+                // 1. Uložení konzumace do DB
                 db.consumedSnackDao().insertConsumed(
                     ConsumedSnackEntity(
                         date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
@@ -783,10 +784,15 @@ class SnackFragment : Fragment() {
                     )
                 )
 
-                // AKTUALIZACE POPULARITY (Smart sorting bod)
+                // 2. Aktualizace popularity
                 incrementSnackUsage(snack.name)
 
+                // --- TADY JE TA ÚPRAVA PRO QUEST ---
                 withContext(Dispatchers.Main) {
+                    Log.d("QuestFlow", "1. SnackFragment: Volám onMealLogged")
+                    // Zavoláme QuestManager v hlavní aktivitě (pokud je dostupná)
+                    (activity as? MakromonMapActivity)?.questManager?.onMealLogged()
+
                     dialog.dismiss()
                     view?.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
                     Toast.makeText(requireContext(), "${snack.name} přidáno!", Toast.LENGTH_SHORT).show()

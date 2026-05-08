@@ -26,7 +26,7 @@ import coil.decode.ImageDecoderDecoder
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.pokemon.ui.StepProgressBar
-import cz.uhk.macroflow.pokemon.quests.QuestRegistry // Import registru
+import cz.uhk.macroflow.pokemon.quests.QuestRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -42,7 +42,7 @@ class MakromonMapActivity : AppCompatActivity() {
     private lateinit var questDialogManager: QuestDialogManager
     private lateinit var companionManager: CompanionManager
     private lateinit var stepProgressBar:  StepProgressBar
-    lateinit var questManager:             QuestManager // Změněno na public pro přístup z fragmentů
+    lateinit var questManager:             QuestManager
     private lateinit var gudwinNPC:        ImageView
     private lateinit var starterBush:      ImageView
     private lateinit var meadowBushNPC:    ImageView
@@ -61,6 +61,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     companion object {
         private const val DOUBLE_CLICK_TIME = 300L
+        private const val TAG_JOURNAL = "QUEST_JOURNAL"
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -93,8 +94,20 @@ class MakromonMapActivity : AppCompatActivity() {
         )
 
         questManager = QuestManager(AppDatabase.getDatabase(this), questDialogManager, lifecycleScope)
+        questManager.startObservingMeals() // Tímto manager začne hlídat jídla v DB
 
-        // Inicializace NPC
+        // PROPOJENÍ: Když se v manageru změní progres (např. onMealLogged), refreshneme UI
+        questManager.onProgressChanged = { progress ->
+            // lifecycleScope zajistí, že nebudeme sahat do UI, pokud aktivita umírá
+            lifecycleScope.launch(Dispatchers.Main) {
+                val journalFragment = supportFragmentManager.findFragmentByTag(TAG_JOURNAL) as? QuestJournalFragment
+                // Kontrolujeme isAdded(), aby fragment nespadl při pokusu o refresh
+                if (journalFragment != null && journalFragment.isAdded) {
+                    journalFragment.refreshData()
+                }
+            }
+        }
+
         setupGudwinView()
         setupStarterBush()
         setupMeadowBush()
@@ -114,18 +127,14 @@ class MakromonMapActivity : AppCompatActivity() {
         }
 
         findViewById<ImageButton>(R.id.btnOpenJournal).setOnClickListener {
-            replaceMapContent(QuestJournalFragment())
+            replaceMapContent(QuestJournalFragment(), TAG_JOURNAL)
         }
-
 
         companionManager.refresh()
         startStepSyncLoop()
     }
 
-    // Přidej tuto metodu do MakromonMapActivity
-    fun getCurrentBiome(): BiomeType {
-        return currentBiome
-    }
+    fun getCurrentBiome(): BiomeType = currentBiome
 
     private fun setupGudwinView() {
         gudwinNPC = ImageView(this).apply {
@@ -220,7 +229,6 @@ class MakromonMapActivity : AppCompatActivity() {
 
             when (nodeName) {
                 "gudwin", "meadow_npc" -> questManager.checkNpcInteraction()
-
                 "starter_bush" -> {
                     getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                         .putString("LAST_BIOME", currentBiome.name)
@@ -228,9 +236,7 @@ class MakromonMapActivity : AppCompatActivity() {
                         .apply()
                     replaceMapContent(PokemonBattleFragment())
                 }
-
                 "hory" -> if (currentDailySteps >= STEP_GOAL_FOR_MOUNTAINS) changeBiome(BiomeType.MOUNTAINS, PointF(0.450f, 0.350f)) else showStepWarningToast()
-
                 "les" -> {
                     if (!questManager.isIntroQuestFinished()) {
                         movementEngine.cancel()
@@ -239,14 +245,12 @@ class MakromonMapActivity : AppCompatActivity() {
                         changeBiome(BiomeType.MEADOW, PointF(0.340f, 0.640f))
                     }
                 }
-
                 "domov" -> replaceMapContent(InventoryFragment())
                 "pokedex" -> replaceMapContent(MakrodexFragment())
                 "obchod" -> replaceMapContent(PokemonShopFragment())
                 "vstup_z_town" -> changeBiome(BiomeType.TOWN, PointF(0.46f, 0.15f))
-
                 "krovi1", "krovi2", "voda" -> {
-                    if ((1..100).random() <= 90) { // Snížena šance na 30% pro hratelnost
+                    if ((1..100).random() <= 90) {
                         val encounterBiome = if (nodeName == "voda") BiomeType.WATER else currentBiome
                         getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                             .putString("LAST_BIOME", encounterBiome.name)
@@ -266,8 +270,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     private fun showStepWarningToast() {
         val layout = layoutInflater.inflate(R.layout.layout_custom_toast, null)
-        val text: TextView = layout.findViewById(R.id.toastText)
-        text.text = "Tohle by jsi na jeden zátah neušel, zkus se trochu víc ještě projít!"
+        layout.findViewById<TextView>(R.id.toastText).text = "Tohle by jsi na jeden zátah neušel, zkus se trochu víc ještě projít!"
         with (Toast(applicationContext)) {
             setGravity(Gravity.CENTER, 0, 0)
             duration = Toast.LENGTH_LONG
@@ -293,16 +296,13 @@ class MakromonMapActivity : AppCompatActivity() {
             currentBiome = newBiome
             stepProgressBar.visibility = if (newBiome == BiomeType.MEADOW) View.VISIBLE else View.GONE
 
-            // Správa Questů při změně biomu
             val questToLoad = if (newBiome == BiomeType.MEADOW) QuestRegistry.MEADOW_QUEST.id else QuestRegistry.TOWN_INTRO_QUEST.id
             questManager.loadQuest(questToLoad)
 
-            // UI a Pozicování NPC
             when (newBiome) {
                 BiomeType.TOWN -> {
                     mapBackground.setImageResource(R.drawable.poketown)
                     movementEngine.updateBiome(BiomeRegistry.TOWN_GRAPH, startPos)
-
                     gudwinNPC.visibility = View.VISIBLE
                     starterBush.visibility = View.VISIBLE
                     meadowBushNPC.visibility = View.GONE
@@ -322,12 +322,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 BiomeType.MEADOW -> {
                     mapBackground.setImageResource(R.drawable.meadow)
                     movementEngine.updateBiome(BiomeRegistry.MEADOW_GRAPH, startPos)
-
                     gudwinNPC.visibility = View.GONE
                     starterBush.visibility = View.GONE
                     meadowBushNPC.visibility = View.VISIBLE
 
-                    // Opraveno ID na meadow_npc
                     val bushNpcPos = BiomeRegistry.MEADOW_GRAPH.find { it.id == "meadow_npc" }?.pos ?: PointF(0.630f, 0.430f)
                     meadowBushNPC.post {
                         meadowBushNPC.x = bushNpcPos.x * container.width - (meadowBushNPC.width / 2)
@@ -367,10 +365,10 @@ class MakromonMapActivity : AppCompatActivity() {
         container.addView(debugLayer)
     }
 
-    private fun replaceMapContent(fragment: Fragment) {
+    private fun replaceMapContent(fragment: Fragment, tag: String? = null) {
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-            .replace(R.id.mapFragmentContainer, fragment)
+            .replace(R.id.mapFragmentContainer, fragment, tag)
             .addToBackStack(null)
             .commit()
     }

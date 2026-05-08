@@ -73,7 +73,7 @@ object QuestRegistry {
                 speakerResId = R.drawable.npc_bush,
                 requirementType = RequirementType.BATTLE_TYPE,
                 targetValue = 3,
-                targetId = "water"
+                targetId = "WATER"
             ),
             QuestStage(
                 title = "Dálkový průzkum",

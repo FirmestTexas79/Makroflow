@@ -497,13 +497,24 @@ class PokemonBattleView @JvmOverloads constructor(
                 val enemyType = gs.enemy.moves.firstOrNull()?.type ?: MakromonType.NORMAL
                 val dmg = BattleEngine.calcDamage(gs.player.level, mv.power, gs.player.attack, gs.enemy.defense, mv.type, enemyType)
                 doFlash {
-                    gs.enemy.currentHp = maxOf(0, gs.enemy.currentHp - dmg); invalidate()
+                    gs.enemy.currentHp = maxOf(0, gs.enemy.currentHp - dmg)
+                    invalidate()
+
                     handler.postDelayed({
                         if (gs.enemy.currentHp <= 0) {
-                            gs.enemyVisible = false; gs.phase = BattlePhase.ENEMY_FAINTED
+                            gs.enemyVisible = false
+                            gs.phase = BattlePhase.ENEMY_FAINTED
                             setText("${gs.enemy.name}", "FAINTED!")
 
+                            // --- QUEST SYSTÉM: OZNÁMENÍ VÝHRY ---
+                            // Zjistíme typ nepřítele (bereme typ prvního útoku, jak to máš v dmg výpočtu)
+                            val enemyType = gs.enemy.moves.firstOrNull()?.type ?: MakromonType.NORMAL
+
+                            // Informujeme QuestManager o výhře nad konkrétním typem
+                            (context as? MakromonMapActivity)?.questManager?.onBattleWon(enemyType.name)
+
                             Thread {
+                                // Logika pro XP a Makrodex
                                 val mId = BattleFactory.makrodexId(gs.enemy)
                                 val spawnEntry = SpawnManager.allEntries.find { it.id == mId }
                                 val rarity = spawnEntry?.rarity ?: Rarity.COMMON
@@ -515,14 +526,18 @@ class PokemonBattleView @JvmOverloads constructor(
                                     Rarity.LEGENDARY -> 120
                                     Rarity.MYTHIC    -> 250
                                 }
-                                val totalBattleXp = baseScore + gs.enemy.level * 3
+                                val totalBattleXp = baseScore + (gs.enemy.level * 3)
                                 awardXpToActiveMakromon(totalBattleXp)
 
                                 handler.post {
-                                    handler.postDelayed({ onCaught?.invoke() }, 2000)
+                                    // Počkej 2 sekundy, než se vrátíš na mapu/ukončíš souboj
+                                    handler.postDelayed({
+                                        onCaught?.invoke()
+                                    }, 2000)
                                 }
                             }.start()
                         } else {
+                            // Nepřítel přežil, pokračujeme v boji
                             setText("IT DEALT", "$dmg DAMAGE!")
                             scheduleAfterText { enemyTurn() }
                         }

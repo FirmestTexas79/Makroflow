@@ -59,9 +59,9 @@ object MakromonGrowthManager {
             evolutionLevel = 4,
             evolutionToId = "005",
             movesLearnedAt = listOf(
-                LearnableMove(1, BattleFactory.attackTackle()),
+                LearnableMove(1, BattleFactory.attackWaterGun()),
                 LearnableMove(1, BattleFactory.attackGrowl()),
-                LearnableMove(3, BattleFactory.attackWaterGun())
+                LearnableMove(3, BattleFactory.attackBite())
             )
         ),
         "005" to MakromonGrowthProfile(
@@ -252,8 +252,8 @@ object MakromonGrowthManager {
             evolutionLevel = 8,
             evolutionToId = "021",
             movesLearnedAt = listOf(
-                LearnableMove(1, BattleFactory.attackTackle()),
                 LearnableMove(1, BattleFactory.attackWaterGun()),
+                LearnableMove(1, BattleFactory.attackTackle()),
                 LearnableMove(4, BattleFactory.attackBubbleBeam()),
                 LearnableMove(7, BattleFactory.attackSandAttack())
             )

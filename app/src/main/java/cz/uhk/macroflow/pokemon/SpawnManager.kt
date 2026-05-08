@@ -67,7 +67,7 @@ data class SpawnPool(
 object SpawnManager {
 
     // Definujeme biomy, které jsou považovány za "divočinu" (vše kromě města)
-    private val ALL_WILD_BIOMES = BiomeType.values().filter { it != BiomeType.TOWN }
+    private val ALL_WILD_BIOMES = BiomeType.values().filter { it != BiomeType.TOWN && it != BiomeType.WATER }
 
     // Ponecháno, pokud byste někdy potřebovali skutečně úplně všechny
     private val ALL_BIOMES = BiomeType.values().toList()
@@ -106,7 +106,7 @@ object SpawnManager {
         SpawnPool("024", "SOULU",     Rarity.RARE,   ALL_WILD_BIOMES, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createSoulu() },
         SpawnPool("016", "SHADIRRA",  Rarity.EPIC,   ALL_WILD_BIOMES, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createShadirra() },
         SpawnPool("025", "SOULEX",    Rarity.EPIC,   ALL_WILD_BIOMES, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createSoulex() },
-        SpawnPool("028", "PHANTIUS",  Rarity.EPIC,   ALL_WILD_BIOMES, listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createPhantius() },
+        SpawnPool("028", "PHANTIUS",  Rarity.EPIC,   listOf(BiomeType.WATER), listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createPhantius() },
         SpawnPool("026", "SOULORD",   Rarity.LEGENDARY, ALL_WILD_BIOMES, listOf(Conditions.MinCheckInCount(20), Conditions.NIGHT_ONLY)) { BattleFactory.createSoulord() },
 
         // ── LEGENDARY & MYTHIC (Všude kromě TOWN) ──────────────────────
