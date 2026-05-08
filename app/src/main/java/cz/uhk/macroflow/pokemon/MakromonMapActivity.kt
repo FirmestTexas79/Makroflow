@@ -26,6 +26,7 @@ import coil.decode.ImageDecoderDecoder
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.pokemon.ui.StepProgressBar
+import cz.uhk.macroflow.pokemon.quests.QuestRegistry // Import registru
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,10 +42,10 @@ class MakromonMapActivity : AppCompatActivity() {
     private lateinit var questDialogManager: QuestDialogManager
     private lateinit var companionManager: CompanionManager
     private lateinit var stepProgressBar:  StepProgressBar
-    public lateinit var questManager:     QuestManager
+    lateinit var questManager:             QuestManager // Změněno na public pro přístup z fragmentů
     private lateinit var gudwinNPC:        ImageView
     private lateinit var starterBush:      ImageView
-    private lateinit var meadowBushNPC:    ImageView // <--- NOVÉ
+    private lateinit var meadowBushNPC:    ImageView
 
     private var lastClickTime = 0L
     private var lastClickedNode = ""
@@ -92,8 +93,8 @@ class MakromonMapActivity : AppCompatActivity() {
         )
 
         questManager = QuestManager(AppDatabase.getDatabase(this), questDialogManager, lifecycleScope)
-        questManager.loadQuest("town_intro_oliver")
 
+        // Inicializace NPC
         setupGudwinView()
         setupStarterBush()
         setupMeadowBush()
@@ -116,8 +117,14 @@ class MakromonMapActivity : AppCompatActivity() {
             replaceMapContent(QuestJournalFragment())
         }
 
+
         companionManager.refresh()
         startStepSyncLoop()
+    }
+
+    // Přidej tuto metodu do MakromonMapActivity
+    fun getCurrentBiome(): BiomeType {
+        return currentBiome
     }
 
     private fun setupGudwinView() {
@@ -142,7 +149,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 (50 * resources.displayMetrics.density).toInt()
             )
             visibility = View.GONE
-            elevation = 5f // Zvýšeno na úroveň Gudwina
+            elevation = 5f
         }
         findViewById<ViewGroup>(R.id.mapMainContent).addView(starterBush)
     }
@@ -170,15 +177,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 currentDailySteps = steps
 
-                // Spustíme na hlavním vlákně
                 runOnUiThread {
                     stepProgressBar.setProgress(currentDailySteps, STEP_GOAL_FOR_MOUNTAINS)
-
-                    // OPRAVA: Voláme novou metodu onStepsChanged
-                    // Tímto propojíme senzory s Quest systémem
                     questManager.onStepsChanged(currentDailySteps)
                 }
-
                 delay(2000)
             }
         }
@@ -213,45 +215,27 @@ class MakromonMapActivity : AppCompatActivity() {
         lastClickTime = now
         lastClickedNode = nodeName
 
-        // Definice toho, co se stane, když Ash DOSTOUPÍ na políčko
         val action = {
-            // 1. Oznámíme manažerovi, že jsme na místě (důležité pro VISIT_NODE i CAPTURE_SPECIFIC)
             questManager.onNodeVisited(nodeName)
 
             when (nodeName) {
-                "gudwin" -> questManager.checkNpcInteraction()
-
-                "meadow_npc" -> questManager.checkNpcInteraction()
+                "gudwin", "meadow_npc" -> questManager.checkNpcInteraction()
 
                 "starter_bush" -> {
-                    // TADY JE ZMĚNA: Nastavíme příznak, že jde o starter bush souboj
                     getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                         .putString("LAST_BIOME", currentBiome.name)
-                        .putString("FORCE_ENCOUNTER_ID", "starter_bush") // Přidáno pro BattleFragment
+                        .putString("FORCE_ENCOUNTER_ID", "starter_bush")
                         .apply()
                     replaceMapContent(PokemonBattleFragment())
                 }
 
                 "hory" -> if (currentDailySteps >= STEP_GOAL_FOR_MOUNTAINS) changeBiome(BiomeType.MOUNTAINS, PointF(0.450f, 0.350f)) else showStepWarningToast()
 
-
                 "les" -> {
-                    // Kontrola, zda je hotový úvodní quest pro Olivera
                     if (!questManager.isIntroQuestFinished()) {
-                        // Zastavíme pohyb, aby Ash nedošel až ke vstupu
                         movementEngine.cancel()
-
-                        // Zobrazíme blokující dialog
-                        questDialogManager.showQuestDialog(
-                            speakerResource = R.drawable.gudwin_oliver,
-                            speakerName = "Gudwin Oliver",
-                            stageName = "Cesta uzavřena",
-                            text = "Zadrž! Ještě jsi nesplnil vše, co jsem tě učil. Dokonči mé úkoly v Town, než se vydáš do nebezpečného Meadow!",
-                            totalSteps = 1,
-                            currentStepIndex = 0
-                        )
+                        showBlockingDialog()
                     } else {
-                        // Pokud je splněno, normálně tě pustíme dál
                         changeBiome(BiomeType.MEADOW, PointF(0.340f, 0.640f))
                     }
                 }
@@ -260,12 +244,13 @@ class MakromonMapActivity : AppCompatActivity() {
                 "pokedex" -> replaceMapContent(MakrodexFragment())
                 "obchod" -> replaceMapContent(PokemonShopFragment())
                 "vstup_z_town" -> changeBiome(BiomeType.TOWN, PointF(0.46f, 0.15f))
+
                 "krovi1", "krovi2", "voda" -> {
-                    if ((1..100).random() <= 90) {
+                    if ((1..100).random() <= 90) { // Snížena šance na 30% pro hratelnost
                         val encounterBiome = if (nodeName == "voda") BiomeType.WATER else currentBiome
                         getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                             .putString("LAST_BIOME", encounterBiome.name)
-                            .remove("FORCE_ENCOUNTER_ID") // Jistota, že u wild není force
+                            .remove("FORCE_ENCOUNTER_ID")
                             .apply()
                         replaceMapContent(PokemonBattleFragment())
                     }
@@ -273,20 +258,9 @@ class MakromonMapActivity : AppCompatActivity() {
             }
         }
 
-        // Pohyb k uzlu
-        if (isDoubleClick) {
-            movementEngine.cancel()
-            movementEngine.currentSpeed = MovementEngine.FAST_SPEED
-            movementEngine.walkToNode(nodeName)
-            // I u double clicku počkáme na dojítí, nebo akci spustíme hned,
-            // ale sjednoceně přes action()
-            action()
-        } else {
-            movementEngine.currentSpeed = MovementEngine.NORMAL_SPEED
-            movementEngine.walkToNode(nodeName) {
-                // Tohle se spustí, až postavička dojde k cíli
-                runOnUiThread { action() }
-            }
+        movementEngine.currentSpeed = if (isDoubleClick) MovementEngine.FAST_SPEED else MovementEngine.NORMAL_SPEED
+        movementEngine.walkToNode(nodeName) {
+            runOnUiThread { action() }
         }
     }
 
@@ -306,66 +280,59 @@ class MakromonMapActivity : AppCompatActivity() {
         questDialogManager.showQuestDialog(
             speakerResource = R.drawable.gudwin_oliver,
             speakerName = "Gudwin Oliver",
-            stageName = "Zákaz vstupu",
-            text = "Zadrž, hrdino! Meadow je nebezpečné místo pro někoho, kdo ještě neprokázal své základní dovednosti. Dokonči prosím mé úkoly v Town, než se vydáš dál!",
+            stageName = "Cesta uzavřena",
+            text = "Zadrž! Ještě jsi nesplnil vše, co jsem tě učil. Dokonči mé úkoly v Town, než se vydáš do nebezpečného Meadow!",
             totalSteps = 1,
             currentStepIndex = 0
         )
     }
 
     private fun changeBiome(newBiome: BiomeType, startPos: PointF, animate: Boolean = true) {
-                val container = findViewById<ViewGroup>(R.id.mapMainContent)
-                val transitionAction = {
-                    currentBiome = newBiome
-                    stepProgressBar.visibility = if (newBiome == BiomeType.MEADOW) View.VISIBLE else View.GONE
+        val container = findViewById<ViewGroup>(R.id.mapMainContent)
+        val transitionAction = {
+            currentBiome = newBiome
+            stepProgressBar.visibility = if (newBiome == BiomeType.MEADOW) View.VISIBLE else View.GONE
 
-                    // --- SPRÁVA NPC PODLE BIOMU ---
-                    if (newBiome == BiomeType.TOWN) {
-                        gudwinNPC.visibility = View.VISIBLE
-                        starterBush.visibility = View.VISIBLE
-                        meadowBushNPC.visibility = View.GONE
+            // Správa Questů při změně biomu
+            val questToLoad = if (newBiome == BiomeType.MEADOW) QuestRegistry.MEADOW_QUEST.id else QuestRegistry.TOWN_INTRO_QUEST.id
+            questManager.loadQuest(questToLoad)
 
-                        // OPRAVA: Musíme Gudwina a keř znovu umístit na správné souřadnice v kontejneru
-                        val gudwinPos = BiomeRegistry.TOWN_GRAPH.find { it.id == "gudwin" }?.pos ?: PointF(0.120f, 0.520f)
-                        val bushPos = BiomeRegistry.TOWN_GRAPH.find { it.id == "starter_bush" }?.pos ?: PointF(0.200f, 0.170f)
-
-                        gudwinNPC.post {
-                            gudwinNPC.x = gudwinPos.x * container.width - (gudwinNPC.width / 2)
-                            gudwinNPC.y = gudwinPos.y * container.height - gudwinNPC.height
-                        }
-                        starterBush.post {
-                            starterBush.x = bushPos.x * container.width - (starterBush.width / 2)
-                            starterBush.y = bushPos.y * container.height - starterBush.height
-                        }
-                    } else if (newBiome == BiomeType.MEADOW) {
-                gudwinNPC.visibility = View.GONE
-                starterBush.visibility = View.GONE
-                meadowBushNPC.visibility = View.VISIBLE // Zobrazit v Meadow
-
-                // Pozicování NPC z křoví v Meadow (např. na pozici uzlu 'krovi1')
-                val bushNpcPos = BiomeRegistry.MEADOW_GRAPH.find { it.id == "npc_bush" }?.pos ?: PointF(0.630f, 0.350f)
-                meadowBushNPC.post {
-                    meadowBushNPC.x = bushNpcPos.x * container.width - (meadowBushNPC.width / 2)
-                    meadowBushNPC.y = bushNpcPos.y * container.height - (meadowBushNPC.height / 0.8f) // Trochu výš, aby to vypadalo přirozeně
-                }
-            } else {
-                gudwinNPC.visibility = View.GONE
-                starterBush.visibility = View.GONE
-                meadowBushNPC.visibility = View.GONE
-            }
-
+            // UI a Pozicování NPC
             when (newBiome) {
                 BiomeType.TOWN -> {
                     mapBackground.setImageResource(R.drawable.poketown)
                     movementEngine.updateBiome(BiomeRegistry.TOWN_GRAPH, startPos)
+
+                    gudwinNPC.visibility = View.VISIBLE
+                    starterBush.visibility = View.VISIBLE
+                    meadowBushNPC.visibility = View.GONE
+
+                    val gudwinPos = BiomeRegistry.TOWN_GRAPH.find { it.id == "gudwin" }?.pos ?: PointF(0.120f, 0.520f)
+                    val bushPos = BiomeRegistry.TOWN_GRAPH.find { it.id == "starter_bush" }?.pos ?: PointF(0.200f, 0.170f)
+
+                    gudwinNPC.post {
+                        gudwinNPC.x = gudwinPos.x * container.width - (gudwinNPC.width / 2)
+                        gudwinNPC.y = gudwinPos.y * container.height - gudwinNPC.height
+                    }
+                    starterBush.post {
+                        starterBush.x = bushPos.x * container.width - (starterBush.width / 2)
+                        starterBush.y = bushPos.y * container.height - starterBush.height
+                    }
                 }
                 BiomeType.MEADOW -> {
                     mapBackground.setImageResource(R.drawable.meadow)
                     movementEngine.updateBiome(BiomeRegistry.MEADOW_GRAPH, startPos)
-                }
-                BiomeType.MOUNTAINS -> {
-                    mapBackground.setImageResource(R.drawable.poketown)
-                    movementEngine.updateBiome(BiomeRegistry.TOWN_GRAPH, startPos)
+
+                    gudwinNPC.visibility = View.GONE
+                    starterBush.visibility = View.GONE
+                    meadowBushNPC.visibility = View.VISIBLE
+
+                    // Opraveno ID na meadow_npc
+                    val bushNpcPos = BiomeRegistry.MEADOW_GRAPH.find { it.id == "meadow_npc" }?.pos ?: PointF(0.630f, 0.430f)
+                    meadowBushNPC.post {
+                        meadowBushNPC.x = bushNpcPos.x * container.width - (meadowBushNPC.width / 2)
+                        meadowBushNPC.y = bushNpcPos.y * container.height - (meadowBushNPC.height / 0.8f)
+                    }
                 }
                 else -> {}
             }

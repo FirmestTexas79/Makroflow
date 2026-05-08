@@ -18,122 +18,198 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.pokemon.quests.QuestDefinition
 import cz.uhk.macroflow.pokemon.quests.QuestRegistry
 import cz.uhk.macroflow.pokemon.quests.RequirementType
-import java.text.SimpleDateFormat
-import java.util.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class QuestJournalFragment : Fragment() {
 
-    // Držíme informaci o tom, na co uživatel kliknul (mimo fragment kvůli zachování stavu při rebuildování)
     private var selectedStageIndex: Int? = null
+    private var currentPageIndex = 0
+    private var unlockedQuests: List<QuestProgressEntity> = emptyList()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_quest_journal, container, false)
 
+        // Zavření deníku
         view.findViewById<ImageButton>(R.id.btnCloseJournal).setOnClickListener {
-            selectedStageIndex = null // Reset při zavření
+            selectedStageIndex = null
             parentFragmentManager.popBackStack()
         }
 
-        setupJournalData(view)
+        // --- ÚPRAVA 1: PŘEPÍNÁNÍ STRÁNEK KLIKEM NA OKRAJE ---
+        val paperBody = view.findViewById<View>(R.id.journalPaperBody)
+        paperBody.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_UP) {
+                val width = v.width
+                val x = event.x
+
+                if (x < width * 0.25f) { // Klik vlevo (předchozí strana)
+                    flipPage(-1, view)
+                } else if (x > width * 0.75f) { // Klik vpravo (další strana)
+                    flipPage(1, view)
+                } else { // Klik uprostřed (reset výběru fáze)
+                    selectedStageIndex = null
+                    renderCurrentPage(view)
+                }
+            }
+            true
+        }
+
+        loadDataAndSetup(view)
         return view
     }
 
-    private fun setupJournalData(view: View) {
-        val activity = requireActivity() as MakromonMapActivity
-        val progress = activity.questManager.getCurrentProgress()
-        val quest = QuestRegistry.TOWN_INTRO_QUEST
-        val currentIndex = progress?.currentStageIndex ?: 0
-        val isAllDone = progress?.isCompleted == true
+    private fun flipPage(direction: Int, view: View) {
+        if (unlockedQuests.isEmpty()) return
 
-        // Pokud není nic vybráno, zobrazujeme buď aktuální progres, nebo finální stav
-        val viewingIndex = selectedStageIndex ?: currentIndex
-
-        view.findViewById<TextView>(R.id.dateText).text =
-            SimpleDateFormat("dd. MM. yyyy", Locale.getDefault()).format(Date())
-
-        // RESET: Kliknutí na pozadí papíru vrátí výchozí stav
-        view.findViewById<View>(R.id.journalPaperBody).setOnClickListener {
+        val newIndex = currentPageIndex + direction
+        if (newIndex in unlockedQuests.indices) {
+            currentPageIndex = newIndex
             selectedStageIndex = null
-            setupJournalData(view)
+            renderCurrentPage(view)
+        }
+    }
+
+    private fun loadDataAndSetup(view: View) {
+        val db = AppDatabase.getDatabase(requireContext())
+
+        // Získání aktuální lokace z aktivity přes novou metodu
+        val currentBiome = (activity as? MakromonMapActivity)?.getCurrentBiome() ?: BiomeType.TOWN
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            // Načteme všechny questy a seřadíme je
+            val allProgress = db.questDao().getAllQuests().sortedBy { it.lastUpdated }
+
+            withContext(Dispatchers.Main) {
+                if (isAdded) {
+                    unlockedQuests = allProgress
+
+                    // Logika: Chceme otevřít deník na questu, který odpovídá lokaci
+                    val targetQuestId = when (currentBiome) {
+                        BiomeType.TOWN -> QuestRegistry.TOWN_INTRO_QUEST.id
+                        BiomeType.MEADOW -> QuestRegistry.MEADOW_QUEST.id
+                        else -> QuestRegistry.TOWN_INTRO_QUEST.id
+                    }
+
+                    // Najdeme index stránky v našem seznamu progresů
+                    val locationPageIndex = unlockedQuests.indexOfFirst { it.questId == targetQuestId }
+
+                    currentPageIndex = if (locationPageIndex != -1) {
+                        locationPageIndex
+                    } else {
+                        // Pokud v dané lokaci nemáme rozjetý quest, skočíme na poslední stránku
+                        (unlockedQuests.size - 1).coerceAtLeast(0)
+                    }
+
+                    renderCurrentPage(view)
+                }
+            }
+        }
+    }
+
+    private fun renderCurrentPage(view: View) {
+        if (unlockedQuests.isEmpty()) {
+            view.findViewById<TextView>(R.id.chapterTitle).text = "Prázdný deník"
+            view.findViewById<TextView>(R.id.storyText).text = "Zatím jsi nezačal žádné dobrodružství."
+            return
         }
 
-        // 1. LEVÁ STRANA: Dynamický obsah
-        val stageToDisplay = quest.stages.getOrNull(viewingIndex)
+        val progress = unlockedQuests.getOrNull(currentPageIndex) ?: return
 
-        if (isAllDone && selectedStageIndex == null) {
-            // Zobrazení po dokončení celého questu
-            view.findViewById<TextView>(R.id.chapterTitle).text = "Dobrodružství dokončeno"
-            view.findViewById<ImageView>(R.id.npcPortrait).setImageResource(R.drawable.gudwin_oliver)
-            view.findViewById<TextView>(R.id.taskListText).text = "Všechny cíle splněny!"
-            view.findViewById<TextView>(R.id.storyText).text =
-                "Dokázal jsi to! Town už pro tebe nemá žádná tajemství. " +
-                        "Meadow je nyní přístupné a tvá cesta za poznáním Makromonů může skutečně začít. " +
-                        "Hodně štěstí, trenére!"
-        } else if (stageToDisplay != null) {
-            // Zobrazení konkrétní fáze (buď aktuální nebo vybrané z historie)
+        // Mapování ID na definici (Gudwin vs Křovník)
+        val quest = when (progress.questId) {
+            QuestRegistry.TOWN_INTRO_QUEST.id -> QuestRegistry.TOWN_INTRO_QUEST
+            QuestRegistry.MEADOW_QUEST.id -> QuestRegistry.MEADOW_QUEST
+            else -> QuestRegistry.TOWN_INTRO_QUEST
+        }
+
+        val currentIndex = progress.currentStageIndex
+        val isAllDone = progress.isCompleted
+        val viewingIndex = selectedStageIndex ?: if (isAllDone) quest.stages.size - 1 else currentIndex
+
+        // --- ZOBRAZENÍ STRÁNKOVÁNÍ ---
+        val dateTextView = view.findViewById<TextView>(R.id.dateText)
+        dateTextView.text = "Strana ${currentPageIndex + 1} / ${unlockedQuests.size}"
+        // Malý vizuální hint, že se dá listovat
+        dateTextView.append(if (currentPageIndex < unlockedQuests.size - 1) "  →" else "")
+
+        // --- OBSAH (NPC a TEXT) ---
+        val stageToDisplay = quest.stages.getOrNull(viewingIndex)
+        if (stageToDisplay != null) {
             view.findViewById<TextView>(R.id.chapterTitle).text = stageToDisplay.title
             view.findViewById<ImageView>(R.id.npcPortrait).setImageResource(stageToDisplay.speakerResId)
             view.findViewById<TextView>(R.id.storyText).text = stageToDisplay.text
 
             val brief = when (stageToDisplay.requirementType) {
                 RequirementType.WALK_STEPS -> "Cíl: ${stageToDisplay.targetValue} kroků"
-                RequirementType.VISIT_NODE -> "Cíl: Průzkum místa"
-                RequirementType.CAPTURE_SPECIFIC -> "Cíl: Chytit Makromona"
-                RequirementType.LOG_MEAL -> "Cíl: Zapsat jídla (${progress?.metadata ?: 0}/${stageToDisplay.targetValue})"
-                RequirementType.BATTLE_TYPE -> "Cíl: Porazit ${stageToDisplay.targetValue}x typ ${stageToDisplay.targetId}"
-                RequirementType.SCAN_BARCODE -> "Cíl: Naskenovat čárový kód"
-                else -> "Pokračuj v příběhu"
+                RequirementType.LOG_MEAL -> {
+                    val currentVal = if (viewingIndex < currentIndex) stageToDisplay.targetValue else progress.metadata
+                    "Cíl: Zapsat jídla ($currentVal/${stageToDisplay.targetValue})"
+                }
+                RequirementType.BATTLE_TYPE -> "Cíl: Souboj (${stageToDisplay.targetId})"
+                RequirementType.SCAN_BARCODE -> "Cíl: Skenování kódu"
+                RequirementType.VISIT_NODE -> "Cíl: Průzkum oblasti"
+                else -> "Cíl: Hotovo"
             }
             view.findViewById<TextView>(R.id.taskListText).text = "• $brief"
         }
 
-        // 2. PRAVÁ STRANA: Seznam fází
         renderStagesList(view, quest, currentIndex, isAllDone)
-
-        // 3. TRACKER
-        val progressContainer = view.findViewById<LinearLayout>(R.id.journalQuestProgressLine)
-        drawTracker(progressContainer, quest.stages.size, if (isAllDone) quest.stages.size else currentIndex)
+        drawTracker(view.findViewById(R.id.journalQuestProgressLine), quest.stages.size, if (isAllDone) quest.stages.size else currentIndex)
     }
+
+    private fun indexPast(viewIdx: Int, currentIdx: Int): Boolean = viewIdx < currentIdx
 
     private fun renderStagesList(view: View, quest: QuestDefinition, currentIdx: Int, allDone: Boolean) {
         val listTextView = view.findViewById<TextView>(R.id.tvQuestStagesList)
         val builder = SpannableStringBuilder()
 
         quest.stages.forEachIndexed { index, stage ->
-            val prefix = when {
-                allDone || index < currentIdx -> "[X] "
-                index == currentIdx -> "[>] "
-                else -> "[ ] "
+            // Tajemství: Hráč vidí jen to, co už potkal (aktuální index nebo historii)
+            val isKnown = allDone || index <= currentIdx
+
+            if (isKnown) {
+                val prefix = when {
+                    allDone || index < currentIdx -> "[X] "
+                    index == currentIdx -> "[>] "
+                    else -> "[ ] "
+                }
+
+                val start = builder.length
+                builder.append("$prefix${index + 1}. ${stage.title}\n")
+                val end = builder.length
+
+                builder.setSpan(object : ClickableSpan() {
+                    override fun onClick(widget: View) {
+                        selectedStageIndex = index
+                        renderCurrentPage(view)
+                    }
+                    override fun updateDrawState(ds: TextPaint) {
+                        ds.isUnderlineText = false
+                        ds.color = if (selectedStageIndex == index) Color.parseColor("#BC6C25") else Color.parseColor("#283618")
+                    }
+                }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } else {
+                // Neobjevené části příběhu jsou skryté
+                builder.append("[ ] ???\n")
             }
-
-            val start = builder.length
-            builder.append("$prefix${index + 1}. ${stage.title}\n")
-            val end = builder.length
-
-            // Klikací zóna pro každou fázi
-            builder.setSpan(object : ClickableSpan() {
-                override fun onClick(widget: View) {
-                    selectedStageIndex = index
-                    setupJournalData(view)
-                }
-                override fun updateDrawState(ds: TextPaint) {
-                    ds.isUnderlineText = false
-                    // Zvýraznění vybrané fáze hnědou, ostatní černou/tmavě zelenou
-                    ds.color = if (selectedStageIndex == index) Color.parseColor("#BC6C25") else Color.parseColor("#283618")
-                }
-            }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
         listTextView.text = builder
         listTextView.movementMethod = LinkMovementMethod.getInstance()
-        listTextView.highlightColor = Color.TRANSPARENT // Odstraní ošklivý šedý obdélník při kliku
+        listTextView.highlightColor = Color.TRANSPARENT
     }
+
+    // --- POMOCNÉ METODY PRO KRESLENÍ (Zůstávají stejné) ---
 
     private fun drawTracker(container: LinearLayout, total: Int, activeIndex: Int) {
         container.removeAllViews()

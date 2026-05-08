@@ -28,9 +28,9 @@ object BiomeRegistry {
 
     val MEADOW_GRAPH = listOf(
         MovementEngine.Waypoint("vstup_z_town", PointF(0.340f, 0.640f), listOf("rozcesti")),
-        MovementEngine.Waypoint("rozcesti",      PointF(0.500f, 0.425f), listOf("vstup_z_town", "krovi1", "krovi2", "voda")),
+        MovementEngine.Waypoint("rozcesti",      PointF(0.500f, 0.425f), listOf("vstup_z_town", "krovi1", "krovi2", "voda", "meadow_npc")),
 
-        MovementEngine.Waypoint("meadow_npc",         PointF(0.630f, 0.350f), listOf("rozcesti")),
+        MovementEngine.Waypoint("meadow_npc",         PointF(0.630f, 0.410f), listOf("rozcesti")),
 
         MovementEngine.Waypoint("krovi1",        PointF(0.380f, 0.425f), listOf("rozcesti")),
         MovementEngine.Waypoint("krovi2",        PointF(0.630f, 0.270f), listOf("rozcesti")),
