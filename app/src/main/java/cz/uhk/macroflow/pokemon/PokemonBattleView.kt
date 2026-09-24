@@ -111,7 +111,7 @@ class PokemonBattleView @JvmOverloads constructor(
             val playerWithStats = createPlayerMakromon(mId, playerLevel)
 
             // --- 🎲 OPRAVENÝ ROLL S BIOMEM ---
-            val baseEnemy = SpawnManager.rollWildEncounter(context, currentBiome)
+            val baseEnemy = SpawnManager.rollWildEncounter(context, currentBiome.wildBiome)
 
             val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
@@ -873,7 +873,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
         // Informujeme QuestManager o výhře nad konkrétním typem
         (context as? MakromonMapActivity)?.let { map ->
-            map.questManager.onBattleWon(enemyType.name, biome = map.getCurrentBiome().name)
+            map.questManager.onBattleWon(enemyType.name, biome = map.getCurrentBiome().wildBiome.name)
         }
 
         Thread {

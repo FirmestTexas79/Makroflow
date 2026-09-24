@@ -23,8 +23,11 @@ data class CaveMap(
     val crystal: CrystalColor,
     /** Místa, kde může vyskočit divoký Makromon. */
     val encounterNodes: Set<String>,
-    /** Kolik art pixelů je vidět na šířku obrazovky (přiblížení kamery). */
-    val artPixelsAcross: Int = 120
+    /**
+     * Kolik art pixelů je vidět na šířku obrazovky. Výchozí = celá šířka mapy: všechny body
+     * jsou vodorovně vždy na obrazovce a dají se naklikat, kamera jezdí svisle.
+     */
+    val artPixelsAcross: Int = artW
 ) {
     private val byId = nodes.associateBy { it.id }
 
@@ -58,18 +61,18 @@ object CaveMaps {
 
     /** Mechová jeskyně – otevřená síň ve třech patrech, modrý krystal. Vchod: „cave“ v Horách. */
     val OPEN = CaveMap(
-        artW = 240, artH = 400,
+        artW = 150, artH = 440,
         nodes = listOf(
-            CaveNode("vychod_jeskyne", 120, 388),
-            CaveNode("sal", 120, 318),
-            CaveNode("jezirko", 62, 296),
-            CaveNode("balvany_j", 192, 300),
-            CaveNode("pata_schodu", 120, 270),
-            CaveNode("terasa", 120, 206),
-            CaveNode("houby", 46, 176),
-            CaveNode("krystaly_j", 194, 162),
-            CaveNode("pata_schodu2", 128, 124),
-            CaveNode("krystal_modry", 120, 58)
+            CaveNode("vychod_jeskyne", 75, 428),
+            CaveNode("sal", 75, 370),
+            CaveNode("jezirko", 38, 346),
+            CaveNode("balvany_j", 116, 352),
+            CaveNode("pata_schodu", 75, 318),
+            CaveNode("terasa", 75, 256),
+            CaveNode("houby", 34, 230),
+            CaveNode("krystaly_j", 116, 214),
+            CaveNode("pata_schodu2", 82, 170),
+            CaveNode("krystal_modry", 75, 86)
         ),
         edges = listOf(
             "vychod_jeskyne" to "sal", "sal" to "jezirko", "sal" to "balvany_j", "sal" to "pata_schodu",
@@ -85,24 +88,24 @@ object CaveMaps {
 
     /** Starý důl – uzavřené bludiště štol se žebříky, červený krystal. Vchod: „mine“ v Horách. */
     val MAZE = CaveMap(
-        artW = 240, artH = 440,
+        artW = 150, artH = 480,
         nodes = listOf(
-            CaveNode("vychod_dolu", 40, 424),
-            CaveNode("stola_vstup", 40, 372),
-            CaveNode("stola_kriz", 120, 372),
-            CaveNode("vozik", 204, 372),
-            CaveNode("zebrik1", 120, 300),
-            CaveNode("tezba", 204, 300),
-            CaveNode("chodba_zapad", 40, 300),
-            CaveNode("chodba_sever", 40, 232),
-            CaveNode("rozcesti_dul", 120, 232),
-            CaveNode("netopyri", 204, 232),
-            CaveNode("zebrik2", 120, 162),
-            CaveNode("slepa_chodba", 40, 162),
-            CaveNode("horni_stola", 204, 162),
-            CaveNode("hlubina", 204, 94),
-            CaveNode("sin_krystalu", 120, 94),
-            CaveNode("krystal_cerveny", 120, 56)
+            CaveNode("vychod_dolu", 26, 466),
+            CaveNode("stola_vstup", 26, 412),
+            CaveNode("stola_kriz", 75, 412),
+            CaveNode("vozik", 124, 412),
+            CaveNode("zebrik1", 75, 344),
+            CaveNode("tezba", 124, 344),
+            CaveNode("chodba_zapad", 26, 344),
+            CaveNode("chodba_sever", 26, 276),
+            CaveNode("rozcesti_dul", 75, 276),
+            CaveNode("netopyri", 124, 276),
+            CaveNode("zebrik2", 75, 208),
+            CaveNode("slepa_chodba", 26, 208),
+            CaveNode("horni_stola", 124, 208),
+            CaveNode("hlubina", 124, 140),
+            CaveNode("sin_krystalu", 75, 140),
+            CaveNode("krystal_cerveny", 75, 76)
         ),
         edges = listOf(
             "vychod_dolu" to "stola_vstup", "stola_vstup" to "stola_kriz", "stola_kriz" to "vozik",

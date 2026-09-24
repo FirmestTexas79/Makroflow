@@ -11,15 +11,18 @@ a vlastní přechod „do tmavých jeskyní“ v tmavě modrém stylu s mechem.
 
 ## Rozhodnutí
 1. **Dvě mapy z generátoru** `tools/mapgen/gen_caves.py` (vlastní pixel art, žádné cizí assety):
-   * `cave_open` – *Mechová jeskyně* (240×400 art px): tři patra teras propojená schody,
+   * `cave_open` – *Mechová jeskyně* (150×440 art px): tři patra teras propojená schody,
      podzemní jezírko, svítící houby, modré krystalky. Vchod z uzlu `cave`.
-   * `cave_maze` – *Starý důl* (240×440): štoly v bludišti, patra spojená žebříky, výdřeva,
+   * `cave_maze` – *Starý důl* (150×480): štoly v bludišti, patra spojená žebříky, výdřeva,
      lucerny, koleje, vozík. Vchod z uzlu `mine` (výdřeva u vchodu v Horách sedí k dolu).
    Pohled 3/4 shora: výšková mapa (patra 0–2, masiv 9) → čela stěn/teras pod jižními hranami,
    hroudy masivu jako Voronoi buňky, mech u stěn a pramínky z hran, bodová světla s ditheringem.
 2. **PNG v nativním rozlišení v `drawable-nodpi`.** Běžné `drawable/` by Android přepočítal
    podle hustoty (u xxhdpi 3× → desítky MB). Zvětšuje se až ve view celočíselným násobkem
-   bez vyhlazení (`MapCamera.pixelScale`, cíl ~120 art px na šířku) → ostré, stejné pixely.
+   bez vyhlazení (`MapCamera.pixelScale`) → ostré, stejné pixely.
+   **Na šířku se vejde celá mapa** (`artPixelsAcross = artW`), kamera jezdí svisle. První verze
+   (240 px, přiblížení na 120 px) měla body na stranách mimo obrazovku a nešly naklikat –
+   test `everyNodeIsHorizontallyOnScreenWhereverTheCameraIs` to teď hlídá pro běžné displeje.
 3. **Kamera = posun „světa“.** `mapWorld` (pozadí, postava, NPC, krystal) má v jeskyni velikost
    obrázku × násobek a kamera nastavuje `translationX/Y` z pozice postavy
    (`MapCamera.offset`: postava uprostřed, omezeno hranami, menší svět se vycentruje).
@@ -34,8 +37,11 @@ a vlastní přechod „do tmavých jeskyní“ v tmavě modrém stylu s mechem.
    místa setkání. `BiomeRegistry.graphOf` z nich staví navigační graf. Souřadnice jsou zdrojem
    pravdy v generátoru i v Kotlinu (stejně jako u Hor); test hlídá propojenost a že krystal je
    nejvzdálenější uzel od východu.
-6. **Souboje v jeskyni jsou „horské“** (`battleBiome = MOUNTAINS`): intro s kameny, horští
-   Makromoni a questy s výhrami v Horách počítají i jeskyně. Sken čárového kódu se přestěhoval
+6. **Souboje v jeskyni:** `LAST_BIOME` je jeskyně → vlastní intro `CaveEncounterScene`
+   (tmavá síň s krápníky, vyplašení netopýři, zářící oči, mrknutí, výpad s otřesem, studený
+   záblesk). Divocí Makromoni a questy ale berou `BiomeType.wildBiome` = Hory (stejná populace,
+   výhry se počítají do horských questů). Místa setkání jsou v mapě označená trsem svítících
+   kapradin (jeskynní obdoba vysoké trávy) a nad nimi v aplikaci pomalu pulzuje záře. Sken čárového kódu se přestěhoval
    na rudnou žílu (`tezba`) uvnitř dolu.
 7. **Krystaly:** sprite z pixelů (`Crystals.pixels`), vznáší se po celých art pixelech, pulzující
    záře. Sebrání = `GamePrefs` `crystal_BLUE` / `crystal_RED`; `Crystals.legendaryUnlocked`

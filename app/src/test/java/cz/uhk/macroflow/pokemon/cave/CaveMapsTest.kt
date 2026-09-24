@@ -53,4 +53,22 @@ class CaveMapsTest {
         assertEquals(setOf(CrystalColor.BLUE, CrystalColor.RED), CaveMaps.ALL.map { it.crystal }.toSet())
         assertEquals(setOf("cave", "mine"), CaveMaps.ALL.map { it.mountainNode }.toSet())
     }
+
+    @Test
+    fun everyNodeIsHorizontallyOnScreenWhereverTheCameraIs() {
+        // Dřív byla mapa 2× širší než displej a body na stranách nešlo naklikat
+        for ((vw, vh) in listOf(1080 to 2340, 720 to 1600, 1440 to 3120, 1080 to 1920)) {
+            CaveMaps.ALL.forEach { cave ->
+                val s = MapCamera.pixelScale(cave.artW, cave.artH, vw, vh, cave.artPixelsAcross)
+                val worldW = cave.artW * s
+                cave.nodes.forEach { player ->
+                    val off = MapCamera.offset(player.x * s.toFloat(), vw, worldW)
+                    cave.nodes.forEach { n ->
+                        val sx = n.x * s + off
+                        assertTrue("${n.id} @ $vw: $sx", sx >= vw * 0.05f && sx <= vw * 0.95f)
+                    }
+                }
+            }
+        }
+    }
 }

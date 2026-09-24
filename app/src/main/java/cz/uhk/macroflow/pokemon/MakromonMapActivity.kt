@@ -50,6 +50,8 @@ class MakromonMapActivity : AppCompatActivity() {
     private var crystalView: ImageView? = null
     private var crystalGlow: View? = null
     private val crystalAnimators = mutableListOf<android.animation.Animator>()
+    /** Pulzující světlo nad místy setkání v jeskyni (svítící kapradiny). */
+    private val encounterGlows = mutableListOf<View>()
     /** Během přechodu do/z jeskyně se na mapu neklepe. */
     private var transitionRunning = false
     private lateinit var movementEngine:   MovementEngine
@@ -344,8 +346,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 "vstup_z_town" -> changeBiome(BiomeType.TOWN, PointF(0.46f, 0.15f))
                 in encounterNodes -> {
                     if ((1..100).random() <= 90) {
-                        val encounterBiome = if (nodeName == "voda") BiomeType.WATER
-                            else BiomeRegistry.definition(currentBiome)?.battleBiome ?: currentBiome
+                        // Jeskyně ukládají svůj biom (vlastní intro); Makromoni a questy jsou horské (wildBiome)
+                        val encounterBiome = if (nodeName == "voda") BiomeType.WATER else currentBiome
                         getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                             .putString("LAST_BIOME", encounterBiome.name)
                             .remove("FORCE_ENCOUNTER_ID")
@@ -503,7 +505,7 @@ class MakromonMapActivity : AppCompatActivity() {
                         meadowBushNPC.y = bushNpcPos.y * mapWorld.height - (meadowBushNPC.height / 0.8f)
                     }
                 }
-                else -> def?.cave?.let { cave -> mapWorld.post { placeCrystal(cave) } }
+                else -> def?.cave?.let { cave -> mapWorld.post { placeCrystal(cave); placeEncounterGlows(cave) } }
             }
             // Ladicí body grafu jen v debug buildu – dřív byly vidět i v produkční verzi.
             if (BuildConfig.DEBUG) mapWorld.post { drawDebugNodes(mapWorld) }
@@ -635,9 +637,39 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    /** Místa setkání v jeskyni: kapradiny jsou v mapě, tady jen pomalu dýchající záře nad nimi. */
+    private fun placeEncounterGlows(cave: CaveMap) {
+        if (mapWorld.width == 0) return
+        val scale = mapWorld.width / cave.artW.toFloat()
+        val size = (30 * scale).toInt()
+        cave.encounterNodes.forEachIndexed { i, id ->
+            val n = cave.node(id) ?: return@forEachIndexed
+            val glow = View(this).apply {
+                layoutParams = FrameLayout.LayoutParams(size, (size * 0.6f).toInt())
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+                    gradientRadius = size / 2f
+                    colors = intArrayOf(0x668CF0D2, Color.TRANSPARENT)
+                }
+                x = n.x * scale - size / 2f
+                y = (n.y - 3) * scale - size * 0.3f
+                alpha = 0.3f
+                elevation = 1f
+            }
+            mapWorld.addView(glow)
+            encounterGlows += glow
+            crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.25f, 0.9f, 0.25f).apply {
+                duration = 2600; startDelay = i * 450L
+                repeatCount = android.animation.ValueAnimator.INFINITE; start()
+            }
+        }
+    }
+
     private fun removeCrystal() {
         crystalAnimators.forEach { it.cancel() }
         crystalAnimators.clear()
+        encounterGlows.forEach { mapWorld.removeView(it) }
+        encounterGlows.clear()
         crystalView?.let { mapWorld.removeView(it) }
         crystalGlow?.let { mapWorld.removeView(it) }
         crystalView = null; crystalGlow = null
@@ -652,10 +684,13 @@ class MakromonMapActivity : AppCompatActivity() {
         gamePrefs.edit().putBoolean(color.prefKey, true).apply()
         val crystal = crystalView
         val glow = crystalGlow
-        crystalAnimators.forEach { it.cancel() }
-        crystalAnimators.clear()
+        // zastavit jen vznášení a pulz krystalu, záře nad kapradinami běží dál
+        crystalAnimators.filter { (it as? android.animation.ObjectAnimator)?.target.let { t -> t === crystal || t === glow } }
+            .forEach { it.cancel(); crystalAnimators.remove(it) }
         crystal?.animate()?.translationYBy(-crystal.height * 0.6f)?.scaleX(1.5f)?.scaleY(1.5f)?.alpha(0f)
-            ?.setDuration(900)?.withEndAction { removeCrystal() }?.start()
+            ?.setDuration(900)?.withEndAction {
+                crystal.visibility = View.GONE; glow?.visibility = View.GONE
+            }?.start()
         glow?.animate()?.scaleX(3f)?.scaleY(3f)?.alpha(0f)?.setDuration(900)?.start()
 
         val all = CrystalColor.entries.filter { isCollected(it) }.toSet()

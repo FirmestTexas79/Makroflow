@@ -38,6 +38,7 @@ FLOOR = {0: [(46, 58, 90), (52, 66, 100), (58, 74, 110)],
 OUT = (9, 12, 24); RIM = (98, 120, 170)
 MOSS = [(30, 72, 62), (42, 98, 76), (62, 128, 88), (104, 170, 104)]
 WATER = [(24, 56, 104), (34, 84, 144), (70, 150, 196), (170, 226, 244)]
+FERN = [(34, 110, 84), (70, 176, 122), (170, 250, 200)]    # svítící kapradiny = místa setkání
 CAP = [(40, 150, 164), (86, 216, 206), (190, 250, 240)]; STEM = (176, 186, 204)
 CRY_B = [(34, 70, 160), (60, 130, 230), (150, 210, 255), (240, 250, 255)]
 CRY_R = [(120, 24, 40), (200, 50, 60), (255, 130, 120), (255, 230, 220)]
@@ -299,6 +300,24 @@ class Cave:
         for dx in range(-4, 5):                                       # podstavec
             self.px(cx + dx, cy - 1, STONE[3]); self.px(cx + dx, cy - 2, STONE[0])
 
+    def encounter_patch(self, cx, cy):
+        """Místo setkání = jeskynní obdoba vysoké trávy: hustý trs svítících kapradin kolem uzlu."""
+        r = np.random.default_rng(cx * 131 + cy)
+        floor = self.is_floor()
+        for _ in range(16):
+            ang = r.uniform(0, 6.283); d = math.sqrt(r.uniform(0.05, 1.0))
+            x = int(cx + math.cos(ang) * d * 13); y = int(cy - 2 + math.sin(ang) * d * 6)
+            if not (0 <= x < self.AW and 0 <= y < self.AH and floor[y, x]): continue
+            h = int(r.integers(3, 6))
+            for k in range(h):                                   # vějíř listů
+                for side in (-1, 0, 1):
+                    xx = x + side * ((k + 1) // 2) if side else x
+                    if side and k == 0: continue
+                    col = FERN[2] if k == h - 1 else (FERN[1] if k > h // 2 else FERN[0])
+                    self.px(xx, y - k, col)
+            self.px(x, y + 1, OUT)
+        self.lights.append((cx, cy - 3, 20, 0.42, FERN[2]))
+
     def ladder(self, x, y0, y1):
         for y in range(y0, y1 + 1):
             self.px(x - 4, y, WOOD[1]); self.px(x + 4, y, WOOD[1])
@@ -361,20 +380,21 @@ class Cave:
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1) MECHOVÁ JESKYNĚ (otevřená, 3 patra, modrý krystal)
+#    Šířka 150 art px = celá šířka se vejde na obrazovku, kamera jezdí hlavně svisle.
 # ═══════════════════════════════════════════════════════════════════════════════
 def gen_open():
-    AW, AH = 240, 400
+    AW, AH = 150, 440
     nodes = {
-        "vychod_jeskyne": (120, 388),
-        "sal":            (120, 318),
-        "jezirko":        (62, 296),
-        "balvany_j":      (192, 300),
-        "pata_schodu":    (120, 270),
-        "terasa":         (120, 206),
-        "houby":          (46, 176),
-        "krystaly_j":     (194, 162),
-        "pata_schodu2":   (128, 124),
-        "krystal_modry":  (120, 58),
+        "vychod_jeskyne": (75, 428),
+        "sal":            (75, 370),
+        "jezirko":        (38, 346),
+        "balvany_j":      (116, 352),
+        "pata_schodu":    (75, 318),
+        "terasa":         (75, 256),
+        "houby":          (34, 230),
+        "krystaly_j":     (116, 214),
+        "pata_schodu2":   (82, 170),
+        "krystal_modry":  (75, 86),
     }
     lvl = {"vychod_jeskyne": 0, "sal": 0, "jezirko": 0, "balvany_j": 0, "pata_schodu": 0,
            "terasa": 1, "houby": 1, "krystaly_j": 1, "pata_schodu2": 1, "krystal_modry": 2}
@@ -383,20 +403,16 @@ def gen_open():
              ("terasa", "pata_schodu2"), ("pata_schodu2", "krystal_modry")]
     c = Cave("cave_open", AW, AH, nodes, edges, lvl, seed=11)
 
-    c.blob(0, 120, 312, 110, 72, k=1)                 # hlavní síň
-    c.blob(0, 40, 318, 34, 26, k=2)                   # záliv s jezírkem
-    c.rect(0, 100, 340, 141, AH)                      # chodba ven
-    c.blob(0, 110, 262, 104, 22, k=11)                # síň sahá až pod terasu
-    c.blob(1, 120, 180, 104, 70, k=3)                 # střední terasa
-    c.blob(1, 124, 112, 86, 26, k=12)                 # terasa sahá až pod horní patro
-    c.blob(1, 200, 140, 34, 40, k=4)
-    c.blob(2, 120, 62, 70, 42, k=5)                   # horní patro s oltářem
-    c.blob(9, 196, 236, 16, 10, k=6)                  # skalní pilíře v síni
-    c.blob(9, 30, 214, 12, 18, k=7)
+    c.blob(0, 75, 372, 70, 56, k=1)                   # hlavní síň
+    c.blob(0, 24, 388, 20, 16, k=2)                   # záliv s jezírkem
+    c.blob(0, 72, 318, 66, 16, k=11)                  # síň sahá až pod terasu
+    c.blob(1, 75, 236, 70, 66, k=3)                   # střední terasa
+    c.blob(1, 78, 170, 58, 20, k=12)                  # terasa sahá až pod horní patro
+    c.blob(2, 75, 100, 52, 50, k=5)                   # horní patro s oltářem
+    c.blob(9, 10, 268, 6, 12, k=7)                    # skalní pilíř
     c.carve_nodes()
-    c.rect(0, 100, 340, 141, AH)
-    c.water[:] = False
-    wm = ((c.xs - 34) / 24.0) ** 2 + ((c.ys - 324) / 14.0) ** 2 < 1
+    c.rect(0, 58, 400, 93, AH)                        # chodba ven
+    wm = ((c.xs - 24) / 15.0) ** 2 + ((c.ys - 394) / 9.0) ** 2 < 1
     c.water |= wm & (c.H == 0)
     c.faces()
     c.paint_base()
@@ -408,7 +424,7 @@ def gen_open():
         edge = any(not c.water[y + dy, x + dx] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
         c.img[y, x] = WATER[0] if edge else (WATER[2] if wn[y, x] > 0.78 else WATER[1])
         if not edge and wn[y, x] > 0.9 and (x + y) % 3 == 0: c.img[y, x] = WATER[3]
-    c.lights.append((34, 324, 34, 0.35, WATER[2]))
+    c.lights.append((24, 394, 26, 0.35, WATER[2]))
 
     c.outline()
     c.moss(1.0)
@@ -430,30 +446,30 @@ def gen_open():
             p = c.crossing(lo, hi, lvl[lo], lvl[hi])
             if p:
                 x, y = p
-                # najdi čelo pod hranou
                 yy = y
                 while yy + 1 < AH and c.face[yy + 1, x] < 0 and c.H[yy + 1, x] == lvl[hi]: yy += 1
                 c.stairs(x, yy - 2, yy + STEP_FH * (lvl[hi] - lvl[lo]) + 2)
 
-    # jezírko: rákos / mech na břehu, houby, krystaly, balvany, krápníky
-    for (x, y, big) in ((36, 182, True), (52, 168, False), (30, 170, False), (58, 186, True), (40, 194, False),
-                        (86, 150, False), (170, 108, False), (212, 268, False), (18, 300, True), (70, 330, False)):
+    for (x, y, big) in ((22, 214, True), (48, 212, False), (18, 244, True), (52, 244, False),
+                        (60, 196, False), (128, 186, False), (134, 330, False), (12, 366, True), (52, 402, False)):
         c.mushroom(x, y, big)
         c.lights.append((x, y - 3, 14, 0.30, CAP[1]))
-    for (x, y) in ((202, 150), (212, 166), (184, 146), (170, 60), (72, 56), (160, 88)):
+    for (x, y) in ((130, 200), (136, 226), (104, 196), (40, 112), (114, 116), (108, 82), (44, 80)):
         c.crystal_cluster(x, y, CRY_B, 3)
-        c.lights.append((x, y - 3, 18, 0.34, CRY_B[2]))
-    for (x, y, r) in ((200, 292, 5), (186, 286, 4), (212, 302, 3), (150, 356, 3), (84, 244, 3)):
+        c.lights.append((x, y - 3, 16, 0.34, CRY_B[2]))
+    for (x, y, r) in ((130, 340, 5), (104, 338, 4), (138, 362, 3), (98, 410, 3), (30, 322, 3)):
         c.boulder(x, y, r)
-    for (x, y, h) in ((22, 262, 6), (222, 322, 7), (92, 350, 5), (160, 232, 4), (60, 116, 5), (182, 196, 5), (100, 88, 4)):
+    for (x, y, h) in ((138, 388, 6), (56, 410, 5), (106, 282, 4), (120, 134, 4), (30, 128, 5)):
         c.stalagmite(x, y, h)
+    for n in ("jezirko", "balvany_j", "houby", "krystaly_j"):
+        c.encounter_patch(*nodes[n])
 
     # oltář s modrým krystalem
     ax, ay = nodes["krystal_modry"]
     c.altar(ax, ay - ALTAR_ABOVE, CRY_B)          # hráč stojí před oltářem, krystal kreslí aplikace
-    c.lights.append((ax, ay - ALTAR_ABOVE - 6, 36, 0.55, CRY_B[2]))
-    c.warm_exit(96, 145, 346)
-    c.lights.append((120, AH + 4, 44, 0.7, WARM))
+    c.lights.append((ax, ay - ALTAR_ABOVE - 6, 32, 0.55, CRY_B[2]))
+    c.warm_exit(56, 95, 392)
+    c.lights.append((75, AH + 4, 40, 0.7, WARM))
     c.lighting()
     c.save()
     return c
@@ -463,24 +479,25 @@ def gen_open():
 # 2) STARÝ DŮL (uzavřené bludiště, žebříky, červený krystal)
 # ═══════════════════════════════════════════════════════════════════════════════
 def gen_maze():
-    AW, AH = 240, 440
+    AW, AH = 150, 480
+    L, M, R = 26, 75, 124                     # sloupce štol
     nodes = {
-        "vychod_dolu":     (40, 424),
-        "stola_vstup":     (40, 372),
-        "stola_kriz":      (120, 372),
-        "vozik":           (204, 372),
-        "zebrik1":         (120, 300),
-        "tezba":           (204, 300),
-        "chodba_zapad":    (40, 300),
-        "chodba_sever":    (40, 232),
-        "rozcesti_dul":    (120, 232),
-        "netopyri":        (204, 232),
-        "zebrik2":         (120, 162),
-        "slepa_chodba":    (40, 162),
-        "horni_stola":     (204, 162),
-        "hlubina":         (204, 94),
-        "sin_krystalu":    (120, 94),
-        "krystal_cerveny": (120, 56),
+        "vychod_dolu":     (L, 466),
+        "stola_vstup":     (L, 412),
+        "stola_kriz":      (M, 412),
+        "vozik":           (R, 412),
+        "zebrik1":         (M, 344),
+        "tezba":           (R, 344),
+        "chodba_zapad":    (L, 344),
+        "chodba_sever":    (L, 276),
+        "rozcesti_dul":    (M, 276),
+        "netopyri":        (R, 276),
+        "zebrik2":         (M, 208),
+        "slepa_chodba":    (L, 208),
+        "horni_stola":     (R, 208),
+        "hlubina":         (R, 140),
+        "sin_krystalu":    (M, 140),
+        "krystal_cerveny": (M, 76),
     }
     lvl = {"vychod_dolu": 0, "stola_vstup": 0, "stola_kriz": 0, "vozik": 0,
            "zebrik1": 1, "tezba": 1, "chodba_zapad": 1, "chodba_sever": 1, "rozcesti_dul": 1, "netopyri": 1,
@@ -505,41 +522,41 @@ def gen_maze():
     for a, b in edges:
         if lvl[a] == lvl[b]: corridor(a, b, lvl[a])
     # žebříkové šachty: spodní polovina patro níž, horní patro výš
-    for lo, hi in (("stola_kriz", "zebrik1"), ("rozcesti_dul", "zebrik2")):
+    ladders = (("stola_kriz", "zebrik1"), ("rozcesti_dul", "zebrik2"))
+    for lo, hi in ladders:
         (x, y0), (_, y1) = nodes[lo], nodes[hi]
         mid = (y0 + y1) // 2
         c.rect(lvl[hi], x - 9, y1 - 9 - WALL_FH, x + 10, mid)
         c.rect(lvl[lo], x - 9, mid, x + 10, y0 + 8)
-    c.rect(0, 31, 380, 50, AH)                                             # štola ven
-    # síň krystalu – kulatá komora nahoře
-    c.blob(2, 120, 48, 30, 26, rough=0.12, k=9)
-    c.rect(1, 195, 232 - 9 - WALL_FH, 222, 244)                            # výklenek netopýrů
+    c.rect(0, L - 9, 420, L + 10, AH)                                       # štola ven
+    c.blob(2, M, 64, 28, 24, rough=0.12, k=9)                               # síň krystalu
+    c.rect(1, R - 9, 276 - 9 - WALL_FH, R + 18, 284)                        # výklenek netopýrů
     c.faces()
     c.paint_base()
     c.rock_mass()
     c.outline()
     c.moss(0.45)
 
-    # žebříky přes čela teras
-    for lo, hi in (("stola_kriz", "zebrik1"), ("rozcesti_dul", "zebrik2")):
+    for lo, hi in ladders:
         x, y0 = nodes[lo]; _, y1 = nodes[hi]
         mid = (y0 + y1) // 2
         c.ladder(x, mid - 4, mid + STEP_FH + 3)
 
-    # koleje ve spodní štole a výztuže
-    for x in range(34, 212):
-        y = nodes["stola_kriz"][1] + 2
+    # koleje ve spodní štole, výztuže a lucerny
+    y = nodes["stola_kriz"][1] + 2
+    for x in range(L - 6, R + 9):
         if c.is_floor()[y, x]:
             c.px(x, y - 2, RAIL); c.px(x, y + 2, RAIL)
             if x % 4 == 0:
                 for k in (-1, 0, 1): c.px(x, y + k, WOOD[1])
-    for (x, y) in ((80, 372), (160, 372), (80, 300), (160, 232), (80, 232), (160, 162), (80, 162), (160, 94)):
+    for (x, y) in ((50, 412), (100, 412), (50, 344), (100, 344), (50, 276), (100, 276), (50, 208), (100, 208), (100, 140)):
         c.support(x, y - 9 - WALL_FH + 1)
-    for (x, y) in ((60, 372), (180, 300), (100, 232), (180, 162), (140, 94), (60, 162)):
+    for (x, y) in ((62, 412), (112, 344), (38, 276), (112, 208), (88, 140), (38, 208)):
         c.lantern(x, y - 9 - WALL_FH + 4)
 
     # opuštěný vozík
     vx, vy = nodes["vozik"]
+    vx -= 2
     for y in range(vy - 12, vy - 4):
         for x in range(vx - 7, vx + 8):
             e = x in (vx - 7, vx + 7) or y in (vy - 12, vy - 5)
@@ -551,31 +568,32 @@ def gen_maze():
     for (dx, dy) in ((-6, -14), (-3, -12), (2, -15), (5, -12), (0, -10), (-5, -10), (7, -14)):
         c.px(tx + dx, ty + dy, ORE[1]); c.px(tx + dx + 1, ty + dy, ORE[0])
     c.lights.append((tx, ty - 12, 16, 0.26, ORE[1]))
-    for k in range(6): c.px(tx + 9 - k, ty - 2 - k, WOOD[0])
-    for k in range(-2, 3): c.px(tx + 4 + k, ty - 7 + abs(k), STONE[2])
+    for k in range(6): c.px(tx + 8 - k, ty - 2 - k, WOOD[0])
+    for k in range(-2, 3): c.px(tx + 3 + k, ty - 7 + abs(k), STONE[2])
 
     # netopýři (tmavá komora) a slepá chodba: kosti a krápníky
     nx, ny = nodes["netopyri"]
-    for (dx, dy) in ((-6, -14), (3, -16), (8, -13)):
+    for (dx, dy) in ((-6, -14), (3, -16), (10, -13)):
         c.px(nx + dx, ny + dy, OUT); c.px(nx + dx - 1, ny + dy - 1, OUT); c.px(nx + dx + 1, ny + dy - 1, OUT)
         c.px(nx + dx, ny + dy - 1, (200, 60, 70))
     sx, sy = nodes["slepa_chodba"]
-    c.stalagmite(sx - 6, sy + 4, 5); c.stalagmite(sx + 7, sy + 5, 4)
-    for dx in range(-3, 4): c.px(sx + dx, sy + 6, (214, 214, 196))
-    c.px(sx - 4, sy + 5, (214, 214, 196)); c.px(sx + 4, sy + 7, (214, 214, 196))
+    c.stalagmite(sx - 6, sy + 5, 5)
+    for dx in range(-3, 4): c.px(sx + dx + 4, sy + 6, (214, 214, 196))
 
-    for (x, y) in ((96, 36), (146, 40), (104, 64), (138, 62), (200, 84)):
+    for (x, y) in ((58, 52), (94, 54), (60, 74), (92, 72), (118, 132)):
         c.crystal_cluster(x, y, CRY_R, 2)
         c.lights.append((x, y - 3, 14, 0.28, CRY_R[2]))
-    for (x, y) in ((47, 262), (210, 122), (60, 168), (212, 378), (34, 306)):
+    for (x, y) in ((33, 310), (130, 176), (40, 214), (130, 420), (32, 440)):
         c.mushroom(x, y, False)
         c.lights.append((x, y - 3, 12, 0.24, CAP[1]))
+    for n in ("vozik", "netopyri", "slepa_chodba", "hlubina"):
+        c.encounter_patch(*nodes[n])
 
     ax, ay = nodes["krystal_cerveny"]
     c.altar(ax, ay - ALTAR_ABOVE, CRY_R)
-    c.lights.append((ax, ay - ALTAR_ABOVE - 6, 34, 0.55, CRY_R[2]))
-    c.warm_exit(28, 54, 396)
-    c.lights.append((40, AH + 4, 34, 0.7, WARM))
+    c.lights.append((ax, ay - ALTAR_ABOVE - 6, 30, 0.55, CRY_R[2]))
+    c.warm_exit(L - 12, L + 14, 440)
+    c.lights.append((L, AH + 4, 30, 0.7, WARM))
     c.lighting(ambient=0.5)
     c.save()
     return c

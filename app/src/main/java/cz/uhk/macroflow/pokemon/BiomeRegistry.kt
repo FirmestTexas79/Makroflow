@@ -76,9 +76,7 @@ object BiomeRegistry {
         /** Zobrazit ukazatel denních kroků (cíl = zámek dalšího biomu). */
         val stepGoalFor: BiomeType? = null,
         /** Jeskyně: mapa větší než obrazovka, kamera jede za postavou. null = mapa přes celou obrazovku. */
-        val cave: CaveMap? = null,
-        /** Biom souboje (intro, divocí Makromoni, questy) – jeskyně bojují jako Hory. */
-        val battleBiome: BiomeType = type
+        val cave: CaveMap? = null
     )
 
     val DEFINITIONS: Map<BiomeType, BiomeDefinition> by lazy {
@@ -88,9 +86,9 @@ object BiomeRegistry {
                 stepGoalFor = BiomeType.MOUNTAINS),
             BiomeDefinition(BiomeType.MOUNTAINS, R.drawable.mountains, MOUNTAINS_GRAPH, QuestRegistry.MOUNTAINS_QUEST.id),
             BiomeDefinition(BiomeType.CAVE_OPEN, R.drawable.cave_open, graphOf(CaveMaps.OPEN), questId = null,
-                cave = CaveMaps.OPEN, battleBiome = BiomeType.MOUNTAINS),
+                cave = CaveMaps.OPEN),
             BiomeDefinition(BiomeType.CAVE_MAZE, R.drawable.cave_maze, graphOf(CaveMaps.MAZE), questId = null,
-                cave = CaveMaps.MAZE, battleBiome = BiomeType.MOUNTAINS)
+                cave = CaveMaps.MAZE)
         ).associateBy { it.type }
     }
 

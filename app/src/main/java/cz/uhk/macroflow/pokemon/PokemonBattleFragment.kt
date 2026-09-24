@@ -118,8 +118,11 @@ class PokemonBattleFragment : Fragment() {
         val biome = runCatching {
             BiomeType.valueOf(gamePrefs.getString("LAST_BIOME", BiomeType.TOWN.name) ?: BiomeType.TOWN.name)
         }.getOrDefault(BiomeType.TOWN)
-        val introOverlay = if (biome == BiomeType.MOUNTAINS) buildMountainIntro(ctx, dp, battleContent)
-            else buildIntroOverlay(ctx, dp, battleContent, biome)
+        val introOverlay = when (biome) {
+            BiomeType.MOUNTAINS -> buildMountainIntro(ctx, dp, battleContent)
+            BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE -> buildCaveIntro(ctx, dp, battleContent)
+            else -> buildIntroOverlay(ctx, dp, battleContent, biome)
+        }
         root.addView(introOverlay)
 
         return root
@@ -213,6 +216,30 @@ class PokemonBattleFragment : Fragment() {
             introDone = true
             revealBattle(ctx, overlay, battleContent, overlay.width.toFloat(), overlay.height.toFloat(), dp,
                 baseFlash = Color.argb(235, 255, 236, 200))
+        }
+        overlay.setOnClickListener { if (!introDone) scene.skip() }
+        introHandler.postDelayed({ scene.start() }, 120)
+        return overlay
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // JESKYNĚ: tma, netopýři a zářící oči (pixel art z CaveEncounterScene)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun buildCaveIntro(ctx: Context, dp: Float, battleContent: View): FrameLayout {
+        val overlay = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(Color.BLACK)
+        }
+        val scene = cz.uhk.macroflow.pokemon.cave.CaveEncounterView(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+        overlay.addView(scene)
+        scene.onReveal = {
+            introDone = true
+            // studený záblesk krystalového světla
+            revealBattle(ctx, overlay, battleContent, overlay.width.toFloat(), overlay.height.toFloat(), dp,
+                baseFlash = Color.argb(235, 200, 236, 255))
         }
         overlay.setOnClickListener { if (!introDone) scene.skip() }
         introHandler.postDelayed({ scene.start() }, 120)

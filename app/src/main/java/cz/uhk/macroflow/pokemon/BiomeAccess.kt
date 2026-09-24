@@ -22,3 +22,13 @@ object BiomeAccess {
     fun missingSteps(biome: BiomeType, stepsToday: Int): Int =
         (requiredSteps(biome) - stepsToday).coerceAtLeast(0)
 }
+
+/**
+ * Biom pro divoké Makromony a questy: jeskyně v Horách patří k Horám (stejní Makromoni,
+ * výhry se počítají do horských questů). Intro souboje ale jeskyně mají vlastní.
+ */
+val BiomeType.wildBiome: BiomeType
+    get() = when (this) {
+        BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE -> BiomeType.MOUNTAINS
+        else -> this
+    }
