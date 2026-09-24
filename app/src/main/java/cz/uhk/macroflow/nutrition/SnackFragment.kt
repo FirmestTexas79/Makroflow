@@ -29,7 +29,6 @@ import cz.uhk.macroflow.data.SnackEntity
 import cz.uhk.macroflow.data.GeminiRepository
 import cz.uhk.macroflow.data.FoodAIResult
 import cz.uhk.macroflow.dashboard.MacroCalculator
-import cz.uhk.macroflow.pokemon.MakromonMapActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -787,12 +786,8 @@ class SnackFragment : Fragment() {
                 // 2. Aktualizace popularity
                 incrementSnackUsage(snack.name)
 
-                // --- TADY JE TA ÚPRAVA PRO QUEST ---
+                // Quest „Příprava na cestu“ si počet jídel čte z DB sám (QuestManager.observeGameData)
                 withContext(Dispatchers.Main) {
-                    Log.d("QuestFlow", "1. SnackFragment: Volám onMealLogged")
-                    // Zavoláme QuestManager v hlavní aktivitě (pokud je dostupná)
-                    (activity as? MakromonMapActivity)?.questManager?.onMealLogged()
-
                     dialog.dismiss()
                     view?.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
                     Toast.makeText(requireContext(), "${snack.name} přidáno!", Toast.LENGTH_SHORT).show()
@@ -937,38 +932,26 @@ class SnackFragment : Fragment() {
         tilName.setEndIconOnClickListener {
             val scanner = GmsBarcodeScanning.getClient(requireContext())
             scanner.startScan().addOnSuccessListener { barcode ->
-                barcode.rawValue?.let { code ->
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        try {
-                            val response = URL("https://world.openfoodfacts.org/api/v2/product/$code.json").readText()
-                            val json = JSONObject(response)
-                            if (json.optInt("status") == 1) {
-                                val product    = json.getJSONObject("product")
-                                val nutriments = product.optJSONObject("nutriments")
-                                val name = product.optString("product_name_cs")
-                                    .ifEmpty { product.optString("product_name", "Neznámý") }
-                                nutriments?.let { n ->
-                                    withContext(Dispatchers.Main) {
-                                        // Uložíme per-gram hodnoty — weight listener pak přepočítá
-                                        perGramP     = (n.optDouble("proteins_100g",      0.0) / 100.0).toFloat()
-                                        perGramS     = (n.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat()
-                                        perGramT     = (n.optDouble("fat_100g",           0.0) / 100.0).toFloat()
-                                        perGramFiber = (n.optDouble("fiber_100g",         0.0) / 100.0).toFloat()
-
-                                        etName.setText(name)
-                                        etWeight.setText("100")
-                                        // Nastavíme makra pro 100g — změna váhy pak přepočítá automaticky
-                                        etP.setText("%.1f".format(perGramP * 100).replace(",", "."))
-                                        etS.setText("%.1f".format(perGramS * 100).replace(",", "."))
-                                        etT.setText("%.1f".format(perGramT * 100).replace(",", "."))
-                                        etFiber.setText("%.1f".format(perGramFiber * 100).replace(",", "."))
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
+                val code = barcode.rawValue ?: return@addOnSuccessListener
+                lifecycleScope.launch {
+                    val product = BarcodeProductLookup.lookup(db, code)
+                    if (product == null) {
+                        context?.let { Toast.makeText(it, "Produkt $code se nepodařilo dohledat", Toast.LENGTH_SHORT).show() }
+                        return@launch
                     }
+                    // Uložíme per-gram hodnoty — weight listener pak přepočítá
+                    perGramP     = product.proteins100g / 100f
+                    perGramS     = product.carbs100g    / 100f
+                    perGramT     = product.fat100g      / 100f
+                    perGramFiber = product.fiber100g    / 100f
+
+                    etName.setText(product.name)
+                    etWeight.setText("100")
+                    // Nastavíme makra pro 100g — změna váhy pak přepočítá automaticky
+                    etP.setText("%.1f".format(Locale.US, product.proteins100g))
+                    etS.setText("%.1f".format(Locale.US, product.carbs100g))
+                    etT.setText("%.1f".format(Locale.US, product.fat100g))
+                    etFiber.setText("%.1f".format(Locale.US, product.fiber100g))
                 }
             }
         }

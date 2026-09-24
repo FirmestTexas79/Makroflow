@@ -22,6 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.pokemon.quests.QuestDefinition
+import cz.uhk.macroflow.pokemon.quests.QuestProgression
 import cz.uhk.macroflow.pokemon.quests.QuestRegistry
 import cz.uhk.macroflow.pokemon.quests.RequirementType
 import kotlinx.coroutines.Dispatchers
@@ -86,7 +87,12 @@ class QuestJournalFragment : Fragment() {
 
     private fun loadDataAndSetup() {
         val db = AppDatabase.getDatabase(requireContext())
-        val currentBiome = (activity as? MakromonMapActivity)?.getCurrentBiome() ?: BiomeType.TOWN
+        val mapActivity = activity as? MakromonMapActivity
+        val currentBiome = mapActivity?.getCurrentBiome() ?: BiomeType.TOWN
+        // V biomu bez vlastního questu (hory) otevřeme stránku právě aktivního questu
+        val targetQuestId = BiomeRegistry.definition(currentBiome)?.questId
+            ?: mapActivity?.questManager?.getActiveQuestId()
+            ?: QuestRegistry.TOWN_INTRO_QUEST.id
 
         lifecycleScope.launch(Dispatchers.IO) {
             val allProgress = db.questDao().getAllQuests().sortedBy { it.lastUpdated }
@@ -97,11 +103,6 @@ class QuestJournalFragment : Fragment() {
 
                     // Pokud otevíráme deník poprvé (ne při refresh), najdeme správnou stranu podle biomu
                     if (selectedStageIndex == null && unlockedQuests.isNotEmpty()) {
-                        val targetQuestId = when (currentBiome) {
-                            BiomeType.TOWN -> QuestRegistry.TOWN_INTRO_QUEST.id
-                            BiomeType.MEADOW -> QuestRegistry.MEADOW_QUEST.id
-                            else -> QuestRegistry.TOWN_INTRO_QUEST.id
-                        }
                         val locationIndex = unlockedQuests.indexOfFirst { it.questId == targetQuestId }
                         if (locationIndex != -1) currentPageIndex = locationIndex
                     }
@@ -122,11 +123,7 @@ class QuestJournalFragment : Fragment() {
         }
 
         val progress = unlockedQuests.getOrNull(currentPageIndex) ?: return
-        val quest = when (progress.questId) {
-            QuestRegistry.TOWN_INTRO_QUEST.id -> QuestRegistry.TOWN_INTRO_QUEST
-            QuestRegistry.MEADOW_QUEST.id -> QuestRegistry.MEADOW_QUEST
-            else -> QuestRegistry.TOWN_INTRO_QUEST
-        }
+        val quest = QuestRegistry.byId(progress.questId) ?: QuestRegistry.TOWN_INTRO_QUEST
 
         val currentIndex = progress.currentStageIndex
         val isAllDone = progress.isCompleted
@@ -166,12 +163,19 @@ class QuestJournalFragment : Fragment() {
                     val visited = if (viewingIndex < currentIndex || isAllDone) {
                         stageToDisplay.targetValue
                     } else {
-                        progress.metadata.split(",").filter { it.isNotBlank() }.size
+                        QuestProgression.currentValue(stageToDisplay, progress.metadata)
                     }
                     "Cíl: Průzkum ($visited / ${stageToDisplay.targetValue})"
                 }
                 RequirementType.BATTLE_TYPE -> "Cíl: Souboj (${stageToDisplay.targetId})"
-                RequirementType.SCAN_BARCODE -> "Cíl: Skenování kódu"
+                RequirementType.SCAN_BARCODE -> {
+                    val scanned = if (viewingIndex < currentIndex || isAllDone) {
+                        stageToDisplay.targetValue
+                    } else {
+                        QuestProgression.currentValue(stageToDisplay, progress.metadata)
+                    }
+                    "Cíl: Naskenuj kód jídla v sekci Jídlo ($scanned / ${stageToDisplay.targetValue})"
+                }
                 else -> if (viewingIndex < currentIndex || isAllDone) "Cíl: Splněno" else "Cíl: Aktivní"
             }
             rootView.findViewById<TextView>(R.id.taskListText).text = "• $brief"

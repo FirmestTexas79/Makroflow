@@ -8,7 +8,10 @@ data class QuestProgressEntity(
     val currentStageIndex: Int = 0,        // Aktuální krok v poli questu
     val isCompleted: Boolean = false,
     val metadata: String = "",             // Pro flexibilní data (např. "visited:domov,obchod")
-    val lastUpdated: Long = System.currentTimeMillis()
+    val lastUpdated: Long = System.currentTimeMillis(),
+    // Kdy začala aktuální fáze – od tohoto okamžiku se počítají události (např. skeny kódů).
+    // 0 = řádek z verze DB < 34 (před migrací).
+    @ColumnInfo(defaultValue = "0") val stageStartedAt: Long = 0L
 )
 
 @Dao

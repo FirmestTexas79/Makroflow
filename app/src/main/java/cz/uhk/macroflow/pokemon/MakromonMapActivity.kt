@@ -19,20 +19,18 @@ import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import cz.uhk.macroflow.BuildConfig
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.pokemon.ui.StepProgressBar
-import cz.uhk.macroflow.pokemon.quests.QuestRegistry
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.*
 import kotlin.math.sqrt
 
 class MakromonMapActivity : AppCompatActivity() {
@@ -51,13 +49,16 @@ class MakromonMapActivity : AppCompatActivity() {
     private var lastClickedNode = ""
     private var currentBiome = BiomeType.TOWN
     private var currentDailySteps = 0
-    private val STEP_GOAL_FOR_MOUNTAINS = 5000
 
     private val clickableNodes = listOf(
         "les", "domov", "pokedex", "obchod", "hory",
         "vstup_z_town", "krovi1", "krovi2", "voda", "gudwin", "starter_bush",
-        "meadow_npc"
+        "meadow_npc",
+        "vstup_z_meadow", "skaly1", "skaly2"
     )
+
+    /** Uzly, kde může vyskočit divoký Makromon (90 % šance). */
+    private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2")
 
     companion object {
         private const val DOUBLE_CLICK_TIME = 300L
@@ -94,7 +95,6 @@ class MakromonMapActivity : AppCompatActivity() {
         )
 
         questManager = QuestManager(AppDatabase.getDatabase(this), questDialogManager, lifecycleScope)
-        questManager.startObservingMeals() // Tímto manager začne hlídat jídla v DB
 
         // PROPOJENÍ: Když se v manageru změní progres (např. onMealLogged), refreshneme UI
         questManager.onProgressChanged = { progress ->
@@ -131,7 +131,7 @@ class MakromonMapActivity : AppCompatActivity() {
         }
 
         companionManager.refresh()
-        startStepSyncLoop()
+        observeGameData()
     }
 
     fun getCurrentBiome(): BiomeType = currentBiome
@@ -176,23 +176,30 @@ class MakromonMapActivity : AppCompatActivity() {
         findViewById<ViewGroup>(R.id.mapMainContent).addView(meadowBushNPC)
     }
 
-    private fun startStepSyncLoop() {
+    /**
+     * Reaktivní napojení na data funkční části (kroky, jídla, skeny).
+     * Nahrazuje dřívější polling každé 2 s, který běžel i na pozadí.
+     * Běží jen ve stavu STARTED; po návratu na mapu se vše přepočítá.
+     */
+    private fun observeGameData() {
         lifecycleScope.launch {
-            val db = AppDatabase.getDatabase(applicationContext)
-            while (true) {
-                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                val steps = withContext(Dispatchers.IO) {
-                    db.stepsDao().getStepsForDateSync(todayStr)?.count ?: 0
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                questManager.observeGameData { steps ->
+                    currentDailySteps = steps
+                    refreshStepBar()
                 }
-                currentDailySteps = steps
-
-                runOnUiThread {
-                    stepProgressBar.setProgress(currentDailySteps, STEP_GOAL_FOR_MOUNTAINS)
-                    questManager.onStepsChanged(currentDailySteps)
-                }
-                delay(2000)
             }
         }
+    }
+
+    private fun refreshStepBar() {
+        val gatedBiome = BiomeRegistry.definition(currentBiome)?.stepGoalFor
+        if (gatedBiome == null) {
+            stepProgressBar.visibility = View.GONE
+            return
+        }
+        stepProgressBar.visibility = View.VISIBLE
+        stepProgressBar.setProgress(currentDailySteps, BiomeAccess.requiredSteps(gatedBiome))
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -236,7 +243,8 @@ class MakromonMapActivity : AppCompatActivity() {
                         .apply()
                     replaceMapContent(PokemonBattleFragment())
                 }
-                "hory" -> if (currentDailySteps >= STEP_GOAL_FOR_MOUNTAINS) changeBiome(BiomeType.MOUNTAINS, PointF(0.450f, 0.350f)) else showStepWarningToast()
+                "hory" -> tryEnterBiome(BiomeType.MOUNTAINS, entryNode = "vstup_z_meadow")
+                "vstup_z_meadow" -> enterBiomeAtNode(BiomeType.MEADOW, "hory")
                 "les" -> {
                     if (!questManager.isIntroQuestFinished()) {
                         movementEngine.cancel()
@@ -249,7 +257,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 "pokedex" -> replaceMapContent(MakrodexFragment())
                 "obchod" -> replaceMapContent(PokemonShopFragment())
                 "vstup_z_town" -> changeBiome(BiomeType.TOWN, PointF(0.46f, 0.15f))
-                "krovi1", "krovi2", "voda" -> {
+                in encounterNodes -> {
                     if ((1..100).random() <= 90) {
                         val encounterBiome = if (nodeName == "voda") BiomeType.WATER else currentBiome
                         getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
@@ -268,9 +276,25 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
-    private fun showStepWarningToast() {
+    /** Vstup do biomu se zámkem (dnes nachozené kroky). Kontroluje se jen při vstupu. */
+    private fun tryEnterBiome(target: BiomeType, entryNode: String) {
+        if (BiomeAccess.canEnter(target, currentDailySteps)) {
+            enterBiomeAtNode(target, entryNode)
+        } else {
+            showStepWarningToast(BiomeAccess.missingSteps(target, currentDailySteps))
+        }
+    }
+
+    private fun enterBiomeAtNode(target: BiomeType, nodeId: String) {
+        val graph = BiomeRegistry.definition(target)?.graph ?: return
+        val pos = BiomeRegistry.nodePos(graph, nodeId) ?: return
+        changeBiome(target, PointF(pos.x, pos.y))
+    }
+
+    private fun showStepWarningToast(missingSteps: Int) {
         val layout = layoutInflater.inflate(R.layout.layout_custom_toast, null)
-        layout.findViewById<TextView>(R.id.toastText).text = "Tohle by jsi na jeden zátah neušel, zkus se trochu víc ještě projít!"
+        layout.findViewById<TextView>(R.id.toastText).text =
+            "Tohle bys na jeden zátah neušel! Dnes se ještě projdi – chybí ti $missingSteps kroků."
         with (Toast(applicationContext)) {
             setGravity(Gravity.CENTER, 0, 0)
             duration = Toast.LENGTH_LONG
@@ -294,10 +318,9 @@ class MakromonMapActivity : AppCompatActivity() {
         val container = findViewById<ViewGroup>(R.id.mapMainContent)
         val transitionAction = {
             currentBiome = newBiome
-            stepProgressBar.visibility = if (newBiome == BiomeType.MEADOW) View.VISIBLE else View.GONE
+            refreshStepBar()
 
-            val questToLoad = if (newBiome == BiomeType.MEADOW) QuestRegistry.MEADOW_QUEST.id else QuestRegistry.TOWN_INTRO_QUEST.id
-            questManager.loadQuest(questToLoad)
+            BiomeRegistry.definition(newBiome)?.questId?.let { questManager.loadQuest(it) }
 
             when (newBiome) {
                 BiomeType.TOWN -> {
@@ -332,9 +355,17 @@ class MakromonMapActivity : AppCompatActivity() {
                         meadowBushNPC.y = bushNpcPos.y * container.height - (meadowBushNPC.height / 0.8f)
                     }
                 }
+                BiomeType.MOUNTAINS -> {
+                    mapBackground.setImageResource(R.drawable.mountains)
+                    movementEngine.updateBiome(BiomeRegistry.MOUNTAINS_GRAPH, startPos)
+                    gudwinNPC.visibility = View.GONE
+                    starterBush.visibility = View.GONE
+                    meadowBushNPC.visibility = View.GONE
+                }
                 else -> {}
             }
-            drawDebugNodes(container)
+            // Ladicí body grafu jen v debug buildu – dřív byly vidět i v produkční verzi.
+            if (BuildConfig.DEBUG) drawDebugNodes(container)
         }
 
         if (animate) {

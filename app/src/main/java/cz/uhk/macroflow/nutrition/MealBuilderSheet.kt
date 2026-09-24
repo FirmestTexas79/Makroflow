@@ -18,8 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -145,37 +143,24 @@ class MealBuilderSheet(private val isPreSelected: Boolean) : BottomSheetDialogFr
         btnScanIngredient.setOnClickListener {
             val scanner = GmsBarcodeScanning.getClient(requireContext())
             scanner.startScan().addOnSuccessListener { barcode ->
-                barcode.rawValue?.let { code ->
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        try {
-                            val response = URL("https://world.openfoodfacts.org/api/v2/product/$code.json").readText()
-                            val json = JSONObject(response)
-                            if (json.optInt("status") == 1) {
-                                val product    = json.getJSONObject("product")
-                                val nutriments = product.optJSONObject("nutriments")
-                                val name = product.optString("product_name_cs")
-                                    .ifEmpty { product.optString("product_name", "Neznámý") }
-                                nutriments?.let { n ->
-                                    withContext(Dispatchers.Main) {
-                                        val kj = (n.optDouble("energy-kj_100g", 0.0) / 100.0).toFloat().let {
-                                            if (it == 0f) (n.optDouble("energy-kcal_100g", 0.0) / 100.0).toFloat() * 4.184f else it
-                                        }
-                                        ingredients.add(Ingredient(
-                                            name         = name,
-                                            weight       = 100f,
-                                            perGramP     = (n.optDouble("proteins_100g",      0.0) / 100.0).toFloat(),
-                                            perGramS     = (n.optDouble("carbohydrates_100g", 0.0) / 100.0).toFloat(),
-                                            perGramT     = (n.optDouble("fat_100g",           0.0) / 100.0).toFloat(),
-                                            perGramFiber = (n.optDouble("fiber_100g",         0.0) / 100.0).toFloat(),
-                                            perGramKj    = kj
-                                        ))
-                                        selectedAdapter.notifyDataSetChanged()
-                                        calculateTotalWeight(etMealWeight)
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) { e.printStackTrace() }
+                val code = barcode.rawValue ?: return@addOnSuccessListener
+                lifecycleScope.launch {
+                    val product = BarcodeProductLookup.lookup(db, code)
+                    if (product == null) {
+                        context?.let { Toast.makeText(it, "Produkt $code se nepodařilo dohledat", Toast.LENGTH_SHORT).show() }
+                        return@launch
                     }
+                    ingredients.add(Ingredient(
+                        name         = product.name,
+                        weight       = 100f,
+                        perGramP     = product.proteins100g  / 100f,
+                        perGramS     = product.carbs100g     / 100f,
+                        perGramT     = product.fat100g       / 100f,
+                        perGramFiber = product.fiber100g     / 100f,
+                        perGramKj    = product.energyKj100g  / 100f
+                    ))
+                    selectedAdapter.notifyDataSetChanged()
+                    calculateTotalWeight(etMealWeight)
                 }
             }
         }

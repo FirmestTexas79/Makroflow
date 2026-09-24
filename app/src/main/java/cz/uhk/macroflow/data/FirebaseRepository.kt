@@ -440,7 +440,8 @@ object FirebaseRepository {
             "currentStageIndex" to progress.currentStageIndex,
             "isCompleted"      to progress.isCompleted,
             "metadata"         to progress.metadata,
-            "lastUpdated"      to progress.lastUpdated
+            "lastUpdated"      to progress.lastUpdated,
+            "stageStartedAt"   to progress.stageStartedAt
         )
         userDoc().collection("quest_progress").document(progress.questId)
             .set(data, SetOptions.merge()).await()
@@ -455,7 +456,8 @@ object FirebaseRepository {
                 currentStageIndex = (doc.getLong("currentStageIndex") ?: 0L).toInt(),
                 isCompleted       = doc.getBoolean("isCompleted") ?: false,
                 metadata          = doc.getString("metadata") ?: "",
-                lastUpdated       = doc.getLong("lastUpdated") ?: System.currentTimeMillis()
+                lastUpdated       = doc.getLong("lastUpdated") ?: System.currentTimeMillis(),
+                stageStartedAt    = doc.getLong("stageStartedAt") ?: 0L
             )
         }
     }

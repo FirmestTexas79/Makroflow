@@ -1,6 +1,9 @@
 package cz.uhk.macroflow.pokemon
 
 import android.graphics.PointF
+import androidx.annotation.DrawableRes
+import cz.uhk.macroflow.R
+import cz.uhk.macroflow.pokemon.quests.QuestRegistry
 
 enum class BiomeType { TOWN, MEADOW, MOUNTAINS, LAKE, WATER }
 
@@ -28,12 +31,50 @@ object BiomeRegistry {
 
     val MEADOW_GRAPH = listOf(
         MovementEngine.Waypoint("vstup_z_town", PointF(0.340f, 0.640f), listOf("rozcesti")),
-        MovementEngine.Waypoint("rozcesti",      PointF(0.500f, 0.425f), listOf("vstup_z_town", "krovi1", "krovi2", "voda", "meadow_npc")),
+        MovementEngine.Waypoint("rozcesti",      PointF(0.500f, 0.425f), listOf("vstup_z_town", "krovi1", "krovi2", "voda", "meadow_npc", "hory")),
 
         MovementEngine.Waypoint("meadow_npc",         PointF(0.630f, 0.410f), listOf("rozcesti")),
 
         MovementEngine.Waypoint("krovi1",        PointF(0.380f, 0.425f), listOf("rozcesti")),
         MovementEngine.Waypoint("krovi2",        PointF(0.630f, 0.270f), listOf("rozcesti")),
-        MovementEngine.Waypoint("voda",        PointF(0.255f, 0.320f), listOf("rozcesti"))
+        MovementEngine.Waypoint("voda",        PointF(0.255f, 0.320f), listOf("rozcesti")),
+
+        // Můstek na pravém okraji louky = vstup do hor (zamčený denním krokovým cílem)
+        MovementEngine.Waypoint("hory",          PointF(0.765f, 0.432f), listOf("rozcesti"))
     )
+
+    // ⚠️ PROVIZORNÍ souřadnice – sedí na placeholder pozadí `mountains.png`.
+    // Až bude hotová pixel-art mapa hor, přepočítat podle ní (stejně jako Meadow: x/y = zlomek šířky/výšky obrázku).
+    val MOUNTAINS_GRAPH = listOf(
+        MovementEngine.Waypoint("vstup_z_meadow", PointF(0.500f, 0.850f), listOf("horska_stezka")),
+        MovementEngine.Waypoint("horska_stezka",  PointF(0.500f, 0.620f), listOf("vstup_z_meadow", "skaly1", "skaly2", "vrchol")),
+        MovementEngine.Waypoint("skaly1",         PointF(0.280f, 0.550f), listOf("horska_stezka")),
+        MovementEngine.Waypoint("skaly2",         PointF(0.720f, 0.480f), listOf("horska_stezka")),
+        // Místo pro budoucího NPC a quest hor (zatím neklikatelné)
+        MovementEngine.Waypoint("vrchol",         PointF(0.500f, 0.300f), listOf("horska_stezka"))
+    )
+
+    /** Vše, co mapa potřebuje o biomu vědět, na jednom místě. */
+    data class BiomeDefinition(
+        val type: BiomeType,
+        @DrawableRes val backgroundRes: Int,
+        val graph: List<MovementEngine.Waypoint>,
+        /** Quest, který se v biomu načte; null = ponechat aktuálně aktivní quest. */
+        val questId: String?,
+        /** Zobrazit ukazatel denních kroků (cíl = zámek dalšího biomu). */
+        val stepGoalFor: BiomeType? = null
+    )
+
+    val DEFINITIONS: Map<BiomeType, BiomeDefinition> by lazy {
+        listOf(
+            BiomeDefinition(BiomeType.TOWN, R.drawable.poketown, TOWN_GRAPH, QuestRegistry.TOWN_INTRO_QUEST.id),
+            BiomeDefinition(BiomeType.MEADOW, R.drawable.meadow, MEADOW_GRAPH, QuestRegistry.MEADOW_QUEST.id,
+                stepGoalFor = BiomeType.MOUNTAINS),
+            BiomeDefinition(BiomeType.MOUNTAINS, R.drawable.mountains, MOUNTAINS_GRAPH, questId = null)
+        ).associateBy { it.type }
+    }
+
+    fun definition(type: BiomeType): BiomeDefinition? = DEFINITIONS[type]
+
+    fun nodePos(graph: List<MovementEngine.Waypoint>, id: String): PointF? = graph.find { it.id == id }?.pos
 }

@@ -9,7 +9,7 @@ enum class RequirementType {
     TALK_TO_NPC,    // Jen odkliknutí dialogu
     LOG_MEAL,        // Nové: Zapsání jídla
     BATTLE_TYPE,     // Nové: Souboj s konkrétním typem
-    SCAN_BARCODE
+    SCAN_BARCODE     // Naskenování čárového kódu ve funkční části (přes GameEvent log)
 }
 
 data class QuestStage(
@@ -18,7 +18,8 @@ data class QuestStage(
     val speakerResId: Int,
     val requirementType: RequirementType,
     val targetValue: Int,            // Počet (např. 3000 kroků nebo 3 budovy)
-    val targetId: String? = null     // Např. "starter_bush" nebo "domov,pokedex,obchod"
+    val targetId: String? = null,    // Např. "starter_bush" nebo "domov,pokedex,obchod"
+    val speakerName: String = ""     // Prázdné = jmenovka se v dialogu skryje
 )
 
 data class QuestDefinition(
@@ -28,6 +29,8 @@ data class QuestDefinition(
 
 // Objekt se všemi questy ve hře
 object QuestRegistry {
+    private const val GUDWIN = "Gudwin Oliver"
+
     val TOWN_INTRO_QUEST = QuestDefinition(
         id = "town_intro_oliver",
         stages = listOf(
@@ -35,6 +38,7 @@ object QuestRegistry {
                 title = "První kroky městem",
                 text = "Vítej v Town, hrdino! Já jsem tvůj Makromom Gudwin, ale přátelé mi říkají Olivere. Než se vydáš do divočiny, musíš vědět, kde co je. Projdi si své zázemí – mrkni domů, prohlédni si Makrodex a nezapomeň se stavit v Obchodě. Až budeš mít mapu v malíčku, přijď za mnou!",
                 speakerResId = R.drawable.gudwin_oliver,
+                speakerName = GUDWIN,
                 requirementType = RequirementType.VISIT_NODE,
                 targetValue = 3,
                 targetId = "domov,pokedex,obchod"
@@ -43,6 +47,7 @@ object QuestRegistry {
                 title = "Tajemství v křoví",
                 text = "Slyšel jsi to? Za tvým domem v tom hustém křoví se něco hýbe. Vypadá to, že si tě vyhlédl tvůj první parťák! Běž tam a zjisti, kdo na tebe čeká.",
                 speakerResId = R.drawable.gudwin_oliver,
+                speakerName = GUDWIN,
                 requirementType = RequirementType.CAPTURE_SPECIFIC,
                 targetValue = 1,
                 targetId = "starter_bush"
@@ -51,6 +56,7 @@ object QuestRegistry {
                 title = "Dechberoucí túra",
                 text = "Tvůj parťák je plný energie a Meadow je ještě daleko. Abych tě mohl pustit dál, musím vědět, že na to máš kondici. Rozhýbej nohy! Jakmile ujdeme společně 3000 kroků, cesta se ti otevře.",
                 speakerResId = R.drawable.gudwin_oliver,
+                speakerName = GUDWIN,
                 requirementType = RequirementType.WALK_STEPS,
                 targetValue = 3000
             )
@@ -91,4 +97,8 @@ object QuestRegistry {
             )
         )
     )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST) }
+
+    fun byId(id: String): QuestDefinition? = ALL.firstOrNull { it.id == id }
 }

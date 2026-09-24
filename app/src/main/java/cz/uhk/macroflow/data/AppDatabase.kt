@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import cz.uhk.macroflow.achievements.AchievementDao
 import cz.uhk.macroflow.achievements.AchievementEntity
@@ -29,9 +30,10 @@ import kotlin.concurrent.thread
         StepsEntity::class,
         AnalyticsCacheEntity::class,
         SnackUsageEntity::class,
-        QuestProgressEntity::class
+        QuestProgressEntity::class,
+        GameEventEntity::class
     ],
-    version = 33,
+    version = 34,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -52,8 +54,30 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun stepsDao(): StepsDao
     abstract fun analyticsDao(): AnalyticsDao
     abstract fun questDao(): QuestDao
+    abstract fun gameEventDao(): GameEventDao
 
     companion object {
+        /** v34: log herních událostí + začátek fáze questu. */
+        val MIGRATION_33_34 = object : Migration(33, 34) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `quest_progress` ADD COLUMN `stageStartedAt` INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `game_events` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`type` TEXT NOT NULL, " +
+                        "`timestamp` INTEGER NOT NULL, " +
+                        "`date` TEXT NOT NULL, " +
+                        "`payload` TEXT)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_game_events_type_timestamp` " +
+                        "ON `game_events` (`type`, `timestamp`)"
+                )
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -64,7 +88,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_33_34)
+                    // Destruktivní fallback jen pro verze PŘED zavedením migrací.
+                    // Od v33 se lokální data uživatelů už nikdy nesmažou potichu:
+                    // chybějící migrace = pád při vývoji, ne ztráta dat v produkci.
+                    .fallbackToDestructiveMigrationFrom(*(1..32).toList().toIntArray())
                     .allowMainThreadQueries()
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
