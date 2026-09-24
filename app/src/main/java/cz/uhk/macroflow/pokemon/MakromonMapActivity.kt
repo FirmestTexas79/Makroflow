@@ -93,6 +93,7 @@ class MakromonMapActivity : AppCompatActivity() {
         /** Dosah klepnutí na uzel v podílu obrazovky. */
         private const val TAP_RADIUS = 0.1f
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
+        private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -442,7 +443,9 @@ class MakromonMapActivity : AppCompatActivity() {
 
     /** Vstup do biomu se zámkem (dnes nachozené kroky). Kontroluje se jen při vstupu. */
     private fun tryEnterBiome(target: BiomeType, entryNode: String) {
-        if (BiomeAccess.canEnter(target, currentDailySteps)) {
+        // Debug: sedmimílové boty přeskočí denní krokový zámek (jen v debug buildu)
+        val boots = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false)
+        if (boots || BiomeAccess.canEnter(target, currentDailySteps)) {
             enterBiomeAtNode(target, entryNode)
         } else {
             showStepWarningToast(BiomeAccess.missingSteps(target, currentDailySteps))
@@ -765,7 +768,9 @@ class MakromonMapActivity : AppCompatActivity() {
     // ── Ladění příběhu (jen debug build) ──
 
     private fun showDebugMenu() {
+        val boots = gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false)
         val items = arrayOf(
+            if (boots) "👢 Sedmimílové boty: ZAPNUTO (sundat)" else "👢 Obout sedmimílové boty (hory bez kroků)",
             "✦ Příští setkání bude shiny",
             "💎 Reset krystalů, strážců a legendy",
             "⚔ Porazit oba strážce",
@@ -776,18 +781,23 @@ class MakromonMapActivity : AppCompatActivity() {
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> {
+                        gamePrefs.edit().putBoolean(DEBUG_BOOTS_KEY, !boots).apply()
+                        showMapToast(if (boots) "👢 Boty sundány – do hor zase jen po svých."
+                            else "👢 Sedmimílové boty obuty! Do hor se dostaneš i bez dnešních kroků.")
+                    }
+                    1 -> {
                         gamePrefs.edit().putBoolean("DEBUG_FORCE_SHINY", true).apply()
                         showMapToast("✦ Debug: příští setkání bude shiny")
                     }
-                    1 -> debugResetLegend()
-                    2 -> {
+                    2 -> debugResetLegend()
+                    3 -> {
                         gamePrefs.edit().apply {
                             CrystalColor.entries.forEach { putBoolean(LegendProgress.bossKey(it), true) }
                         }.apply()
                         showMapToast("⚔ Debug: strážci poraženi – krystaly jdou vzít")
                         refreshStoryDecor()
                     }
-                    3 -> lifecycleScope.launch {
+                    4 -> lifecycleScope.launch {
                         kotlinx.coroutines.withContext(Dispatchers.IO) {
                             CrystalColor.entries.forEach { c ->
                                 if ((db.userItemDao().getItemCount(c.itemId) ?: 0) == 0) db.userItemDao().addItem(c.itemId, 1)
