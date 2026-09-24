@@ -29,7 +29,9 @@ data class ShopProduct(
     val imageUrl: String,
     val category: Int,
     /** Makroball se kreslí z vlastního pixel artu (bez obrázku z internetu). */
-    val ball: cz.uhk.macroflow.pokemon.balls.Makroball? = null
+    val ball: cz.uhk.macroflow.pokemon.balls.Makroball? = null,
+    /** Lék na stavy – ikonka z vlastního pixel artu. */
+    val med: cz.uhk.macroflow.pokemon.status.MedItem? = null
 )
 
 class PokemonShopFragment : Fragment() {
@@ -44,6 +46,8 @@ class PokemonShopFragment : Fragment() {
     // Makrobally z jednoho registru (ceny, balení, popisy), pak ostatní předměty
     private val allProducts = cz.uhk.macroflow.pokemon.balls.Makroball.entries.map { b ->
         ShopProduct(b.id, "${b.label} (${b.packSize}x)", b.description, b.price, b.packSize, "", 0, b)
+    } + cz.uhk.macroflow.pokemon.status.MedItem.entries.map { m ->
+        ShopProduct(m.id, m.label, m.description, m.price, 1, "", 0, med = m)
     } + listOf(
         ShopProduct("lure_lamp", "Spooky Plate", "Zvedne spawn Gengara v noci.", 150, 1, "https://img.pokemondb.net/sprites/items/spooky-plate.png", 1),
         ShopProduct("lure_protein", "Black Belt", "Zaručí spawn Machampa.", 100, 1, "https://img.pokemondb.net/sprites/items/black-belt.png", 1),
@@ -118,7 +122,10 @@ class PokemonShopFragment : Fragment() {
             holder.btnBuy.text = "${product.price} 🪙"
 
             val ball = product.ball
-            if (ball != null) {
+            val med = product.med
+            if (med != null) {
+                holder.ivIcon.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(med, med.pixels, cz.uhk.macroflow.pokemon.status.MedItem.SIZE, (48 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (ball != null) {
                 holder.ivIcon.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.icon(ball, (48 * holder.itemView.resources.displayMetrics.density).toInt()))
             } else {
                 holder.ivIcon.load(product.imageUrl) {

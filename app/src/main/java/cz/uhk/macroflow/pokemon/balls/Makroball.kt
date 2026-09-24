@@ -4,7 +4,7 @@ package cz.uhk.macroflow.pokemon.balls
  * Makrobally (čistý Kotlin, pokryto testy). Podklady v docs/adr/0011.
  *
  * Interní ID zůstávají původní (poke_ball / great_ball), aby seděla data v DB, Firebase a promo kódech.
- * Sprite je pixel art 12 × 12 složený ze dvou půlek (vršek řádky 0–5, spodek 6–11) –
+ * Sprite je pixel art 12 × 12 (černý pás s kulatým tlačítkem je u všech stejný) složený ze dvou půlek (vršek řádky 0–5, spodek 6–11) –
  * při dopadu se vršek odklopí na pantu.
  */
 enum class Makroball(
@@ -22,15 +22,15 @@ enum class Makroball(
         "poke_ball", "Makroball", 1.0f, 20, 5,
         "Základní Makroball. Na běžné tréninky stačí.",
         Palette(top = 0xFF606C38, topShade = 0xFF3E4A22, topLight = 0xFFA3B46B,
-            bottom = 0xFFFEFAE0, bottomShade = 0xFFD8D2B0, band = 0xFF283618,
-            plate = 0xFFFEFAE0, bar = 0xFFFEFAE0, outline = 0xFF1C2410)
+            bottom = 0xFFFEFAE0, bottomShade = 0xFFD8D2B0,
+            outline = 0xFF1C2410)
     ),
     PROTEIN(
         "great_ball", "Proteinball", 1.5f, 50, 3,
         "Šejkr plný proteinu – 1,5× větší šance na chycení.",
         Palette(top = 0xFF2E86DE, topShade = 0xFF1B5FA6, topLight = 0xFF9CD0FF,
-            bottom = 0xFFF4F7FA, bottomShade = 0xFFC9D3DD, band = 0xFF9CD0FF,
-            plate = 0xFF0E3A66, bar = 0xFF0E3A66, outline = 0xFF0E1A26),
+            bottom = 0xFFF4F7FA, bottomShade = 0xFFC9D3DD,
+            outline = 0xFF0E1A26),
         // Bílý pruh přes víčko jako na šejkru
         decor = (3..8).associate { (it to 3) to 'W' }
     ),
@@ -38,17 +38,16 @@ enum class Makroball(
         "ultra_ball", "Kreatinball", 2.0f, 120, 2,
         "Síla kotouče činky – dvojnásobná šance na chycení.",
         Palette(top = 0xFF2B2B2B, topShade = 0xFF141414, topLight = 0xFF6E6E6E,
-            bottom = 0xFF9EA4AA, bottomShade = 0xFF6C7278, band = 0xFFE0B040,
-            plate = 0xFFFFD54F, bar = 0xFF141414, outline = 0xFF0A0A0A),
+            bottom = 0xFF9EA4AA, bottomShade = 0xFF6C7278,
+            outline = 0xFF0A0A0A),
         // Zlaté nýty na víčku (jako šrouby na kotouči)
         decor = mapOf((3 to 2) to 'G', (8 to 2) to 'G')
     );
 
     data class Palette(
         val top: Long, val topShade: Long, val topLight: Long,
-        val bottom: Long, val bottomShade: Long, val band: Long,
-        /** Zámek je malá činka: kotouče [plate] a osa [bar]. */
-        val plate: Long, val bar: Long, val outline: Long
+        val bottom: Long, val bottomShade: Long,
+        val outline: Long
     )
 
     /** Pixely 12 × 12 (ARGB, 0 = průhledné), řádek po řádku. */
@@ -65,9 +64,8 @@ enum class Makroball(
                 'H' -> palette.topLight
                 'W' -> palette.bottom
                 'w' -> palette.bottomShade
-                'B' -> palette.band
-                'C' -> palette.plate
-                'D' -> palette.bar
+                'B' -> BAND
+                'C' -> BUTTON
                 'G' -> 0xFFFFD54F
                 else -> 0L
             }.toInt()
@@ -77,23 +75,26 @@ enum class Makroball(
 
     companion object {
         const val SIZE = 12
+        /** Střed je u všech ballů stejný: černý pás a bílé tlačítko. */
+        private const val BAND = 0xFF181818
+        private const val BUTTON = 0xFFF4F4F4
         /** Řádek, od kterého začíná spodní půlka (pant je na jejím horním okraji). */
         const val SPLIT_ROW = 6
 
         /**
-         * Tvar koule: K obrys, T vršek, t stín, H odlesk, B pás, W/w spodek.
-         * Místo kulatého tlačítka je zámek ve tvaru činky (C kotouče, D osa) – vlastní motiv Makroflow.
+         * Tvar koule: K obrys, T vršek, t stín, H odlesk, W/w spodek,
+         * B černý pás a C bílé kulaté tlačítko vpředu – u všech ballů stejné.
          */
         val SHAPE = listOf(
             "....KKKK....",
             "..KKTTTTKK..",
             ".KHHTTTTTtK.",
             ".KHTTTTTTtK.",
-            "KTTTTTTTTTtK",
-            "KTTTCTTCTTtK",
-            "KBBBCDDCBBBK",
-            "KWWWCWWCWWwK",
-            "KWWWWWWWWWwK",
+            "KTTTTKKTTTtK",
+            "KBBBKCCKBBBK",
+            "KBBKCCCCKBBK",
+            "KWWWKCCKWWwK",
+            "KWWWWKKWWWwK",
             ".KWWWWWWWwK.",
             ".KKwWWWWwKK.",
             "....KKKK...."

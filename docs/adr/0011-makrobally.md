@@ -19,7 +19,7 @@ stahovaly obrázky originálních Pokéballů z pokemondb.net, tedy cizí grafik
 
   ID zůstala kvůli datům v DB, Firebase a promo kódům.
 - **Šance na chycení** se počítá stejným vzorcem jako dřív: `((1 − HP/maxHP) · 220 + 20) · druh · ball`, strop 255 z 256.
-- **Vlastní motiv:** místo kulatého tlačítka (typický prvek Pokéballu) má zámek tvar malé činky.
+- **Vzhled:** střed je u všech tří stejný, černý pás a kulaté bílé tlačítko vpředu; liší se barvou víčka a spodku.
   Sprite je 12 × 12 px definovaný v kódu jako mřížka znaků, takže jde otestovat.
   Víčko (řádky 0–5) a spodek (6–11) se kreslí zvlášť, aby šlo víčko odklopit na pantu.
 - **Animace:**
@@ -37,4 +37,4 @@ stahovaly obrázky originálních Pokéballů z pokemondb.net, tedy cizí grafik
 
 ## Otevřené
 - Návnady v obchodě (Spooky Plate, Black Belt) mají pořád jména a obrázky z Pokémonů.
-- Stavové útoky (spánek, paralýza…) budou násobit šanci na chycení. Připraveno přes `catchMultiplier`.
+- Stavy soupeře násobí šanci na chycení (ADR 0012).

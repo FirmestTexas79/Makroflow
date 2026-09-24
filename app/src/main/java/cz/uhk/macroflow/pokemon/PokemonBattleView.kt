@@ -59,6 +59,15 @@ class PokemonBattleView @JvmOverloads constructor(
     private var captureBeam = 0f
     private var clickStars = -1f
     private val ballCounts = HashMap<cz.uhk.macroflow.pokemon.balls.Makroball, Int>()
+    private val medCounts = HashMap<cz.uhk.macroflow.pokemon.status.MedItem, Int>()
+    /** Menu předmětů: 0 = výběr kategorie, 1 = Makrobally, 2 = lékárnička. */
+    private var itemPage = 0
+
+    // ── Stavy (spánek, paralýza…) – platí jen po dobu souboje ──
+    private val playerCond = cz.uhk.macroflow.pokemon.status.Condition()
+    private val enemyCond = cz.uhk.macroflow.pokemon.status.Condition()
+    private var playerAtkMod = 1f
+    private var playerDefMod = 1f
     private val absorbPaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
     private val beamPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var flashOn = false; private var cursorOn = true
@@ -111,6 +120,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
             val counts = cz.uhk.macroflow.pokemon.balls.Makroball.entries.associateWith { db.userItemDao().getItemCount(it.id) ?: 0 }
             val currentPokeballs = counts.values.sum()
+            val meds = cz.uhk.macroflow.pokemon.status.MedItem.entries.associateWith { db.userItemDao().getItemCount(it.id) ?: 0 }
 
             handler.post {
                 gs = BattleState(
@@ -119,6 +129,7 @@ class PokemonBattleView @JvmOverloads constructor(
                     ballCount = currentPokeballs
                 )
                 ballCounts.putAll(counts)
+                medCounts.putAll(meds)
                 gs.isEnemyShiny  = enemyIsShiny
                 gs.isPlayerShiny = playerIsShiny
 
@@ -225,6 +236,7 @@ class PokemonBattleView @JvmOverloads constructor(
         }
         drawSparkles(canvas)
         drawBallOverlay(canvas)
+        drawStatusFx(canvas)
 
         playerBitmap?.let { bmp ->
             val targetH = 36f * sc
@@ -281,6 +293,17 @@ class PokemonBattleView @JvmOverloads constructor(
         PokemonSprites.drawText(c, "HP", x+3, y+13, C_TEXT, fp)
         drawHPBar(c, x+16, y+13, 54, 5, gs.enemy.currentHp, gs.enemy.maxHp)
         if (gs.isEnemyShiny) PokemonSprites.drawText(c, "*SHINY", x+3, y+20, 0xFFC08A00.toInt(), fp)
+        enemyCond.tag?.let { drawStatusTag(c, it, x + 51, y + 19) }
+    }
+
+    /** Štítek stavu (SLP, PAR, PSN, BRN, CNF) v barevném rámečku. */
+    private fun drawStatusTag(c: Canvas, tag: String, x: Int, y: Int) {
+        fp.color = when (tag) {
+            "SLP" -> 0xFF8A8A8A.toInt(); "PAR" -> 0xFFC8960E.toInt(); "PSN" -> 0xFF8E44AD.toInt()
+            "BRN" -> 0xFFE0592A.toInt(); else -> 0xFFE84F9A.toInt()
+        }
+        c.drawRect(x.toFloat(), y.toFloat(), (x + 21).toFloat(), (y + 9).toFloat(), fp)
+        PokemonSprites.drawText(c, tag, x + 2, y + 1, 0xFFFFFFFF.toInt(), fp)
     }
 
     private fun drawPlayerHUD(c: Canvas) {
@@ -291,6 +314,7 @@ class PokemonBattleView @JvmOverloads constructor(
         drawHPBar(c, x+16, y+13, 54, 5, gs.player.currentHp, gs.player.maxHp)
         val hp = "${gs.player.currentHp}/${gs.player.maxHp}"
         PokemonSprites.drawText(c, hp, x+w-3-hp.length*6, y+22, C_TEXT, fp)
+        playerCond.tag?.let { drawStatusTag(c, it, x + 3, y + 21) }
     }
 
     private fun drawHPBar(c: Canvas, x: Int, y: Int, w: Int, h: Int, cur: Int, max: Int) {
@@ -376,6 +400,31 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private fun drawItemMenu(c: Canvas) {
+        when (itemPage) {
+            1 -> drawBallMenu(c)
+            2 -> drawMedMenu(c)
+            else -> drawItemCategories(c)
+        }
+    }
+
+    private fun drawItemCategories(c: Canvas) {
+        val bx = 2; val by = 97; val bw = 156; val bh = 46; drawUIBox(c, bx, by, bw, bh)
+        zones.clear()
+        c.save(); c.translate((bx + 3).toFloat(), (by + 3).toFloat()); c.scale(8f / 12f, 8f / 12f)
+        cz.uhk.macroflow.pokemon.balls.BallSprites.draw(c, cz.uhk.macroflow.pokemon.balls.Makroball.MAKRO, 6f, 6f)
+        c.restore()
+        PokemonSprites.drawText(c, "MAKROBALLY", bx + 14, by + 4, C_TEXT, fp)
+        c.save(); c.translate((bx + 3).toFloat(), (by + 14).toFloat()); c.scale(8f / 12f, 8f / 12f)
+        cz.uhk.macroflow.pokemon.balls.BallSprites.drawPixels(c, cz.uhk.macroflow.pokemon.status.MedItem.MULTIVITAMIN.pixels, 12, 0f, 0f)
+        c.restore()
+        PokemonSprites.drawText(c, "LEKARNICKA", bx + 14, by + 15, C_TEXT, fp)
+        PokemonSprites.drawText(c, "BACK", bx+bw-28, by+37, C_TEXT, fp)
+        zones.add(Zone(Rect(bx, by + 1, bx + bw, by + 12)) { if (!busy) { itemPage = 1; invalidate() } })
+        zones.add(Zone(Rect(bx, by + 12, bx + bw, by + 23)) { if (!busy) { itemPage = 2; invalidate() } })
+        zones.add(Zone(Rect(bx+bw-32, by+33, bx+bw, by+bh)) { if (!busy) showMain() })
+    }
+
+    private fun drawBallMenu(c: Canvas) {
         val bx = 2; val by = 97; val bw = 156; val bh = 46; drawUIBox(c, bx, by, bw, bh)
         zones.clear()
         // Počty se čtou z mezipaměti – dřív se sahalo do DB při každém překreslení
@@ -389,7 +438,25 @@ class PokemonBattleView @JvmOverloads constructor(
             zones.add(Zone(Rect(bx, y - 2, bx + bw - 34, y + 9)) { if (!busy && n > 0) throwBall(b) })
         }
         PokemonSprites.drawText(c, "BACK", bx+bw-28, by+37, C_TEXT, fp)
-        zones.add(Zone(Rect(bx+bw-32, by+33, bx+bw, by+bh)) { if (!busy) showMain() })
+        zones.add(Zone(Rect(bx+bw-32, by+33, bx+bw, by+bh)) { if (!busy) { itemPage = 0; invalidate() } })
+    }
+
+    /** Lékárnička: 2 sloupce × 3 řádky, šedě co nemáš. */
+    private fun drawMedMenu(c: Canvas) {
+        val bx = 2; val by = 97; val bw = 156; val bh = 46; drawUIBox(c, bx, by, bw, bh)
+        zones.clear()
+        cz.uhk.macroflow.pokemon.status.MedItem.entries.forEachIndexed { i, m ->
+            val col = i / 3; val row = i % 3
+            val x = bx + 3 + col * 76; val y = by + 4 + row * 11
+            val n = medCounts[m] ?: 0
+            c.save(); c.translate(x.toFloat(), (y - 1).toFloat()); c.scale(8f / 12f, 8f / 12f)
+            cz.uhk.macroflow.pokemon.balls.BallSprites.drawPixels(c, m.pixels, 12, 0f, 0f)
+            c.restore()
+            PokemonSprites.drawText(c, "${m.short} X$n", x + 10, y, if (n > 0) C_TEXT else 0xFF9A9A9A.toInt(), fp)
+            zones.add(Zone(Rect(x - 1, y - 2, x + 74, y + 9)) { if (!busy && n > 0) useMed(m) })
+        }
+        PokemonSprites.drawText(c, "BACK", bx+bw-28, by+37, C_TEXT, fp)
+        zones.add(Zone(Rect(bx+bw-32, by+33, bx+bw, by+bh)) { if (!busy) { itemPage = 0; invalidate() } })
     }
 
     private fun drawTextPanel(c: Canvas) {
@@ -594,11 +661,13 @@ class PokemonBattleView @JvmOverloads constructor(
     private fun showMain()    { busy = false; gs.phase = BattlePhase.MAIN_MENU; zones.clear(); invalidate() }
     private fun startFight()  { if (gs.player.moves.all { it.pp <= 0 }) { setText("NO PP LEFT!", ""); return }; gs.phase = BattlePhase.FIGHT_MENU; invalidate() }
     private fun showPkmn()    { setText("ONLY ${gs.player.name}", "IN PARTY!") }
-    private fun startItem()   { gs.phase = BattlePhase.ITEM_MENU; zones.clear(); invalidate() }
+    private fun startItem()   { itemPage = 0; gs.phase = BattlePhase.ITEM_MENU; zones.clear(); invalidate() }
 
     private fun doRun() {
         busy = true
-        if (BattleEngine.tryEscape(gs.player.speed, gs.enemy.speed)) {
+        // Paralýza půlí rychlost i při útěku
+        val speed = (gs.player.speed * cz.uhk.macroflow.pokemon.status.StatusRules.speedMultiplier(playerCond)).toInt()
+        if (BattleEngine.tryEscape(speed, gs.enemy.speed)) {
             gs.phase = BattlePhase.ESCAPED
             setText("GOT AWAY", "SAFELY!")
         } else {
@@ -608,76 +677,377 @@ class PokemonBattleView @JvmOverloads constructor(
         invalidate()
     }
 
+    // ── Tahy se stavy ────────────────────────────────────────────────────────
+    //
+    // Kolo: hráč → soupeř → zranění na konci kola (otrava, popálení). Každá hláška čeká na ťuknutí.
+
+    private val rng = Random.Default
+
+    private fun typeOf(m: Makromon) = m.moves.firstOrNull()?.type ?: MakromonType.NORMAL
+
+    private fun say(l1: String, l2: String, then: () -> Unit) { setText(l1, l2); scheduleAfterText(then) }
+
+    private fun condOf(isPlayer: Boolean) = if (isPlayer) playerCond else enemyCond
+    private fun monOf(isPlayer: Boolean) = if (isPlayer) gs.player else gs.enemy
+
+    /** Zmatený Makromon zasáhne sám sebe útokem bez typu o síle 40. */
+    private fun selfHitDamage(isPlayer: Boolean): Int {
+        val m = monOf(isPlayer)
+        val atk = (m.attack * cz.uhk.macroflow.pokemon.status.StatusRules.attackMultiplier(condOf(isPlayer))).toInt().coerceAtLeast(1)
+        return BattleEngine.calcDamage(m.level, cz.uhk.macroflow.pokemon.status.StatusRules.CONFUSION_SELF_POWER, atk, m.defense,
+            MakromonType.NORMAL, MakromonType.NORMAL)
+    }
+
     private fun playerMove(idx: Int) {
         val mv = gs.player.moves[idx]
         if (mv.pp <= 0) { setText("NO PP LEFT!", ""); return }
-        mv.pp--; busy = true; gs.phase = BattlePhase.ANIMATING
-        setText("${gs.player.name}", "USED ${mv.name}!"); invalidate()
+        busy = true; gs.phase = BattlePhase.ANIMATING
+        val pre = cz.uhk.macroflow.pokemon.status.StatusRules.beforeMove(playerCond, rng) { selfHitDamage(true) }
+        handleBeforeMove(true, pre, act = { useMove(true, mv) }, skip = { enemyTurn() })
+    }
+
+    private fun enemyTurn() {
+        if (gs.enemy.currentHp <= 0 || gs.player.currentHp <= 0) { busy = false; showMain(); return }
+        busy = true
+        val mv = BattleEngine.enemyChooseMove(gs.enemy, playerCond)
+        val pre = cz.uhk.macroflow.pokemon.status.StatusRules.beforeMove(enemyCond, rng) { selfHitDamage(false) }
+        handleBeforeMove(false, pre, act = { useMove(false, mv) }, skip = { endOfRound() })
+    }
+
+    /** Reakce na stav před tahem: spánek, paralýza, zmatení, omráčení. */
+    private fun handleBeforeMove(isPlayer: Boolean, pre: cz.uhk.macroflow.pokemon.status.BeforeMove, act: () -> Unit, skip: () -> Unit) {
+        val name = monOf(isPlayer).name
+        when (pre) {
+            is cz.uhk.macroflow.pokemon.status.BeforeMove.CanAct -> act()
+            is cz.uhk.macroflow.pokemon.status.BeforeMove.Flinched -> say(name, "FLINCHED!", skip)
+            is cz.uhk.macroflow.pokemon.status.BeforeMove.StillAsleep -> { statusFx(isPlayer, cz.uhk.macroflow.pokemon.status.EffectKind.SLEEP); say(name, "IS FAST ASLEEP.", skip) }
+            is cz.uhk.macroflow.pokemon.status.BeforeMove.WokeUp -> say(name, "WOKE UP!", act)
+            is cz.uhk.macroflow.pokemon.status.BeforeMove.FullyParalyzed -> { statusFx(isPlayer, cz.uhk.macroflow.pokemon.status.EffectKind.PARALYZE); say(name, "IS PARALYZED!", skip) }
+            is cz.uhk.macroflow.pokemon.status.BeforeMove.SnappedOut -> say(name, "SNAPPED OUT OF IT!", act)
+            is cz.uhk.macroflow.pokemon.status.BeforeMove.ConfusedButActs -> { statusFx(isPlayer, cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE); say(name, "IS CONFUSED!", act) }
+            is cz.uhk.macroflow.pokemon.status.BeforeMove.HurtItself -> {
+                statusFx(isPlayer, cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE)
+                say(name, "IS CONFUSED!") {
+                    doFlash {
+                        val m = monOf(isPlayer)
+                        m.currentHp = maxOf(0, m.currentHp - pre.damage); invalidate()
+                        say("IT HURT ITSELF", "IN CONFUSION!") {
+                            if (m.currentHp <= 0) { if (isPlayer) playerFainted() else enemyFainted() } else skip()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Provedení útoku: přesnost → zranění → vedlejší efekt (stav, snížení statistiky). */
+    private fun useMove(isPlayer: Boolean, mv: Move) {
+        mv.pp = maxOf(0, mv.pp - 1)
+        val atk = monOf(isPlayer); val def = monOf(!isPlayer)
+        val defCond = condOf(!isPlayer)
+        busy = true; gs.phase = BattlePhase.ANIMATING
+        setText(atk.name, "USED ${mv.name}!"); invalidate()
         handler.postDelayed({
             if (Random.nextInt(100) >= mv.accuracy) {
-                setText("${gs.player.name}", "MISSED!"); scheduleAfterText { enemyTurn() }; return@postDelayed
+                say(atk.name, "MISSED!") { afterAction(isPlayer) }; return@postDelayed
             }
-            if (mv.power > 0) {
-                val enemyType = gs.enemy.moves.firstOrNull()?.type ?: MakromonType.NORMAL
-                val dmg = BattleEngine.calcDamage(gs.player.level, mv.power, gs.player.attack, gs.enemy.defense, mv.type, enemyType)
-                doFlash {
-                    gs.enemy.currentHp = maxOf(0, gs.enemy.currentHp - dmg)
-                    invalidate()
-
-                    handler.postDelayed({
-                        if (gs.enemy.currentHp <= 0) {
-                            gs.enemyVisible = false
-                            gs.phase = BattlePhase.ENEMY_FAINTED
-                            setText("${gs.enemy.name}", "FAINTED!")
-
-                            // --- QUEST SYSTÉM: OZNÁMENÍ VÝHRY ---
-                            // Zjistíme typ nepřítele (bereme typ prvního útoku, jak to máš v dmg výpočtu)
-                            val enemyType = gs.enemy.moves.firstOrNull()?.type ?: MakromonType.NORMAL
-
-                            // Informujeme QuestManager o výhře nad konkrétním typem
-                            (context as? MakromonMapActivity)?.let { map ->
-                                map.questManager.onBattleWon(enemyType.name, biome = map.getCurrentBiome().name)
-                            }
-
-                            Thread {
-                                // Logika pro XP a Makrodex
-                                val mId = BattleFactory.makrodexId(gs.enemy)
-                                val spawnEntry = SpawnManager.allEntries.find { it.id == mId }
-                                val rarity = spawnEntry?.rarity ?: Rarity.COMMON
-
-                                val baseScore = when (rarity) {
-                                    Rarity.COMMON    -> 15
-                                    Rarity.RARE      -> 30
-                                    Rarity.EPIC      -> 60
-                                    Rarity.LEGENDARY -> 120
-                                    Rarity.MYTHIC    -> 250
-                                }
-                                val totalBattleXp = baseScore + (gs.enemy.level * 3)
-                                awardXpToActiveMakromon(totalBattleXp)
-
-                                handler.post {
-                                    // Počkej 2 sekundy, než se vrátíš na mapu/ukončíš souboj
-                                    handler.postDelayed({
-                                        onCaught?.invoke()
-                                    }, 2000)
-                                }
-                            }.start()
-                        } else {
-                            // Nepřítel přežil, pokračujeme v boji
-                            setText("IT DEALT", "$dmg DAMAGE!")
-                            scheduleAfterText { enemyTurn() }
-                        }
-                    }, 400)
+            when {
+                mv.power > 0 -> {
+                    // HEX má dvojnásobnou sílu proti cíli se stavem
+                    val power = if (mv.name == "HEX" && defCond.major != null) mv.power * 2 else mv.power
+                    // Oprava: snížení útoku/obrany se dřív aplikovalo na špatnou stranu
+                    val atkMod = if (isPlayer) playerAtkMod else gs.enemyAtkMod
+                    val defMod = if (isPlayer) gs.enemyDefMod else playerDefMod
+                    val atkStat = (atk.attack * atkMod * cz.uhk.macroflow.pokemon.status.StatusRules.attackMultiplier(condOf(isPlayer))).toInt().coerceAtLeast(1)
+                    val defStat = (def.defense * defMod).toInt().coerceAtLeast(1)
+                    val dmg = BattleEngine.calcDamage(atk.level, power, atkStat, defStat, mv.type, typeOf(def))
+                    doFlash {
+                        def.currentHp = maxOf(0, def.currentHp - dmg); invalidate()
+                        handler.postDelayed({
+                            if (def.currentHp <= 0) { if (isPlayer) enemyFainted() else playerFainted() }
+                            else say("IT DEALT", "$dmg DAMAGE!") { applyMoveEffect(isPlayer, mv, statusOnly = false) }
+                        }, 400)
+                    }
                 }
-            } else {
-                when (mv.statEffect) {
-                    StatEffect.LOWER_ENEMY_ATK -> gs.enemyAtkMod *= 0.85f
-                    StatEffect.LOWER_ENEMY_DEF -> gs.enemyDefMod *= 0.85f
-                    else -> {}
+                mv.statEffect != null -> {
+                    val label = when (mv.statEffect) {
+                        StatEffect.LOWER_ENEMY_ATK -> { if (isPlayer) gs.enemyAtkMod *= 0.85f else playerAtkMod *= 0.85f; "ATTACK FELL!" }
+                        StatEffect.LOWER_ENEMY_DEF -> { if (isPlayer) gs.enemyDefMod *= 0.85f else playerDefMod *= 0.85f; "DEFENSE FELL!" }
+                    }
+                    doFlash { say(def.name, label) { afterAction(isPlayer) } }
                 }
-                doFlash { setText("ENEMY STAT", "FELL!"); scheduleAfterText { enemyTurn() } }
+                else -> applyMoveEffect(isPlayer, mv, statusOnly = true)
             }
         }, 1200)
+    }
+
+    private fun applyMoveEffect(isPlayer: Boolean, mv: Move, statusOnly: Boolean) {
+        val eff = mv.effect
+        if (eff == null) {
+            if (statusOnly) say("BUT NOTHING", "HAPPENED!") { afterAction(isPlayer) } else afterAction(isPlayer)
+            return
+        }
+        val def = monOf(!isPlayer)
+        when (cz.uhk.macroflow.pokemon.status.StatusRules.tryInflict(condOf(!isPlayer), typeOf(def), eff, rng)) {
+            cz.uhk.macroflow.pokemon.status.InflictResult.APPLIED -> {
+                if (eff.kind == cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH) { afterAction(isPlayer); return }
+                statusFx(!isPlayer, eff.kind)
+                val text = when (eff.kind) {
+                    cz.uhk.macroflow.pokemon.status.EffectKind.SLEEP -> "FELL ASLEEP!"
+                    cz.uhk.macroflow.pokemon.status.EffectKind.PARALYZE -> "IS PARALYZED!"
+                    cz.uhk.macroflow.pokemon.status.EffectKind.POISON -> "WAS POISONED!"
+                    cz.uhk.macroflow.pokemon.status.EffectKind.BURN -> "WAS BURNED!"
+                    else -> "BECAME CONFUSED!"
+                }
+                invalidate()
+                say(def.name, text) { afterAction(isPlayer) }
+            }
+            cz.uhk.macroflow.pokemon.status.InflictResult.IMMUNE ->
+                if (statusOnly) say("IT DOESNT AFFECT", def.name) { afterAction(isPlayer) } else afterAction(isPlayer)
+            cz.uhk.macroflow.pokemon.status.InflictResult.ALREADY ->
+                if (statusOnly) say("BUT IT", "FAILED!") { afterAction(isPlayer) } else afterAction(isPlayer)
+            cz.uhk.macroflow.pokemon.status.InflictResult.FAILED_CHANCE -> afterAction(isPlayer)
+        }
+    }
+
+    private fun afterAction(isPlayer: Boolean) { if (isPlayer) enemyTurn() else endOfRound() }
+
+    /** Konec kola: omráčení vyprší, otrava a popálení zraní (nejdřív hráče, pak soupeře). */
+    private fun endOfRound() {
+        playerCond.flinched = false; enemyCond.flinched = false
+        residual(true) { residual(false) { showMain() } }
+    }
+
+    private fun residual(isPlayer: Boolean, next: () -> Unit) {
+        val m = monOf(isPlayer); val c = condOf(isPlayer)
+        val d = cz.uhk.macroflow.pokemon.status.StatusRules.endOfTurnDamage(c, m.maxHp)
+        if (d == 0 || m.currentHp <= 0) { next(); return }
+        m.currentHp = maxOf(0, m.currentHp - d)
+        statusFx(isPlayer, if (c.major == cz.uhk.macroflow.pokemon.status.StatusKind.POISON) cz.uhk.macroflow.pokemon.status.EffectKind.POISON else cz.uhk.macroflow.pokemon.status.EffectKind.BURN)
+        invalidate()
+        say(m.name, if (c.major == cz.uhk.macroflow.pokemon.status.StatusKind.POISON) "IS HURT BY POISON!" else "IS HURT BY ITS BURN!") {
+            if (m.currentHp <= 0) { if (isPlayer) playerFainted() else enemyFainted() } else next()
+        }
+    }
+
+    private fun playerFainted() {
+        gs.phase = BattlePhase.PLAYER_FAINTED
+        setText("${gs.player.name}", "FAINTED!")
+        busy = false
+        pendingAction = { onCaught?.invoke() }
+    }
+
+    private fun enemyFainted() {
+        busy = false
+        gs.enemyVisible = false
+        gs.phase = BattlePhase.ENEMY_FAINTED
+        setText("${gs.enemy.name}", "FAINTED!")
+
+        // --- QUEST SYSTÉM: OZNÁMENÍ VÝHRY ---
+        // Zjistíme typ nepřítele (bereme typ prvního útoku, jak to máš v dmg výpočtu)
+        val enemyType = gs.enemy.moves.firstOrNull()?.type ?: MakromonType.NORMAL
+
+        // Informujeme QuestManager o výhře nad konkrétním typem
+        (context as? MakromonMapActivity)?.let { map ->
+            map.questManager.onBattleWon(enemyType.name, biome = map.getCurrentBiome().name)
+        }
+
+        Thread {
+            // Logika pro XP a Makrodex
+            val mId = BattleFactory.makrodexId(gs.enemy)
+            val spawnEntry = SpawnManager.allEntries.find { it.id == mId }
+            val rarity = spawnEntry?.rarity ?: Rarity.COMMON
+
+            val baseScore = when (rarity) {
+                Rarity.COMMON    -> 15
+                Rarity.RARE      -> 30
+                Rarity.EPIC      -> 60
+                Rarity.LEGENDARY -> 120
+                Rarity.MYTHIC    -> 250
+            }
+            val totalBattleXp = baseScore + (gs.enemy.level * 3)
+            awardXpToActiveMakromon(totalBattleXp)
+
+            handler.post {
+                // Počkej 2 sekundy, než se vrátíš na mapu/ukončíš souboj
+                handler.postDelayed({
+                    onCaught?.invoke()
+                }, 2000)
+            }
+        }.start()
+    }
+
+    // ── Efekty stavů ─────────────────────────────────────────────────────────
+    //
+    // Částice žijí v souřadnicích herního plátna relativně ke středu Makromona a kreslí se
+    // v rozlišení displeje. Dokud stav trvá, občas se krátce zopakují (Zzz, jiskry, bublinky…).
+
+    private enum class FxShape { Z, SPARK, BUBBLE, FLAME, STAR, HEAL }
+    private class Fx(
+        val onPlayer: Boolean, val shape: FxShape,
+        val x0: Float, val y0: Float, val vx: Float, val vy: Float,
+        val born: Long, val life: Long, val size: Float, val phase: Float
+    )
+    private val fxList = mutableListOf<Fx>()
+    private var fxLoop = false
+    private var nextAmbientAt = 0L
+    private val fxPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val fxPath = Path()
+
+    private fun rnd(a: Float, b: Float) = a + Random.nextFloat() * (b - a)
+
+    private fun statusFx(onPlayer: Boolean, kind: cz.uhk.macroflow.pokemon.status.EffectKind?, ambient: Boolean = false) {
+        val t = now()
+        val shape = when (kind) {
+            cz.uhk.macroflow.pokemon.status.EffectKind.SLEEP -> FxShape.Z
+            cz.uhk.macroflow.pokemon.status.EffectKind.PARALYZE -> FxShape.SPARK
+            cz.uhk.macroflow.pokemon.status.EffectKind.POISON -> FxShape.BUBBLE
+            cz.uhk.macroflow.pokemon.status.EffectKind.BURN -> FxShape.FLAME
+            cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE -> FxShape.STAR
+            cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH -> return
+            null -> FxShape.HEAL
+        }
+        val n = when (shape) {
+            FxShape.Z -> if (ambient) 1 else 3
+            FxShape.STAR -> 3
+            else -> if (ambient) 2 else 8
+        }
+        repeat(n) { i ->
+            fxList += when (shape) {
+                FxShape.Z -> Fx(onPlayer, shape, 5f, -8f, 9f, -13f, t + i * 260L, 1100, 3.2f + i * 1.1f, 0f)
+                FxShape.SPARK -> Fx(onPlayer, shape, rnd(-13f, 13f), rnd(-12f, 12f), 0f, 0f, t + (rnd(0f, 320f)).toLong(), 240, rnd(3f, 5f), rnd(0f, 360f))
+                FxShape.BUBBLE -> Fx(onPlayer, shape, rnd(-10f, 10f), rnd(2f, 12f), rnd(-3f, 3f), rnd(-26f, -16f), t + i * 70L, 900, rnd(1.2f, 2.6f), 0f)
+                FxShape.FLAME -> Fx(onPlayer, shape, rnd(-11f, 11f), rnd(4f, 12f), rnd(-2f, 2f), -18f, t + i * 60L, 700, rnd(2f, 3.4f), 0f)
+                FxShape.STAR -> Fx(onPlayer, shape, 0f, -15f, 0f, 0f, t, if (ambient) 900 else 1500, 2.4f, i * 120f)
+                FxShape.HEAL -> Fx(onPlayer, shape, rnd(-12f, 12f), rnd(-4f, 12f), 0f, -20f, t + i * 50L, 800, 1.6f, 0f)
+            }
+        }
+        ensureFxLoop()
+    }
+
+    private val fxTick = object : Runnable {
+        override fun run() {
+            val t = now()
+            fxList.removeAll { t - it.born > it.life }
+            if (t >= nextAmbientAt && ::gs.isInitialized && gs.phase != BattlePhase.CAUGHT) {
+                nextAmbientAt = t + 1700
+                ambientFor(true); if (gs.enemyVisible) ambientFor(false)
+            }
+            invalidate()
+            val anyStatus = playerCond.tag != null || enemyCond.tag != null
+            if (fxList.isNotEmpty() || anyStatus) handler.postDelayed(this, 16) else fxLoop = false
+        }
+    }
+
+    private fun ambientFor(onPlayer: Boolean) {
+        val c = condOf(onPlayer)
+        if (monOf(onPlayer).currentHp <= 0) return
+        val kind = when (c.major) {
+            cz.uhk.macroflow.pokemon.status.StatusKind.SLEEP -> cz.uhk.macroflow.pokemon.status.EffectKind.SLEEP
+            cz.uhk.macroflow.pokemon.status.StatusKind.PARALYSIS -> cz.uhk.macroflow.pokemon.status.EffectKind.PARALYZE
+            cz.uhk.macroflow.pokemon.status.StatusKind.POISON -> cz.uhk.macroflow.pokemon.status.EffectKind.POISON
+            cz.uhk.macroflow.pokemon.status.StatusKind.BURN -> cz.uhk.macroflow.pokemon.status.EffectKind.BURN
+            null -> if (c.confused) cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE else return
+        }
+        statusFx(onPlayer, kind, ambient = true)
+    }
+
+    private fun ensureFxLoop() { if (!fxLoop) { fxLoop = true; nextAmbientAt = now() + 1700; handler.post(fxTick) } }
+
+    /** Střed Makromona v herních souřadnicích (hráč vlevo dole, soupeř vpravo nahoře). */
+    private fun centerGb(onPlayer: Boolean): PointF =
+        if (onPlayer) PointF(48f - gs.introOffset * 100f, 82f - 18f)
+        else PointF(112f + gs.introOffset * 100f, 54f - enemySpriteHeight() / 2f)
+
+    private fun drawStatusFx(canvas: Canvas) {
+        if (fxList.isEmpty() || !::gs.isInitialized) return
+        val sc = scale; val t = now()
+        for (f in fxList.toList()) {
+            val age = t - f.born
+            if (age < 0) continue
+            if (!f.onPlayer && !gs.enemyVisible) continue
+            val q = (age / f.life.toFloat()).coerceIn(0f, 1f)
+            val tau = age / 1000f
+            val c = centerGb(f.onPlayer)
+            val x = gbX(c.x + f.x0 + f.vx * tau); val y = gbY(c.y + f.y0 + f.vy * tau)
+            val a = ((if (q < 0.15f) q / 0.15f else 1f - (q - 0.15f) / 0.85f) * 255).toInt().coerceIn(0, 255)
+            when (f.shape) {
+                FxShape.Z -> {
+                    fxPaint.style = Paint.Style.FILL; fxPaint.typeface = Typeface.DEFAULT_BOLD
+                    fxPaint.textSize = f.size * sc * 1.7f
+                    fxPaint.color = Color.WHITE; fxPaint.alpha = a
+                    canvas.drawText("Z", x + sc * 0.6f, y + sc * 0.6f, fxPaint)
+                    fxPaint.color = 0xFF34467E.toInt(); fxPaint.alpha = a
+                    canvas.drawText("Z", x, y, fxPaint)
+                }
+                FxShape.SPARK -> {
+                    val flicker = if ((age / 40) % 2 == 0L) a else a / 3
+                    fxPaint.style = Paint.Style.STROKE; fxPaint.strokeWidth = 1.1f * sc
+                    fxPaint.color = 0xFFFFE066.toInt(); fxPaint.alpha = flicker
+                    val r = Math.toRadians(f.phase.toDouble()); val dx = cos(r).toFloat() * f.size * sc; val dy = sin(r).toFloat() * f.size * sc
+                    fxPath.reset(); fxPath.moveTo(x - dx, y - dy)
+                    fxPath.lineTo(x - dx * 0.2f + dy * 0.35f, y - dy * 0.2f - dx * 0.35f)
+                    fxPath.lineTo(x + dx * 0.2f - dy * 0.35f, y + dy * 0.2f + dx * 0.35f)
+                    fxPath.lineTo(x + dx, y + dy)
+                    canvas.drawPath(fxPath, fxPaint)
+                    fxPaint.style = Paint.Style.FILL
+                }
+                FxShape.BUBBLE -> {
+                    fxPaint.style = Paint.Style.FILL
+                    fxPaint.color = 0xFFA35BD1.toInt(); fxPaint.alpha = (a * 0.85f).toInt()
+                    canvas.drawCircle(x, y, f.size * sc, fxPaint)
+                    fxPaint.color = 0xFFE7C8F7.toInt(); fxPaint.alpha = a
+                    canvas.drawCircle(x - f.size * sc * 0.35f, y - f.size * sc * 0.35f, f.size * sc * 0.3f, fxPaint)
+                }
+                FxShape.FLAME -> {
+                    val r = f.size * sc * (1f - 0.6f * q)
+                    fxPaint.style = Paint.Style.FILL
+                    fxPaint.color = 0xFFFF6A1A.toInt(); fxPaint.alpha = a
+                    canvas.drawCircle(x, y, r, fxPaint)
+                    fxPath.reset(); fxPath.moveTo(x - r, y); fxPath.lineTo(x, y - r * 2.2f); fxPath.lineTo(x + r, y); fxPath.close()
+                    canvas.drawPath(fxPath, fxPaint)
+                    fxPaint.color = 0xFFFFD54F.toInt(); fxPaint.alpha = a
+                    canvas.drawCircle(x, y + r * 0.2f, r * 0.5f, fxPaint)
+                }
+                FxShape.STAR -> {
+                    // Hvězdičky krouží nad hlavou zmateného Makromona
+                    val ang = Math.toRadians((f.phase + tau * 260f).toDouble())
+                    val sx = gbX(c.x + cos(ang).toFloat() * 10f); val sy = gbY(c.y + f.y0 + sin(ang).toFloat() * 3f)
+                    drawStar(canvas, sx, sy, f.size * sc, tau * 180f, 0xFFFFE066.toInt(), a)
+                }
+                FxShape.HEAL -> {
+                    fxPaint.style = Paint.Style.FILL
+                    fxPaint.color = 0xFF7CD957.toInt(); fxPaint.alpha = a
+                    val r = f.size * sc
+                    canvas.drawRect(x - r * 1.5f, y - r * 0.5f, x + r * 1.5f, y + r * 0.5f, fxPaint)
+                    canvas.drawRect(x - r * 0.5f, y - r * 1.5f, x + r * 0.5f, y + r * 1.5f, fxPaint)
+                }
+            }
+        }
+        fxPaint.alpha = 255
+    }
+
+    /** Lék z lékárničky: bez účinku se nespotřebuje a tah nepropadne; jinak stojí tah. */
+    private fun useMed(m: cz.uhk.macroflow.pokemon.status.MedItem) {
+        if (!m.helps(playerCond)) {
+            say("IT WONT HAVE", "ANY EFFECT.") { itemPage = 2; gs.phase = BattlePhase.ITEM_MENU; busy = false; invalidate() }
+            return
+        }
+        busy = true
+        medCounts[m] = ((medCounts[m] ?: 1) - 1).coerceAtLeast(0)
+        Thread { db.userItemDao().consumeItem(m.id, 1) }.start()
+        m.apply(playerCond)
+        statusFx(true, null)
+        val cure = when (m) {
+            cz.uhk.macroflow.pokemon.status.MedItem.CAFFEINE -> "WOKE UP!"
+            cz.uhk.macroflow.pokemon.status.MedItem.ELECTROLYTE -> "CAN MOVE AGAIN!"
+            cz.uhk.macroflow.pokemon.status.MedItem.CHARCOAL -> "POISON IS GONE!"
+            cz.uhk.macroflow.pokemon.status.MedItem.ALOE -> "BURN IS HEALED!"
+            cz.uhk.macroflow.pokemon.status.MedItem.COLD_SHOWER -> "SNAPPED OUT OF IT!"
+            cz.uhk.macroflow.pokemon.status.MedItem.MULTIVITAMIN -> "IS FULLY CURED!"
+        }
+        invalidate()
+        say("USED ${m.short}!", "${gs.player.name} ${cure}".take(24)) { enemyTurn() }
     }
 
     /**
@@ -735,39 +1105,6 @@ class PokemonBattleView @JvmOverloads constructor(
             BattlePhase.TEXT_WAIT -> if (action != null) action() else showMain()
             else -> if (action != null) action() else showMain()
         }
-    }
-
-    private fun enemyTurn() {
-        if (gs.enemy.currentHp <= 0 || gs.player.currentHp <= 0) { busy = false; showMain(); return }
-        busy = true
-        val mv = BattleEngine.enemyChooseMove(gs.enemy); mv.pp = maxOf(0, mv.pp - 1)
-        setText("${gs.enemy.name}", "USED ${mv.name}!"); invalidate()
-        handler.postDelayed({
-            if (mv.power > 0) {
-                val atkE = (gs.enemy.attack   * gs.enemyAtkMod).toInt()
-                val defE = (gs.player.defense * gs.enemyDefMod).toInt()
-                val playerType = gs.player.moves.firstOrNull()?.type ?: MakromonType.NORMAL
-                val dmg = BattleEngine.calcDamage(gs.enemy.level, mv.power, atkE, defE, mv.type, playerType)
-                doFlash {
-                    gs.player.currentHp = maxOf(0, gs.player.currentHp - dmg); invalidate()
-                    handler.postDelayed({
-                        if (gs.player.currentHp <= 0) {
-                            gs.phase = BattlePhase.PLAYER_FAINTED
-                            setText("${gs.player.name}", "FAINTED!")
-                            pendingAction = { onCaught?.invoke() }
-                        } else {
-                            setText("IT DEALT", "$dmg DAMAGE!")
-                            busy = false; gs.phase = BattlePhase.TEXT_WAIT
-                            pendingAction = { showMain() }; invalidate()
-                        }
-                    }, 400)
-                }
-            } else {
-                setText("${gs.player.name}", "STAT FELL!")
-                busy = false; gs.phase = BattlePhase.TEXT_WAIT
-                pendingAction = { showMain() }; invalidate()
-            }
-        }, 1200)
     }
 
     // ── Hod Makroballem ──────────────────────────────────────────────────────
@@ -842,7 +1179,8 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun startWobbleBall() {
         val baseMultiplier  = BattleFactory.catchMultiplier(gs.enemy)
-        val finalMultiplier = baseMultiplier * ball.catchMultiplier
+        // Spící / paralyzovaný / otrávený soupeř se chytá snáz
+        val finalMultiplier = baseMultiplier * ball.catchMultiplier * cz.uhk.macroflow.pokemon.status.StatusRules.catchBonus(enemyCond)
         val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy, finalMultiplier)
         gs.captureSuccess = success; gs.wobbleCount = wobbles; gs.wobbleDone = 0
         gs.phase = BattlePhase.BALL_WOBBLE

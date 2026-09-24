@@ -233,7 +233,8 @@ class InventoryFragment : Fragment() {
             val item = list[position]
 
             val ball = cz.uhk.macroflow.pokemon.balls.Makroball.from(item.itemId)
-            holder.tvName.text = ball?.label ?: when (item.itemId) {
+            val med = cz.uhk.macroflow.pokemon.status.MedItem.from(item.itemId)
+            holder.tvName.text = ball?.label ?: med?.label ?: when (item.itemId) {
                 "lure_lamp"  -> "Spooky Plate"
                 else         -> item.itemId
             }
@@ -247,7 +248,9 @@ class InventoryFragment : Fragment() {
                 else         -> ""
             }
 
-            if (ball != null) {
+            if (med != null) {
+                holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(med, med.pixels, cz.uhk.macroflow.pokemon.status.MedItem.SIZE, (64 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (ball != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.icon(ball, (64 * holder.itemView.resources.displayMetrics.density).toInt()))
             } else if (imageUrl.isNotEmpty()) {
                 holder.ivSprite.load(imageUrl) {
@@ -259,6 +262,10 @@ class InventoryFragment : Fragment() {
             }
 
             holder.itemView.setOnClickListener {
+                if (med != null) {
+                    Toast.makeText(requireContext(), "${med.label}: ${med.description} Použij v souboji přes ITEM → LÉKÁRNIČKA.", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
                 if (item.itemId == "lure_lamp" && item.quantity > 0) {
                     val prefs = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
                     if (prefs.getBoolean("ghostPlateActive", false)) {

@@ -10,14 +10,26 @@ import android.graphics.Paint
  */
 object BallSprites {
 
-    private val iconCache = HashMap<Pair<Makroball, Int>, Bitmap>()
+    private val iconCache = HashMap<Pair<Any, Int>, Bitmap>()
     private val px = Paint().apply { isAntiAlias = false; style = Paint.Style.FILL }
 
     /** Ikonka [sizePx] × [sizePx] se zvětšením bez vyhlazení (ostrý pixel art). */
-    fun icon(ball: Makroball, sizePx: Int): Bitmap = iconCache.getOrPut(ball to sizePx) {
-        val n = Makroball.SIZE
-        val src = Bitmap.createBitmap(ball.pixels, n, n, Bitmap.Config.ARGB_8888)
+    fun icon(ball: Makroball, sizePx: Int): Bitmap = pixelIcon(ball, ball.pixels, Makroball.SIZE, sizePx)
+
+    /** Libovolný pixel art n × n (léky apod.) jako ostrá ikonka. */
+    fun pixelIcon(key: Any, pixels: IntArray, n: Int, sizePx: Int): Bitmap = iconCache.getOrPut(key to sizePx) {
+        val src = Bitmap.createBitmap(pixels, n, n, Bitmap.Config.ARGB_8888)
         Bitmap.createScaledBitmap(src, sizePx, sizePx, false)
+    }
+
+    /** Pixel art n × n na herní plátno (levý horní roh [x], [y], 1 jednotka = 1 pixel). */
+    fun drawPixels(canvas: Canvas, pixels: IntArray, n: Int, x: Float, y: Float) {
+        for (yy in 0 until n) for (xx in 0 until n) {
+            val c = pixels[yy * n + xx]
+            if (c == 0) continue
+            px.color = c
+            canvas.drawRect(x + xx, y + yy, x + xx + 1, y + yy + 1, px)
+        }
     }
 
     /**
