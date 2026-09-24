@@ -131,7 +131,18 @@ class MakromonMapActivity : AppCompatActivity() {
         findViewById<View>(R.id.btnExitMap).setOnClickListener { finish() }
 
         onBackPressedDispatcher.addCallback(this) {
-            if (supportFragmentManager.backStackEntryCount > 0) supportFragmentManager.popBackStack() else finish()
+            when {
+                questDialogManager.isVisible() -> questDialogManager.hide()   // zpět zavře tutoriál/dialog
+                supportFragmentManager.backStackEntryCount > 0 -> supportFragmentManager.popBackStack()
+                else -> finish()
+            }
+        }
+
+        // Parťák vlevo nahoře: dřív se načetl jen při otevření mapy – změna v Domově se neprojevila.
+        // Obnoví se při změně aktivního Makromona i po návratu z Domova / souboje (level, evoluce).
+        gamePrefs.registerOnSharedPreferenceChangeListener(companionPrefsListener)
+        supportFragmentManager.addOnBackStackChangedListener {
+            if (supportFragmentManager.backStackEntryCount == 0) companionManager.refresh()
         }
 
         mapBackground.post {
@@ -151,6 +162,25 @@ class MakromonMapActivity : AppCompatActivity() {
 
         companionManager.refresh()
         observeGameData()
+    }
+
+    private val gamePrefs by lazy { getSharedPreferences("GamePrefs", Context.MODE_PRIVATE) }
+
+    /** Silná reference – SharedPreferences drží posluchače jen slabě. */
+    private val companionPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "currentOnBarCaughtDate" || key == "currentOnBarCapturedId" || key == "pokemonAcquired") {
+            runOnUiThread { companionManager.refresh() }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::companionManager.isInitialized) companionManager.refresh()
+    }
+
+    override fun onDestroy() {
+        gamePrefs.unregisterOnSharedPreferenceChangeListener(companionPrefsListener)
+        super.onDestroy()
     }
 
     fun getCurrentBiome(): BiomeType = currentBiome
@@ -397,6 +427,8 @@ class MakromonMapActivity : AppCompatActivity() {
         val transitionAction = {
             currentBiome = newBiome
             refreshStepBar()
+            // Úvodní tutoriál (otazník) patří zatím jen k městu
+            findViewById<View>(R.id.btnStartTutorial).visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
 
             BiomeRegistry.definition(newBiome)?.questId?.let { questManager.loadQuest(it) }
 

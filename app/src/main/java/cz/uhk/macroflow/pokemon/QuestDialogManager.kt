@@ -41,6 +41,9 @@ class QuestDialogManager(
     private val questStageNameView: TextView? by lazy {
         overlay.findViewById(R.id.questStageName)
     }
+    private val closeTutorialView: View? by lazy {
+        overlay.findViewById<View>(R.id.btnCloseTutorial)?.apply { setOnClickListener { hide() } }
+    }
 
     private val tutorialSpots = listOf(
         RectF(0f, 0f, 0f, 0f),
@@ -79,6 +82,7 @@ class QuestDialogManager(
         speakerNameView?.text = "Gudwin Oliver"
         speakerNameView?.visibility = View.VISIBLE
         currentTutorialStep = 0
+        closeTutorialView?.visibility = View.VISIBLE
         sizeSpeaker(R.drawable.makromon_30_gudwin)
         speakerImage.load(R.drawable.makromon_30_gudwin, imageLoader)
         showOverlay()
@@ -103,6 +107,7 @@ class QuestDialogManager(
         spotlightRect: RectF? = null
     ) {
         isTutorialActive = false
+        closeTutorialView?.visibility = View.GONE
         questProgressLine.visibility = View.VISIBLE
         sizeSpeaker(speakerResource)
         speakerImage.load(speakerResource, imageLoader)
@@ -317,6 +322,9 @@ class QuestDialogManager(
     }
 
     fun hide() {
+        textHandler.removeCallbacksAndMessages(null)
+        isTextAnimating = false
+        closeTutorialView?.visibility = View.GONE
         spotlightView.setTargetSpotlight(RectF(0f, 0f, 0f, 0f))
         overlay.animate().alpha(0f).setDuration(300).withEndAction {
             overlay.visibility = View.GONE

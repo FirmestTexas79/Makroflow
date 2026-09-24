@@ -92,6 +92,25 @@
         android:visibility="gone"
         android:elevation="100dp">
 
+        <!-- Zavření tutoriálu (dřív šel jen doklikat do konce) -->
+        <TextView
+            android:id="@+id/btnCloseTutorial"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="48dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="#CC283618"
+            android:elevation="120dp"
+            android:gravity="center"
+            android:paddingHorizontal="16dp"
+            android:text="PŘESKOČIT ✕"
+            android:textColor="#FEFAE0"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/tutorialDialogBox"
             android:layout_width="match_parent"

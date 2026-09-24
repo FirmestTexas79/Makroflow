@@ -43,36 +43,91 @@ class MovementEngine(
         resetToPosition(startPos)
     }
 
-    fun walkToNode(targetId: String, onFinished: () -> Unit = {}) {
-        if (isWalking) {
-            ashView.animate().cancel()
-            handler.removeCallbacksAndMessages(null)
-        }
+    // ── Chůze ────────────────────────────────────────────────────────────────
+    //
+    // Každá trasa má „token“. Zrušená animace volá onAnimationEnd stejně jako dokončená –
+    // dřív to postavu přeteleportovalo na konec úseku a stará trasa běžela souběžně s novou
+    // (cukání při dvojkliku). Teď se reaguje jen na dokončení aktuální trasy.
 
-        val startNode = findClosestNode(currentPosition)
-        if (startNode == targetId) {
-            isWalking = false
-            updateSprite(1, currentDirection)
-            onFinished()
+    private var walkToken = 0
+    private var currentTarget: String? = null
+    private var pendingFinish: (() -> Unit)? = null
+    private var routeIds: List<String> = emptyList()
+    private var routePoints: List<PointF> = emptyList()
+    private var segment = 0
+
+    fun walkToNode(targetId: String, onFinished: () -> Unit = {}) {
+        pendingFinish = onFinished
+
+        // Dvojklik na stejný cíl = jen zrychlit; úsek pokračuje z místa, kde postava je
+        if (isWalking && targetId == currentTarget) {
+            startSegment(++walkToken)
             return
         }
 
-        val path = findPath(startNode, targetId)
-        if (path != null) {
-            val pixelPoints = path.map { id ->
-                val wp = navigationGraph.find { it.id == id } ?: return@map PointF(0f, 0f)
-                PointF(wp.pos.x * mapBackground.width, wp.pos.y * mapBackground.height)
-            }
+        // Za chůze nová trasa začíná uzlem, ke kterému postava právě jde (žádné couvání)
+        val startNode = if (isWalking) routeIds.getOrNull(segment) ?: findClosestNode(currentPosition)
+            else findClosestNode(currentPosition)
 
-            isWalking = true
-            processNextMove(0, pixelPoints) {
-                val finalNode = navigationGraph.find { it.id == targetId }
-                if (finalNode != null) currentPosition = finalNode.pos
-                isWalking = false
-                updateSprite(1, currentDirection)
-                onFinished()
-            }
+        if (!isWalking && startNode == targetId) {
+            finishWalk()
+            return
         }
+
+        val path = findPath(startNode, targetId) ?: return
+        routeIds = path
+        routePoints = path.map { id ->
+            val wp = navigationGraph.find { it.id == id } ?: return@map PointF(0f, 0f)
+            PointF(wp.pos.x * mapBackground.width, wp.pos.y * mapBackground.height)
+        }
+        segment = 0
+        currentTarget = targetId
+        isWalking = true
+        startAnimationLoop()
+        startSegment(++walkToken)
+    }
+
+    /** Dojde (nebo pokračuje) k bodu routePoints[segment] aktuální rychlostí. */
+    private fun startSegment(token: Int) {
+        if (token != walkToken) return
+        if (segment >= routePoints.size) { finishWalk(); return }
+
+        val targetX = routePoints[segment].x - ashView.width / 2f
+        val targetY = routePoints[segment].y - ashView.height.toFloat()
+        val dx = targetX - ashView.x
+        val dy = targetY - ashView.y
+        if (abs(dx) > 0.5f || abs(dy) > 0.5f) {
+            currentDirection = if (abs(dx) > abs(dy)) (if (dx > 0) 3 else 2) else (if (dy > 0) 0 else 1)
+        }
+        val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+
+        ashView.animate().cancel()
+        ashView.animate()
+            .x(targetX).y(targetY)
+            .setDuration((dist * currentSpeed).toLong())
+            .setInterpolator(LinearInterpolator())
+            .setListener(object : AnimatorListenerAdapter() {
+                private var cancelled = false
+                override fun onAnimationCancel(a: Animator) { cancelled = true }
+                override fun onAnimationEnd(a: Animator) {
+                    if (cancelled || token != walkToken) return
+                    navigationGraph.find { it.id == routeIds[segment] }?.let { currentPosition = it.pos }
+                    segment++
+                    startSegment(token)
+                }
+            }).start()
+    }
+
+    private fun finishWalk() {
+        currentTarget?.let { id -> navigationGraph.find { it.id == id }?.let { currentPosition = it.pos } }
+        isWalking = false
+        currentTarget = null
+        ashView.animate().setListener(null)
+        handler.removeCallbacksAndMessages(null)
+        updateSprite(1, currentDirection)
+        val done = pendingFinish
+        pendingFinish = null
+        done?.invoke()
     }
 
     private fun findPath(startId: String, endId: String): List<String>? {
@@ -108,42 +163,15 @@ class MovementEngine(
     private fun getDistance(p1: PointF, p2: PointF): Float =
         sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y))
 
-    private fun processNextMove(index: Int, points: List<PointF>, onFinished: () -> Unit) {
-        if (index >= points.size) {
-            onFinished()
-            return
-        }
-
-        val targetX = points[index].x - ashView.width / 2f
-        val targetY = points[index].y - ashView.height.toFloat()
-        val dx = targetX - ashView.x
-        val dy = targetY - ashView.y
-
-        currentDirection = if (abs(dx) > abs(dy)) (if (dx > 0) 3 else 2) else (if (dy > 0) 0 else 1)
-        startAnimationLoop()
-
-        val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
-
-        ashView.animate()
-            .x(targetX).y(targetY)
-            .setDuration((dist * currentSpeed).toLong())
-            .setInterpolator(LinearInterpolator())
-            .setListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(a: Animator) {
-                    ashView.x = targetX
-                    ashView.y = targetY
-                    if (isWalking) processNextMove(index + 1, points, onFinished)
-                }
-            }).start()
-    }
-
     private fun startAnimationLoop() {
         handler.removeCallbacksAndMessages(null)
         val runnable = object : Runnable {
             override fun run() {
                 if (!isWalking) return
-                updateSprite(if (System.currentTimeMillis() % 400 < 200) 0 else 2, currentDirection)
-                handler.postDelayed(this, ANIM_FRAME_MS)
+                // Rychlá chůze = rychlejší kroky
+                val frame = if (currentSpeed == FAST_SPEED) ANIM_FRAME_MS / 2 else ANIM_FRAME_MS
+                updateSprite(if (System.currentTimeMillis() % (frame * 4) < frame * 2) 0 else 2, currentDirection)
+                handler.postDelayed(this, frame)
             }
         }
         handler.post(runnable)
@@ -158,15 +186,20 @@ class MovementEngine(
         }
     }
 
+    /** Snímky postavy s odstraněným pozadím – dřív se dekódovaly a přebarvovaly každých 110 ms (záseky GC). */
+    private val spriteCache = HashMap<Int, Bitmap?>()
+    private var shownSprite = 0
+
     private fun updateSprite(step: Int, direction: Int) {
         val dirKey = when (direction) { 0 -> "down"; 1 -> "up"; 2 -> "left"; 3 -> "right"; else -> "down" }
         val suffix = when (step) { 1 -> "idle"; 0 -> "1"; else -> "2" }
         val resId = context.resources.getIdentifier("ash_${dirKey}_$suffix", "drawable", context.packageName)
-        if (resId != 0) {
-            ContextCompat.getDrawable(context, resId)?.let { drawable ->
-                ashView.setImageBitmap(removeBackground(drawable, TRANSPARENT_TARGET))
-            }
-        }
+        if (resId == 0 || resId == shownSprite) return
+        val bmp = spriteCache.getOrPut(resId) {
+            ContextCompat.getDrawable(context, resId)?.let { removeBackground(it, TRANSPARENT_TARGET) }
+        } ?: return
+        shownSprite = resId
+        ashView.setImageBitmap(bmp)
     }
 
     private fun removeBackground(drawable: android.graphics.drawable.Drawable, color: Int): Bitmap? {
@@ -180,8 +213,12 @@ class MovementEngine(
     }
 
     fun cancel() {
+        walkToken++
         ashView.animate().cancel()
+        ashView.animate().setListener(null)
         isWalking = false
+        currentTarget = null
+        pendingFinish = null
         handler.removeCallbacksAndMessages(null)
     }
 }
