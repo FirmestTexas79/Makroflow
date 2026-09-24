@@ -1,6 +1,5 @@
 package cz.uhk.macroflow.history
 
-import android.R.attr.height
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -30,6 +29,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.*
 import kotlin.math.*
 
@@ -50,6 +51,17 @@ class HistoryFragment : Fragment() {
     private lateinit var tvStepsCount: TextView
     private lateinit var tvStepsBurned: TextView
     private lateinit var tvFiber: TextView
+    private lateinit var heatmap: ActivityHeatmapView
+    private lateinit var heatChips: LinearLayout
+    private lateinit var tvHeatSummary: TextView
+    private lateinit var tvHeatNote: TextView
+    private var heatMetric = HeatMetric.STEPS
+    /** Spočtené hodnoty podle metriky – výdej a cíle jsou dražší (model pro každý den). */
+    private val heatCache = mutableMapOf<HeatMetric, Map<LocalDate, Double?>>()
+
+    companion object {
+        private const val HEAT_WEEKS = 53
+    }
 
     private val monthSdf = SimpleDateFormat("LLLL yyyy", Locale("cs"))
     private val calendar = Calendar.getInstance()
@@ -76,6 +88,10 @@ class HistoryFragment : Fragment() {
         layoutNoMetrics  = view.findViewById(R.id.layoutNoMetrics)
         tvStepsCount     = view.findViewById(R.id.tvHistoryStepsCount)
         tvStepsBurned    = view.findViewById(R.id.tvHistoryStepsBurned)
+        heatmap          = view.findViewById(R.id.activityHeatmap)
+        heatChips        = view.findViewById(R.id.heatMetricChips)
+        tvHeatSummary    = view.findViewById(R.id.tvHeatSummary)
+        tvHeatNote       = view.findViewById(R.id.tvHeatNote)
 
         setupChartStyle()
 
@@ -96,6 +112,13 @@ class HistoryFragment : Fragment() {
         calendar.set(Calendar.DAY_OF_MONTH, 1)
         renderCalendar()
         loadData(selectedDateKey)
+
+        heatMetric = HeatMetric.entries.firstOrNull {
+            it.name == requireContext().getSharedPreferences("HistoryPrefs", Context.MODE_PRIVATE).getString("heat_metric", null)
+        } ?: HeatMetric.STEPS
+        heatmap.onDayClick = { d -> selectDate(dateKeySdf.format(Date.from(d.atStartOfDay(ZoneId.systemDefault()).toInstant()))) }
+        buildHeatChips()
+        loadHeatmap()
 
         return view
     }
@@ -181,16 +204,73 @@ class HistoryFragment : Fragment() {
             else -> cell.setTextColor(Color.parseColor("#BDFEFAE0"))
         }
         if (dateKey != null && !isFuture) {
-            cell.setOnClickListener {
-                selectedDateKey = dateKey
-                renderCalendar()
-                loadData(dateKey)
-            }
+            cell.setOnClickListener { selectDate(dateKey) }
         }
         return cell
     }
 
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+
+    /** Výběr dne z kalendáře i z heatmapy: kalendář přeskočí na měsíc dne. */
+    private fun selectDate(dateKey: String) {
+        selectedDateKey = dateKey
+        dateKeySdf.parse(dateKey)?.let { calendar.time = it; calendar.set(Calendar.DAY_OF_MONTH, 1) }
+        renderCalendar()
+        loadData(dateKey)
+        if (::heatmap.isInitialized) heatmap.setSelected(LocalDate.parse(dateKey))
+    }
+
+    // ── Heatmapa aktivity ────────────────────────────────────────────────────
+
+    private fun buildHeatChips() {
+        val dp = resources.displayMetrics.density
+        heatChips.removeAllViews()
+        HeatMetric.entries.forEach { m ->
+            heatChips.addView(TextView(requireContext()).apply {
+                text = m.label
+                textSize = 11.5f
+                val sel = m == heatMetric
+                setTextColor(Color.parseColor(if (sel) "#283618" else "#FEFAE0"))
+                typeface = if (sel) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                setPadding((12 * dp).toInt(), (6 * dp).toInt(), (12 * dp).toInt(), (6 * dp).toInt())
+                setBackgroundResource(R.drawable.bg_status_pill)
+                backgroundTintList = ColorStateList.valueOf(Color.parseColor(if (sel) "#E9B072" else "#30FEFAE0"))
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    .apply { marginEnd = (6 * dp).toInt() }
+                setOnClickListener {
+                    if (heatMetric == m) return@setOnClickListener
+                    heatMetric = m
+                    requireContext().getSharedPreferences("HistoryPrefs", Context.MODE_PRIVATE)
+                        .edit().putString("heat_metric", m.name).apply()
+                    buildHeatChips()
+                    loadHeatmap()
+                }
+            })
+        }
+    }
+
+    private fun loadHeatmap() {
+        val metric = heatMetric
+        val today = LocalDate.now()
+        val columns = Heatmap.weekColumns(today, HEAT_WEEKS)
+        tvHeatNote.text = when (metric) {
+            HeatMetric.STEPS -> "Hranice 4 000 / 7 000 / 10 000 kroků – přínos pro zdraví se u dospělých ustaluje kolem 8–10 tisíc."
+            HeatMetric.ACTIVE_KCAL -> "Chůze z naměřených kroků + trénink podle plánu (ne celkový výdej). Stupně = čtvrtiny tvých vlastních dní."
+            HeatMetric.GOALS -> "Kolik ze 4 cílů (kalorie, bílkoviny, sacharidy, tuky) padlo do pásma. Počítají se jen uzavřené dny."
+        }
+        val cached = heatCache[metric]
+        if (cached == null) tvHeatSummary.text = "Počítám…"
+        val ctx = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            val values = cached ?: withContext(Dispatchers.IO) {
+                HeatmapRepository.load(ctx, metric, columns.first().first()!!, today)
+            }.also { heatCache[metric] = it }
+            if (!isAdded || heatMetric != metric) return@launch
+            heatmap.setData(columns, Heatmap.levels(metric, values), LocalDate.parse(selectedDateKey))
+            tvHeatSummary.text = Heatmap.summary(metric, values, today)
+            heatmap.contentDescription = "Heatmapa ${metric.label}: ${tvHeatSummary.text}"
+        }
+    }
 
 
     private fun loadData(dateKey: String) {
