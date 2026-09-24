@@ -70,6 +70,12 @@ class EvolutionDialog(
     }
 
     // Sestaví název drawable stejně jako MakrodexFragment a MakrodexAdapter
+    /** Shiny se vyvíjí zase v shiny – přebarví se odstínem nového druhu. */
+    private fun setSprite(view: android.widget.ImageView, resId: Int, entry: MakrodexEntryEntity?) {
+        val shiny = ::activeMakromon.isInitialized && activeMakromon.isShiny && entry != null && resId != R.drawable.ic_home
+        cz.uhk.macroflow.pokemon.shiny.ShinySprites.into(view, resId, entry?.makrodexId ?: "", shiny)
+    }
+
     private fun spriteResId(entry: MakrodexEntryEntity?): Int {
         if (entry == null) return R.drawable.ic_home
         val shortId     = if (entry.makrodexId.length >= 3) entry.makrodexId.takeLast(2) else entry.makrodexId
@@ -123,7 +129,7 @@ class EvolutionDialog(
         ivEvoSilhouette.visibility = View.VISIBLE
 
         val oldResId = spriteResId(oldEntry)
-        ivEvoSprite.setImageResource(oldResId)
+        setSprite(ivEvoSprite, oldResId, oldEntry)
         ivEvoSilhouette.setImageResource(oldResId)
 
         runEvoAnimator(oldName, newName, newEntry)
@@ -150,7 +156,7 @@ class EvolutionDialog(
                 ivEvoSprite.alpha          = 1f
                 ivEvoSilhouette.visibility = View.GONE
 
-                ivEvoSprite.setImageResource(spriteResId(newEntry))
+                setSprite(ivEvoSprite, spriteResId(newEntry), newEntry)
                 tvEvoText.text = "Gratulace! Tvůj $oldName se vyvinul v ${newEntry?.displayName ?: "Nová Forma"}!"
 
                 dialogScope.launch {

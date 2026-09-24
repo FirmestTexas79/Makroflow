@@ -157,7 +157,7 @@ class CompanionForegroundService : Service(), SensorEventListener {
 
                 // LOGIKA NAČTENÍ LOKÁLNÍHO OBRÁZKU
                 if (pokemon.id != lastPokemonId || cachedPokemonBitmap == null) {
-                    val rawBitmap = getLocalMakromonBitmap(applicationContext, pokemon.makromonId, pokemon.name)
+                    val rawBitmap = getLocalMakromonBitmap(applicationContext, pokemon.makromonId, pokemon.name, pokemon.isShiny)
                     if (rawBitmap != null) {
                         cachedPokemonBitmap = getCroppedAndScaledBitmap(rawBitmap)
                         lastPokemonId = pokemon.id
@@ -206,7 +206,7 @@ class CompanionForegroundService : Service(), SensorEventListener {
     /**
      * Sestaví název resource a vrátí Bitmapu z lokálních drawable.
      */
-    private fun getLocalMakromonBitmap(context: Context, makromonId: String, name: String): Bitmap? {
+    private fun getLocalMakromonBitmap(context: Context, makromonId: String, name: String, shiny: Boolean = false): Bitmap? {
         val shortId = if (makromonId.length >= 3) makromonId.takeLast(2) else makromonId
         val namePart = name.lowercase().trim().replace(" ", "_")
         val drawableName = "makromon_${shortId}_$namePart"
@@ -214,6 +214,7 @@ class CompanionForegroundService : Service(), SensorEventListener {
         val resId = context.resources.getIdentifier(drawableName, "drawable", context.packageName)
         if (resId == 0) return null
 
+        if (shiny) cz.uhk.macroflow.pokemon.shiny.ShinySprites.bitmap(context, resId, makromonId)?.let { return it }
         val drawable = ContextCompat.getDrawable(context, resId)
         return (drawable as? BitmapDrawable)?.bitmap
     }

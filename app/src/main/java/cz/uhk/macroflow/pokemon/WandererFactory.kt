@@ -76,16 +76,16 @@ object WandererFactory {
 
     private val configMap by lazy { CONFIGS.associateBy { it.makromonId } }
 
-    fun create(context: Context, makromonView: ImageView, makromonId: String): PokemonBehavior {
+    fun create(context: Context, makromonView: ImageView, makromonId: String, shiny: Boolean = false): PokemonBehavior {
         val cfg = configMap[makromonId] ?: defaultConfig(makromonId)
 
         // --- KLÍČOVÁ OPRAVA: Nastavení obrázku před spuštěním behavioru ---
-        setupMakromonSprite(context, makromonView, makromonId)
+        setupMakromonSprite(context, makromonView, makromonId, shiny)
 
         return cfg.behaviorFactory(context, makromonView, cfg.baseScale)
     }
 
-    private fun setupMakromonSprite(context: Context, view: ImageView, id: String) {
+    private fun setupMakromonSprite(context: Context, view: ImageView, id: String, shiny: Boolean) {
         // 1. Najdeme jméno v SpawnManageru (nebo v tvé definici), abychom sestavili název
         val entry = SpawnManager.allEntries.find { it.id == id }
         val namePart = entry?.name?.lowercase()?.trim()?.replace(" ", "_") ?: ""
@@ -99,7 +99,7 @@ object WandererFactory {
         val resId = context.resources.getIdentifier(drawableName, "drawable", context.packageName)
 
         if (resId != 0) {
-            view.setImageResource(resId)
+            cz.uhk.macroflow.pokemon.shiny.ShinySprites.into(view, resId, id, shiny)
         } else {
             view.setImageResource(R.drawable.ic_home)
         }

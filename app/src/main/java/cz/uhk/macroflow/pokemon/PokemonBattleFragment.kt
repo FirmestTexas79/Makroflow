@@ -20,11 +20,21 @@ class PokemonBattleFragment : Fragment() {
 
     private var isClosing = false
 
+    /** Shiny se losuje tady (ne ve view), aby na něj mohlo reagovat už intro. */
+    private var isShiny = false
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         val ctx = requireContext()
         val dp  = ctx.resources.displayMetrics.density
+
+        // Tutoriálové křoví je vždy stejné; ladicí přepínač vynutí shiny jen pro jedno setkání
+        val gamePrefs = ctx.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val forced = gamePrefs.contains("FORCE_ENCOUNTER_ID")
+        val debugShiny = gamePrefs.getBoolean("DEBUG_FORCE_SHINY", false)
+        if (debugShiny) gamePrefs.edit().remove("DEBUG_FORCE_SHINY").apply()
+        isShiny = !forced && (debugShiny || cz.uhk.macroflow.pokemon.shiny.ShinyPalette.roll())
 
         val root = FrameLayout(ctx).apply {
             setBackgroundColor(Color.BLACK)
@@ -46,10 +56,10 @@ class PokemonBattleFragment : Fragment() {
         }
 
         val titleTv = TextView(ctx).apply {
-            text      = "★  ENCOUNTER  ★"
+            text      = if (isShiny) "✦  SHINY ENCOUNTER  ✦" else "★  ENCOUNTER  ★"
             textSize  = 10f
             typeface  = Typeface.MONOSPACE
-            setTextColor(Color.parseColor("#A8C8F8"))
+            setTextColor(Color.parseColor(if (isShiny) "#FFD54F" else "#A8C8F8"))
             gravity   = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -58,7 +68,7 @@ class PokemonBattleFragment : Fragment() {
         }
 
         // V onCreateView fragmentu uprav onCaught takto:
-        val battleView = PokemonBattleView(ctx).apply {
+        val battleView = PokemonBattleView(ctx, null, isShiny).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -311,21 +321,24 @@ class PokemonBattleFragment : Fragment() {
                                     // ── FÁZE 4: Reveal flash ──────────────────
                                     battleContent.alpha = 0f
 
+                                    // Shiny: zlatý záblesk a déšť hvězd místo bílého bliknutí
+                                    val flashColor = if (isShiny) Color.argb(240, 255, 214, 102) else Color.argb(235, 255, 255, 255)
+                                    if (isShiny) spawnStarBurst(ctx, (overlay.parent as? FrameLayout) ?: leafContainer, screenW / 2f, screenH * 0.38f, dp)
                                     val flashIn = ObjectAnimator.ofInt(
                                         overlay, "backgroundColor",
                                         Color.TRANSPARENT,
-                                        Color.argb(235, 255, 255, 255)
+                                        flashColor
                                     ).apply {
-                                        duration = 110; setEvaluator(ArgbEvaluator())
+                                        duration = if (isShiny) 180 else 110; setEvaluator(ArgbEvaluator())
                                     }
                                     val revealBattle = ObjectAnimator.ofFloat(
                                         battleContent, "alpha", 0f, 1f
                                     ).apply { duration = 280 }
                                     val flashOut = ObjectAnimator.ofInt(
                                         overlay, "backgroundColor",
-                                        Color.argb(235, 255, 255, 255), Color.TRANSPARENT
+                                        flashColor, Color.TRANSPARENT
                                     ).apply {
-                                        duration = 380; setEvaluator(ArgbEvaluator())
+                                        duration = if (isShiny) 650 else 380; setEvaluator(ArgbEvaluator())
                                     }
 
                                     AnimatorSet().apply {
@@ -448,6 +461,44 @@ class PokemonBattleFragment : Fragment() {
                 }
             })
             start()
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SHINY: DÉŠŤ HVĚZD PŘI ODHALENÍ
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun spawnStarBurst(ctx: Context, container: FrameLayout, cx: Float, cy: Float, dp: Float) {
+        val colors = intArrayOf(Color.parseColor("#FFD54F"), Color.parseColor("#FFF3C4"), Color.WHITE)
+        repeat(26) { i ->
+            val star = TextView(ctx).apply {
+                text = if (i % 3 == 0) "✦" else "✧"
+                setTextColor(colors[i % colors.size])
+                textSize = 14f + Random.nextFloat() * 18f
+                setShadowLayer(8f * dp, 0f, 0f, Color.parseColor("#FFC107"))
+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT)
+                    .apply { leftMargin = cx.toInt(); topMargin = cy.toInt() }
+                alpha = 0f
+            }
+            container.addView(star)
+            val a = Math.toRadians(i * (360.0 / 26) + Random.nextDouble(-6.0, 6.0))
+            val dist = (110f + Random.nextFloat() * 170f) * dp
+            val dur = 900L + Random.nextLong(0L, 500L)
+            AnimatorSet().apply {
+                playTogether(
+                    ObjectAnimator.ofFloat(star, "alpha", 0f, 1f, 1f, 0f).apply { duration = dur },
+                    ObjectAnimator.ofFloat(star, "translationX", 0f, cos(a).toFloat() * dist).apply { duration = dur; interpolator = DecelerateInterpolator(2f) },
+                    ObjectAnimator.ofFloat(star, "translationY", 0f, sin(a).toFloat() * dist).apply { duration = dur; interpolator = DecelerateInterpolator(2f) },
+                    ObjectAnimator.ofFloat(star, "rotation", 0f, if (i % 2 == 0) 270f else -270f).apply { duration = dur },
+                    ObjectAnimator.ofFloat(star, "scaleX", 0.3f, 1.3f, 0.6f).apply { duration = dur },
+                    ObjectAnimator.ofFloat(star, "scaleY", 0.3f, 1.3f, 0.6f).apply { duration = dur }
+                )
+                startDelay = (i % 4) * 40L
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(a: Animator) { container.removeView(star) }
+                })
+                start()
+            }
         }
     }
 

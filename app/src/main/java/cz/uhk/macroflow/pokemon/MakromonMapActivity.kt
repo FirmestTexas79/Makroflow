@@ -57,7 +57,7 @@ class MakromonMapActivity : AppCompatActivity() {
         "les", "domov", "pokedex", "obchod", "hory",
         "vstup_z_town", "krovi1", "krovi2", "voda", "gudwin", "starter_bush",
         "meadow_npc",
-        "vstup_z_meadow", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2"
+        "vstup_z_meadow", "rozcesti_hory", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2"
     )
 
     /** Uzly, kde může vyskočit divoký Makromon (90 % šance). */
@@ -141,6 +141,12 @@ class MakromonMapActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btnOpenJournal).setOnClickListener {
             replaceMapContent(QuestJournalFragment(), TAG_JOURNAL)
+        }
+        // Ladění shiny (jen debug build): podržením deníku bude příští setkání shiny
+        if (BuildConfig.DEBUG) findViewById<ImageButton>(R.id.btnOpenJournal).setOnLongClickListener {
+            getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit().putBoolean("DEBUG_FORCE_SHINY", true).apply()
+            showMapToast("✦ Debug: příští setkání bude shiny")
+            true
         }
 
         companionManager.refresh()
@@ -250,7 +256,8 @@ class MakromonMapActivity : AppCompatActivity() {
             when (nodeName) {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
                 "mine" -> scanInMine()
-                "camp" -> {} // zatím jen cíl průzkumu v questu krále
+                "camp" -> restAtCamp()
+                "rozcesti_hory" -> showMapToast("🪧 ↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku")
                 "starter_bush" -> {
                     getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                         .putString("LAST_BIOME", currentBiome.name)
@@ -280,6 +287,9 @@ class MakromonMapActivity : AppCompatActivity() {
                             .remove("FORCE_ENCOUNTER_ID")
                             .apply()
                         replaceMapContent(PokemonBattleFragment())
+                    } else {
+                        // Dřív se v 10 % nestalo nic a bod působil rozbitě
+                        showMapToast(emptyEncounterText(nodeName))
                     }
                 }
             }
@@ -310,6 +320,35 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 showMapToast(text)
             }
+        }
+    }
+
+    private fun emptyEncounterText(node: String): String = when (node) {
+        "cave" -> "V jeskyni je ticho… jen kape voda. Zkus to znovu."
+        "peak" -> "Na vrcholu fouká, ale nikdo tu není. Výhled na celý Makrosvět ale stojí za to."
+        "skaly1", "skaly2" -> "Mezi skalami se nic nehnulo. Zkus to znovu."
+        "voda" -> "Hladina je klidná. Zkus to znovu."
+        else -> "Křoví se ani nehnulo. Zkus to znovu."
+    }
+
+    /**
+     * Tábor v horách: odpočinek u ohně = přehled dne z funkční části
+     * (kroky a co zbývá z dnešních cílů) – most mezi Makrosvětem a aplikací.
+     */
+    private fun restAtCamp() {
+        lifecycleScope.launch {
+            val status = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                val ctx = applicationContext
+                val today = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())
+                val eaten = AppDatabase.getDatabase(ctx).consumedSnackDao().getConsumedByDateSync(today)
+                cz.uhk.macroflow.dashboard.MacroFlowEngine.calculateDailyStatusForDate(ctx, java.util.Date(), eaten)
+            }
+            fun left(v: Double, unit: String) = if (v > 0) "${v.toInt()} $unit" else "splněno ✓"
+            showMapToast(
+                "🔥 Odpočíváš u táboráku.\n" +
+                    "Dnes ${currentDailySteps} kroků.\n" +
+                    "Zbývá: ${left(status.caloriesLeft, "kcal")} · bílkoviny ${left(status.proteinLeft, "g")}"
+            )
         }
     }
 
