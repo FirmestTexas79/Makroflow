@@ -188,11 +188,19 @@ class StandardWanderer(
     // Spící Makromoni (Gudwin)
     private val isSleeping get() = pokemonId == "030"
 
-    // ── WANDERING KONSTANTY ──────────────────
-    // Střed lišty je oblast kam přijde home tlačítko – crossing se spouští zde
-    private val CENTER_START = 0.38f  // 38 % šířky – levý okraj středu
-    private val CENTER_END   = 0.62f  // 62 % šířky – pravý okraj středu
-    private val viewW get()  = pokemonView.width.toFloat().takeIf { it > 10f } ?: (48f * dp)
+    /**
+     * Generace idle stavu. Každý nový idle (i každá chůze/přechod) ji zvýší a všechny
+     * smyčky částic (bubliny, jiskry, kapky…) z předchozí generace se samy ukončí.
+     *
+     * Dřív se při každém startu idle spustila NOVÁ nekonečná smyčka částic a staré běžely
+     * dál – po pár procházkách jich běžely desítky (Axluovy bubliny „milion za sekundu“).
+     */
+    private var idleGeneration = 0
+
+    private fun cancelIdle() {
+        idleAnim?.cancel()
+        idleGeneration++
+    }
 
     // Jak rychle chodí daný Makromon (ms na crossing)
     private val walkDuration: Long get() = when (pokemonId) {
@@ -210,7 +218,7 @@ class StandardWanderer(
 
     // Jak dlouho čeká na místě před dalším krokem
     private val idleWaitRange: Pair<Long, Long> get() = when (pokemonId) {
-        "030"        -> 4000L to 8000L   // Gudwin hodně sedí
+        "030"        -> 8000L to 16000L  // Gudwin hodně sedí (a spí)
         "022","023"  -> 800L  to 2000L   // Mycit/Mydrus – nervózní, neposedí
         "012"        -> 1500L to 3500L   // Spirra – živá
         "010","011"  -> 2000L to 5000L   // Kuličky – klidné
@@ -233,7 +241,7 @@ class StandardWanderer(
                 if (!running) return@playAppear
                 startIdleAnimation()
                 if (!isFlying && !isSleeping) startWobble()
-                if (!isSleeping) scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
+                scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
             }
         }
     }
@@ -241,6 +249,9 @@ class StandardWanderer(
     override fun stop() {
         running = false
         isCrossing = false
+        afterWalk = null
+        idleGeneration++
+        crossAnim?.cancel()
         moveAnim?.cancel()
         wobbleAnim?.cancel()
         idleAnim?.cancel()
@@ -248,98 +259,146 @@ class StandardWanderer(
     }
 
     // ─────────────────────────────────────────
+    // GEOMETRIE LIŠTY – tlačítko uprostřed je překážka
+    // ─────────────────────────────────────────
+
+    /** Kruhové tlačítko (fabHome) v souřadnicích rodiče Makromona. */
+    private data class Obstacle(val left: Float, val right: Float, val top: Float, val cx: Float, val cy: Float, val r: Float)
+
+    private fun obstacle(): Obstacle {
+        val parent = pokemonView.parent as? ViewGroup
+        val fab = pokemonView.rootView.findViewById<View>(cz.uhk.macroflow.R.id.fabHome)
+        if (parent != null && fab != null && fab.width > 0 && fab.visibility == View.VISIBLE) {
+            val p = IntArray(2); val f = IntArray(2)
+            parent.getLocationInWindow(p); fab.getLocationInWindow(f)
+            val left = (f[0] - p[0]).toFloat(); val top = (f[1] - p[1]).toFloat()
+            val r = fab.width / 2f
+            return Obstacle(left, left + fab.width, top, left + r, top + r, r)
+        }
+        // Záloha: tlačítko 68 dp uprostřed, 20 dp nad zemí Makromona
+        val w = parent?.width?.toFloat() ?: (360f * dp)
+        val r = 34f * dp
+        val top = groundFeetY() - 20f * dp
+        return Obstacle(w / 2 - r, w / 2 + r, top, w / 2, top + r, r)
+    }
+
+    private fun fabView(): View? = pokemonView.rootView.findViewById(cz.uhk.macroflow.R.id.fabHome)
+
+    /** Kde stojí nohy Makromona v klidu (y v souřadnicích rodiče). */
+    private fun groundFeetY(): Float = pokemonView.top + pokemonView.height + targetTranslationY
+
+    /** Poloviční „viditelná“ šířka (sprity mají průhledný okraj, proto 0,7). */
+    private val halfW get() = pokemonView.width * abs(baseScale) / 2f * 0.7f
+
+    private fun feetX(): Float = pokemonView.x + pokemonView.width / 2f
+
+    /** Nastaví polohu podle nohou (střed dole). */
+    private fun placeFeet(fx: Float, fy: Float) {
+        pokemonView.x = fx - pokemonView.width / 2f
+        pokemonView.translationY = fy - pokemonView.top - pokemonView.height
+    }
+
+    /** Rozsah pozic (x nohou) na levé / pravé straně od tlačítka. */
+    private fun sideRange(left: Boolean, o: Obstacle, parentW: Float): ClosedFloatingPointRange<Float> {
+        val gap = 6f * dp
+        return if (left) {
+            val min = halfW + gap; val max = o.left - gap - halfW
+            min..max.coerceAtLeast(min)
+        } else {
+            val min = o.right + gap + halfW; val max = parentW - gap - halfW
+            min..max.coerceAtLeast(min)
+        }
+    }
+
+    /** Jak rád chodí na druhou stranu (povaha). */
+    private val crossChance: Float get() = when (pokemonId) {
+        "030" -> 0.15f                  // Gudwin – líný
+        "012", "031" -> 0.45f           // Spirra, Axlu – zvědaví
+        "022", "023" -> 0.40f           // Mycit – nervózní, ale zvědavý
+        "019", "003" -> 0.50f           // letci to mají nejsnazší
+        else -> 0.30f
+    }
+
+    // ─────────────────────────────────────────
     // WANDERING – pohyb po liště
     // ─────────────────────────────────────────
 
+    /** Co udělat po doběhnutí chůze (např. přejít tlačítko); null = klid a další krok. */
+    private var afterWalk: (() -> Unit)? = null
+
     /**
-     * Naplánuje další krok Makromona.
-     * Pokud se Makromon nachází v oblasti středu (CENTER_START–CENTER_END), spustí crossing animaci.
-     * Jinak se přesune na náhodnou pozici na své straně.
+     * Další krok: buď procházka po své straně, nebo (s pravděpodobností podle povahy)
+     * dojít k tlačítku, chvilku si ho prohlédnout a přejít na druhou stranu svým stylem.
      */
     private fun scheduleStep(delayMs: Long) {
         if (!running) return
         handler.postDelayed({
             if (!running || isCrossing) return@postDelayed
             val parentW = (pokemonView.parent as? ViewGroup)?.width?.toFloat() ?: return@postDelayed
-            val currentX = pokemonView.x
-            val currentXFraction = currentX / parentW
+            val o = obstacle()
+            val fx = feetX()
+            val onLeft = fx < o.cx
+            val here = sideRange(onLeft, o, parentW)
 
-            // Je Makromon v oblasti středu (home tlačítko)?
-            val inCenter = currentXFraction in CENTER_START..CENTER_END
-
-            if (inCenter) {
-                // CROSSING – přejde na druhou stranu přes střed
-                val targetX = if (facingRight)
-                    (parentW * (CENTER_END + 0.15f)).coerceAtMost(parentW - viewW)
-                else
-                    (parentW * (CENTER_START - 0.15f) - viewW).coerceAtLeast(0f)
-
-                idleAnim?.cancel()
-                stopWobble()
-                isCrossing = true
-                playCrossingAnimation(currentX, targetX)
+            if (Random.nextFloat() < crossChance) {
+                // K tlačítku, prohlédnout si ho, přejít
+                val edge = if (onLeft) here.endInclusive else here.start
+                val target = if (onLeft) sideRange(false, o, parentW).start else sideRange(true, o, parentW).endInclusive
+                val cross: () -> Unit = {
+                    facingRight = onLeft; applyFacing(facingRight)
+                    handler.postDelayed({
+                        if (running && !isCrossing) {
+                            cancelIdle(); stopWobble()
+                            isCrossing = true
+                            playCrossingAnimation(feetX(), target, o)
+                        }
+                    }, Random.nextLong(300, 900)) // krátké zaváhání před tlačítkem
+                }
+                if (abs(fx - edge) < 12f * dp) cross()
+                else { afterWalk = cross; walkTo(fx, edge) }
             } else {
-                // NORMÁLNÍ CHŮZE – přesun na pozici na aktuální straně
-                val targetX = pickWalkTarget(parentW, currentXFraction)
-                if (abs(currentX - targetX) < 20f * dp) {
-                    // Jsme už na místě, otoč se a počkej
+                val target = pickWalkTarget(here)
+                if (abs(fx - target) < 20f * dp) {
+                    // Už je na místě – rozhlédne se a počká
                     facingRight = !facingRight
                     applyFacing(facingRight)
-                    scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
-                } else {
-                    idleAnim?.cancel()
-                    stopWobble()
-                    facingRight = targetX > currentX
-                    applyFacing(facingRight)
-                    performWalk(currentX, targetX)
-                }
+                    scheduleStep(randomIdle())
+                } else walkTo(fx, target)
             }
         }, delayMs)
     }
 
-    /**
-     * Vybere cílovou X pozici pro normální chůzi.
-     * Makromon chodí v rámci své "domácí" strany (levá / pravá).
-     * Charakter ovlivňuje jak daleko chodí.
-     */
-    private fun pickWalkTarget(parentW: Float, currentFraction: Float): Float {
-        val onLeftSide = currentFraction < 0.5f
-        return when (pokemonId) {
-            "030" -> {
-                // Gudwin chodí hodně pomalu a na krátké vzdálenosti
-                val base = if (onLeftSide) parentW * 0.05f else parentW * 0.75f
-                base + (Random.nextFloat() - 0.5f) * parentW * 0.10f
-            }
-            "012" -> {
-                // Spirra je živá – chodí dál a rychleji
-                val base = if (onLeftSide) parentW * 0.08f else parentW * 0.72f
-                base + (Random.nextFloat() - 0.5f) * parentW * 0.18f
-            }
-            "031" -> {
-                // Axlu je zvědavý – průzkumník
-                val base = if (onLeftSide) parentW * 0.06f else parentW * 0.70f
-                base + (Random.nextFloat() - 0.5f) * parentW * 0.20f
-            }
-            "022", "023" -> {
-                // Mycit/Mydrus – nervózní, krátké kroky ale rychlé
-                val base = if (onLeftSide) parentW * 0.10f else parentW * 0.68f
-                base + (Random.nextFloat() - 0.5f) * parentW * 0.12f
-            }
-            "010", "011" -> {
-                // Kuličky – levitují klidně, malé pohyby
-                val base = if (onLeftSide) parentW * 0.08f else parentW * 0.72f
-                base + (Random.nextFloat() - 0.5f) * parentW * 0.12f
-            }
-            "019" -> {
-                // Drakirra – letí rychle a daleko
-                val base = if (onLeftSide) parentW * 0.05f else parentW * 0.68f
-                base + (Random.nextFloat() - 0.5f) * parentW * 0.25f
-            }
-            else -> {
-                val base = if (onLeftSide) parentW * 0.06f else parentW * 0.70f
-                base + (Random.nextFloat() - 0.5f) * parentW * 0.15f
-            }
-        }.coerceIn(0f, parentW - viewW)
+    private fun randomIdle() = Random.nextLong(idleWaitRange.first, idleWaitRange.second)
+
+    private fun walkTo(fromFeetX: Float, toFeetX: Float) {
+        cancelIdle(); stopWobble()
+        facingRight = toFeetX > fromFeetX
+        applyFacing(facingRight)
+        val dx = pokemonView.width / 2f
+        performWalk(fromFeetX - dx, toFeetX - dx)
+    }
+
+    /** Společný konec všech stylů chůze. */
+    private fun onWalkEnd() {
+        if (!running || isCrossing) return
+        val next = afterWalk
+        afterWalk = null
+        if (next != null) next() else { startIdleAnimation(); scheduleStep(randomIdle()) }
+    }
+
+    /** Cíl procházky na vlastní straně – délka kroku podle povahy. */
+    private fun pickWalkTarget(range: ClosedFloatingPointRange<Float>): Float {
+        val span = range.endInclusive - range.start
+        val reach = when (pokemonId) {
+            "030" -> 0.35f             // Gudwin – krátké přesuny
+            "022", "023" -> 0.45f      // Mycit – cupitá
+            "010", "011" -> 0.5f       // kuličky – klidné
+            "012", "031", "019" -> 1f  // zvědaví a letci – po celé straně
+            else -> 0.75f
+        }
+        val cur = feetX().coerceIn(range.start, range.endInclusive)
+        val t = cur + (Random.nextFloat() * 2f - 1f) * span * reach
+        return t.coerceIn(range.start, range.endInclusive)
     }
 
     /**
@@ -405,10 +464,7 @@ class StandardWanderer(
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(a: Animator) {
                     pokemonView.translationY = targetTranslationY
-                    if (running && !isCrossing) {
-                        startIdleAnimation()
-                        scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
-                    }
+                    onWalkEnd()
                 }
             })
             start()
@@ -428,10 +484,7 @@ class StandardWanderer(
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(a: Animator) {
                     pokemonView.translationY = targetTranslationY
-                    if (running && !isCrossing) {
-                        startIdleAnimation()
-                        scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
-                    }
+                    onWalkEnd()
                 }
             })
             start()
@@ -453,10 +506,7 @@ class StandardWanderer(
                 override fun onAnimationEnd(a: Animator) {
                     pokemonView.alpha = 1f
                     pokemonView.translationY = targetTranslationY
-                    if (running && !isCrossing) {
-                        startIdleAnimation()
-                        scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
-                    }
+                    onWalkEnd()
                 }
             })
             start()
@@ -478,10 +528,7 @@ class StandardWanderer(
                 override fun onAnimationEnd(a: Animator) {
                     pokemonView.rotation = 0f
                     pokemonView.translationY = targetTranslationY
-                    if (running && !isCrossing) {
-                        startIdleAnimation()
-                        scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
-                    }
+                    onWalkEnd()
                 }
             })
             start()
@@ -501,10 +548,7 @@ class StandardWanderer(
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(a: Animator) {
                     pokemonView.rotation = 0f
-                    if (running && !isCrossing) {
-                        startIdleAnimation()
-                        scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
-                    }
+                    onWalkEnd()
                 }
             })
             start()
@@ -537,12 +581,7 @@ class StandardWanderer(
                         if (stepsDone < steps && running && !isCrossing) {
                             // Krátká pauza mezi kroky (čuchá)
                             handler.postDelayed({ doStep() }, Random.nextLong(200, 600))
-                        } else {
-                            if (running && !isCrossing) {
-                                startIdleAnimation()
-                                scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
-                            }
-                        }
+                        } else onWalkEnd()
                     }
                 })
                 start()
@@ -569,10 +608,7 @@ class StandardWanderer(
                 override fun onAnimationEnd(a: Animator) {
                     pokemonView.rotation = 0f
                     pokemonView.translationY = targetTranslationY
-                    if (running && !isCrossing) {
-                        startIdleAnimation()
-                        scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
-                    }
+                    onWalkEnd()
                 }
             })
             start()
@@ -587,10 +623,7 @@ class StandardWanderer(
             this.duration = duration; interpolator = AccelerateDecelerateInterpolator()
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(a: Animator) {
-                    if (running && !isCrossing) {
-                        startIdleAnimation()
-                        scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
-                    }
+                    onWalkEnd()
                 }
             })
             start()
@@ -598,231 +631,416 @@ class StandardWanderer(
     }
 
     // ─────────────────────────────────────────
-    // CROSSING ANIMACE – přechod přes střed
+    // CROSSING – přechod přes tlačítko uprostřed (každý po svém)
     // ─────────────────────────────────────────
 
-    private fun playCrossingAnimation(fromX: Float, toX: Float) {
+    private var crossAnim: Animator? = null
+
+    private fun playCrossingAnimation(fromFx: Float, toFx: Float, o: Obstacle) {
         when (pokemonId) {
-            "004", "005", "006",
-            "014", "020", "021",
-            "027", "028", "029" -> crossingWaterSurf(fromX, toX)
-
-            "010", "011",
-            "016", "024", "025", "026" -> crossingGhost(fromX, toX)
-
-            "003", "019" -> crossingFlying(fromX, toX)
-
-            "001", "002", "013" -> crossingFire(fromX, toX)
-
-            "030" -> crossingHeavy(fromX, toX)
-
-            "031" -> crossingAxlu(fromX, toX)
-
-            else -> defaultCrossing(fromX, toX)
+            "001", "002" -> crossJump(fromFx, toFx, o, spin = false, embers = true)   // Ignar – ohnivý skok
+            "013" -> crossJump(fromFx, toFx, o, spin = true, embers = true)           // Flamirra – salto s plamenem
+            "003" -> crossFly(fromFx, toFx, o)                                        // Ignaroth – přelet s máváním
+            "019" -> crossLoop(fromFx, toFx, o)                                       // Drakirra – smyčka kolem tlačítka
+            "004", "005", "006" -> crossSurf(fromFx, toFx, o)                         // Aqulin – surf na vlně
+            "014" -> crossGeyser(fromFx, toFx, o)                                     // Aquirra – vyhodí ji gejzír
+            "020", "021" -> crossDolphin(fromFx, toFx, o)                             // Finlet/Serpfin – delfíní skok
+            "007", "008", "009" -> crossClimb(fromFx, toFx, o, heavy = false)         // Flori – přeleze po povrchu
+            "015" -> crossSpring(fromFx, toFx, o)                                     // Verdirra – pružinový skok
+            "010", "024", "025", "026" -> crossPhase(fromFx, toFx, o)                 // Umbex, Soulu – projdou skrz
+            "016" -> crossShadowSink(fromFx, toFx, o)                                 // Shadirra – stínem pod tlačítkem
+            "011", "017", "027", "028", "029" -> crossHover(fromFx, toFx, o)          // Lumex, Charmirra, Phantil – plují nad
+            "012" -> crossPerch(fromFx, toFx, o)                                      // Spirra – vyskočí nahoru a rozhlédne se
+            "018" -> crossIceSlide(fromFx, toFx, o)                                   // Glacirra – vyšplhá a sklouzne
+            "022", "023" -> crossTrampoline(fromFx, toFx, o)                          // Mycit – trampolína
+            "030" -> crossClimb(fromFx, toFx, o, heavy = true)                        // Gudwin – těžce přeleze
+            "031" -> crossBubble(fromFx, toFx, o)                                     // Axlu – přeletí v bublině
+            else -> crossJump(fromFx, toFx, o, spin = false, embers = false)
         }
     }
 
     private fun onCrossingDone() {
         isCrossing = false
+        crossAnim = null
+        pokemonView.rotation = 0f
+        pokemonView.alpha = 1f
+        pokemonView.translationY = targetTranslationY
+        applyFacing(facingRight)
         if (running) {
             startIdleAnimation()
             if (!isFlying && !isSleeping) startWobble()
-            scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
+            scheduleStep(randomIdle())
         }
     }
 
-    private fun crossingWaterSurf(fromX: Float, toX: Float) {
-        idleAnim?.cancel(); stopWobble()
-        val parent = pokemonView.parent as? ViewGroup ?: run { isCrossing = false; return }
+    /** Výška nad zemí, ve které mají být nohy nad vrcholem tlačítka. */
+    private fun clearance(o: Obstacle, extraDp: Float = 10f) =
+        (groundFeetY() - o.top).coerceAtLeast(0f) + extraDp * dp
 
-        val waveWidth  = (pokemonView.width * 2.2f).toInt()
-        val waveHeight = (38 * dp).toInt()
-
-        val waveContainer = android.widget.FrameLayout(context).apply {
-            layoutParams = ViewGroup.LayoutParams(waveWidth, waveHeight)
-            x = pokemonView.x + pokemonView.width / 2f - waveWidth / 2f
-            y = pokemonView.y + pokemonView.height - 12 * dp
-            alpha = 0f; translationZ = 1f
-        }
-        val midLayer = View(context).apply {
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.parseColor("#0288D1")); setStroke((2 * dp).toInt(), Color.WHITE) }
-            layoutParams = android.widget.FrameLayout.LayoutParams((waveWidth * 0.95f).toInt(), (waveHeight * 0.8f).toInt()).apply { gravity = android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.BOTTOM; bottomMargin = (4 * dp).toInt() }
-        }
-        val foamLayer = View(context).apply {
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.parseColor("#B3E5FC")) }
-            layoutParams = android.widget.FrameLayout.LayoutParams((waveWidth * 0.6f).toInt(), (waveHeight * 0.3f).toInt()).apply { gravity = android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.TOP; topMargin = (2 * dp).toInt() }
-            alpha = 0.8f
-        }
-        waveContainer.addView(midLayer); waveContainer.addView(foamLayer)
-        parent.addView(waveContainer)
-
-        val p1 = ObjectAnimator.ofFloat(midLayer, "scaleX", 1f, 1.05f, 1f).apply { duration = 1200; repeatCount = -1; start() }
-        val p2 = ObjectAnimator.ofFloat(foamLayer, "translationX", -10f * dp, 10f * dp).apply { duration = 1500; repeatCount = -1; repeatMode = ValueAnimator.REVERSE; start() }
-
-        val startAnim = AnimatorSet().apply {
-            playTogether(
-                ObjectAnimator.ofFloat(waveContainer, "alpha", 0f, 1f),
-                ObjectAnimator.ofFloat(waveContainer, "scaleY", 0.2f, 1f),
-                ObjectAnimator.ofFloat(pokemonView, "translationY", targetTranslationY, targetTranslationY - 40f * dp)
-            )
-            duration = 600
-        }
-        startAnim.addListener(object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator) {
-                if (!running) return
-                facingRight = toX > fromX; applyFacing(facingRight)
-                ValueAnimator.ofFloat(0f, 1f).apply {
-                    duration = walkDuration + 500L; interpolator = AccelerateDecelerateInterpolator()
-                    addUpdateListener { anim ->
-                        val p = anim.animatedValue as Float
-                        val currentX = fromX + (toX - fromX) * p
-                        pokemonView.x = currentX
-                        val arc = sin(p * PI.toFloat()) * 60f * dp
-                        pokemonView.translationY = (targetTranslationY - 40f * dp) - arc
-                        waveContainer.x = currentX + pokemonView.width / 2f - waveWidth / 2f
-                        waveContainer.y = pokemonView.y + pokemonView.height - 15 * dp
-                    }
-                    addListener(object : AnimatorListenerAdapter() {
-                        override fun onAnimationEnd(a: Animator) {
-                            p1.cancel(); p2.cancel()
-                            pokemonView.animate().translationY(targetTranslationY).setDuration(400).start()
-                            waveContainer.animate().alpha(0f).setDuration(400).withEndAction {
-                                parent.removeView(waveContainer)
-                                onCrossingDone()
-                            }.start()
-                        }
-                    })
-                    start()
-                }
-            }
-        })
-        startAnim.start()
+    /** Výška povrchu tlačítka pod danou x-ovou nohou (0 mimo tlačítko). */
+    private fun surfaceLift(fx: Float, o: Obstacle): Float {
+        val d = fx - o.cx
+        if (abs(d) >= o.r) return 0f
+        val surfaceY = o.cy - sqrt(o.r * o.r - d * d)
+        return (groundFeetY() - surfaceY).coerceAtLeast(0f)
     }
 
-    private fun crossingGhost(fromX: Float, toX: Float) {
-        idleAnim?.cancel(); stopWobble()
-        facingRight = toX > fromX; applyFacing(facingRight)
-        ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = walkDuration + 300L; interpolator = LinearInterpolator()
-            addUpdateListener { anim ->
-                val p = anim.animatedValue as Float
-                pokemonView.x = fromX + (toX - fromX) * p
-                val wave = sin(p * PI.toFloat() * 3).toFloat()
-                pokemonView.translationY = targetTranslationY + wave * 15f * dp
-                pokemonView.alpha = 0.5f + abs(wave) * 0.5f
-            }
+    private fun path(duration: Long, interp: TimeInterpolator, update: (Float) -> Unit, end: () -> Unit) {
+        crossAnim = ValueAnimator.ofFloat(0f, 1f).apply {
+            this.duration = duration; interpolator = interp
+            addUpdateListener { update(it.animatedValue as Float) }
             addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(a: Animator) {
-                    pokemonView.alpha = 1f; pokemonView.translationY = targetTranslationY
-                    onCrossingDone()
-                }
+                private var cancelled = false
+                override fun onAnimationCancel(a: Animator) { cancelled = true }
+                override fun onAnimationEnd(a: Animator) { if (!cancelled && running) end() }
             })
             start()
         }
     }
 
-    private fun crossingFlying(fromX: Float, toX: Float) {
-        idleAnim?.cancel(); stopWobble()
-        facingRight = toX > fromX; applyFacing(facingRight)
-        ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = walkDuration; interpolator = AccelerateDecelerateInterpolator()
-            addUpdateListener { anim ->
-                val p = anim.animatedValue as Float
-                pokemonView.x = fromX + (toX - fromX) * p
-                val arc = sin(p * PI.toFloat()) * 80f * dp
-                pokemonView.translationY = targetTranslationY - arc
-                pokemonView.rotation = cos(p * PI.toFloat()) * (if (facingRight) -15f else 15f)
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(a: Animator) {
-                    pokemonView.animate().rotation(0f).translationY(targetTranslationY).setDuration(400).start()
-                    handler.postDelayed({ onCrossingDone() }, 400)
-                }
-            })
-            start()
-        }
+    /** Stisk tlačítka – když na něj Makromon doskočí nebo šlápne. */
+    private fun pokeFab(strength: Float = 1f) {
+        val fab = fabView() ?: return
+        fab.animate().cancel()
+        fab.animate().scaleY(1f - 0.12f * strength).scaleX(1f + 0.06f * strength).setDuration(90).withEndAction {
+            fab.animate().scaleX(1f).scaleY(1f).setDuration(380).setInterpolator(OvershootInterpolator(3f)).start()
+        }.start()
     }
 
-    private fun crossingFire(fromX: Float, toX: Float) {
-        idleAnim?.cancel(); stopWobble()
-        facingRight = toX > fromX; applyFacing(facingRight)
-        var lastEmberTime = 0L
-        ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = walkDuration - 400L; interpolator = AccelerateDecelerateInterpolator()
-            addUpdateListener { anim ->
-                val p = anim.animatedValue as Float
-                pokemonView.x = fromX + (toX - fromX) * p
+    private fun squash(then: () -> Unit, amount: Float = 0.8f) {
+        val sx = if (facingRight) -baseScale else baseScale
+        pokemonView.animate().scaleY(baseScale * amount).scaleX(sx * (2f - amount)).setDuration(140).withEndAction {
+            pokemonView.animate().scaleY(baseScale).scaleX(sx).setDuration(90).withEndAction { if (running) then() }.start()
+        }.start()
+    }
+
+    private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
+
+    // ── Styly ────────────────────────────────
+
+    /** Odraz a skok obloukem nad tlačítko (volitelně salto a jiskry). */
+    private fun crossJump(fromFx: Float, toFx: Float, o: Obstacle, spin: Boolean, embers: Boolean) {
+        val lift = clearance(o, 16f)
+        val g = groundFeetY()
+        squash({
+            var lastEmber = 0L
+            path(walkDuration * 5 / 10, LinearInterpolator(), { p ->
+                placeFeet(lerp(fromFx, toFx, p), g - lift * 4f * p * (1 - p))
+                if (spin) pokemonView.rotation = (if (facingRight) 360f else -360f) * p
                 val now = System.currentTimeMillis()
-                if (now - lastEmberTime > 80) {
-                    lastEmberTime = now
-                    spawnEmberTrail(pokemonView.x, pokemonView.y + pokemonView.height * 0.7f)
+                if (embers && now - lastEmber > 60) { lastEmber = now; spawnEmberTrail(feetX() - 3 * dp, pokemonView.y + pokemonView.height * 0.8f) }
+            }) { squash({ onCrossingDone() }, 0.85f) }
+        })
+    }
+
+    /** Přelet s máváním – náklon podle směru letu. */
+    private fun crossFly(fromFx: Float, toFx: Float, o: Obstacle) {
+        val lift = clearance(o, 40f)
+        val g = groundFeetY()
+        path(walkDuration, AccelerateDecelerateInterpolator(), { p ->
+            placeFeet(lerp(fromFx, toFx, p), g - lift * sin(PI.toFloat() * p))
+            pokemonView.rotation = cos(p * PI.toFloat()) * (if (facingRight) -12f else 12f) + sin(p * 40f) * 4f
+        }) { onCrossingDone() }
+    }
+
+    /** Drakirra: vzlétne a udělá celou smyčku kolem tlačítka, pak přistane. */
+    private fun crossLoop(fromFx: Float, toFx: Float, o: Obstacle) {
+        val g = groundFeetY()
+        val loopR = o.r + 46f * dp
+        val dir = if (facingRight) 1f else -1f
+        path(walkDuration + 1400L, AccelerateDecelerateInterpolator(), { p ->
+            when {
+                p < 0.25f -> { // nálet nad tlačítko
+                    val t = p / 0.25f
+                    placeFeet(lerp(fromFx, o.cx, t), lerp(g, o.cy - loopR, t))
+                }
+                p < 0.75f -> { // smyčka kolem středu tlačítka
+                    val a = (-PI / 2 + dir * 2 * PI * (p - 0.25f) / 0.5f).toFloat()
+                    placeFeet(o.cx + cos(a) * loopR, o.cy + sin(a) * loopR)
+                    pokemonView.rotation = dir * 360f * (p - 0.25f) / 0.5f
+                }
+                else -> { // přistání
+                    val t = (p - 0.75f) / 0.25f
+                    pokemonView.rotation = 0f
+                    placeFeet(lerp(o.cx, toFx, t), lerp(o.cy - loopR, g, t))
                 }
             }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(a: Animator) { onCrossingDone() }
-            })
-            start()
+        }) { onCrossingDone() }
+    }
+
+    /** Aqulin: pod ním se zvedne vlna a přenese ho přes tlačítko. */
+    private fun crossSurf(fromFx: Float, toFx: Float, o: Obstacle) {
+        val parent = pokemonView.parent as? ViewGroup ?: run { onCrossingDone(); return }
+        val waveW = (pokemonView.width * 1.6f).toInt()
+        val waveH = (30 * dp).toInt()
+        val wave = View(context).apply {
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.parseColor("#0288D1")); setStroke((2 * dp).toInt(), Color.WHITE) }
+            layoutParams = ViewGroup.LayoutParams(waveW, waveH); alpha = 0f
+            elevation = pokemonView.elevation - 1f
+        }
+        parent.addView(wave)
+        val lift = clearance(o, 22f)
+        val g = groundFeetY()
+        var lastDrop = 0L
+        path(walkDuration + 600L, AccelerateDecelerateInterpolator(), { p ->
+            val fy = g - lift * sin(PI.toFloat() * p)
+            placeFeet(lerp(fromFx, toFx, p), fy)
+            wave.x = feetX() - waveW / 2f; wave.y = fy - waveH * 0.45f
+            wave.alpha = (sin(PI.toFloat() * p) * 1.6f).coerceIn(0f, 0.9f)
+            wave.scaleX = 0.8f + 0.2f * sin(p * 20f)
+            val now = System.currentTimeMillis()
+            if (now - lastDrop > 90) { lastDrop = now; spawnDrop(parent, feetX() + (if (facingRight) -1 else 1) * waveW / 2.5f, fy) }
+        }) {
+            wave.animate().alpha(0f).setDuration(250).withEndAction { parent.removeView(wave) }.start()
+            onCrossingDone()
         }
     }
 
-    private fun crossingHeavy(fromX: Float, toX: Float) {
-        idleAnim?.cancel(); stopWobble()
-        facingRight = toX > fromX; applyFacing(facingRight)
+    /** Aquirra: gejzír u tlačítka ji vystřelí nahoru, dopadne na druhou stranu. */
+    private fun crossGeyser(fromFx: Float, toFx: Float, o: Obstacle) {
+        val parent = pokemonView.parent as? ViewGroup ?: run { onCrossingDone(); return }
+        repeat(10) { i -> handler.postDelayed({ if (running) spawnDrop(parent, fromFx + (Random.nextFloat() - 0.5f) * 20 * dp, groundFeetY(), up = 70f) }, i * 30L) }
+        crossJump(fromFx, toFx, o, spin = false, embers = false)
+    }
+
+    /** Finlet/Serpfin: delfíní skok – tělo se natáčí podle dráhy, šplouchnutí na začátku i na konci. */
+    private fun crossDolphin(fromFx: Float, toFx: Float, o: Obstacle) {
         val parent = pokemonView.parent as? ViewGroup
-
-        ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = walkDuration + 600L; interpolator = LinearInterpolator()
-            addUpdateListener { anim ->
-                val p = anim.animatedValue as Float
-                pokemonView.x = fromX + (toX - fromX) * p
-                pokemonView.rotation = sin(p * PI.toFloat() * 5).toFloat() * 5f
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(a: Animator) {
-                    pokemonView.animate().rotation(0f).setDuration(200).start()
-                    // Otřes při Gudwinově příchodu
-                    parent?.let {
-                        ObjectAnimator.ofFloat(it, "translationX", 0f, -8f * dp, 8f * dp, -4f * dp, 4f * dp, 0f)
-                            .apply { duration = 350; start() }
-                    }
-                    handler.postDelayed({ onCrossingDone() }, 350)
-                }
-            })
-            start()
+        val lift = clearance(o, 26f)
+        val g = groundFeetY()
+        parent?.let { splash(it, fromFx, g) }
+        val dir = if (toFx > fromFx) 1f else -1f
+        path(walkDuration * 6 / 10, LinearInterpolator(), { p ->
+            placeFeet(lerp(fromFx, toFx, p), g - lift * 4f * p * (1 - p))
+            // natočení podle tečny paraboly
+            val slope = lift * 4f * (1 - 2 * p) / abs(toFx - fromFx)
+            pokemonView.rotation = -dir * Math.toDegrees(atan(slope.toDouble())).toFloat() * 0.8f
+        }) {
+            parent?.let { splash(it, toFx, g) }
+            onCrossingDone()
         }
     }
 
-    private fun crossingAxlu(fromX: Float, toX: Float) {
-        idleAnim?.cancel(); stopWobble()
-        facingRight = toX > fromX; applyFacing(facingRight)
-        ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = walkDuration; interpolator = AccelerateDecelerateInterpolator()
-            addUpdateListener { anim ->
-                val p = anim.animatedValue as Float
-                pokemonView.x = fromX + (toX - fromX) * p
-                val wave = sin(p * PI.toFloat() * 4).toFloat()
-                pokemonView.translationY = targetTranslationY + wave * 12f * dp
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(a: Animator) {
-                    pokemonView.animate().translationY(targetTranslationY).setDuration(300).start()
-                    handler.postDelayed({ onCrossingDone() }, 300)
+    /** Flori / Gudwin: přeleze po povrchu tlačítka (sleduje jeho kruhový tvar). */
+    private fun crossClimb(fromFx: Float, toFx: Float, o: Obstacle, heavy: Boolean) {
+        val g = groundFeetY()
+        var poked = false
+        path(if (heavy) walkDuration + 1600L else walkDuration + 400L, LinearInterpolator(), { p ->
+            val fx = lerp(fromFx, toFx, p)
+            val lift = surfaceLift(fx, o)
+            placeFeet(fx, g - lift)
+            // náklon podle sklonu povrchu
+            val d = fx - o.cx
+            val tilt = if (abs(d) < o.r && lift > 0f) Math.toDegrees(asin((d / o.r).toDouble())).toFloat() else 0f
+            pokemonView.rotation = (if (heavy) 0.5f else 0.7f) * tilt + sin(p * (if (heavy) 18f else 30f)) * (if (heavy) 4f else 2f)
+            if (!poked && abs(d) < o.r * 0.15f) { poked = true; pokeFab(if (heavy) 1.6f else 0.7f) }
+        }) {
+            if (heavy) {
+                (pokemonView.parent as? ViewGroup)?.let {
+                    ObjectAnimator.ofFloat(it, "translationX", 0f, -8f * dp, 8f * dp, -4f * dp, 4f * dp, 0f).apply { duration = 350; start() }
                 }
-            })
-            start()
+            } else leafSwayReaction()
+            onCrossingDone()
         }
     }
 
-    private fun defaultCrossing(fromX: Float, toX: Float) {
-        facingRight = toX > fromX; applyFacing(facingRight)
-        startWobble()
-        moveAnim = ObjectAnimator.ofFloat(pokemonView, "x", fromX, toX).apply {
-            duration = walkDuration + 200L; interpolator = AccelerateDecelerateInterpolator()
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(a: Animator) { onCrossingDone() }
-            })
-            start()
+    /** Verdirra: hluboký podřep jako pružina a dlouhý vysoký skok s listím. */
+    private fun crossSpring(fromFx: Float, toFx: Float, o: Obstacle) {
+        val lift = clearance(o, 40f)
+        val g = groundFeetY()
+        squash({
+            path(walkDuration * 7 / 10, DecelerateInterpolator(0.6f), { p ->
+                placeFeet(lerp(fromFx, toFx, p), g - lift * 4f * p * (1 - p))
+                pokemonView.scaleY = baseScale * (1f + 0.15f * sin(PI.toFloat() * p))
+            }) { leafSwayReaction(); squash({ onCrossingDone() }, 0.85f) }
+        }, amount = 0.6f)
+    }
+
+    /** Duchové: projdou tlačítkem skrz – zprůhlední a rozvlní se. */
+    private fun crossPhase(fromFx: Float, toFx: Float, o: Obstacle) {
+        val g = groundFeetY()
+        val parent = pokemonView.parent as? ViewGroup
+        var lastP = 0L
+        path(walkDuration + 400L, LinearInterpolator(), { p ->
+            placeFeet(lerp(fromFx, toFx, p), g + sin(p * PI.toFloat() * 4) * 6f * dp)
+            val insideness = (1f - abs(feetX() - o.cx) / (o.r + halfW)).coerceIn(0f, 1f)
+            pokemonView.alpha = 1f - 0.75f * insideness
+            val now = System.currentTimeMillis()
+            if (parent != null && insideness > 0.3f && now - lastP > 120) { lastP = now; spawnGhostWisp(parent) }
+        }) { onCrossingDone() }
+    }
+
+    /** Shadirra: propadne se do stínu, stín přejede pod tlačítkem a na druhé straně se vynoří. */
+    private fun crossShadowSink(fromFx: Float, toFx: Float, o: Obstacle) {
+        val parent = pokemonView.parent as? ViewGroup ?: run { onCrossingDone(); return }
+        val g = groundFeetY()
+        val shadow = View(context).apply {
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.argb(170, 40, 10, 60)) }
+            layoutParams = ViewGroup.LayoutParams((halfW * 1.6f).toInt(), (10 * dp).toInt())
+            x = fromFx - halfW * 0.8f; y = g - 5 * dp; alpha = 0f
         }
+        parent.addView(shadow)
+        path(walkDuration + 1000L, LinearInterpolator(), { p ->
+            when {
+                p < 0.25f -> { val t = p / 0.25f; pokemonView.scaleY = baseScale * (1f - t); shadow.alpha = t; placeFeet(fromFx, g) }
+                p < 0.75f -> { val t = (p - 0.25f) / 0.5f; pokemonView.scaleY = 0f; shadow.x = lerp(fromFx, toFx, t) - halfW * 0.8f; placeFeet(lerp(fromFx, toFx, t), g) }
+                else -> { val t = (p - 0.75f) / 0.25f; pokemonView.scaleY = baseScale * t; shadow.alpha = 1f - t; placeFeet(toFx, g) }
+            }
+        }) {
+            parent.removeView(shadow)
+            pokemonView.scaleY = baseScale
+            onCrossingDone()
+        }
+    }
+
+    /** Lumex, Charmirra, Phantil: plynule vyplují nad tlačítko a přes něj (Lumex nahoře zazáří). */
+    private fun crossHover(fromFx: Float, toFx: Float, o: Obstacle) {
+        val lift = clearance(o, 24f)
+        val g = groundFeetY()
+        val parent = pokemonView.parent as? ViewGroup
+        var flashed = false; var lastS = 0L
+        path(walkDuration + 1200L, AccelerateDecelerateInterpolator(), { p ->
+            placeFeet(lerp(fromFx, toFx, p), g - lift * sin(PI.toFloat() * p) + sin(p * 12f) * 4f * dp)
+            val now = System.currentTimeMillis()
+            if (parent != null && now - lastS > 150) { lastS = now; spawnSparkle(parent) }
+            if (pokemonId == "011" && !flashed && p > 0.5f) { flashed = true; lumexFlashReaction() }
+        }) { onCrossingDone() }
+    }
+
+    /** Spirra: vyskočí na tlačítko, sedne si, rozhlédne se na obě strany a seskočí. */
+    private fun crossPerch(fromFx: Float, toFx: Float, o: Obstacle) {
+        val g = groundFeetY()
+        val topLift = g - o.top
+        squash({
+            path(420L, DecelerateInterpolator(), { p ->
+                placeFeet(lerp(fromFx, o.cx, p), g - topLift * p - 26f * dp * sin(PI.toFloat() * p))
+            }) {
+                pokeFab(0.8f)
+                // Rozhlédne se
+                handler.postDelayed({ if (running) { facingRight = !facingRight; applyFacing(facingRight) } }, 350)
+                handler.postDelayed({ if (running) { facingRight = !facingRight; applyFacing(facingRight) } }, 900)
+                handler.postDelayed({
+                    if (!running) return@postDelayed
+                    facingRight = toFx > o.cx; applyFacing(facingRight)
+                    squash({
+                        path(420L, AccelerateInterpolator(), { p ->
+                            placeFeet(lerp(o.cx, toFx, p), g - topLift * (1 - p) - 20f * dp * sin(PI.toFloat() * p))
+                        }) { squash({ onCrossingDone() }, 0.85f) }
+                    }, 0.85f)
+                }, 1400)
+            }
+        }, 0.75f)
+    }
+
+    /** Glacirra: rychle vyšplhá a po druhé straně sklouzne jako po ledu, za ní střípky. */
+    private fun crossIceSlide(fromFx: Float, toFx: Float, o: Obstacle) {
+        val g = groundFeetY()
+        val parent = pokemonView.parent as? ViewGroup
+        var lastShard = 0L
+        path(walkDuration, AccelerateInterpolator(1.3f), { p ->
+            val fx = lerp(fromFx, toFx, p)
+            placeFeet(fx, g - surfaceLift(fx, o))
+            val d = fx - o.cx
+            pokemonView.rotation = if (d > 0 && abs(d) < o.r) (if (facingRight) 1f else -1f) * 25f * (d / o.r) else 0f
+            val now = System.currentTimeMillis()
+            if (parent != null && d * (if (facingRight) 1 else -1) > 0 && now - lastShard > 70) { lastShard = now; spawnIceShard(parent) }
+        }) { onCrossingDone() }
+    }
+
+    /** Mycit: nejdřív couvne, pak skočí na tlačítko a dvakrát se od něj odrazí jako od trampolíny. */
+    private fun crossTrampoline(fromFx: Float, toFx: Float, o: Obstacle) {
+        val g = groundFeetY()
+        val topLift = g - o.top
+        val back = fromFx + (if (toFx > fromFx) -1 else 1) * 14f * dp
+        // nervózní couvnutí
+        path(260L, DecelerateInterpolator(), { p -> placeFeet(lerp(fromFx, back, p), g) }) {
+            path(360L, LinearInterpolator(), { p -> placeFeet(lerp(back, o.cx, p), g - topLift * p - 30f * dp * sin(PI.toFloat() * p)) }) {
+                pokeFab(1f)
+                path(360L, LinearInterpolator(), { p -> placeFeet(o.cx, g - topLift - 40f * dp * sin(PI.toFloat() * p)) }) {
+                    pokeFab(1.2f)
+                    path(460L, LinearInterpolator(), { p ->
+                        placeFeet(lerp(o.cx, toFx, p), g - topLift * (1 - p) - 50f * dp * sin(PI.toFloat() * p))
+                        pokemonView.rotation = (if (toFx > o.cx) 1f else -1f) * 360f * p
+                    }) { squash({ onCrossingDone() }, 0.85f) }
+                }
+            }
+        }
+    }
+
+    /** Axlu: vyfoukne bublinu, ve které přepluje tlačítko, bublina na konci praskne. */
+    private fun crossBubble(fromFx: Float, toFx: Float, o: Obstacle) {
+        val parent = pokemonView.parent as? ViewGroup ?: run { onCrossingDone(); return }
+        val size = (pokemonView.width * abs(baseScale) * 0.95f).toInt()
+        val bubble = View(context).apply {
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.argb(40, 255, 182, 193)); setStroke((2 * dp).toInt(), Color.argb(200, 255, 105, 180)) }
+            layoutParams = ViewGroup.LayoutParams(size, size); alpha = 0f; scaleX = 0.2f; scaleY = 0.2f
+            elevation = pokemonView.elevation + 1f
+        }
+        parent.addView(bubble)
+        val g = groundFeetY()
+        val lift = clearance(o, 30f)
+        fun placeBubble() { bubble.x = feetX() - size / 2f; bubble.y = pokemonView.y + pokemonView.height - size * 0.95f }
+        placeBubble()
+        bubble.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(500).setInterpolator(OvershootInterpolator()).withEndAction {
+            if (!running) { parent.removeView(bubble); return@withEndAction }
+            path(walkDuration + 1500L, AccelerateDecelerateInterpolator(), { p ->
+                placeFeet(lerp(fromFx, toFx, p), g - lift * sin(PI.toFloat() * p) + sin(p * 10f) * 5f * dp)
+                placeBubble()
+                bubble.rotation = p * 90f
+            }) {
+                bubble.animate().scaleX(1.5f).scaleY(1.5f).alpha(0f).setDuration(220).withEndAction { parent.removeView(bubble) }.start()
+                repeat(6) { spawnDrop(parent, feetX() + (Random.nextFloat() - 0.5f) * size, pokemonView.y + pokemonView.height - size / 2f, up = 30f) }
+                onCrossingDone()
+            }
+        }.start()
+    }
+
+    // ── Drobné efekty pro přechody ────────────
+
+    private fun spawnDrop(parent: ViewGroup, x0: Float, y0: Float, up: Float = 20f) {
+        val s = (4 * dp).toInt()
+        val drop = View(context).apply {
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.parseColor("#29B6F6")) }
+            layoutParams = ViewGroup.LayoutParams(s, s); x = x0; y = y0
+        }
+        parent.addView(drop)
+        drop.animate().translationYBy(-up * dp * (0.5f + Random.nextFloat())).translationXBy((Random.nextFloat() - 0.5f) * 20 * dp)
+            .alpha(0f).setDuration(600).withEndAction { parent.removeView(drop) }.start()
+    }
+
+    private fun splash(parent: ViewGroup, fx: Float, fy: Float) {
+        repeat(8) { spawnDrop(parent, fx + (Random.nextFloat() - 0.5f) * 16 * dp, fy, up = 45f) }
+    }
+
+    private fun spawnGhostWisp(parent: ViewGroup) {
+        val s = (6 * dp).toInt()
+        val w = View(context).apply {
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.parseColor("#CE93D8")) }
+            layoutParams = ViewGroup.LayoutParams(s, s)
+            x = feetX() + (Random.nextFloat() - 0.5f) * halfW; y = pokemonView.y + pokemonView.height * 0.6f; alpha = 0.7f
+        }
+        parent.addView(w)
+        w.animate().translationYBy(-25f * dp).alpha(0f).setDuration(700).withEndAction { parent.removeView(w) }.start()
+    }
+
+    private fun spawnSparkle(parent: ViewGroup) {
+        val sp = TextView(context).apply {
+            text = "✦"; textSize = 9f; setTextColor(Color.parseColor(if (pokemonId == "011") "#FFD700" else "#F8BBD0"))
+            x = feetX() + (Random.nextFloat() - 0.5f) * halfW * 2; y = pokemonView.y + pokemonView.height * 0.8f
+        }
+        parent.addView(sp)
+        sp.animate().translationYBy(18f * dp).alpha(0f).setDuration(600).withEndAction { parent.removeView(sp) }.start()
+    }
+
+    private fun spawnIceShard(parent: ViewGroup) {
+        val shard = View(context).apply {
+            background = GradientDrawable().apply { setColor(Color.parseColor("#B3E5FC")) }
+            layoutParams = ViewGroup.LayoutParams((3 * dp).toInt(), (8 * dp).toInt())
+            x = feetX(); y = pokemonView.y + pokemonView.height - 6 * dp; rotation = Random.nextFloat() * 90f
+        }
+        parent.addView(shard)
+        shard.animate().translationXBy((if (facingRight) -1 else 1) * 25f * dp).translationYBy(-10f * dp).alpha(0f)
+            .setDuration(450).withEndAction { parent.removeView(shard) }.start()
     }
 
     // ─────────────────────────────────────────
@@ -830,7 +1048,7 @@ class StandardWanderer(
     // ─────────────────────────────────────────
 
     private fun startIdleAnimation() {
-        idleAnim?.cancel()
+        cancelIdle()
         idleAnim = when (pokemonId) {
             "001", "002", "003" -> startIgnarIdle()
             "004", "005", "006" -> startAqulinIdle()
@@ -881,7 +1099,8 @@ class StandardWanderer(
     }
 
     private fun startLumexIdle(): Animator {
-        val pulse = ObjectAnimator.ofFloat(pokemonView, "scaleX", -baseScale, -baseScale * 1.1f, -baseScale).apply { duration = 1400; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        val fs = facingSign()
+        val pulse = ObjectAnimator.ofFloat(pokemonView, "scaleX", fs * baseScale, fs * baseScale * 1.1f, fs * baseScale).apply { duration = 1400; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         val pulseY = ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.1f, baseScale).apply { duration = 1400; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         val levitate = ObjectAnimator.ofFloat(pokemonView, "translationY", targetTranslationY - 6f * dp, targetTranslationY + 6f * dp).apply { duration = 2000; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.REVERSE; interpolator = AccelerateDecelerateInterpolator() }
         scheduleGhostParticles(Color.parseColor("#FFD700"))
@@ -929,7 +1148,8 @@ class StandardWanderer(
 
     private fun startDrakirraIdle(): Animator {
         val levitate = ObjectAnimator.ofFloat(pokemonView, "translationY", targetTranslationY - 15f * dp, targetTranslationY + 15f * dp).apply { duration = 3000; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.REVERSE; interpolator = AccelerateDecelerateInterpolator() }
-        val breathe = ObjectAnimator.ofFloat(pokemonView, "scaleX", -baseScale, -baseScale * 1.06f, -baseScale).apply { duration = 1500; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        val fs = facingSign()
+        val breathe = ObjectAnimator.ofFloat(pokemonView, "scaleX", fs * baseScale, fs * baseScale * 1.06f, fs * baseScale).apply { duration = 1500; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         return AnimatorSet().apply { playTogether(levitate, breathe); start() }
     }
 
@@ -959,14 +1179,15 @@ class StandardWanderer(
     }
 
     private fun startGudwinIdle(): Animator {
-        val breatheX = ObjectAnimator.ofFloat(pokemonView, "scaleX", -baseScale, -baseScale * 1.07f, -baseScale).apply { duration = 2300; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        val fs = facingSign()
+        val breatheX = ObjectAnimator.ofFloat(pokemonView, "scaleX", fs * baseScale, fs * baseScale * 1.07f, fs * baseScale).apply { duration = 2300; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         val breatheY = ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.07f, baseScale).apply { duration = 2300; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         spawnGudwinBubbles()
         return AnimatorSet().apply { playTogether(breatheX, breatheY); start() }
     }
 
-    private fun spawnGudwinBubbles() {
-        if (!running) return
+    private fun spawnGudwinBubbles(gen: Int = idleGeneration) {
+        if (!running || gen != idleGeneration) return
         val parent = pokemonView.parent as? ViewGroup ?: return
         val cx = pokemonView.x + pokemonView.width * 0.62f; val cy = pokemonView.y + pokemonView.height * 0.22f
         val size = (9 * dp).toInt()
@@ -978,7 +1199,7 @@ class StandardWanderer(
         bubble.animate().translationYBy(-72f * dp).translationXBy((Random.nextFloat() - 0.5f) * 24f * dp)
             .alpha(0f).scaleX(1.7f).scaleY(1.7f).setDuration(2600).setInterpolator(DecelerateInterpolator())
             .withEndAction { parent.removeView(bubble) }.start()
-        handler.postDelayed({ spawnGudwinBubbles() }, Random.nextLong(1600, 3200))
+        handler.postDelayed({ spawnGudwinBubbles(gen) }, Random.nextLong(1600, 3200))
     }
 
     private fun startAxluIdle(): Animator {
@@ -988,9 +1209,11 @@ class StandardWanderer(
         levitate.start(); scheduleAxluBubble(); return levitate
     }
 
-    private fun scheduleAxluBubble() {
-        if (!running) return
-        handler.postDelayed({ if (running) { spawnAxluBubble(); scheduleAxluBubble() } }, Random.nextLong(4000, 8000))
+    private fun scheduleAxluBubble(gen: Int = idleGeneration) {
+        if (!running || gen != idleGeneration) return
+        handler.postDelayed({
+            if (running && gen == idleGeneration) { spawnAxluBubble(); scheduleAxluBubble(gen) }
+        }, Random.nextLong(4000, 8000))
     }
 
     private fun spawnAxluBubble() {
@@ -1135,8 +1358,9 @@ class StandardWanderer(
         flash.animate().alpha(0.9f).setDuration(100).withEndAction {
             flash.animate().alpha(0f).setDuration(400).withEndAction { parent.removeView(flash) }.start()
         }.start()
-        pokemonView.animate().scaleX(baseScale * -1.3f).scaleY(baseScale * 1.3f).setDuration(100).withEndAction {
-            pokemonView.animate().scaleX(baseScale * -1f).scaleY(baseScale).setDuration(300).start()
+        val fs = facingSign()
+        pokemonView.animate().scaleX(fs * baseScale * 1.3f).scaleY(baseScale * 1.3f).setDuration(100).withEndAction {
+            pokemonView.animate().scaleX(fs * baseScale).scaleY(baseScale).setDuration(300).start()
         }.start()
     }
 
@@ -1173,7 +1397,8 @@ class StandardWanderer(
                     .withEndAction { parent.removeView(shard) }.start()
             }, i * 40L)
         }
-        ObjectAnimator.ofFloat(pokemonView, "scaleX", baseScale * -1f, baseScale * -1.15f, baseScale * -1f).apply { duration = 250; start() }
+        val fs = facingSign()
+        ObjectAnimator.ofFloat(pokemonView, "scaleX", fs * baseScale, fs * baseScale * 1.15f, fs * baseScale).apply { duration = 250; start() }
         if (running) handler.postDelayed({ startWobble() }, 300)
     }
 
@@ -1193,9 +1418,10 @@ class StandardWanderer(
 
     private fun axluTapReaction() {
         stopWobble(); moveAnim?.cancel()
-        pokemonView.animate().translationYBy(-30f * dp).scaleX(baseScale * -1.15f).scaleY(baseScale * 1.15f)
+        val fs = facingSign()
+        pokemonView.animate().translationYBy(-30f * dp).scaleX(fs * baseScale * 1.15f).scaleY(baseScale * 1.15f)
             .setDuration(200).setInterpolator(DecelerateInterpolator()).withEndAction {
-                pokemonView.animate().translationY(targetTranslationY).scaleX(baseScale * -1f).scaleY(baseScale)
+                pokemonView.animate().translationY(targetTranslationY).scaleX(fs * baseScale).scaleY(baseScale)
                     .setDuration(300).setInterpolator(OvershootInterpolator()).withEndAction { if (running) startWobble() }.start()
             }.start()
         val parent = pokemonView.parent as? ViewGroup ?: return
@@ -1250,6 +1476,9 @@ class StandardWanderer(
         else       -> -12f * dp
     }
 
+    /** −1 = otočen doprava (sprity jsou kreslené doleva), +1 = doleva. */
+    private fun facingSign(): Float = if (facingRight) -1f else 1f
+
     private fun applyFacing(right: Boolean) {
         pokemonView.scaleX = baseScale * (if (right) -1f else 1f)
     }
@@ -1285,9 +1514,9 @@ class StandardWanderer(
     // PARTICLE SYSTÉMY
     // ─────────────────────────────────────────
 
-    private fun scheduleGhostParticles(color: Int) {
-        if (!running) return
-        val parent = pokemonView.parent as? ViewGroup ?: run { handler.postDelayed({ scheduleGhostParticles(color) }, 2000); return }
+    private fun scheduleGhostParticles(color: Int, gen: Int = idleGeneration) {
+        if (!running || gen != idleGeneration) return
+        val parent = pokemonView.parent as? ViewGroup ?: run { handler.postDelayed({ scheduleGhostParticles(color, gen) }, 2000); return }
         val cx = pokemonView.x + pokemonView.width / 2f; val cy = pokemonView.y + pokemonView.height / 2f
         val size = (7 * dp).toInt()
         val particle = View(context).apply {
@@ -1300,12 +1529,12 @@ class StandardWanderer(
         particle.animate().alpha(0.7f).translationYBy(-30f * dp).scaleX(0.3f).scaleY(0.3f).setDuration(800).withEndAction {
             particle.animate().alpha(0f).setDuration(400).withEndAction { parent.removeView(particle) }.start()
         }.start()
-        handler.postDelayed({ scheduleGhostParticles(color) }, Random.nextLong(800, 2000))
+        handler.postDelayed({ scheduleGhostParticles(color, gen) }, Random.nextLong(800, 2000))
     }
 
-    private fun scheduleFireParticles() {
-        if (!running) return
-        val parent = pokemonView.parent as? ViewGroup ?: run { handler.postDelayed({ scheduleFireParticles() }, 1000); return }
+    private fun scheduleFireParticles(gen: Int = idleGeneration) {
+        if (!running || gen != idleGeneration) return
+        val parent = pokemonView.parent as? ViewGroup ?: run { handler.postDelayed({ scheduleFireParticles(gen) }, 1000); return }
         val cx = pokemonView.x + pokemonView.width / 2f; val cy = pokemonView.y + pokemonView.height * 0.4f
         val size = (5 * dp).toInt()
         val ember = View(context).apply {
@@ -1315,12 +1544,12 @@ class StandardWanderer(
         parent.addView(ember)
         ember.animate().translationYBy(-25f * dp).translationXBy((Random.nextFloat() - 0.5f) * 15f * dp)
             .alpha(0f).setDuration(600).withEndAction { parent.removeView(ember) }.start()
-        handler.postDelayed({ scheduleFireParticles() }, Random.nextLong(400, 900))
+        handler.postDelayed({ scheduleFireParticles(gen) }, Random.nextLong(400, 900))
     }
 
-    private fun scheduleWaterDrops() {
-        if (!running) return
-        val parent = pokemonView.parent as? ViewGroup ?: run { handler.postDelayed({ scheduleWaterDrops() }, 1000); return }
+    private fun scheduleWaterDrops(gen: Int = idleGeneration) {
+        if (!running || gen != idleGeneration) return
+        val parent = pokemonView.parent as? ViewGroup ?: run { handler.postDelayed({ scheduleWaterDrops(gen) }, 1000); return }
         val cx = pokemonView.x + pokemonView.width / 2f; val cy = pokemonView.y + pokemonView.height * 0.3f
         val size = (4 * dp).toInt()
         val drop = View(context).apply {
@@ -1329,12 +1558,12 @@ class StandardWanderer(
         }
         parent.addView(drop)
         drop.animate().translationYBy(-20f * dp).alpha(0f).setDuration(700).withEndAction { parent.removeView(drop) }.start()
-        handler.postDelayed({ scheduleWaterDrops() }, Random.nextLong(600, 1400))
+        handler.postDelayed({ scheduleWaterDrops(gen) }, Random.nextLong(600, 1400))
     }
 
-    private fun scheduleFairySparkles() {
-        if (!running) return
-        val parent = pokemonView.parent as? ViewGroup ?: run { handler.postDelayed({ scheduleFairySparkles() }, 1000); return }
+    private fun scheduleFairySparkles(gen: Int = idleGeneration) {
+        if (!running || gen != idleGeneration) return
+        val parent = pokemonView.parent as? ViewGroup ?: run { handler.postDelayed({ scheduleFairySparkles(gen) }, 1000); return }
         val cx = pokemonView.x + pokemonView.width / 2f; val cy = pokemonView.y + pokemonView.height / 2f
         val sparkle = TextView(context).apply {
             text = "✦"; textSize = 10f; setTextColor(Color.parseColor("#F8BBD0"))
@@ -1344,6 +1573,6 @@ class StandardWanderer(
         sparkle.animate().alpha(0.9f).translationYBy(-20f * dp).setDuration(400).withEndAction {
             sparkle.animate().alpha(0f).setDuration(400).withEndAction { parent.removeView(sparkle) }.start()
         }.start()
-        handler.postDelayed({ scheduleFairySparkles() }, Random.nextLong(500, 1200))
+        handler.postDelayed({ scheduleFairySparkles(gen) }, Random.nextLong(500, 1200))
     }
 }
