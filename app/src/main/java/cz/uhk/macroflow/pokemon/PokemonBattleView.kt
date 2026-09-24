@@ -137,6 +137,12 @@ class PokemonBattleView @JvmOverloads constructor(
                 medCounts.putAll(meds)
                 gs.isEnemyShiny  = enemyIsShiny
                 gs.isPlayerShiny = playerIsShiny
+                // Shiny Makrodex: zapsat, že hráč tuhle shiny verzi viděl (docs/adr/0016)
+                if (enemyIsShiny) {
+                    val id = BattleFactory.makrodexId(enemyWithStats)
+                    val seen = prefs.getStringSet(cz.uhk.macroflow.pokemon.shiny.ShinyDex.SEEN_KEY, emptySet()).orEmpty()
+                    if (id !in seen) prefs.edit().putStringSet(cz.uhk.macroflow.pokemon.shiny.ShinyDex.SEEN_KEY, seen + id).apply()
+                }
 
                 handler.post(cursorTick)
 

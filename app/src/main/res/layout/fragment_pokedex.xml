@@ -169,6 +169,37 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Přepínač: celý Makrodex / shiny viděné / shiny chycené (docs/adr/0016) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="10dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/chipDex"
+                style="@style/MakrodexChip"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="MAKRODEX" />
+
+            <TextView
+                android:id="@+id/chipShinySeen"
+                style="@style/MakrodexChip"
+                android:layout_width="0dp"
+                android:layout_marginHorizontal="6dp"
+                android:layout_weight="1.25"
+                android:text="✦ SHINY VIDĚNO" />
+
+            <TextView
+                android:id="@+id/chipShinyCaught"
+                style="@style/MakrodexChip"
+                android:layout_width="0dp"
+                android:layout_weight="1.3"
+                android:text="✦ SHINY CHYCENO" />
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -178,7 +209,7 @@
             android:layout_marginBottom="8dp">
             <View android:layout_width="0dp" android:layout_height="1dp"
                 android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            <TextView android:id="@+id/tvListSeparator" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:layout_marginHorizontal="12dp" android:text="@string/pokedex_list_separator"
                 android:textColor="@color/brand_primary" android:textSize="10sp" android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.14" />
@@ -186,6 +217,17 @@
                 android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
         </LinearLayout>
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvShinyEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:textColor="@color/brand_primary"
+        android:textSize="14sp"
+        android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvPokedex"

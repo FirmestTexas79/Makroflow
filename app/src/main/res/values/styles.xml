@@ -33,4 +33,16 @@
     <style name="ShapeAppearance.LargeComponent.Rounded" parent="ShapeAppearance.MaterialComponents.LargeComponent">
         <item name="cornerSize">24dp</item>
     </style>
+    <!-- Přepínač záložek v Makrodexu (Makrodex / shiny viděno / shiny chyceno) -->
+    <style name="MakrodexChip">
+        <item name="android:layout_height">34dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/bg_status_pill</item>
+        <item name="android:backgroundTint">@color/brand_primary_alpha10</item>
+        <item name="android:textColor">@color/brand_primary</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:maxLines">1</item>
+    </style>
 </resources>

@@ -39,6 +39,17 @@ class MakrodexFragment : Fragment() {
 
     private val C_BROWN   = 0xFFBC6C25.toInt()
     private val C_ACCENT  = 0xFFDDA15E.toInt()
+    private val C_GOLD    = 0xFFE9B072.toInt()
+
+    // ── Shiny Makrodex (docs/adr/0016) ──
+    private enum class Mode { DEX, SHINY_SEEN, SHINY_CAUGHT }
+    private var mode = Mode.DEX
+    private var allEntries: List<MakrodexEntryEntity> = emptyList()
+    private var unlockedCache: List<String> = emptyList()
+    private var invCache: List<String> = emptyList()
+    private var statsCache: Map<String, Int> = emptyMap()
+    private var shinySeen: Set<String> = emptySet()
+    private var shinyCaught: Set<String> = emptySet()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -61,6 +72,11 @@ class MakrodexFragment : Fragment() {
         makrodexAdapter = MakrodexAdapter(emptyList(), emptyList(), emptyList(), emptyMap())
         rvMakrodex.adapter = makrodexAdapter
 
+        view.findViewById<View>(R.id.chipDex).setOnClickListener { setMode(Mode.DEX) }
+        view.findViewById<View>(R.id.chipShinySeen).setOnClickListener { setMode(Mode.SHINY_SEEN) }
+        view.findViewById<View>(R.id.chipShinyCaught).setOnClickListener { setMode(Mode.SHINY_CAUGHT) }
+        styleChips()
+
         loadMakrodex()
     }
 
@@ -75,8 +91,12 @@ class MakrodexFragment : Fragment() {
                 val status   = db.makrodexStatusDao().getUnlockedIds()
                 val unlocked = (status + inv).distinct()
                 val stats    = caught.groupBy { it.makromonId }.mapValues { it.value.size }
+                shinyCaught  = caught.filter { it.isShiny }.map { it.makromonId }.toSet()
                 Triple(inv.toList(), unlocked, stats)
             }
+            // Viděné shiny: zápis ze soubojů + všichni chycení shiny (i z doby před evidencí)
+            shinySeen = requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+                .getStringSet(cz.uhk.macroflow.pokemon.shiny.ShinyDex.SEEN_KEY, emptySet()).orEmpty() + shinyCaught
 
             val filteredList = withContext(Dispatchers.IO) {
                 val definedIds = SpawnManager.allEntries.map { it.id }
@@ -85,17 +105,64 @@ class MakrodexFragment : Fragment() {
                     .sortedBy { it.makrodexId }
             }
 
-            makrodexAdapter.updateData(filteredList, unlockedIds, invIds, catchStats)
+            allEntries = filteredList
+            unlockedCache = unlockedIds; invCache = invIds; statsCache = catchStats
+            applyMode()
+        }
+    }
 
-            if (filteredList.isNotEmpty()) {
-                val first = filteredList[0]
-                showDetail(
-                    first,
-                    unlockedIds.contains(first.makrodexId),
-                    invIds.contains(first.makrodexId),
-                    catchStats[first.makrodexId] ?: 0
-                )
+    private fun setMode(m: Mode) {
+        if (m == mode) return
+        mode = m
+        styleChips()
+        applyMode()
+    }
+
+    private fun styleChips() {
+        val v = view ?: return
+        listOf(R.id.chipDex to Mode.DEX, R.id.chipShinySeen to Mode.SHINY_SEEN, R.id.chipShinyCaught to Mode.SHINY_CAUGHT)
+            .forEach { (id, m) ->
+                val chip = v.findViewById<TextView>(id)
+                val active = m == mode
+                val activeColor = if (m == Mode.DEX) 0xFF606C38.toInt() else C_BROWN
+                chip.backgroundTintList = ColorStateList.valueOf(if (active) activeColor else 0x1A606C38)
+                chip.setTextColor(if (active) 0xFFFEFAE0.toInt() else if (m == Mode.DEX) 0xFF606C38.toInt() else C_BROWN)
             }
+    }
+
+    /** Naplní mřížku podle záložky; ve shiny záložkách jen viděné / chycené v jejich barvách. */
+    private fun applyMode() {
+        val v = view ?: return
+        val ids = allEntries.map { it.makrodexId }
+        val list = when (mode) {
+            Mode.DEX -> allEntries
+            Mode.SHINY_SEEN, Mode.SHINY_CAUGHT -> {
+                val filter = if (mode == Mode.SHINY_SEEN) cz.uhk.macroflow.pokemon.shiny.ShinyDex.Filter.SEEN
+                    else cz.uhk.macroflow.pokemon.shiny.ShinyDex.Filter.CAUGHT
+                val keep = cz.uhk.macroflow.pokemon.shiny.ShinyDex.visible(ids, filter, shinySeen, shinyCaught).toSet()
+                allEntries.filter { it.makrodexId in keep }
+            }
+        }
+        makrodexAdapter.shinyMode = mode != Mode.DEX
+        makrodexAdapter.updateData(list, unlockedCache, invCache, statsCache)
+
+        val separator = v.findViewById<TextView>(R.id.tvListSeparator)
+        val empty = v.findViewById<TextView>(R.id.tvShinyEmpty)
+        if (mode == Mode.DEX) {
+            separator.setText(R.string.pokedex_list_separator)
+            empty.visibility = View.GONE
+        } else {
+            val (seenN, caughtN) = cz.uhk.macroflow.pokemon.shiny.ShinyDex.counts(ids, shinySeen, shinyCaught)
+            separator.text = "✦ VIDĚNO $seenN · CHYCENO $caughtN / ${ids.size}"
+            empty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            empty.text = if (mode == Mode.SHINY_SEEN)
+                "Zatím jsi žádného shiny Makromona nepotkal.\nŠance je 1 : 100 – každé setkání se počítá!"
+            else "Zatím nemáš chyceného shiny.\nAž nějakého chytíš, objeví se tu v jeho barvách."
+        }
+
+        list.firstOrNull()?.let { first ->
+            showDetail(first, unlockedCache.contains(first.makrodexId) || mode != Mode.DEX,
+                invCache.contains(first.makrodexId), statsCache[first.makrodexId] ?: 0)
         }
     }
 
@@ -135,7 +202,13 @@ class MakrodexFragment : Fragment() {
 
         val typeColor = if (isInInventory) C_BROWN else C_ACCENT
         tvDetailType.backgroundTintList = ColorStateList.valueOf(typeColor)
+        val shinyStatus = if (mode == Mode.DEX) null
+            else cz.uhk.macroflow.pokemon.shiny.ShinyDex.status(entry.makrodexId, shinySeen, shinyCaught)
+        if (shinyStatus != null) tvDetailType.backgroundTintList = ColorStateList.valueOf(
+            if (shinyStatus == cz.uhk.macroflow.pokemon.shiny.ShinyDex.Status.CAUGHT) C_GOLD else C_ACCENT)
         tvDetailType.text = when {
+            shinyStatus == cz.uhk.macroflow.pokemon.shiny.ShinyDex.Status.CAUGHT -> "✦ SHINY • CHYCENO"
+            shinyStatus == cz.uhk.macroflow.pokemon.shiny.ShinyDex.Status.SEEN -> "✦ SHINY • VIDĚNO"
             isInInventory -> "${entry.type.uppercase()} • V INVENTÁŘI ($catchCount ×)"
             isUnlocked    -> "${entry.type.uppercase()} • ($catchCount ×)"
             else          -> "???"
@@ -156,7 +229,8 @@ class MakrodexFragment : Fragment() {
         val resId = requireContext().resources.getIdentifier(
             dynamicName, "drawable", requireContext().packageName
         )
-        ivDetailSprite.setImageResource(if (resId != 0) resId else R.drawable.ic_home)
+        if (resId != 0) cz.uhk.macroflow.pokemon.shiny.ShinySprites.into(ivDetailSprite, resId, entry.makrodexId, shiny = shinyStatus != null)
+        else ivDetailSprite.setImageResource(R.drawable.ic_home)
 
         if (!isUnlocked) {
             val matrix = ColorMatrix().apply { setSaturation(0f) }
@@ -217,6 +291,9 @@ class MakrodexFragment : Fragment() {
         private var catchStats: Map<String, Int>
     ) : RecyclerView.Adapter<MakrodexAdapter.VH>() {
 
+        /** Shiny záložka: sprity v shiny barvách, zlatý rámeček u chycených. */
+        var shinyMode = false
+
         fun updateData(
             newList: List<MakrodexEntryEntity>,
             newUnlocked: List<String>,
@@ -243,13 +320,19 @@ class MakrodexFragment : Fragment() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val m             = list[position]
-            val isUnlocked    = unlockedIds.contains(m.makrodexId)
+            val isUnlocked    = unlockedIds.contains(m.makrodexId) || shinyMode
             val isInInventory = invIds.contains(m.makrodexId)
 
             holder.tvName.text   = if (isUnlocked) m.displayName else "???"
             holder.tvNumber.text = "#${m.makrodexId}"
-            holder.cardView.strokeWidth = if (isInInventory) 6 else 0
-            holder.cardView.strokeColor = C_BROWN
+            if (shinyMode) {
+                val caught = m.makrodexId in shinyCaught
+                holder.cardView.strokeWidth = if (caught) 6 else 0
+                holder.cardView.strokeColor = C_GOLD
+            } else {
+                holder.cardView.strokeWidth = if (isInInventory) 6 else 0
+                holder.cardView.strokeColor = C_BROWN
+            }
 
             // --- DYNAMICKÉ SESTAVENÍ NÁZVU OBRÁZKU V ADAPTÉRU ---
             val shortId = if (m.makrodexId.length >= 3) m.makrodexId.takeLast(2) else m.makrodexId
@@ -259,7 +342,8 @@ class MakrodexFragment : Fragment() {
             val resId = holder.itemView.context.resources.getIdentifier(
                 dynamicName, "drawable", holder.itemView.context.packageName
             )
-            holder.ivSprite.setImageResource(if (resId != 0) resId else R.drawable.ic_home)
+            if (resId != 0) cz.uhk.macroflow.pokemon.shiny.ShinySprites.into(holder.ivSprite, resId, m.makrodexId, shiny = shinyMode)
+            else holder.ivSprite.setImageResource(R.drawable.ic_home)
 
             if (!isUnlocked) {
                 val matrix = ColorMatrix().apply { setSaturation(0f) }
