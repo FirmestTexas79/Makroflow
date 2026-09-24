@@ -114,21 +114,120 @@ class PokemonBattleFragment : Fragment() {
         battleContent.addView(closeBtn)
         root.addView(battleContent)
 
-        // ── INTRO OVERLAY (Křoví a Animace) ──────────────────────────────────
-        val introOverlay = buildIntroOverlay(ctx, dp, battleContent)
+        // ── INTRO podle lokace: Hory mají vlastní (kameny a hory), jinde křoví ──
+        val biome = runCatching {
+            BiomeType.valueOf(gamePrefs.getString("LAST_BIOME", BiomeType.TOWN.name) ?: BiomeType.TOWN.name)
+        }.getOrDefault(BiomeType.TOWN)
+        val introOverlay = if (biome == BiomeType.MOUNTAINS) buildMountainIntro(ctx, dp, battleContent)
+            else buildIntroOverlay(ctx, dp, battleContent, biome)
         root.addView(introOverlay)
 
         return root
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // INTRO OVERLAY
+    // ŘÍZENÍ INTRA: přeskočení klepnutím, úklid po zavření
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private val introHandler = Handler(Looper.getMainLooper())
+    private val introAnimators = mutableListOf<Animator>()
+    /** Intro už skončilo nebo bylo přeskočeno – další fáze se nespouštějí. */
+    private var introDone = false
+    private var revealStarted = false
+
+    private fun <T : Animator> T.tracked(): T { introAnimators += this; return this }
+
+    override fun onDestroyView() {
+        // Dřív zpožděná volání a animace dobíhaly i po zavření souboje
+        introHandler.removeCallbacksAndMessages(null)
+        introAnimators.toList().forEach { it.cancel() }
+        introAnimators.clear()
+        super.onDestroyView()
+    }
+
+    /** Pixel art bez rozmazání při zvětšení. */
+    private fun ImageView.crisp() {
+        (drawable as? android.graphics.drawable.BitmapDrawable)?.apply { isFilterBitmap = false; setAntiAlias(false) }
+    }
+
+    /**
+     * Společné odhalení souboje: záblesk (bílý, v Horách písečný, u shiny zlatý) + případně déšť hvězd.
+     */
+    private fun revealBattle(
+        ctx: Context, overlay: FrameLayout, battleContent: View,
+        screenW: Float, screenH: Float, dp: Float,
+        baseFlash: Int = Color.argb(235, 255, 255, 255)
+    ) {
+        if (revealStarted) return
+        revealStarted = true
+
+        val flashColor = if (isShiny) Color.argb(240, 255, 214, 102) else baseFlash
+        if (isShiny) spawnStarBurst(ctx, (overlay.parent as? FrameLayout) ?: overlay, screenW / 2f, screenH * 0.38f, dp)
+
+        // Záblesk jako samostatná vrstva NAVRCHU. Dřív se animovalo pozadí overlaye, jenže to
+        // celé zakrýval přechod – záblesk nebyl vidět a intro na konci jen naráz zmizelo.
+        val flash = View(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(flashColor)
+            alpha = 0f
+        }
+        overlay.addView(flash)
+
+        val flashIn = ObjectAnimator.ofFloat(flash, "alpha", 0f, 1f).apply { duration = if (isShiny) 180 else 110 }
+        flashIn.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(a: Animator) {
+                // Na vrcholu záblesku vyměnit scénu za souboj
+                overlay.getChildAt(0)?.visibility = View.INVISIBLE
+                overlay.setBackgroundColor(Color.TRANSPARENT)
+                battleContent.alpha = 1f
+            }
+        })
+        val flashOut = ObjectAnimator.ofFloat(flash, "alpha", 1f, 0f).apply {
+            duration = if (isShiny) 650 else 380
+            interpolator = DecelerateInterpolator()
+        }
+        AnimatorSet().apply {
+            playSequentially(flashIn, flashOut)
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(a: Animator) { overlay.visibility = View.GONE }
+            })
+            tracked()
+            start()
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HORY: kameny a hory (pixel art z MountainScene)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun buildMountainIntro(ctx: Context, dp: Float, battleContent: View): FrameLayout {
+        val overlay = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(Color.BLACK)
+        }
+        val scene = cz.uhk.macroflow.pokemon.encounter.MountainEncounterView(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+        overlay.addView(scene)
+        scene.onReveal = {
+            introDone = true
+            revealBattle(ctx, overlay, battleContent, overlay.width.toFloat(), overlay.height.toFloat(), dp,
+                baseFlash = Color.argb(235, 255, 236, 200))
+        }
+        overlay.setOnClickListener { if (!introDone) scene.skip() }
+        introHandler.postDelayed({ scene.start() }, 120)
+        return overlay
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // KŘOVÍ (louka, město, voda)
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun buildIntroOverlay(
         ctx: Context,
         dp: Float,
-        battleContent: View
+        battleContent: View,
+        biome: BiomeType
     ): FrameLayout {
 
         val bushLeftRes  = ctx.resources.getIdentifier("bush",  "drawable", ctx.packageName)
@@ -143,7 +242,12 @@ class PokemonBattleFragment : Fragment() {
             setBackgroundColor(Color.BLACK)
         }
 
-        // ── GRADIENT VRSTVA ───────────────────────────────────────────────────
+        // Vše, co má pod zábleskem zmizet, je v jednom kontejneru (revealBattle skryje první dítě)
+        val stage = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+        overlay.addView(stage)
+
         val gradientView = View(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -151,13 +255,13 @@ class PokemonBattleFragment : Fragment() {
             )
             alpha = 0f
         }
-        overlay.addView(gradientView)
+        stage.addView(gradientView)
 
-        // ── KŘOVÍ ─────────────────────────────────────────────────────────────
         val bushLeft = ImageView(ctx).apply {
             if (bushLeftRes != 0) setImageResource(bushLeftRes)
             scaleType    = ImageView.ScaleType.FIT_XY
             layoutParams = FrameLayout.LayoutParams(1, 1)
+            crisp()
         }
         val bushRight = ImageView(ctx).apply {
             if (bushRightRes != 0) setImageResource(bushRightRes)
@@ -165,10 +269,10 @@ class PokemonBattleFragment : Fragment() {
             scaleType    = ImageView.ScaleType.FIT_XY
             scaleX       = -1f
             layoutParams = FrameLayout.LayoutParams(1, 1)
+            crisp()
         }
 
-        // ── KONTEJNER NA LISTY ────────────────────────────────────────────────
-        // DŮLEŽITÉ: leafContainer musí být PŘES křoví (přidán jako poslední)
+        // Listy nad křovím
         val leafContainer = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -176,53 +280,56 @@ class PokemonBattleFragment : Fragment() {
             )
         }
 
-        overlay.addView(bushLeft)
-        overlay.addView(bushRight)
-        overlay.addView(leafContainer)
+        stage.addView(bushLeft)
+        stage.addView(bushRight)
+        stage.addView(leafContainer)
 
         overlay.post {
             val screenW = overlay.width.toFloat()
             val screenH = overlay.height.toFloat()
 
-            // ── GRADIENT POZADÍ ────────────────────────────────────────────────
-            val gradientDrawable = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(
-                    Color.argb(255, 25, 55, 15),
-                    Color.argb(255, 8,  18,  3),
-                )
-            ).apply {
+            // Barva pozadí podle lokace (voda modrá, jinak les)
+            val (inner, outer) = if (biome == BiomeType.WATER)
+                Color.argb(255, 18, 52, 92) to Color.argb(255, 4, 12, 30)
+            else Color.argb(255, 25, 55, 15) to Color.argb(255, 8, 18, 3)
+            gradientView.background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(inner, outer)).apply {
                 gradientType   = GradientDrawable.RADIAL_GRADIENT
                 gradientRadius = screenW * 0.85f
             }
-            gradientView.background = gradientDrawable
 
-            // ── ROZMĚRY KŘOVÍ ─────────────────────────────────────────────────
-            val bushW = (screenW * 0.80f).toInt()
-            val bushH = (screenH * 0.50f).toInt()
-            val bushTopMargin = (screenH * 0.42f).toInt()
+            // Keř je čtvercový pixel art – dřív se roztahoval na 80 % × 50 % obrazovky a deformoval
+            val bushSize = (screenW * 0.80f).toInt()
+            val bushTopMargin = (screenH * 0.92f).toInt() - bushSize
 
             (bushLeft.layoutParams as FrameLayout.LayoutParams).apply {
-                width      = bushW
-                height     = bushH
+                width = bushSize; height = bushSize
                 gravity    = Gravity.NO_GRAVITY
-                leftMargin = -(bushW / 10)
+                leftMargin = -(bushSize / 10)
                 topMargin  = bushTopMargin
             }
             bushLeft.requestLayout()
 
             (bushRight.layoutParams as FrameLayout.LayoutParams).apply {
-                width      = bushW
-                height     = bushH
+                width = bushSize; height = bushSize
                 gravity    = Gravity.NO_GRAVITY
-                leftMargin = (screenW - bushW + bushW / 10).toInt()
+                leftMargin = (screenW - bushSize + bushSize / 10).toInt()
                 topMargin  = bushTopMargin
             }
             bushRight.requestLayout()
-
             overlay.requestLayout()
 
-            Handler(Looper.getMainLooper()).postDelayed({
+            // Klepnutím intro přeskočíš: křoví rychle uhne a hned je záblesk
+            overlay.setOnClickListener {
+                if (introDone) return@setOnClickListener
+                introDone = true
+                introAnimators.toList().forEach { it.cancel() }
+                gradientView.alpha = 1f
+                bushLeft.animate().translationX(-screenW).setDuration(160).start()
+                bushRight.animate().translationX(screenW).setDuration(160).start()
+                revealBattle(ctx, overlay, battleContent, screenW, screenH, dp)
+            }
+
+            introHandler.postDelayed({
                 runIntroSequence(
                     ctx           = ctx,
                     overlay       = overlay,
@@ -235,18 +342,14 @@ class PokemonBattleFragment : Fragment() {
                     screenW       = screenW,
                     screenH       = screenH,
                     bushTopMargin = bushTopMargin.toFloat(),
-                    bushH         = bushH.toFloat(),
+                    bushH         = bushSize.toFloat(),
                     dp            = dp
                 )
-            }, 150)
+            }, 120)
         }
 
         return overlay
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // INTRO SEKVENCE
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun runIntroSequence(
         ctx: Context,
@@ -263,18 +366,18 @@ class PokemonBattleFragment : Fragment() {
         bushH: Float,
         dp: Float
     ) {
-        val handler = Handler(Looper.getMainLooper())
+        if (introDone) return
 
-        // ── FÁZE 1: Černá → Gradient ──────────────────────────────────────────
-        val fadeInGradient = ObjectAnimator.ofFloat(gradientView, "alpha", 0f, 1f).apply {
-            duration = 500
-        }
+        // ── FÁZE 1: Černá → Gradient ──
+        val fadeInGradient = ObjectAnimator.ofFloat(gradientView, "alpha", 0f, 1f).apply { duration = 400 }.tracked()
 
         fadeInGradient.addListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
+                if (introDone) return
 
-                // ── FÁZE 2: Wiggle křoví ──────────────────────────────────────
-                handler.postDelayed({
+                // ── FÁZE 2: Wiggle křoví ──
+                introHandler.postDelayed({
+                    if (introDone) return@postDelayed
                     val wiggleSet = AnimatorSet().apply {
                         playTogether(
                             ObjectAnimator.ofFloat(bushLeft, "rotation", 0f, -5f, 4f, -3f, 2f, 0f).apply {
@@ -290,80 +393,41 @@ class PokemonBattleFragment : Fragment() {
                                 duration = 550; interpolator = AccelerateDecelerateInterpolator()
                             }
                         )
-                    }
+                    }.tracked()
 
                     wiggleSet.addListener(object : AnimatorListenerAdapter() {
                         override fun onAnimationEnd(animation: Animator) {
+                            if (introDone) return
 
-                            // ── FÁZE 3: Křoví odletí + listy ─────────────────
-                            val leafOriginX = screenW * 0.50f
-                            val leafOriginY = bushTopMargin + bushH * 0.25f
-
-                            spawnLeafParticles(
-                                ctx, leafContainer, leafRes,
-                                leafOriginX, leafOriginY, screenW, dp
-                            )
+                            // ── FÁZE 3: Křoví odletí + listy ──
+                            spawnLeafParticles(ctx, leafContainer, leafRes, screenW * 0.50f, bushTopMargin + bushH * 0.25f, screenW, dp)
 
                             val flySet = AnimatorSet().apply {
                                 playTogether(
-                                    ObjectAnimator.ofFloat(bushLeft, "translationX",
-                                        0f, -(screenW * 0.90f)
-                                    ).apply { duration = 420; interpolator = AccelerateInterpolator(2f) },
-                                    ObjectAnimator.ofFloat(bushRight, "translationX",
-                                        0f, screenW * 0.90f
-                                    ).apply { duration = 420; interpolator = AccelerateInterpolator(2f) }
+                                    ObjectAnimator.ofFloat(bushLeft, "translationX", 0f, -(screenW * 0.90f))
+                                        .apply { duration = 420; interpolator = AccelerateInterpolator(2f) },
+                                    ObjectAnimator.ofFloat(bushRight, "translationX", 0f, screenW * 0.90f)
+                                        .apply { duration = 420; interpolator = AccelerateInterpolator(2f) }
                                 )
-                            }
+                            }.tracked()
 
                             flySet.addListener(object : AnimatorListenerAdapter() {
                                 override fun onAnimationEnd(animation: Animator) {
-
-                                    // ── FÁZE 4: Reveal flash ──────────────────
-                                    battleContent.alpha = 0f
-
-                                    // Shiny: zlatý záblesk a déšť hvězd místo bílého bliknutí
-                                    val flashColor = if (isShiny) Color.argb(240, 255, 214, 102) else Color.argb(235, 255, 255, 255)
-                                    if (isShiny) spawnStarBurst(ctx, (overlay.parent as? FrameLayout) ?: leafContainer, screenW / 2f, screenH * 0.38f, dp)
-                                    val flashIn = ObjectAnimator.ofInt(
-                                        overlay, "backgroundColor",
-                                        Color.TRANSPARENT,
-                                        flashColor
-                                    ).apply {
-                                        duration = if (isShiny) 180 else 110; setEvaluator(ArgbEvaluator())
-                                    }
-                                    val revealBattle = ObjectAnimator.ofFloat(
-                                        battleContent, "alpha", 0f, 1f
-                                    ).apply { duration = 280 }
-                                    val flashOut = ObjectAnimator.ofInt(
-                                        overlay, "backgroundColor",
-                                        flashColor, Color.TRANSPARENT
-                                    ).apply {
-                                        duration = if (isShiny) 650 else 380; setEvaluator(ArgbEvaluator())
-                                    }
-
-                                    AnimatorSet().apply {
-                                        play(revealBattle).with(flashIn)
-                                        play(flashOut).after(flashIn)
-                                        addListener(object : AnimatorListenerAdapter() {
-                                            override fun onAnimationEnd(a: Animator) {
-                                                overlay.visibility = View.GONE
-                                            }
-                                        })
-                                        start()
-                                    }
+                                    if (introDone) return
+                                    // ── FÁZE 4: záblesk a souboj ──
+                                    introDone = true
+                                    revealBattle(ctx, overlay, battleContent, screenW, screenH, dp)
                                 }
                             })
-
                             flySet.start()
                         }
                     })
-
                     wiggleSet.start()
-                }, 150)
+                }, 120)
             }
         })
 
-        handler.postDelayed({ fadeInGradient.start() }, 350)
+        introHandler.postDelayed({ if (!introDone) fadeInGradient.start() }, 200)
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -379,9 +443,8 @@ class PokemonBattleFragment : Fragment() {
         screenW: Float,
         dp: Float
     ) {
-        val handler = Handler(Looper.getMainLooper())
         repeat(14) { i ->
-            handler.postDelayed({
+            introHandler.postDelayed({
                 if (container.isAttachedToWindow) {
                     spawnSingleLeaf(ctx, container, leafRes, originX, originY, screenW, dp)
                 }
@@ -412,6 +475,7 @@ class PokemonBattleFragment : Fragment() {
 
         val leaf = ImageView(ctx).apply {
             if (leafRes != 0) setImageResource(leafRes)
+            crisp()
             layoutParams = FrameLayout.LayoutParams(leafSize, leafSize).apply {
                 leftMargin = spawnX
                 topMargin  = spawnY
