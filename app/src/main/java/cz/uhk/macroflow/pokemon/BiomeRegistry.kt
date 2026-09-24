@@ -3,9 +3,15 @@ package cz.uhk.macroflow.pokemon
 import android.graphics.PointF
 import androidx.annotation.DrawableRes
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.pokemon.cave.CaveMap
+import cz.uhk.macroflow.pokemon.cave.CaveMaps
 import cz.uhk.macroflow.pokemon.quests.QuestRegistry
 
-enum class BiomeType { TOWN, MEADOW, MOUNTAINS, LAKE, WATER }
+enum class BiomeType {
+    TOWN, MEADOW, MOUNTAINS, LAKE, WATER,
+    /** Jeskyně v Horách (docs/adr/0013) – mapy větší než obrazovka s pohyblivou kamerou. */
+    CAVE_OPEN, CAVE_MAZE
+}
 
 object BiomeRegistry {
     val TOWN_GRAPH = listOf(
@@ -68,7 +74,11 @@ object BiomeRegistry {
         /** Quest, který se v biomu načte; null = ponechat aktuálně aktivní quest. */
         val questId: String?,
         /** Zobrazit ukazatel denních kroků (cíl = zámek dalšího biomu). */
-        val stepGoalFor: BiomeType? = null
+        val stepGoalFor: BiomeType? = null,
+        /** Jeskyně: mapa větší než obrazovka, kamera jede za postavou. null = mapa přes celou obrazovku. */
+        val cave: CaveMap? = null,
+        /** Biom souboje (intro, divocí Makromoni, questy) – jeskyně bojují jako Hory. */
+        val battleBiome: BiomeType = type
     )
 
     val DEFINITIONS: Map<BiomeType, BiomeDefinition> by lazy {
@@ -76,9 +86,22 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.TOWN, R.drawable.poketown, TOWN_GRAPH, QuestRegistry.TOWN_INTRO_QUEST.id),
             BiomeDefinition(BiomeType.MEADOW, R.drawable.meadow, MEADOW_GRAPH, QuestRegistry.MEADOW_QUEST.id,
                 stepGoalFor = BiomeType.MOUNTAINS),
-            BiomeDefinition(BiomeType.MOUNTAINS, R.drawable.mountains, MOUNTAINS_GRAPH, QuestRegistry.MOUNTAINS_QUEST.id)
+            BiomeDefinition(BiomeType.MOUNTAINS, R.drawable.mountains, MOUNTAINS_GRAPH, QuestRegistry.MOUNTAINS_QUEST.id),
+            BiomeDefinition(BiomeType.CAVE_OPEN, R.drawable.cave_open, graphOf(CaveMaps.OPEN), questId = null,
+                cave = CaveMaps.OPEN, battleBiome = BiomeType.MOUNTAINS),
+            BiomeDefinition(BiomeType.CAVE_MAZE, R.drawable.cave_maze, graphOf(CaveMaps.MAZE), questId = null,
+                cave = CaveMaps.MAZE, battleBiome = BiomeType.MOUNTAINS)
         ).associateBy { it.type }
     }
+
+    /** Navigační graf jeskyně z art souřadnic (sousedé obousměrně podle hran). */
+    fun graphOf(cave: CaveMap): List<MovementEngine.Waypoint> = cave.nodes.map { n ->
+        MovementEngine.Waypoint(n.id, PointF(n.x.toFloat() / cave.artW, n.y.toFloat() / cave.artH), cave.neighbors(n.id))
+    }
+
+    /** Jeskyně, do které vede uzel v Horách („cave“, „mine“), nebo null. */
+    fun caveBehind(mountainNode: String): BiomeType? =
+        DEFINITIONS.values.firstOrNull { it.cave?.mountainNode == mountainNode }?.type
 
     fun definition(type: BiomeType): BiomeDefinition? = DEFINITIONS[type]
 

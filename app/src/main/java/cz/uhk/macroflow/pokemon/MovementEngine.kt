@@ -37,6 +37,9 @@ class MovementEngine(
 
     fun getCurrentPosition(): PointF = currentPosition
 
+    /** Volá se při každém posunu postavy (snímek chůze, reset) – kamera v jeskyních. */
+    var onMoved: (() -> Unit)? = null
+
     fun updateBiome(newGraph: List<Waypoint>, startPos: PointF) {
         cancel()
         this.navigationGraph = newGraph
@@ -106,6 +109,7 @@ class MovementEngine(
             .x(targetX).y(targetY)
             .setDuration((dist * currentSpeed).toLong())
             .setInterpolator(LinearInterpolator())
+            .setUpdateListener { onMoved?.invoke() }
             .setListener(object : AnimatorListenerAdapter() {
                 private var cancelled = false
                 override fun onAnimationCancel(a: Animator) { cancelled = true }
@@ -183,6 +187,7 @@ class MovementEngine(
             ashView.x = relPos.x * mapBackground.width - (ashView.width / 2f)
             ashView.y = relPos.y * mapBackground.height - ashView.height.toFloat()
             updateSprite(1, 0)
+            onMoved?.invoke()
         }
     }
 

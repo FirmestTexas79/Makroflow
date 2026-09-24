@@ -30,6 +30,11 @@ import cz.uhk.macroflow.R
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.nutrition.BarcodeProductLookup
+import cz.uhk.macroflow.pokemon.cave.CaveMap
+import cz.uhk.macroflow.pokemon.cave.CaveTransitionView
+import cz.uhk.macroflow.pokemon.cave.CrystalColor
+import cz.uhk.macroflow.pokemon.cave.Crystals
+import cz.uhk.macroflow.pokemon.cave.MapCamera
 import cz.uhk.macroflow.pokemon.ui.StepProgressBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -39,6 +44,14 @@ import kotlin.math.sqrt
 class MakromonMapActivity : AppCompatActivity() {
 
     private lateinit var mapBackground:    ImageView
+    /** Pozadí + postava + NPC; v jeskyních větší než obrazovka a posouvaný kamerou. */
+    private lateinit var mapWorld:         FrameLayout
+    private lateinit var ashView:          ImageView
+    private var crystalView: ImageView? = null
+    private var crystalGlow: View? = null
+    private val crystalAnimators = mutableListOf<android.animation.Animator>()
+    /** Během přechodu do/z jeskyně se na mapu neklepe. */
+    private var transitionRunning = false
     private lateinit var movementEngine:   MovementEngine
     private lateinit var questDialogManager: QuestDialogManager
     private lateinit var companionManager: CompanionManager
@@ -60,11 +73,17 @@ class MakromonMapActivity : AppCompatActivity() {
         "vstup_z_meadow", "rozcesti_hory", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2"
     )
 
-    /** Uzly, kde může vyskočit divoký Makromon (90 % šance). */
-    private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2", "cave", "peak")
+    /** Uzly, kde může vyskočit divoký Makromon (90 % šance). Jeskyně mají vlastní (CaveMap.encounterNodes). */
+    private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2", "peak") +
+        cz.uhk.macroflow.pokemon.cave.CaveMaps.ALL.flatMap { it.encounterNodes }
+
+    /** Přechod mezi mapami. */
+    private enum class MapTransition { NONE, FADE, CAVE_IN, CAVE_OUT }
 
     companion object {
         private const val DOUBLE_CLICK_TIME = 300L
+        /** Dosah klepnutí na uzel v podílu obrazovky. */
+        private const val TAP_RADIUS = 0.1f
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
     }
 
@@ -74,9 +93,10 @@ class MakromonMapActivity : AppCompatActivity() {
         setContentView(R.layout.activity_pokemon_map)
 
         mapBackground = findViewById(R.id.mapBackground)
+        mapWorld = findViewById(R.id.mapWorld)
         stepProgressBar = findViewById(R.id.stepProgressBar)
 
-        val ashView = findViewById<ImageView>(R.id.ashView).also {
+        ashView = findViewById<ImageView>(R.id.ashView).also {
             it.layoutParams.width  = (28 * resources.displayMetrics.density).toInt()
             it.layoutParams.height = (42 * resources.displayMetrics.density).toInt()
             it.requestLayout()
@@ -87,6 +107,7 @@ class MakromonMapActivity : AppCompatActivity() {
         }.build()
 
         movementEngine = MovementEngine(this, ashView, mapBackground)
+        movementEngine.onMoved = { updateCamera() }
 
         questDialogManager = QuestDialogManager(
             this,
@@ -146,7 +167,7 @@ class MakromonMapActivity : AppCompatActivity() {
         }
 
         mapBackground.post {
-            changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), animate = false)
+            changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), MapTransition.NONE)
             intent.getStringExtra("TARGET_LOCATION")?.let { triggerHotspotAction(it.lowercase()) }
         }
 
@@ -195,7 +216,7 @@ class MakromonMapActivity : AppCompatActivity() {
             visibility = View.GONE
             elevation = 5f
         }
-        findViewById<ViewGroup>(R.id.mapMainContent).addView(gudwinNPC)
+        mapWorld.addView(gudwinNPC)
     }
 
     private fun setupStarterBush() {
@@ -209,7 +230,7 @@ class MakromonMapActivity : AppCompatActivity() {
             visibility = View.GONE
             elevation = 5f
         }
-        findViewById<ViewGroup>(R.id.mapMainContent).addView(starterBush)
+        mapWorld.addView(starterBush)
     }
 
     private fun setupMeadowBush() {
@@ -222,7 +243,7 @@ class MakromonMapActivity : AppCompatActivity() {
             visibility = View.GONE
             elevation = 5f
         }
-        findViewById<ViewGroup>(R.id.mapMainContent).addView(meadowBushNPC)
+        mapWorld.addView(meadowBushNPC)
     }
 
     /**
@@ -252,19 +273,23 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (transitionRunning) return true
         if (event.action == MotionEvent.ACTION_UP) {
-            val mapContent = findViewById<View>(R.id.mapMainContent)
+            // Souřadnice ve světě mapy (getLocationOnScreen zahrnuje i posun kamery)
+            val viewport = findViewById<View>(R.id.mapMainContent)
             val location = IntArray(2)
-            mapContent.getLocationOnScreen(location)
+            mapWorld.getLocationOnScreen(location)
+            val relX = (event.rawX - location[0]) / mapWorld.width
+            val relY = (event.rawY - location[1]) / mapWorld.height
 
-            val relX = (event.rawX - location[0]) / mapContent.width
-            val relY = (event.rawY - location[1]) / mapContent.height
-
-            val clickedWaypoint = movementEngine.navigationGraph.find { waypoint ->
-                clickableNodes.contains(waypoint.id) &&
-                        sqrt(Math.pow((waypoint.pos.x - relX).toDouble(), 2.0) +
-                                Math.pow((waypoint.pos.y - relY).toDouble(), 2.0)) < 0.1
-            }
+            val cave = BiomeRegistry.definition(currentBiome)?.cave
+            // Nejbližší uzel v dosahu (dřív první nalezený – v hustém bludišti by se trefil vedlejší)
+            val clickedWaypoint = movementEngine.navigationGraph
+                .filter { cave != null || clickableNodes.contains(it.id) }
+                .map { it to MapCamera.tapDistance(it.pos.x, it.pos.y, relX, relY,
+                    mapWorld.width, mapWorld.height, viewport.width, viewport.height) }
+                .filter { it.second < TAP_RADIUS }
+                .minByOrNull { it.second }?.first
 
             if (clickedWaypoint != null && !questDialogManager.isVisible() && supportFragmentManager.backStackEntryCount == 0) {
                 triggerHotspotAction(clickedWaypoint.id)
@@ -285,7 +310,15 @@ class MakromonMapActivity : AppCompatActivity() {
 
             when (nodeName) {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
-                "mine" -> scanInMine()
+                "cave", "mine" -> BiomeRegistry.caveBehind(nodeName)?.let { cave ->
+                    val entry = BiomeRegistry.definition(cave)?.cave?.exitNode ?: return@let
+                    enterBiomeAtNode(cave, entry, MapTransition.CAVE_IN)
+                }
+                "vychod_jeskyne", "vychod_dolu" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
+                    enterBiomeAtNode(BiomeType.MOUNTAINS, it.mountainNode, MapTransition.CAVE_OUT)
+                }
+                "tezba" -> scanInMine()
+                "krystal_modry", "krystal_cerveny" -> BiomeRegistry.definition(currentBiome)?.cave?.let { collectCrystal(it) }
                 "camp" -> restAtCamp()
                 "rozcesti_hory" -> showMapToast("🪧 ↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku")
                 "starter_bush" -> {
@@ -311,7 +344,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 "vstup_z_town" -> changeBiome(BiomeType.TOWN, PointF(0.46f, 0.15f))
                 in encounterNodes -> {
                     if ((1..100).random() <= 90) {
-                        val encounterBiome = if (nodeName == "voda") BiomeType.WATER else currentBiome
+                        val encounterBiome = if (nodeName == "voda") BiomeType.WATER
+                            else BiomeRegistry.definition(currentBiome)?.battleBiome ?: currentBiome
                         getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                             .putString("LAST_BIOME", encounterBiome.name)
                             .remove("FORCE_ENCOUNTER_ID")
@@ -354,7 +388,13 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     private fun emptyEncounterText(node: String): String = when (node) {
-        "cave" -> "V jeskyni je ticho… jen kape voda. Zkus to znovu."
+        "jezirko" -> "Na hladině podzemního jezírka se jen zavlnil odraz hub. Zkus to znovu."
+        "houby" -> "Svítící houby pomalu pulzují… nikdo tu není. Zkus to znovu."
+        "krystaly_j", "balvany_j" -> "Mezi kameny to jen zapraskalo. Zkus to znovu."
+        "vozik" -> "Ve starém vozíku je jen hlušina. Zkus to znovu."
+        "netopyri" -> "Netopýři se rozletěli, ale nic dalšího se nehnulo. Zkus to znovu."
+        "slepa_chodba" -> "Slepá chodba… jen kape voda. Zkus to znovu."
+        "hlubina" -> "Z hlubiny zafoukal studený vzduch. Zkus to znovu."
         "peak" -> "Na vrcholu fouká, ale nikdo tu není. Výhled na celý Makrosvět ale stojí za to."
         "skaly1", "skaly2" -> "Mezi skalami se nic nehnulo. Zkus to znovu."
         "voda" -> "Hladina je klidná. Zkus to znovu."
@@ -391,10 +431,10 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
-    private fun enterBiomeAtNode(target: BiomeType, nodeId: String) {
+    private fun enterBiomeAtNode(target: BiomeType, nodeId: String, transition: MapTransition = MapTransition.FADE) {
         val graph = BiomeRegistry.definition(target)?.graph ?: return
         val pos = BiomeRegistry.nodePos(graph, nodeId) ?: return
-        changeBiome(target, PointF(pos.x, pos.y))
+        changeBiome(target, PointF(pos.x, pos.y), transition)
     }
 
     private fun showStepWarningToast(missingSteps: Int) =
@@ -422,7 +462,7 @@ class MakromonMapActivity : AppCompatActivity() {
         )
     }
 
-    private fun changeBiome(newBiome: BiomeType, startPos: PointF, animate: Boolean = true) {
+    private fun changeBiome(newBiome: BiomeType, startPos: PointF, transition: MapTransition = MapTransition.FADE) {
         val container = findViewById<ViewGroup>(R.id.mapMainContent)
         val transitionAction = {
             currentBiome = newBiome
@@ -430,65 +470,202 @@ class MakromonMapActivity : AppCompatActivity() {
             // Úvodní tutoriál (otazník) patří zatím jen k městu
             findViewById<View>(R.id.btnStartTutorial).visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
 
-            BiomeRegistry.definition(newBiome)?.questId?.let { questManager.loadQuest(it) }
+            val def = BiomeRegistry.definition(newBiome)
+            def?.questId?.let { questManager.loadQuest(it) }
+            gudwinNPC.visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
+            starterBush.visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
+            meadowBushNPC.visibility = if (newBiome == BiomeType.MEADOW) View.VISIBLE else View.GONE
+            removeCrystal()
+
+            if (def != null) {
+                mapBackground.setImageResource(def.backgroundRes)
+                layoutWorld(def.cave)
+                movementEngine.updateBiome(def.graph, startPos)
+            }
 
             when (newBiome) {
                 BiomeType.TOWN -> {
-                    mapBackground.setImageResource(R.drawable.poketown)
-                    movementEngine.updateBiome(BiomeRegistry.TOWN_GRAPH, startPos)
-                    gudwinNPC.visibility = View.VISIBLE
-                    starterBush.visibility = View.VISIBLE
-                    meadowBushNPC.visibility = View.GONE
-
                     val gudwinPos = BiomeRegistry.TOWN_GRAPH.find { it.id == "gudwin" }?.pos ?: PointF(0.120f, 0.520f)
                     val bushPos = BiomeRegistry.TOWN_GRAPH.find { it.id == "starter_bush" }?.pos ?: PointF(0.200f, 0.170f)
-
                     gudwinNPC.post {
-                        gudwinNPC.x = gudwinPos.x * container.width - (gudwinNPC.width / 2)
-                        gudwinNPC.y = gudwinPos.y * container.height - gudwinNPC.height
+                        gudwinNPC.x = gudwinPos.x * mapWorld.width - (gudwinNPC.width / 2)
+                        gudwinNPC.y = gudwinPos.y * mapWorld.height - gudwinNPC.height
                     }
                     starterBush.post {
-                        starterBush.x = bushPos.x * container.width - (starterBush.width / 2)
-                        starterBush.y = bushPos.y * container.height - starterBush.height
+                        starterBush.x = bushPos.x * mapWorld.width - (starterBush.width / 2)
+                        starterBush.y = bushPos.y * mapWorld.height - starterBush.height
                     }
                 }
                 BiomeType.MEADOW -> {
-                    mapBackground.setImageResource(R.drawable.meadow)
-                    movementEngine.updateBiome(BiomeRegistry.MEADOW_GRAPH, startPos)
-                    gudwinNPC.visibility = View.GONE
-                    starterBush.visibility = View.GONE
-                    meadowBushNPC.visibility = View.VISIBLE
-
                     val bushNpcPos = BiomeRegistry.MEADOW_GRAPH.find { it.id == "meadow_npc" }?.pos ?: PointF(0.630f, 0.430f)
                     meadowBushNPC.post {
-                        meadowBushNPC.x = bushNpcPos.x * container.width - (meadowBushNPC.width / 2)
-                        meadowBushNPC.y = bushNpcPos.y * container.height - (meadowBushNPC.height / 0.8f)
+                        meadowBushNPC.x = bushNpcPos.x * mapWorld.width - (meadowBushNPC.width / 2)
+                        meadowBushNPC.y = bushNpcPos.y * mapWorld.height - (meadowBushNPC.height / 0.8f)
                     }
                 }
-                BiomeType.MOUNTAINS -> {
-                    mapBackground.setImageResource(R.drawable.mountains)
-                    movementEngine.updateBiome(BiomeRegistry.MOUNTAINS_GRAPH, startPos)
-                    gudwinNPC.visibility = View.GONE
-                    starterBush.visibility = View.GONE
-                    meadowBushNPC.visibility = View.GONE
-                }
-                else -> {}
+                else -> def?.cave?.let { cave -> mapWorld.post { placeCrystal(cave) } }
             }
             // Ladicí body grafu jen v debug buildu – dřív byly vidět i v produkční verzi.
-            if (BuildConfig.DEBUG) drawDebugNodes(container)
+            if (BuildConfig.DEBUG) mapWorld.post { drawDebugNodes(mapWorld) }
         }
 
-        if (animate) {
-            container.animate().alpha(0f).setDuration(400).withEndAction {
+        when (transition) {
+            MapTransition.NONE -> transitionAction()
+            MapTransition.FADE -> container.animate().alpha(0f).setDuration(400).withEndAction {
                 transitionAction()
                 container.animate().alpha(1f).setDuration(400).start()
             }.start()
-        } else {
-            transitionAction()
+            MapTransition.CAVE_IN, MapTransition.CAVE_OUT ->
+                playCaveTransition(exiting = transition == MapTransition.CAVE_OUT, onCovered = transitionAction)
         }
     }
 
-    private fun drawDebugNodes(container: ViewGroup) {
+    // ─────────────────────────────────────────────────────────────────────────
+    // KAMERA (jeskyně): svět je větší než obrazovka a jede za postavou
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Velikost světa: běžné mapy = obrazovka (centerCrop jako dřív). Jeskyně = obrázek zvětšený
+     * celočíselným násobkem bez vyhlazení; kamera pak posouvá celý svět.
+     */
+    private fun layoutWorld(cave: CaveMap?) {
+        val viewport = findViewById<View>(R.id.mapMainContent)
+        val lp = mapWorld.layoutParams
+        mapWorld.translationX = 0f
+        mapWorld.translationY = 0f
+        if (cave == null) {
+            lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+            lp.height = ViewGroup.LayoutParams.MATCH_PARENT
+            mapBackground.scaleType = ImageView.ScaleType.CENTER_CROP
+        } else {
+            val scale = MapCamera.pixelScale(cave.artW, cave.artH, viewport.width, viewport.height, cave.artPixelsAcross)
+            lp.width = cave.artW * scale
+            lp.height = cave.artH * scale
+            mapBackground.scaleType = ImageView.ScaleType.FIT_XY
+            (mapBackground.drawable as? android.graphics.drawable.BitmapDrawable)?.apply {
+                isFilterBitmap = false; setAntiAlias(false)
+            }
+        }
+        mapWorld.layoutParams = lp
+    }
+
+    /** Postava uprostřed obrazovky, ale kamera nevyjede za okraj pozadí. */
+    private fun updateCamera() {
+        if (BiomeRegistry.definition(currentBiome)?.cave == null) {
+            mapWorld.translationX = 0f; mapWorld.translationY = 0f
+            return
+        }
+        val viewport = findViewById<View>(R.id.mapMainContent)
+        mapWorld.translationX = MapCamera.offset(ashView.x + ashView.width / 2f, viewport.width, mapWorld.width)
+        mapWorld.translationY = MapCamera.offset(ashView.y + ashView.height / 2f, viewport.height, mapWorld.height)
+    }
+
+    /** Tmavě modrý mechový přechod: pod plně zakrytou obrazovkou se vymění mapa, pak se překryv rozplyne. */
+    private fun playCaveTransition(exiting: Boolean, onCovered: () -> Unit) {
+        val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+        movementEngine.cancel()
+        transitionRunning = true
+        val overlay = CaveTransitionView(this, exiting).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            elevation = 200f
+        }
+        overlay.onCovered = onCovered
+        overlay.onFinished = {
+            overlay.animate().alpha(0f).setDuration(if (exiting) 420 else 520).withEndAction {
+                root.removeView(overlay)
+                transitionRunning = false
+            }.start()
+        }
+        root.addView(overlay)
+        overlay.post { overlay.start() }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // KRYSTALY na konci jeskyní (později otevřou legendární souboj)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun isCollected(c: CrystalColor) = gamePrefs.getBoolean(c.prefKey, false)
+
+    private fun placeCrystal(cave: CaveMap) {
+        removeCrystal()
+        if (isCollected(cave.crystal) || mapWorld.width == 0) return
+        val scale = mapWorld.width / cave.artW.toFloat()
+        val (bx, by) = cave.crystalBase
+        val w = (Crystals.W * scale).toInt()
+        val h = (Crystals.H * scale).toInt()
+        val left = bx * scale - w / 2f
+        val top = by * scale - h
+
+        val glowSize = (w * 3.2f).toInt()
+        val glow = View(this).apply {
+            layoutParams = FrameLayout.LayoutParams(glowSize, glowSize)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+                gradientRadius = glowSize / 2f
+                colors = intArrayOf((cave.crystal.glow and 0x00FFFFFF) or 0x99000000.toInt(), Color.TRANSPARENT)
+            }
+            x = left + w / 2f - glowSize / 2f
+            y = top + h / 2f - glowSize / 2f
+            elevation = 1f
+        }
+        val bmp = android.graphics.Bitmap.createBitmap(Crystals.pixels(cave.crystal), Crystals.W, Crystals.H, android.graphics.Bitmap.Config.ARGB_8888)
+        val crystal = ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(w, h)
+            setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, bmp).apply { isFilterBitmap = false })
+            scaleType = ImageView.ScaleType.FIT_XY
+            x = left; y = top
+            elevation = 1.5f
+        }
+        mapWorld.addView(glow)
+        mapWorld.addView(crystal)
+        crystalGlow = glow
+        crystalView = crystal
+
+        // Krystal se vznáší (po celých art pixelech) a záře pulzuje
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(crystal, "translationY", 0f, -2 * scale, 0f).apply {
+            duration = 2200; repeatCount = android.animation.ValueAnimator.INFINITE
+            // skoky po celých art pixelech, ne plynule (pixel art)
+            setEvaluator(android.animation.TypeEvaluator<Float> { f, _, _ ->
+                -Math.round(2 * kotlin.math.sin(f * Math.PI).toFloat()) * scale
+            })
+            start()
+        }
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.45f, 1f, 0.45f).apply {
+            duration = 1800; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+    }
+
+    private fun removeCrystal() {
+        crystalAnimators.forEach { it.cancel() }
+        crystalAnimators.clear()
+        crystalView?.let { mapWorld.removeView(it) }
+        crystalGlow?.let { mapWorld.removeView(it) }
+        crystalView = null; crystalGlow = null
+    }
+
+    private fun collectCrystal(cave: CaveMap) {
+        val color = cave.crystal
+        if (isCollected(color)) {
+            showMapToast("Oltář je prázdný – ${color.label} už máš u sebe.")
+            return
+        }
+        gamePrefs.edit().putBoolean(color.prefKey, true).apply()
+        val crystal = crystalView
+        val glow = crystalGlow
+        crystalAnimators.forEach { it.cancel() }
+        crystalAnimators.clear()
+        crystal?.animate()?.translationYBy(-crystal.height * 0.6f)?.scaleX(1.5f)?.scaleY(1.5f)?.alpha(0f)
+            ?.setDuration(900)?.withEndAction { removeCrystal() }?.start()
+        glow?.animate()?.scaleX(3f)?.scaleY(3f)?.alpha(0f)?.setDuration(900)?.start()
+
+        val all = CrystalColor.entries.filter { isCollected(it) }.toSet()
+        val tail = if (Crystals.legendaryUnlocked(all))
+            "Oba krystaly se rozzářily současně… Někde v Makrosvětě se probudila legenda."
+        else "Pulzuje v ruce. Druhý krystal prý leží v jiné jeskyni."
+        showMapToast("💎 Získal jsi ${color.label}!\n$tail")
+    }
+
+    private fun drawDebugNodes(container: FrameLayout) {
         container.findViewWithTag<View>("debug_layer")?.let { container.removeView(it) }
         val debugLayer = FrameLayout(this).apply {
             tag = "debug_layer"

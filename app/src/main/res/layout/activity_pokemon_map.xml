@@ -11,19 +11,27 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <ImageView
-            android:id="@+id/mapBackground"
+        <!-- Svět mapy: pozadí + postava (+ NPC, krystaly). Na mapách přes celou obrazovku má
+             velikost obrazovky; v jeskyních je větší a posouvá ho kamera (docs/adr/0013). -->
+        <FrameLayout
+            android:id="@+id/mapWorld"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:src="@drawable/poketown" />
+            android:layout_height="match_parent">
 
-        <ImageView
-            android:id="@+id/ashView"
-            android:layout_width="28dp"
-            android:layout_height="42dp"
-            android:scaleType="fitCenter"
-            android:elevation="2dp" />
+            <ImageView
+                android:id="@+id/mapBackground"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/poketown" />
+
+            <ImageView
+                android:id="@+id/ashView"
+                android:layout_width="28dp"
+                android:layout_height="42dp"
+                android:scaleType="fitCenter"
+                android:elevation="2dp" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="wrap_content"
