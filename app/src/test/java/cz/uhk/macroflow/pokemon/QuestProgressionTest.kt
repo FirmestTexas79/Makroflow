@@ -122,3 +122,33 @@ class QuestProgressionTest {
         assertEquals(setOf("kcal", "protein", "carbs", "fat"), nutrition.map { it.targetId }.toSet())
     }
 }
+
+class QuestReminderTest {
+    private fun stage(type: RequirementType, target: Int, targetId: String? = null) =
+        QuestStage("t", "úvodní text", 0, type, target, targetId)
+
+    @Test
+    fun `připomínka místo opakování úvodu – průzkum`() {
+        val s = stage(RequirementType.VISIT_NODE, 3, "domov,pokedex,obchod")
+        assertEquals("Ještě se podívej: Makrodex, Obchod.", QuestProgression.reminder(s, "0,domov"))
+    }
+
+    @Test
+    fun `připomínka kroků ukazuje kolik chybí`() {
+        val s = stage(RequirementType.WALK_STEPS, 5000)
+        assertEquals("Dnes máš 3200 kroků z 5000. Ještě 1800 – rozhýbej se!", QuestProgression.reminder(s, "3200"))
+    }
+
+    @Test
+    fun `připomínka se liší od úvodního textu u všech typů fází`() {
+        RequirementType.entries.filter { it != RequirementType.TALK_TO_NPC }.forEach { type ->
+            val s = stage(type, 3, if (type == RequirementType.HIT_TARGET) "protein" else "domov")
+            assertTrue(type.name, QuestProgression.reminder(s, "1") != s.text)
+        }
+    }
+
+    @Test
+    fun `každý quest má rozloučení`() {
+        QuestRegistry.ALL.forEach { assertTrue(it.id, it.farewell.isNotBlank()) }
+    }
+}

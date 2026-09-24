@@ -449,7 +449,7 @@ class MainActivity : AppCompatActivity() {
             db.clearAllTables()
 
             // Vymazání všech SharedPreferences
-            listOf("GamePrefs", "UserPrefs", "TrainingPrefs").forEach { name ->
+            listOf("GamePrefs", "UserPrefs", "TrainingPrefs", "QuestPrefs").forEach { name ->
                 getSharedPreferences(name, MODE_PRIVATE).edit().clear().apply()
             }
 

@@ -57,8 +57,7 @@ class QuestDialogManager(
         "Vlevo najdeš svůj Domov. Tam si odpočineš a spravíš inventář.",
         "Vpravo je tvůj věrný Pokedex. Ukáže ti vše, co jsi chytil.",
         "A támhle dole je Market! Tam utratíš těžce vydřené coiny.",
-        "Kdykoliv budeš tápat, klikni na otazník! Teď už běž makat!",
-        "Jo a mimochodem, Tomáš je GAY haha xdddd"
+        "Kdykoliv budeš tápat, klikni na otazník! Teď už běž makat!"
     )
 
     init {

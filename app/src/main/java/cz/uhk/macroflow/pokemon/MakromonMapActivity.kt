@@ -105,7 +105,8 @@ class MakromonMapActivity : AppCompatActivity() {
             targetsProvider = {
                 val t = cz.uhk.macroflow.dashboard.MacroCalculator.calculate(applicationContext)
                 cz.uhk.macroflow.energy.Adherence.Targets(t.calories, t.protein, t.carbs, t.fat)
-            }
+            },
+            introPrefs = getSharedPreferences("QuestPrefs", Context.MODE_PRIVATE)
         )
 
         // PROPOJENÍ: Když se v manageru změní progres (např. onMealLogged), refreshneme UI

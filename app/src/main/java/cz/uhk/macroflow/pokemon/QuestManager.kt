@@ -43,7 +43,9 @@ class QuestManager(
     private val dialogManager: QuestDialogManager,
     private val scope: CoroutineScope,
     /** Dnešní OSOBNÍ cíle (volá se na IO vlákně); null = fáze HIT_TARGET se nevyhodnocují. */
-    private val targetsProvider: (() -> Adherence.Targets)? = null
+    private val targetsProvider: (() -> Adherence.Targets)? = null,
+    /** Kde si pamatujeme, které úvodní dialogy už hráč slyšel. */
+    private val introPrefs: android.content.SharedPreferences? = null
 ) {
     private var activeQuest: QuestDefinition? = null
     private var currentProgress: QuestProgressEntity? = null
@@ -214,23 +216,54 @@ class QuestManager(
         withContext(Dispatchers.IO) { db.questDao().saveQuestProgress(result.progress) }
         onProgressChanged?.invoke(result.progress)
 
-        if (result.stageCompleted && !silent) checkNpcInteraction()
+        // Po splnění fáze NPC sám představí další úkol (nebo se rozloučí)
+        if (result.stageCompleted && !silent) checkNpcInteraction(playerInitiated = false)
     }
 
-    fun checkNpcInteraction() {
+    /**
+     * Rozhovor s NPC:
+     *  - úvod fáze se přehraje jen poprvé (nebo když ho NPC sám ohlásí po splnění předchozí),
+     *  - při dalším oslovení NPC řekne jen krátkou připomínku s aktuálním postupem,
+     *  - po dokončení questu se rozloučí.
+     */
+    fun checkNpcInteraction(playerInitiated: Boolean = true) {
         val quest = activeQuest ?: return
         val progress = currentProgress ?: return
-        if (progress.isCompleted) return
-        val stage = quest.stages.getOrNull(progress.currentStageIndex) ?: return
+        val lastStage = quest.stages.last()
 
+        if (progress.isCompleted) {
+            if (!playerInitiated) {
+                // Právě dokončeno – rozlučka hned, bez čekání na kliknutí
+                showLine(quest, lastStage, "Splněno!", quest.farewell, quest.stages.size)
+            } else {
+                showLine(quest, lastStage, "Hotovo", quest.farewell, quest.stages.size)
+            }
+            return
+        }
+
+        val stage = quest.stages.getOrNull(progress.currentStageIndex) ?: return
+        val introSeen = introSeenIndex(quest.id) >= progress.currentStageIndex
+        val text = if (!playerInitiated || !introSeen) stage.text
+            else QuestProgression.reminder(stage, progress.metadata)
+        markIntroSeen(quest.id, progress.currentStageIndex)
+        showLine(quest, stage, stage.title, text, progress.currentStageIndex)
+    }
+
+    private fun showLine(quest: QuestDefinition, speaker: QuestStage, title: String, text: String, stepIndex: Int) {
         dialogManager.showQuestDialog(
-            speakerResource = stage.speakerResId,
-            speakerName = stage.speakerName,
-            stageName = stage.title,
-            text = stage.text,
+            speakerResource = speaker.speakerResId,
+            speakerName = speaker.speakerName,
+            stageName = title,
+            text = text,
             totalSteps = quest.stages.size,
-            currentStepIndex = progress.currentStageIndex
+            currentStepIndex = stepIndex
         )
+    }
+
+    private fun introSeenIndex(questId: String): Int = introPrefs?.getInt("intro_seen_$questId", -1) ?: -1
+
+    private fun markIntroSeen(questId: String, index: Int) {
+        if (index > introSeenIndex(questId)) introPrefs?.edit()?.putInt("intro_seen_$questId", index)?.apply()
     }
 
     fun getActiveStage(): QuestStage? {

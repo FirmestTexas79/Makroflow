@@ -30,7 +30,9 @@ data class QuestStage(
 
 data class QuestDefinition(
     val id: String,
-    val stages: List<QuestStage>
+    val stages: List<QuestStage>,
+    /** Co NPC řekne, když s ním hráč mluví po dokončení celého questu. */
+    val farewell: String = "Už jsi pro mě udělal dost. Hodně štěstí na cestách, hrdino!"
 )
 
 // Objekt se všemi questy ve hře
@@ -40,6 +42,7 @@ object QuestRegistry {
 
     val TOWN_INTRO_QUEST = QuestDefinition(
         id = "town_intro_oliver",
+        farewell = "Město už znáš jako své boty. Cesta do Meadow je volná – a kdyby něco, víš, kde mě najdeš!",
         stages = listOf(
             QuestStage(
                 title = "První kroky městem",
@@ -72,6 +75,7 @@ object QuestRegistry {
 
     val MEADOW_QUEST = QuestDefinition(
         id = "meadow_mastery",
+        farewell = "Louku máš v malíčku. Za můstkem na východě začínají hory – ale bez pořádné procházky tě tam nepustí!",
         stages = listOf(
             QuestStage(
                 title = "Příprava na cestu",
@@ -112,6 +116,7 @@ object QuestRegistry {
     // ════════════════════════════════════════════════════════════════════════
     val MOUNTAINS_QUEST = QuestDefinition(
         id = "mountains_macro_king",
+        farewell = "Výživový rytíři hor! Moje armáda je silná a kuchyně reformovaná. Jen tak dál – trefuj své cíle každý den.",
         stages = listOf(
             QuestStage(
                 title = "Audience u krále",

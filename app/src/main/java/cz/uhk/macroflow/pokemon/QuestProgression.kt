@@ -31,6 +31,39 @@ object QuestProgression {
         return Adherence.percent(n, eaten, targets)
     }
 
+    private val nodeNames = mapOf(
+        "domov" to "Domov", "pokedex" to "Makrodex", "obchod" to "Obchod",
+        "camp" to "tábor", "cave" to "jeskyni"
+    )
+
+    /**
+     * Krátká připomínka, co ještě chybí – NPC ji řekne, když s ním hráč mluví podruhé.
+     * (Dřív se pokaždé přehrál celý úvodní dialog fáze.)
+     */
+    fun reminder(stage: QuestStage, metadata: String): String {
+        val v = currentValue(stage, metadata)
+        return when (stage.requirementType) {
+            RequirementType.VISIT_NODE -> {
+                val missing = (stage.targetId?.split(",")?.map { it.trim() } ?: emptyList()) - visitedNodes(metadata)
+                if (missing.isEmpty()) "Už jsi všude byl – vrať se ke mně!"
+                else "Ještě se podívej: " + missing.joinToString(", ") { nodeNames[it] ?: it } + "."
+            }
+            RequirementType.CAPTURE_SPECIFIC -> "Pořád tě někdo čeká v tom křoví! Běž se tam podívat."
+            RequirementType.WALK_STEPS ->
+                "Dnes máš $v kroků z ${stage.targetValue}. Ještě ${(stage.targetValue - v).coerceAtLeast(0)} – rozhýbej se!"
+            RequirementType.LOG_MEAL -> "Dnes máš zapsáno $v jídel z ${stage.targetValue}. Zapiš je v sekci Jídlo."
+            RequirementType.BATTLE_TYPE -> "Poraženo $v z ${stage.targetValue}. Pokračuj v soubojích!"
+            RequirementType.BATTLE_BIOME -> "Výhry v horách: $v z ${stage.targetValue}. Ještě chvíli!"
+            RequirementType.SCAN_BARCODE -> "Pořád čekám na čárový kód! Naskenuj ho u jídla v sekci Jídlo."
+            RequirementType.HIT_TARGET -> {
+                val n = Adherence.Nutrient.from(stage.targetId)
+                if (n == null) stage.text
+                else "Dnes máš ${n.label} na $v % svého cíle. Potřebuješ ${n.minPct}–${n.maxPct} %."
+            }
+            RequirementType.TALK_TO_NPC -> stage.text
+        }
+    }
+
     fun visitedNodes(metadata: String): Set<String> =
         metadata.split(",").map { it.trim() }.filter { it.isNotEmpty() && it.toIntOrNull() == null }.toSet()
 
