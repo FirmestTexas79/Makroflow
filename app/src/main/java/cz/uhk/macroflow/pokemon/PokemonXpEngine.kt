@@ -54,7 +54,8 @@ object PokemonXpEngine {
         }
 
         // Klíč je unikátní per-pokémon per-den, aby se různí pokémoni nepřebíjeli
-        val dayKey = "${goal.key}_${activeCapturedId}_$today"
+        // Jednou za den pro celou aplikaci – dřív klíč obsahoval ID Makromona a výměnou šlo odměnu získat znovu
+        val dayKey = "${goal.key}_$today"
         if (prefs.getString(dayKey, "") == today) {
             return@withContext 0  // Už bylo uděleno dnes
         }
@@ -84,12 +85,12 @@ object PokemonXpEngine {
         val xpPrefs = context.getSharedPreferences("PokemonXpPrefs", Context.MODE_PRIVATE)
 
         fun alreadyAwarded(goal: XpGoal): Boolean {
-            val dayKey = "${goal.key}_${activeCapturedId}_$today"
+            val dayKey = "${goal.key}_$today"
             return xpPrefs.getString(dayKey, "") == today
         }
 
         fun markAwarded(goal: XpGoal) {
-            val dayKey = "${goal.key}_${activeCapturedId}_$today"
+            val dayKey = "${goal.key}_$today"
             xpPrefs.edit().putString(dayKey, today).apply()
         }
 

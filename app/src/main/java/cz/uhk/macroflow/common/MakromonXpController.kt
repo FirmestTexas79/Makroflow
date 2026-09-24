@@ -18,7 +18,7 @@ import java.util.Calendar
  * MakromonXpController — řídí veškerou XP logiku aktivního Makromona.
  *
  * Zodpovědnosti:
- *   - Denní XP odměna (20 XP jednou za den při spuštění aplikace)
+ *   - Denní XP odměna (20 XP při prvním spuštění aplikace v daném dni, viz DailyXpGate)
  *   - Real-time přidání XP (po check-inu, tréninku, splnění cíle)
  *   - Detekce level-upu a zobrazení EvolutionDialogu pokud je splněna podmínka
  *   - Upload změn na Firebase
@@ -33,37 +33,49 @@ class MakromonXpController(
 ) {
 
     /**
-     * Udělí 20 XP aktivnímu Makromonovi jednou za kalendářní den.
-     * Použije SharedPrefs klíč "lastXpDay_{capturedId}" jako pojistku.
+     * Udělí 20 XP aktivnímu Makromonovi při prvním spuštění aplikace v daném dni.
+     * Den se hlídá jednou pro celou aplikaci (DailyXpGate), ne pro každého Makromona zvlášť,
+     * a „spotřebuje“ se hned při kontrole – návrat ze světa Makromonů ani dvojí onResume nic nepřidá.
      * Pokud Makromon dosáhne úrovně evoluce, automaticky zobrazí EvolutionDialog.
      */
     fun awardDailyXp() {
         val prefs = activity.getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE)
         val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
-        if (activeCapturedId == -1) return
+        val today = java.time.LocalDate.now()
 
-        val today   = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
-        val lastDay = prefs.getInt("lastXpDay_$activeCapturedId", -1)
-        if (today == lastDay) return
+        synchronized(DailyXpGate) {
+            val last = DailyXpGate.effectiveLastDate(
+                storedDate = prefs.getString(DailyXpGate.KEY, null),
+                legacyDayOfYear = prefs.getInt("lastXpDay_$activeCapturedId", -1),
+                todayDayOfYear = Calendar.getInstance().get(Calendar.DAY_OF_YEAR),
+                today = today.toString()
+            )
+            if (!DailyXpGate.shouldAward(last, today.toString())) {
+                if (prefs.getString(DailyXpGate.KEY, null) == null) prefs.edit().putString(DailyXpGate.KEY, today.toString()).apply()
+                return
+            }
+            // Odměna patří prvnímu spuštění dne – zapsat hned (synchronně), ještě před zápisem do DB
+            prefs.edit().putString(DailyXpGate.KEY, today.toString()).commit()
+        }
+        if (activeCapturedId == -1) return
 
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(activity)
             val makromon = db.capturedMakromonDao().getMakromonById(activeCapturedId) ?: return@launch
 
             val oldLevel = makromon.level
-            makromon.xp += 20
+            makromon.xp += DailyXpGate.REWARD_XP
             val newLevel = PokemonLevelCalc.levelFromXp(makromon.xp)
             makromon.level = newLevel
 
             db.capturedMakromonDao().updateMakromon(makromon)
-            prefs.edit().putInt("lastXpDay_$activeCapturedId", today).apply()
 
             if (FirebaseRepository.isLoggedIn) {
                 FirebaseRepository.uploadCapturedMakromon(makromon)
             }
 
             withContext(Dispatchers.Main) {
-                Toast.makeText(activity, "🎉 ${makromon.name} získal 20 XP!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(activity, "🎉 ${makromon.name} získal ${DailyXpGate.REWARD_XP} XP za dnešní první spuštění!", Toast.LENGTH_SHORT).show()
 
                 // Zkontrolujeme evolveLevel z Makrodexu
                 val entry = withContext(Dispatchers.IO) {

@@ -128,8 +128,8 @@ object MakromonGrowthManager {
                 LearnableMove(1,  BattleFactory.attackNightShade()),
                 LearnableMove(5,  BattleFactory.attackShadowBall()),
                 LearnableMove(10, BattleFactory.attackHex()),
-                LearnableMove(15, Move("PAIN SPLIT", MakromonType.GHOST, 0, 100, 20)),
-                LearnableMove(20, Move("MEMENTO",    MakromonType.GHOST, 0, 100, 10, statEffect = StatEffect.LOWER_ENEMY_ATK))
+                LearnableMove(15, Move("PAIN SPLIT", MakromonType.GHOST, 0, 100, 20, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_DEF))),
+                LearnableMove(20, Move("MEMENTO",    MakromonType.GHOST, 0, 100, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK, 100, stages = 2)))
             )
         ),
         "011" to MakromonGrowthProfile(
@@ -141,7 +141,7 @@ object MakromonGrowthManager {
                 LearnableMove(1,  BattleFactory.attackHex()),
                 LearnableMove(5,  BattleFactory.attackCharm()),
                 LearnableMove(10, BattleFactory.attackShadowBall()),
-                LearnableMove(15, Move("DARK PULSE",  MakromonType.GHOST, 80, 100, 15)),
+                LearnableMove(15, Move("DARK PULSE",  MakromonType.GHOST, 80, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH, 20))),
                 LearnableMove(20, BattleFactory.attackMoonblast())
             )
         ),
@@ -242,7 +242,7 @@ object MakromonGrowthManager {
                 LearnableMove(5,  BattleFactory.attackDragonClaw()),
                 LearnableMove(10, BattleFactory.attackDragonPulse()),
                 LearnableMove(15, BattleFactory.attackOutrage()),
-                LearnableMove(20, Move("DRAGON DANCE", MakromonType.DRAGON, 0, 100, 20))
+                LearnableMove(20, Move("DRAGON DANCE", MakromonType.DRAGON, 0, 100, 20, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_ATK)))
             )
         ),
 
@@ -265,7 +265,7 @@ object MakromonGrowthManager {
             movesLearnedAt = listOf(
                 LearnableMove(8,  BattleFactory.attackAquaTail()),
                 LearnableMove(12, BattleFactory.attackHydroPump()),
-                LearnableMove(18, Move("AQUA RING",   MakromonType.WATER, 0, 100, 20)),
+                LearnableMove(18, Move("AQUA RING",   MakromonType.WATER, 0, 100, 20, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))),
                 LearnableMove(25, Move("HYDRO CANNON", MakromonType.WATER, 150, 90, 5))
             )
         ),
@@ -288,10 +288,10 @@ object MakromonGrowthManager {
             evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(7,  BattleFactory.attackSludgeBomb()),
-                LearnableMove(10, Move("TOXIC AURA",  MakromonType.POISON, 70, 90, 15)),
+                LearnableMove(10, Move("TOXIC AURA",  MakromonType.POISON, 70, 90, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.POISON, 30))),
                 LearnableMove(15, Move("ACID SPRAY",  MakromonType.POISON, 40, 100, 20, statEffect = StatEffect.LOWER_ENEMY_DEF)),
                 LearnableMove(20, Move("BELCH",       MakromonType.POISON, 120, 90, 10)),
-                LearnableMove(25, Move("POISON GAS",  MakromonType.POISON, 0, 90, 40, statEffect = StatEffect.LOWER_ENEMY_ATK))
+                LearnableMove(25, Move("POISON GAS",  MakromonType.POISON, 0, 90, 40, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.POISON)))
             )
         ),
 
@@ -322,7 +322,7 @@ object MakromonGrowthManager {
             evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(10, BattleFactory.attackPsychic()),
-                LearnableMove(15, Move("DARK PULSE",    MakromonType.GHOST,   80, 100, 15)),
+                LearnableMove(15, Move("DARK PULSE",    MakromonType.GHOST,   80, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH, 20))),
                 LearnableMove(20, Move("PHANTOM FORCE", MakromonType.GHOST,   90, 100, 10)),
                 LearnableMove(25, Move("SOUL DRAIN",    MakromonType.GHOST,  100,  90, 10))
             )
@@ -368,8 +368,8 @@ object MakromonGrowthManager {
             evolutionLevel = 0,
             evolutionToId = "",
             movesLearnedAt = listOf(
-                LearnableMove(1,  Move("BODY SLAM",  MakromonType.NORMAL, 85, 85, 15)),
-                LearnableMove(1,  Move("LULLABY",    MakromonType.NORMAL,  0, 80, 15, statEffect = StatEffect.LOWER_ENEMY_ATK)),
+                LearnableMove(1,  Move("BODY SLAM",  MakromonType.NORMAL, 85, 85, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.PARALYZE, 30))),
+                LearnableMove(1,  Move("LULLABY",    MakromonType.NORMAL,  0, 80, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.SLEEP))),
                 LearnableMove(5,  Move("WISE WORDS", MakromonType.NORMAL,  0, 100, 20, statEffect = StatEffect.LOWER_ENEMY_DEF)),
                 LearnableMove(10, Move("HEAVY SLAM", MakromonType.NORMAL, 100, 100, 10)),
                 LearnableMove(15, Move("SNORE",      MakromonType.NORMAL,  50, 100, 15)),
@@ -385,7 +385,7 @@ object MakromonGrowthManager {
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackWaterGun()),
                 LearnableMove(1,  BattleFactory.attackCharm()),
-                LearnableMove(5,  Move("REGENERATE",  MakromonType.NORMAL,  0, 100, 10)),
+                LearnableMove(5,  Move("REGENERATE",  MakromonType.NORMAL,  0, 100, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))),
                 LearnableMove(10, BattleFactory.attackBubbleBeam()),
                 LearnableMove(15, BattleFactory.attackDazzlingGleam()),
                 LearnableMove(20, BattleFactory.attackHydroPump()),

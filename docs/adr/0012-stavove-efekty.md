@@ -26,6 +26,28 @@ Omráčení tedy umí jen hráč, protože v tomhle souboji hraje hráč vždyck
 **Kolo:** hráč → soupeř → zranění na konci kola (nejdřív hráč, pak soupeř). Každá hláška čeká na ťuknutí.
 Stav platí jen během souboje, po souboji se neukládá.
 
+## Stupně útoku a obrany
+- **Rozsah a násobitel:** stupně jdou od −6 do +6, násobitel je (2 + s) / 2 pro s ≥ 0, jinak 2 / (2 − s).
+
+  | Stupeň | Násobitel |
+  |---|---|
+  | −6 | ×0,25 |
+  | −2 | ×0,5 |
+  | −1 | ×0,67 |
+  | +1 | ×1,5 |
+  | +2 | ×2 |
+  | +6 | ×4 |
+
+  Dřív se snížení skládalo neomezeně (×0,85 pořád dokola) a platilo pro špatnou stranu.
+- **Na koho působí:**
+  - snížení (GROWL, LEER, CHARM…) míří na soupeře, zvýšení (HARDEN, DRAGON DANCE…) na útočníka;
+  - typové imunity se na změny statistik nevztahují.
+- **Hlášky:** „ATTACK FELL!“, „DEFENSE FELL!“, „… HARSHLY FELL!“ (o 2 stupně), „… ROSE!“.
+  Na limitu u čistě stavového útoku „WONT GO LOWER / HIGHER!“.
+- **Zobrazení:**
+  - v rámečku HP se ukáže zkratka stupňů, např. „A-1 D+2“ (A = útok, D = obrana);
+  - modré šipky dolů, když statistika klesne, a červené nahoru, když stoupne.
+
 ## Útoky
 
 | Útok | Efekt a šance |
@@ -39,6 +61,26 @@ Stav platí jen během souboje, po souboji se neukládá.
 | BITE | omráčení 30 % |
 | HYPER FANG | omráčení 10 % |
 
+- **Snížení / zvýšení statistik u útoků:**
+
+  | Efekt | Útoky |
+  |---|---|
+  | snížení útoku 100 % | GROWL, SAND ATTACK, BABY-DOLL, MUD-SLAP, SMOKESCREEN, SPITE |
+  | snížení útoku o 2 stupně | CHARM, MEMENTO |
+  | snížení útoku 10–30 % | BUBBLE BEAM, MOONBLAST, PLAY ROUGH |
+  | snížení obrany 100 % | LEER, TAIL WHIP, STRING SHOT, WISE WORDS, ACID SPRAY, PAIN SPLIT |
+  | snížení obrany 10–20 % | CRUNCH, SHADOW BALL, PSYCHIC |
+  | zvýšení vlastní obrany | HARDEN, AQUA RING, REGENERATE |
+  | zvýšení vlastního útoku | DRAGON DANCE |
+- **Další stavy:**
+
+  | Efekt | Útoky |
+  |---|---|
+  | paralýza 30 % | BODY SLAM |
+  | uspání | LULLABY |
+  | otrava | POISON GAS |
+  | otrava 30 % | TOXIC AURA |
+  | omráčení 20 % | DARK PULSE |
 - **HEX** má dvojnásobnou sílu proti cíli se stavem.
 - **Nové čistě stavové útoky:**
 

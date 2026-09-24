@@ -15,9 +15,44 @@ enum class StatusKind(val tag: String, val label: String, val catchBonus: Float)
 }
 
 /** Co může útok způsobit a s jakou šancí (%). */
-enum class EffectKind { SLEEP, PARALYZE, POISON, BURN, CONFUSE, FLINCH }
+enum class EffectKind {
+    SLEEP, PARALYZE, POISON, BURN, CONFUSE, FLINCH,
+    /** Snížení / zvýšení statistiky o stupně (−6 … +6). RAISE_* působí na útočníka samotného. */
+    LOWER_ATK, LOWER_DEF, RAISE_ATK, RAISE_DEF;
 
-data class MoveEffect(val kind: EffectKind, val chance: Int = 100)
+    val isStatChange: Boolean get() = this == LOWER_ATK || this == LOWER_DEF || this == RAISE_ATK || this == RAISE_DEF
+    val targetsSelf: Boolean get() = this == RAISE_ATK || this == RAISE_DEF
+}
+
+data class MoveEffect(val kind: EffectKind, val chance: Int = 100, val stages: Int = 1)
+
+/**
+ * Stupně statistik jako v Pokémonech: násobitel (2 + s) / 2 pro s ≥ 0, jinak 2 / (2 − s).
+ * −1 = ×0,67, −2 = ×0,5, +1 = ×1,5, +2 = ×2; rozsah −6 … +6.
+ */
+object StatStages {
+    const val MIN = -6
+    const val MAX = 6
+
+    fun multiplier(stage: Int): Float = if (stage >= 0) (2f + stage) / 2f else 2f / (2f - stage)
+
+    /** Změní stupeň; vrací skutečnou změnu (0 = už nejde níž/výš). */
+    fun change(c: Condition, kind: EffectKind, stages: Int): Int {
+        val (cur, delta) = when (kind) {
+            EffectKind.LOWER_ATK -> c.atkStage to -stages
+            EffectKind.LOWER_DEF -> c.defStage to -stages
+            EffectKind.RAISE_ATK -> c.atkStage to stages
+            EffectKind.RAISE_DEF -> c.defStage to stages
+            else -> return 0
+        }
+        val next = (cur + delta).coerceIn(MIN, MAX)
+        when (kind) {
+            EffectKind.LOWER_ATK, EffectKind.RAISE_ATK -> c.atkStage = next
+            else -> c.defStage = next
+        }
+        return next - cur
+    }
+}
 
 /** Stav jednoho Makromona během souboje. Hlavní stav je jen jeden; zmatení a omráčení jdou navíc. */
 class Condition {
@@ -26,10 +61,19 @@ class Condition {
     var confusedTurns = 0
     /** Omráčení platí jen pro nejbližší tah (útočník musel jednat dřív). */
     var flinched = false
+    /** Stupně útoku a obrany (−6 … +6), viz [StatStages]. */
+    var atkStage = 0
+    var defStage = 0
 
     val confused: Boolean get() = confusedTurns > 0
 
-    fun clearAll() { major = null; sleepTurns = 0; confusedTurns = 0; flinched = false }
+    fun clearAll() { major = null; sleepTurns = 0; confusedTurns = 0; flinched = false; atkStage = 0; defStage = 0 }
+
+    /** Krátký popis stupňů do HUD (A = útok, D = obrana), např. „A-1 D+2“; null když jsou na nule. */
+    val stagesLabel: String? get() {
+        fun part(name: String, s: Int) = if (s == 0) null else name + (if (s > 0) "+$s" else "$s")
+        return listOfNotNull(part("A", atkStage), part("D", defStage)).joinToString(" ").ifEmpty { null }
+    }
 
     /** Štítek do rámečku HP: hlavní stav, jinak zmatení. */
     val tag: String? get() = major?.tag ?: if (confused) "CNF" else null
@@ -63,6 +107,9 @@ object StatusRules {
      */
     fun tryInflict(target: Condition, targetType: MakromonType, effect: MoveEffect, rng: Random): InflictResult {
         if (rng.nextInt(100) >= effect.chance) return InflictResult.FAILED_CHANCE
+        if (effect.kind.isStatChange) {
+            return if (StatStages.change(target, effect.kind, effect.stages) != 0) InflictResult.APPLIED else InflictResult.ALREADY
+        }
         return when (effect.kind) {
             EffectKind.FLINCH -> { target.flinched = true; InflictResult.APPLIED }
             EffectKind.CONFUSE -> {

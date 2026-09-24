@@ -66,8 +66,7 @@ class PokemonBattleView @JvmOverloads constructor(
     // ── Stavy (spánek, paralýza…) – platí jen po dobu souboje ──
     private val playerCond = cz.uhk.macroflow.pokemon.status.Condition()
     private val enemyCond = cz.uhk.macroflow.pokemon.status.Condition()
-    private var playerAtkMod = 1f
-    private var playerDefMod = 1f
+
     private val absorbPaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
     private val beamPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var flashOn = false; private var cursorOn = true
@@ -292,7 +291,10 @@ class PokemonBattleView @JvmOverloads constructor(
         PokemonSprites.drawText(c, ":L${gs.enemy.level}", x+48, y+3, C_TEXT, fp)
         PokemonSprites.drawText(c, "HP", x+3, y+13, C_TEXT, fp)
         drawHPBar(c, x+16, y+13, 54, 5, gs.enemy.currentHp, gs.enemy.maxHp)
-        if (gs.isEnemyShiny) PokemonSprites.drawText(c, "*SHINY", x+3, y+20, 0xFFC08A00.toInt(), fp)
+        // Třetí řádek: stupně statistik (A = útok, D = obrana), jinak štítek shiny
+        val stages = enemyCond.stagesLabel
+        if (stages != null) PokemonSprites.drawText(c, stages, x+3, y+20, 0xFF3A5AA8.toInt(), fp)
+        else if (gs.isEnemyShiny) PokemonSprites.drawText(c, "*SHINY", x+3, y+20, 0xFFC08A00.toInt(), fp)
         enemyCond.tag?.let { drawStatusTag(c, it, x + 51, y + 19) }
     }
 
@@ -307,7 +309,7 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private fun drawPlayerHUD(c: Canvas) {
-        val x = 84; val y = 58; val w = 75; val h = 36; drawUIBox(c, x, y, w, h)
+        val x = 84; val y = 58; val w = 75; val h = 37; drawUIBox(c, x, y, w, h)
         PokemonSprites.drawText(c, gs.player.name.take(7), x+3, y+3, C_TEXT, fp)
         PokemonSprites.drawText(c, ":L${gs.player.level}", x+42, y+3, C_TEXT, fp)
         PokemonSprites.drawText(c, "HP", x+3, y+13, C_TEXT, fp)
@@ -315,6 +317,7 @@ class PokemonBattleView @JvmOverloads constructor(
         val hp = "${gs.player.currentHp}/${gs.player.maxHp}"
         PokemonSprites.drawText(c, hp, x+w-3-hp.length*6, y+22, C_TEXT, fp)
         playerCond.tag?.let { drawStatusTag(c, it, x + 3, y + 21) }
+        playerCond.stagesLabel?.let { PokemonSprites.drawText(c, it, x + 3, y + 29, 0xFF3A5AA8.toInt(), fp) }
     }
 
     private fun drawHPBar(c: Canvas, x: Int, y: Int, w: Int, h: Int, cur: Int, max: Int) {
@@ -709,7 +712,7 @@ class PokemonBattleView @JvmOverloads constructor(
     private fun enemyTurn() {
         if (gs.enemy.currentHp <= 0 || gs.player.currentHp <= 0) { busy = false; showMain(); return }
         busy = true
-        val mv = BattleEngine.enemyChooseMove(gs.enemy, playerCond)
+        val mv = BattleEngine.enemyChooseMove(gs.enemy, playerCond, enemyCond)
         val pre = cz.uhk.macroflow.pokemon.status.StatusRules.beforeMove(enemyCond, rng) { selfHitDamage(false) }
         handleBeforeMove(false, pre, act = { useMove(false, mv) }, skip = { endOfRound() })
     }
@@ -755,11 +758,10 @@ class PokemonBattleView @JvmOverloads constructor(
                 mv.power > 0 -> {
                     // HEX má dvojnásobnou sílu proti cíli se stavem
                     val power = if (mv.name == "HEX" && defCond.major != null) mv.power * 2 else mv.power
-                    // Oprava: snížení útoku/obrany se dřív aplikovalo na špatnou stranu
-                    val atkMod = if (isPlayer) playerAtkMod else gs.enemyAtkMod
-                    val defMod = if (isPlayer) gs.enemyDefMod else playerDefMod
-                    val atkStat = (atk.attack * atkMod * cz.uhk.macroflow.pokemon.status.StatusRules.attackMultiplier(condOf(isPlayer))).toInt().coerceAtLeast(1)
-                    val defStat = (def.defense * defMod).toInt().coerceAtLeast(1)
+                    // Stupně útoku a obrany (−6 … +6) + popálení půlí útok
+                    val atkStat = (atk.attack * cz.uhk.macroflow.pokemon.status.StatStages.multiplier(condOf(isPlayer).atkStage) *
+                        cz.uhk.macroflow.pokemon.status.StatusRules.attackMultiplier(condOf(isPlayer))).toInt().coerceAtLeast(1)
+                    val defStat = (def.defense * cz.uhk.macroflow.pokemon.status.StatStages.multiplier(defCond.defStage)).toInt().coerceAtLeast(1)
                     val dmg = BattleEngine.calcDamage(atk.level, power, atkStat, defStat, mv.type, typeOf(def))
                     doFlash {
                         def.currentHp = maxOf(0, def.currentHp - dmg); invalidate()
@@ -769,24 +771,18 @@ class PokemonBattleView @JvmOverloads constructor(
                         }, 400)
                     }
                 }
-                mv.statEffect != null -> {
-                    val label = when (mv.statEffect) {
-                        StatEffect.LOWER_ENEMY_ATK -> { if (isPlayer) gs.enemyAtkMod *= 0.85f else playerAtkMod *= 0.85f; "ATTACK FELL!" }
-                        StatEffect.LOWER_ENEMY_DEF -> { if (isPlayer) gs.enemyDefMod *= 0.85f else playerDefMod *= 0.85f; "DEFENSE FELL!" }
-                    }
-                    doFlash { say(def.name, label) { afterAction(isPlayer) } }
-                }
                 else -> applyMoveEffect(isPlayer, mv, statusOnly = true)
             }
         }, 1200)
     }
 
     private fun applyMoveEffect(isPlayer: Boolean, mv: Move, statusOnly: Boolean) {
-        val eff = mv.effect
+        val eff = mv.fullEffect
         if (eff == null) {
             if (statusOnly) say("BUT NOTHING", "HAPPENED!") { afterAction(isPlayer) } else afterAction(isPlayer)
             return
         }
+        if (eff.kind.isStatChange) { applyStatChange(isPlayer, eff, statusOnly); return }
         val def = monOf(!isPlayer)
         when (cz.uhk.macroflow.pokemon.status.StatusRules.tryInflict(condOf(!isPlayer), typeOf(def), eff, rng)) {
             cz.uhk.macroflow.pokemon.status.InflictResult.APPLIED -> {
@@ -807,6 +803,34 @@ class PokemonBattleView @JvmOverloads constructor(
             cz.uhk.macroflow.pokemon.status.InflictResult.ALREADY ->
                 if (statusOnly) say("BUT IT", "FAILED!") { afterAction(isPlayer) } else afterAction(isPlayer)
             cz.uhk.macroflow.pokemon.status.InflictResult.FAILED_CHANCE -> afterAction(isPlayer)
+        }
+    }
+
+    /**
+     * Snížení / zvýšení útoku či obrany o stupně. RAISE_* míří na útočníka (HARDEN, DRAGON DANCE),
+     * ostatní na soupeře. Na −6 / +6 už to nejde – u čistě stavového útoku to hráč uvidí.
+     */
+    private fun applyStatChange(isPlayer: Boolean, eff: cz.uhk.macroflow.pokemon.status.MoveEffect, statusOnly: Boolean) {
+        val onSelf = eff.kind.targetsSelf
+        val targetIsPlayer = if (onSelf) isPlayer else !isPlayer
+        val target = monOf(targetIsPlayer)
+        val stat = if (eff.kind == cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK || eff.kind == cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_ATK) "ATTACK" else "DEFENSE"
+        val up = onSelf
+        when (cz.uhk.macroflow.pokemon.status.StatusRules.tryInflict(condOf(targetIsPlayer), typeOf(target), eff, rng)) {
+            cz.uhk.macroflow.pokemon.status.InflictResult.APPLIED -> {
+                statFx(targetIsPlayer, up)
+                val text = when {
+                    up && eff.stages >= 2 -> "$stat SHARPLY ROSE!"
+                    up -> "$stat ROSE!"
+                    eff.stages >= 2 -> "$stat HARSHLY FELL!"
+                    else -> "$stat FELL!"
+                }
+                invalidate()
+                say(target.name, text.take(24)) { afterAction(isPlayer) }
+            }
+            else ->
+                if (statusOnly) say(target.name, if (up) "$stat WONT GO HIGHER!" else "$stat WONT GO LOWER!") { afterAction(isPlayer) }
+                else afterAction(isPlayer)
         }
     }
 
@@ -882,7 +906,7 @@ class PokemonBattleView @JvmOverloads constructor(
     // Částice žijí v souřadnicích herního plátna relativně ke středu Makromona a kreslí se
     // v rozlišení displeje. Dokud stav trvá, občas se krátce zopakují (Zzz, jiskry, bublinky…).
 
-    private enum class FxShape { Z, SPARK, BUBBLE, FLAME, STAR, HEAL }
+    private enum class FxShape { Z, SPARK, BUBBLE, FLAME, STAR, HEAL, ARROW_DOWN, ARROW_UP }
     private class Fx(
         val onPlayer: Boolean, val shape: FxShape,
         val x0: Float, val y0: Float, val vx: Float, val vy: Float,
@@ -905,6 +929,8 @@ class PokemonBattleView @JvmOverloads constructor(
             cz.uhk.macroflow.pokemon.status.EffectKind.BURN -> FxShape.FLAME
             cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE -> FxShape.STAR
             cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH -> return
+            cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK, cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_DEF -> { statFx(onPlayer, false); return }
+            cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_ATK, cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF -> { statFx(onPlayer, true); return }
             null -> FxShape.HEAL
         }
         val n = when (shape) {
@@ -920,7 +946,19 @@ class PokemonBattleView @JvmOverloads constructor(
                 FxShape.FLAME -> Fx(onPlayer, shape, rnd(-11f, 11f), rnd(4f, 12f), rnd(-2f, 2f), -18f, t + i * 60L, 700, rnd(2f, 3.4f), 0f)
                 FxShape.STAR -> Fx(onPlayer, shape, 0f, -15f, 0f, 0f, t, if (ambient) 900 else 1500, 2.4f, i * 120f)
                 FxShape.HEAL -> Fx(onPlayer, shape, rnd(-12f, 12f), rnd(-4f, 12f), 0f, -20f, t + i * 50L, 800, 1.6f, 0f)
+                FxShape.ARROW_DOWN, FxShape.ARROW_UP -> return   // šipky řeší statFx
             }
+        }
+        ensureFxLoop()
+    }
+
+    /** Šipky přes Makromona: modré dolů (statistika klesla), červené nahoru (stoupla). */
+    private fun statFx(onPlayer: Boolean, up: Boolean) {
+        val t = now()
+        repeat(6) { i ->
+            fxList += Fx(onPlayer, if (up) FxShape.ARROW_UP else FxShape.ARROW_DOWN,
+                -12f + (i % 3) * 12f, if (up) 10f else -14f, 0f, if (up) -26f else 26f,
+                t + i * 90L, 650, 3.2f, 0f)
         }
         ensureFxLoop()
     }
@@ -1014,6 +1052,20 @@ class PokemonBattleView @JvmOverloads constructor(
                     val ang = Math.toRadians((f.phase + tau * 260f).toDouble())
                     val sx = gbX(c.x + cos(ang).toFloat() * 10f); val sy = gbY(c.y + f.y0 + sin(ang).toFloat() * 3f)
                     drawStar(canvas, sx, sy, f.size * sc, tau * 180f, 0xFFFFE066.toInt(), a)
+                }
+                FxShape.ARROW_DOWN, FxShape.ARROW_UP -> {
+                    val r = f.size * sc
+                    val dir = if (f.shape == FxShape.ARROW_UP) -1f else 1f
+                    fxPaint.style = Paint.Style.STROKE; fxPaint.strokeWidth = 1.4f * sc; fxPaint.strokeCap = Paint.Cap.ROUND
+                    fxPaint.color = if (f.shape == FxShape.ARROW_UP) 0xFFE5533D.toInt() else 0xFF3F6FD8.toInt()
+                    fxPaint.alpha = a
+                    // Dvojitá šipka (chevron) ve směru pohybu
+                    for (k in 0..1) {
+                        val yy = y + k * r * 0.9f * dir
+                        fxPath.reset(); fxPath.moveTo(x - r, yy - r * 0.6f * dir); fxPath.lineTo(x, yy + r * 0.4f * dir); fxPath.lineTo(x + r, yy - r * 0.6f * dir)
+                        canvas.drawPath(fxPath, fxPaint)
+                    }
+                    fxPaint.style = Paint.Style.FILL
                 }
                 FxShape.HEAL -> {
                     fxPaint.style = Paint.Style.FILL

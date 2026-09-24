@@ -129,4 +129,54 @@ class StatusTest {
         }
         assertEquals(MedItem.entries.size, MedItem.entries.map { it.id }.distinct().size)
     }
+
+    // ── Stupně statistik (útok / obrana) ──
+
+    @Test
+    fun stageMultipliersMatchPokemon() {
+        assertEquals(1f, StatStages.multiplier(0), 0f)
+        assertEquals(2f / 3f, StatStages.multiplier(-1), 1e-6f)
+        assertEquals(0.5f, StatStages.multiplier(-2), 0f)
+        assertEquals(0.25f, StatStages.multiplier(-6), 0f)
+        assertEquals(1.5f, StatStages.multiplier(1), 0f)
+        assertEquals(4f, StatStages.multiplier(6), 0f)
+    }
+
+    @Test
+    fun lowerAttackStacksUntilMinusSix() {
+        val c = Condition()
+        val growl = MoveEffect(EffectKind.LOWER_ATK)
+        repeat(6) { assertEquals(InflictResult.APPLIED, StatusRules.tryInflict(c, MakromonType.NORMAL, growl, rng)) }
+        assertEquals(-6, c.atkStage)
+        // Níž to nejde – útok „selže“
+        assertEquals(InflictResult.ALREADY, StatusRules.tryInflict(c, MakromonType.NORMAL, growl, rng))
+    }
+
+    @Test
+    fun sharpDropIsTwoStagesAndClamps() {
+        val c = Condition().apply { defStage = -5 }
+        assertEquals(-1, StatStages.change(c, EffectKind.LOWER_DEF, 2))   // jen o 1, pak strop
+        assertEquals(-6, c.defStage)
+        val a = Condition()
+        assertEquals(2, StatStages.change(a, EffectKind.LOWER_ATK, 2).let { -it })
+        assertEquals(-2, a.atkStage)
+    }
+
+    @Test
+    fun raiseTargetsSelfAndLabelIsCompact() {
+        assertTrue(EffectKind.RAISE_DEF.targetsSelf)
+        assertFalse(EffectKind.LOWER_DEF.targetsSelf)
+        val c = Condition()
+        StatStages.change(c, EffectKind.RAISE_DEF, 1)
+        StatStages.change(c, EffectKind.LOWER_ATK, 1)
+        assertEquals("A-1 D+1", c.stagesLabel)
+        assertNull(Condition().stagesLabel)
+    }
+
+    @Test
+    fun statChangesIgnoreTypeImmunity() {
+        // Ohnivého soupeře nelze popálit, ale útok mu snížit jde
+        val c = Condition()
+        assertEquals(InflictResult.APPLIED, StatusRules.tryInflict(c, MakromonType.FIRE, MoveEffect(EffectKind.LOWER_ATK), rng))
+    }
 }

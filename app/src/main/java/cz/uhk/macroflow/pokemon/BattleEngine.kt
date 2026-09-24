@@ -18,7 +18,18 @@ data class Move(
     val statEffect: StatEffect? = null,
     /** Stavový efekt (spánek, paralýza…) a jeho šance – viz pokemon/status. */
     val effect: cz.uhk.macroflow.pokemon.status.MoveEffect? = null
-)
+) {
+    /**
+     * Efekt, se kterým souboj počítá: explicitní [effect], jinak starší [statEffect]
+     * převedený na snížení útoku / obrany soupeře o 1 stupeň (100 %).
+     */
+    val fullEffect: cz.uhk.macroflow.pokemon.status.MoveEffect?
+        get() = effect ?: when (statEffect) {
+            StatEffect.LOWER_ENEMY_ATK -> cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK)
+            StatEffect.LOWER_ENEMY_DEF -> cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_DEF)
+            null -> null
+        }
+}
 enum class StatEffect { LOWER_ENEMY_ATK, LOWER_ENEMY_DEF }
 
 data class Makromon(
@@ -157,14 +168,25 @@ object BattleEngine {
      * Náhodný útok s PP. Čistě stavový útok nepoužije, když by nic neudělal
      * (cíl už hlavní stav má, nebo je už zmatený).
      */
-    fun enemyChooseMove(enemy: Makromon, target: cz.uhk.macroflow.pokemon.status.Condition? = null): Move {
+    fun enemyChooseMove(
+        enemy: Makromon,
+        target: cz.uhk.macroflow.pokemon.status.Condition? = null,
+        self: cz.uhk.macroflow.pokemon.status.Condition? = null
+    ): Move {
         val available = enemy.moves.filter { it.pp > 0 }
         if (available.isEmpty()) return enemy.moves[0]
         val useful = available.filter { mv ->
-            val e = mv.effect
+            val e = mv.fullEffect
+            val k = e?.kind
+            val S = cz.uhk.macroflow.pokemon.status.StatStages
             if (mv.power > 0 || e == null || target == null) true
-            else if (e.kind == cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE) !target.confused
-            else if (e.kind == cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH) true
+            else if (k == cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE) !target.confused
+            else if (k == cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH) true
+            // Snížení/zvýšení statistik jen do limitu −6 / +6
+            else if (k == cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK) target.atkStage > S.MIN
+            else if (k == cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_DEF) target.defStage > S.MIN
+            else if (k == cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_ATK) (self?.atkStage ?: 0) < S.MAX
+            else if (k == cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF) (self?.defStage ?: 0) < S.MAX
             else target.major == null
         }
         return (useful.ifEmpty { available }).random()
@@ -180,14 +202,14 @@ object BattleFactory {
     fun attackScratch()      = Move("SCRATCH",      MakromonType.NORMAL,  40, 100, 35)
     fun attackSlash()        = Move("SLASH",        MakromonType.NORMAL,  70, 100, 20)
     fun attackGrowl()        = Move("GROWL",        MakromonType.NORMAL,   0, 100, 40, statEffect = StatEffect.LOWER_ENEMY_ATK)
-    fun attackHarden()       = Move("HARDEN",       MakromonType.NORMAL,   0, 100, 30)
+    fun attackHarden()       = Move("HARDEN",       MakromonType.NORMAL,   0, 100, 30, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))
     fun attackTailWhip()     = Move("TAIL WHIP",    MakromonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
     fun attackLeer()         = Move("LEER",         MakromonType.NORMAL,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_DEF)
     fun attackQuickAttack()  = Move("QUICK ATTACK", MakromonType.NORMAL,  40, 100, 30)
     fun attackSlam()         = Move("SLAM",         MakromonType.NORMAL,  80,  75, 20)
     fun attackBite()         = Move("BITE",         MakromonType.NORMAL,  60, 100, 25, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH, 30))
-    fun attackCrunch()       = Move("CRUNCH",       MakromonType.NORMAL,  80, 100, 15)
-    fun attackSmokescreen()  = Move("SMOKESCREEN",  MakromonType.NORMAL,   0, 100, 20)
+    fun attackCrunch()       = Move("CRUNCH",       MakromonType.NORMAL,  80, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_DEF, 20))
+    fun attackSmokescreen()  = Move("SMOKESCREEN",  MakromonType.NORMAL,   0, 100, 20, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK))
     fun attackHyperFang()    = Move("HYPER FANG",   MakromonType.NORMAL,  80,  90, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH, 10))
     fun attackFuryAttack()   = Move("FURY ATTACK",  MakromonType.NORMAL,  15,  85, 20)
 
@@ -203,7 +225,7 @@ object BattleFactory {
     fun attackWaterPulse()   = Move("WATER PULSE",  MakromonType.WATER,  60, 100, 20, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE, 20))
     fun attackHydroPump()    = Move("HYDRO PUMP",   MakromonType.WATER, 110,  80,  5)
     fun attackAquaTail()     = Move("AQUA TAIL",    MakromonType.WATER,  90,  90, 10)
-    fun attackBubbleBeam()   = Move("BUBBLE BEAM",  MakromonType.WATER,  65, 100, 20)
+    fun attackBubbleBeam()   = Move("BUBBLE BEAM",  MakromonType.WATER,  65, 100, 20, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK, 10))
 
     // GRASS
     fun attackVineWhip()     = Move("VINE WHIP",    MakromonType.GRASS,  45, 100, 25)
@@ -214,7 +236,7 @@ object BattleFactory {
     fun attackSleepPowder()  = Move("SLEEP POWDER", MakromonType.GRASS,   0,  75, 20, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.SLEEP, 100))
 
     // GHOST
-    fun attackShadowBall()   = Move("SHADOW BALL",  MakromonType.GHOST,  65,  80, 15)
+    fun attackShadowBall()   = Move("SHADOW BALL",  MakromonType.GHOST,  65,  80, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_DEF, 20))
     fun attackShadowPunch()  = Move("SHADOW PUNCH", MakromonType.GHOST,  60, 100, 20)
     fun attackLick()         = Move("LICK",         MakromonType.GHOST,  30, 100, 30, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.PARALYZE, 30))
     fun attackNightShade()   = Move("NIGHT SHADE",  MakromonType.GHOST,  40,  95, 15)
@@ -222,9 +244,10 @@ object BattleFactory {
 
     // FAIRY
     fun attackDazzlingGleam() = Move("DAZZL.GLEAM", MakromonType.FAIRY,  80, 100, 10)
-    fun attackMoonblast()     = Move("MOONBLAST",   MakromonType.FAIRY,  95, 100, 15)
-    fun attackCharm()         = Move("CHARM",       MakromonType.FAIRY,   0, 100, 20, statEffect = StatEffect.LOWER_ENEMY_ATK)
-    fun attackPlayRough()     = Move("PLAY ROUGH",  MakromonType.FAIRY,  90,  90, 10)
+    fun attackMoonblast()     = Move("MOONBLAST",   MakromonType.FAIRY,  95, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK, 30))
+    // CHARM sníží útok o 2 stupně („sharply“)
+    fun attackCharm()         = Move("CHARM",       MakromonType.FAIRY,   0, 100, 20, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK, 100, stages = 2))
+    fun attackPlayRough()     = Move("PLAY ROUGH",  MakromonType.FAIRY,  90,  90, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK, 10))
     fun attackBabyDollEyes()  = Move("BABY-DOLL",   MakromonType.FAIRY,   0, 100, 30, statEffect = StatEffect.LOWER_ENEMY_ATK)
 
     // DRAGON
@@ -235,12 +258,12 @@ object BattleFactory {
 
     // GROUND
     fun attackSandAttack()   = Move("SAND ATTACK",  MakromonType.GROUND,   0, 100, 15, statEffect = StatEffect.LOWER_ENEMY_ATK)
-    fun attackMudSlap()      = Move("MUD-SLAP",     MakromonType.GROUND,  20, 100, 10)
+    fun attackMudSlap()      = Move("MUD-SLAP",     MakromonType.GROUND,  20, 100, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK, 100))
     fun attackDig()          = Move("DIG",          MakromonType.GROUND,  80, 100, 10)
     fun attackEarthquake()   = Move("EARTHQUAKE",   MakromonType.GROUND, 100, 100, 10)
 
     // PSYCHIC
-    fun attackPsychic()      = Move("PSYCHIC",      MakromonType.PSYCHIC, 90,  90, 10)
+    fun attackPsychic()      = Move("PSYCHIC",      MakromonType.PSYCHIC, 90,  90, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_DEF, 10))
     fun attackHypnosis()     = Move("HYPNOSIS",     MakromonType.PSYCHIC,  0,  60, 20, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.SLEEP, 100))
 
     // ELECTRIC
@@ -338,7 +361,7 @@ object BattleFactory {
             attackShadowBall(),
             attackLick(),
             attackNightShade(),
-            Move("SPITE", MakromonType.GHOST, 0, 100, 10)
+            Move("SPITE", MakromonType.GHOST, 0, 100, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_ATK))
         )
     )
 
@@ -350,7 +373,7 @@ object BattleFactory {
             attackDazzlingGleam(),
             attackHex(),
             attackCharm(),
-            Move("DARK PULSE", MakromonType.GHOST, 80, 100, 15)
+            Move("DARK PULSE", MakromonType.GHOST, 80, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH, 20))
         )
     )
 
@@ -449,7 +472,7 @@ object BattleFactory {
         moves = listOf(
             attackPoisonSting(),
             attackSludgeBomb(),
-            Move("TOXIC AURA", MakromonType.POISON, 70, 90, 15),
+            Move("TOXIC AURA", MakromonType.POISON, 70, 90, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.POISON, 30)),
             attackToxic()
         )
     )
@@ -501,9 +524,10 @@ object BattleFactory {
         name = "GUDWIN", level = 10,
         maxHp = 55, attack = 14, defense = 18, speed = 8,
         moves = listOf(
-            Move("BODY SLAM",  MakromonType.NORMAL, 85, 85, 15),
+            Move("BODY SLAM",  MakromonType.NORMAL, 85, 85, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.PARALYZE, 30)),
             attackTackle(),
-            Move("LULLABY",    MakromonType.NORMAL,  0, 80, 15, statEffect = StatEffect.LOWER_ENEMY_ATK),
+            // Ukolébavka uspí (dřív snižovala útok)
+            Move("LULLABY",    MakromonType.NORMAL,  0, 80, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.SLEEP)),
             Move("WISE WORDS", MakromonType.NORMAL,  0, 100, 20, statEffect = StatEffect.LOWER_ENEMY_DEF)
         )
     )
@@ -516,7 +540,7 @@ object BattleFactory {
             attackWaterGun(),
             attackTackle(),
             attackCharm(),
-            Move("REGENERATE", MakromonType.NORMAL, 0, 100, 10)
+            Move("REGENERATE", MakromonType.NORMAL, 0, 100, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))
         )
     )
 
