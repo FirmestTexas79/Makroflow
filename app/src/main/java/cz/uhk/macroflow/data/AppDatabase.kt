@@ -32,9 +32,11 @@ import kotlin.concurrent.thread
         SnackUsageEntity::class,
         QuestProgressEntity::class,
         GameEventEntity::class,
-        AdaptiveTdeeEntity::class
+        AdaptiveTdeeEntity::class,
+        BarbellSetEntity::class,
+        BarbellRepEntity::class
     ],
-    version = 35,
+    version = 36,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -57,6 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun questDao(): QuestDao
     abstract fun gameEventDao(): GameEventDao
     abstract fun adaptiveTdeeDao(): AdaptiveTdeeDao
+    abstract fun barbellDao(): BarbellDao
 
     companion object {
         /** v34: log herních událostí + začátek fáze questu. */
@@ -93,6 +96,33 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v36: sledování činky kamerou – série a opakování. */
+        val MIGRATION_35_36 = object : Migration(35, 36) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `barbell_sets` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` TEXT NOT NULL, " +
+                        "`startedAt` INTEGER NOT NULL, `exercise` TEXT NOT NULL, `setIndex` INTEGER NOT NULL, " +
+                        "`loadKg` REAL, `plateDiameterCm` REAL NOT NULL, `repCount` INTEGER NOT NULL, " +
+                        "`avgRomCm` REAL NOT NULL, `weightedRomCm` REAL NOT NULL, `romCvPct` REAL NOT NULL, " +
+                        "`avgEccentricMs` INTEGER NOT NULL, `avgConcentricMs` INTEGER NOT NULL, " +
+                        "`avgTotalMs` INTEGER NOT NULL, `bestMcv` REAL NOT NULL, `lastMcv` REAL NOT NULL, " +
+                        "`velocityLossPct` REAL NOT NULL, `avgDeviationCm` REAL NOT NULL, `quality` REAL NOT NULL)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_barbell_sets_date` ON `barbell_sets` (`date`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `barbell_reps` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `setId` INTEGER NOT NULL, " +
+                        "`repIndex` INTEGER NOT NULL, `startCm` REAL NOT NULL, `turnCm` REAL NOT NULL, " +
+                        "`endCm` REAL NOT NULL, `romCm` REAL NOT NULL, `eccentricMs` INTEGER NOT NULL, " +
+                        "`concentricMs` INTEGER NOT NULL, `pauseMs` INTEGER NOT NULL, `totalMs` INTEGER NOT NULL, " +
+                        "`meanVelocity` REAL NOT NULL, `peakVelocity` REAL NOT NULL, `deviationCm` REAL NOT NULL, " +
+                        "`quality` REAL NOT NULL)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_barbell_reps_setId` ON `barbell_reps` (`setId`)")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -103,7 +133,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35)
+                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36)
                     // Destruktivní fallback jen pro verze PŘED zavedením migrací.
                     // Od v33 se lokální data uživatelů už nikdy nesmažou potichu:
                     // chybějící migrace = pád při vývoji, ne ztráta dat v produkci.

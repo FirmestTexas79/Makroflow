@@ -41,11 +41,12 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
 
     data class TrajectoryPoint(val x: Float, val y: Float, val goingDown: Boolean, val timestamp: Long)
 
-    fun setPreviewSize(width: Int, height: Int) {
+    /** Rozměry obrazu UŽ OTOČENÉHO do polohy displeje (v těchto souřadnicích vrací ML Kit boxy). */
+    fun setPreviewSize(uprightWidth: Int, uprightHeight: Int) {
         synchronized(lock) {
-            // ML Kit landscape -> Portrait
-            previewWidth = height
-            previewHeight = width
+            if (previewWidth == uprightWidth && previewHeight == uprightHeight) return
+            previewWidth = uprightWidth
+            previewHeight = uprightHeight
             calculateTransformation()
         }
         postInvalidate()
@@ -70,6 +71,10 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
 
     private fun translateX(x: Float): Float = x * scaleFactor + postScaleWidthOffset
     private fun translateY(y: Float): Float = y * scaleFactor + postScaleHeightOffset
+
+    /** Opačný převod – dotyk na obrazovce → souřadnice obrazu z kamery (pro zamčení kotouče). */
+    fun toImageX(viewX: Float): Float = (viewX - postScaleWidthOffset) / scaleFactor
+    fun toImageY(viewY: Float): Float = (viewY - postScaleHeightOffset) / scaleFactor
 
     fun setTrackedBox(rect: RectF?) {
         synchronized(lock) {

@@ -243,6 +243,9 @@ object ReportGenerator {
         drawFooter(canvas)
         pdfDocument.finishPage(currentPage)
 
+        // Samostatná stránka pro trenéra: sledování činky kamerou
+        drawBarbellSection(pdfDocument, reportTitle, context, db)
+
         val file = File(context.cacheDir, "MakroFlow_Report.pdf")
         return@withContext try {
             pdfDocument.writeTo(FileOutputStream(file))
@@ -252,6 +255,127 @@ object ReportGenerator {
             pdfDocument.close()
             null
         }
+    }
+
+    /**
+     * Stránka „Sledování činky“: posledních 14 dní, po dnech a cvicích.
+     * Každá série: souhrn; každé opakování: body rozsahu, rozsah, doby fází, rychlost, dráha –
+     * buňky podbarvené stejným přechodem zelená → červená jako v aplikaci, legenda dole.
+     */
+    private fun drawBarbellSection(pdf: PdfDocument, title: String, context: Context, db: AppDatabase) {
+        val dao = db.barbellDao()
+        val from = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            .format(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -13) }.time)
+        val sets = dao.getSetsSince(from)
+        if (sets.isEmpty()) return
+
+        val paint = Paint().apply { isAntiAlias = true }
+        var page = createNewPage(pdf, title, context)
+        var c = page.canvas
+        var y = HEADER_END_Y
+
+        val cols = floatArrayOf(22f, 95f, 50f, 55f, 50f, 55f, 45f, 45f)   // šířky sloupců
+        val headers = listOf("#", "Body cm (start/obrat/konec)", "Rozsah", "Spouštění", "Zvedání", "Rychlost", "Dráha", "Kvalita")
+
+        fun newPageIfNeeded(need: Float) {
+            if (y + need > PAGE_HEIGHT - 150) {
+                drawBarbellLegend(c, paint)
+                drawFooter(c)
+                pdf.finishPage(page)
+                page = createNewPage(pdf, title, context)
+                c = page.canvas
+                y = HEADER_END_Y
+            }
+        }
+
+        paint.color = Color.BLACK; paint.textSize = 14f; paint.typeface = Typeface.DEFAULT_BOLD
+        c.drawText("SLEDOVÁNÍ ČINKY (posledních 14 dní)", MARGIN, y, paint)
+        y += 22f
+
+        sets.groupBy { it.date to it.exercise }.forEach { (key, daySets) ->
+            val summaries = daySets.map { cz.uhk.macroflow.training.BarbellMapper.toSummary(it, dao.getReps(it.id)) }
+            newPageIfNeeded(40f)
+            paint.textSize = 12f; paint.typeface = Typeface.DEFAULT_BOLD; paint.color = Color.parseColor("#283618")
+            c.drawText("${key.first} · ${cz.uhk.macroflow.training.analysis.Lift.from(key.second).label}", MARGIN, y, paint)
+            y += 16f
+
+            daySets.zip(summaries).forEach { (set, sum) ->
+                newPageIfNeeded(34f + 13f * (sum.reps.size + 1))
+                // Souhrn série se zabarvením proti nejlepší sérii dne
+                val setScore = cz.uhk.macroflow.training.analysis.RepRating.setScore(sum, summaries)
+                paint.color = cz.uhk.macroflow.training.analysis.RepRating.color(setScore); paint.alpha = 110
+                c.drawRect(MARGIN, y - 10f, PAGE_WIDTH - MARGIN, y + 14f, paint)
+                paint.alpha = 255; paint.color = Color.BLACK; paint.typeface = Typeface.DEFAULT_BOLD; paint.textSize = 9f
+                val load = set.loadKg?.let { String.format(Locale.US, " · %.1f kg", it) } ?: ""
+                c.drawText("Série ${set.setIndex}$load · ${set.repCount} opak. · rozsah Ø %.1f cm (vážený %.1f, var. %.0f %%) · nejrychlejší %.2f m/s · ztráta %.0f %%"
+                    .format(Locale.US, set.avgRomCm, set.weightedRomCm, set.romCvPct, set.bestMcv, set.velocityLossPct), MARGIN + 4f, y, paint)
+                paint.typeface = Typeface.DEFAULT
+                c.drawText("spouštění Ø %.2f s · zvedání Ø %.2f s · rep Ø %.2f s · dráha Ø %.1f cm · kvalita sledování %.0f %%"
+                    .format(Locale.US, set.avgEccentricMs / 1000.0, set.avgConcentricMs / 1000.0, set.avgTotalMs / 1000.0,
+                        set.avgDeviationCm, set.quality * 100), MARGIN + 4f, y + 11f, paint)
+                y += 26f
+
+                // Hlavička tabulky
+                var x = MARGIN
+                paint.textSize = 7.5f; paint.typeface = Typeface.DEFAULT_BOLD
+                headers.forEachIndexed { i, h -> c.drawText(h, x + 2f, y, paint); x += cols[i] }
+                y += 4f
+
+                paint.typeface = Typeface.DEFAULT; paint.textSize = 8f
+                sum.reps.forEach { r ->
+                    val rr = cz.uhk.macroflow.training.analysis.RepRating
+                    val cells = listOf(
+                        "${r.index}" to null,
+                        String.format(Locale.US, "%.0f / %.0f / %.0f", r.startCm, r.turnCm, r.endCm) to null,
+                        String.format(Locale.US, "%.1f cm", r.romCm) to rr.score(rr.Metric.ROM, r, sum),
+                        String.format(Locale.US, "%.2f s", r.eccentricMs / 1000.0) to rr.score(rr.Metric.ECCENTRIC, r, sum),
+                        String.format(Locale.US, "%.2f s", r.concentricMs / 1000.0) to rr.score(rr.Metric.CONCENTRIC, r, sum),
+                        String.format(Locale.US, "%.2f m/s", r.meanConcentricVelocity) to rr.score(rr.Metric.VELOCITY, r, sum),
+                        String.format(Locale.US, "%.1f cm", r.deviationCm) to rr.score(rr.Metric.DEVIATION, r, sum),
+                        String.format(Locale.US, "%.0f %%", r.quality * 100) to null
+                    )
+                    x = MARGIN
+                    cells.forEachIndexed { i, (txt, score) ->
+                        if (score != null) {
+                            paint.color = rr.color(score); paint.alpha = 120
+                            c.drawRect(x, y + 1f, x + cols[i] - 2f, y + 12f, paint)
+                            paint.alpha = 255
+                        }
+                        paint.color = Color.BLACK
+                        c.drawText(txt, x + 2f, y + 10f, paint)
+                        x += cols[i]
+                    }
+                    y += 13f
+                }
+                y += 10f
+            }
+            y += 6f
+        }
+        drawBarbellLegend(c, paint)
+        drawFooter(c)
+        pdf.finishPage(page)
+    }
+
+    private fun drawBarbellLegend(c: Canvas, paint: Paint) {
+        val rr = cz.uhk.macroflow.training.analysis.RepRating
+        var y = PAGE_HEIGHT - 140f
+        paint.color = Color.BLACK; paint.textSize = 9f; paint.typeface = Typeface.DEFAULT_BOLD
+        c.drawText("Legenda barev", MARGIN, y, paint)
+        y += 6f
+        val w = PAGE_WIDTH - 2 * MARGIN
+        val steps = 60
+        for (i in 0 until steps) {
+            paint.color = rr.color(i / (steps - 1.0))
+            c.drawRect(MARGIN + w * i / steps, y, MARGIN + w * (i + 1) / steps + 0.5f, y + 8f, paint)
+        }
+        y += 18f
+        paint.color = Color.BLACK; paint.typeface = Typeface.DEFAULT; paint.textSize = 7.5f
+        c.drawText("zelená = jako nejlepší rep / v normě", MARGIN, y, paint)
+        val right = "červená = výrazně horší"
+        c.drawText(right, PAGE_WIDTH - MARGIN - paint.measureText(right), y, paint)
+        y += 11f
+        rr.Metric.entries.forEach { m -> c.drawText("${m.label}: ${m.legend}", MARGIN, y, paint); y += 10f }
+        c.drawText("Rychlost = průměrná rychlost zvedání (m/s). Vážený rozsah = průměr vážený kvalitou sledování repu. Série se srovnávají s nejlepší sérií dne.", MARGIN, y, paint)
     }
 
     private fun createNewPage(pdfDocument: PdfDocument, title: String, context: Context): PdfDocument.Page {
