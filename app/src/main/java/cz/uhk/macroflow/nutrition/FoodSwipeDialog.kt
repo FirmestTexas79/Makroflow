@@ -118,7 +118,7 @@ class FoodSwipeDialog : DialogFragment() {
 
         return snacks.sortedByDescending { s ->
             val total = s.p + s.s + s.t + 0.01f
-            val kcal  = FoodEnergy.kcalPreferLabel(s.energyKj, s.p, s.s, s.t, s.fiber)
+            val kcal  = FoodEnergy.kcalPreferLabel(s.energyKj, s.p, s.s, s.t, s.fiber).toFloat()
 
             val macroScore = when (ctx) {
                 TrainingTimeManager.MealContext.PRE_WORKOUT -> {
