@@ -49,12 +49,21 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private lateinit var gs: BattleState
     private val handler = Handler(Looper.getMainLooper())
-    private var ballX = 0f; private var ballY = 0f
+    // ── Makroball: poloha a stav animace (souřadnice herního plátna 160 × 144) ──
+    private var ball: cz.uhk.macroflow.pokemon.balls.Makroball = cz.uhk.macroflow.pokemon.balls.Makroball.MAKRO
+    private var ballShown = false
+    private var ballCx = 0f; private var ballCy = 0f
+    private var ballRot = 0f; private var ballOpen = 0f
+    /** 0 = Makromon normálně, 1 = celý vtažený do ballu (světlo). */
+    private var enemyAbsorb = 0f
+    private var captureBeam = 0f
+    private var clickStars = -1f
+    private val ballCounts = HashMap<cz.uhk.macroflow.pokemon.balls.Makroball, Int>()
+    private val absorbPaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
+    private val beamPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var flashOn = false; private var cursorOn = true
     private var busy = false
     private var pendingAction: (() -> Unit)? = null
-    private var ballVisible = 0
-    private var selectedBallId = "poke_ball"
 
     private var enemyBitmap: Bitmap? = null
     private var playerBitmap: Bitmap? = null
@@ -100,7 +109,8 @@ class PokemonBattleView @JvmOverloads constructor(
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
             val enemyIsShiny = enemyShiny
 
-            val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
+            val counts = cz.uhk.macroflow.pokemon.balls.Makroball.entries.associateWith { db.userItemDao().getItemCount(it.id) ?: 0 }
+            val currentPokeballs = counts.values.sum()
 
             handler.post {
                 gs = BattleState(
@@ -108,6 +118,7 @@ class PokemonBattleView @JvmOverloads constructor(
                     enemy  = enemyWithStats,
                     ballCount = currentPokeballs
                 )
+                ballCounts.putAll(counts)
                 gs.isEnemyShiny  = enemyIsShiny
                 gs.isPlayerShiny = playerIsShiny
 
@@ -192,11 +203,28 @@ class PokemonBattleView @JvmOverloads constructor(
                 val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
                 val sx = gbX(112f) - targetW / 2f + animOffset
                 val sy = gbY(54f) - targetH
-                if (gs.isEnemyShiny) drawShinyGlow(canvas, sx + targetW / 2f, sy + targetH / 2f, targetH)
-                canvas.drawBitmap(bmp, null, RectF(sx, sy, sx + targetW, sy + targetH), spSmooth)
+                if (gs.isEnemyShiny && enemyAbsorb == 0f) drawShinyGlow(canvas, sx + targetW / 2f, sy + targetH / 2f, targetH)
+                if (enemyAbsorb <= 0f) {
+                    canvas.drawBitmap(bmp, null, RectF(sx, sy, sx + targetW, sy + targetH), spSmooth)
+                } else {
+                    // Makromon se promění ve světlo, zmenší se a vletí do ballu
+                    val a = enemyAbsorb
+                    val ecx = sx + targetW / 2f; val ecy = sy + targetH / 2f
+                    val cx = ecx + (gbX(ballCx) - ecx) * a
+                    val cy = ecy + (gbY(ballCy) - ecy) * a
+                    val w = targetW * (1f - a); val h = targetH * (1f - a)
+                    val r = RectF(cx - w / 2f, cy - h / 2f, cx + w / 2f, cy + h / 2f)
+                    absorbPaint.colorFilter = null
+                    absorbPaint.alpha = ((1f - (a * 2f).coerceAtMost(1f)) * 255).toInt()
+                    canvas.drawBitmap(bmp, null, r, absorbPaint)
+                    absorbPaint.colorFilter = PorterDuffColorFilter(0xFFFFF6D8.toInt(), PorterDuff.Mode.SRC_ATOP)
+                    absorbPaint.alpha = ((a * 2f).coerceAtMost(1f) * 255).toInt()
+                    canvas.drawBitmap(bmp, null, r, absorbPaint)
+                }
             }
         }
         drawSparkles(canvas)
+        drawBallOverlay(canvas)
 
         playerBitmap?.let { bmp ->
             val targetH = 36f * sc
@@ -236,14 +264,6 @@ class PokemonBattleView @JvmOverloads constructor(
         drawPlatform(c, 16, 72, 64, 10)
         drawEnemyHUD(c)
         drawPlayerHUD(c)
-        when (ballVisible) {
-            1 -> drawSprite(c, PokemonSprites.POKEBALL,
-                PokemonSprites.POKEBALL_W, PokemonSprites.POKEBALL_H,
-                ballX.toInt(), ballY.toInt())
-            2 -> drawSprite(c, PokemonSprites.POKEBALL_CLOSED,
-                PokemonSprites.POKEBALL_W, PokemonSprites.POKEBALL_H,
-                ballX.toInt(), ballY.toInt())
-        }
         drawBottomUI(c)
         if (flashOn) { fp.color = 0xBBFFFFFF.toInt(); c.drawRect(0f, 0f, 160f, 144f, fp) }
     }
@@ -357,15 +377,19 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun drawItemMenu(c: Canvas) {
         val bx = 2; val by = 97; val bw = 156; val bh = 46; drawUIBox(c, bx, by, bw, bh)
-        val pokeCount  = db.userItemDao().getItemCount("poke_ball")  ?: 0
-        val greatCount = db.userItemDao().getItemCount("great_ball") ?: 0
-        PokemonSprites.drawText(c, "1.POKE BALL X$pokeCount",  bx+4, by+5,  C_TEXT, fp)
-        PokemonSprites.drawText(c, "2.GREAT BALL X$greatCount", bx+4, by+18, C_TEXT, fp)
-        PokemonSprites.drawText(c, "BACK", bx+bw-28, by+34, C_TEXT, fp)
         zones.clear()
-        zones.add(Zone(Rect(bx, by,    bx+bw, by+15)) { if (!busy && pokeCount  > 0) throwBall("poke_ball")  })
-        zones.add(Zone(Rect(bx, by+16, bx+bw, by+31)) { if (!busy && greatCount > 0) throwBall("great_ball") })
-        zones.add(Zone(Rect(bx+bw-32, by+32, bx+bw, by+bh)) { if (!busy) showMain() })
+        // Počty se čtou z mezipaměti – dřív se sahalo do DB při každém překreslení
+        cz.uhk.macroflow.pokemon.balls.Makroball.entries.forEachIndexed { i, b ->
+            val y = by + 4 + i * 11
+            val n = ballCounts[b] ?: 0
+            c.save(); c.translate((bx + 3).toFloat(), (y - 1).toFloat()); c.scale(8f / 12f, 8f / 12f)
+            cz.uhk.macroflow.pokemon.balls.BallSprites.draw(c, b, 6f, 6f)
+            c.restore()
+            PokemonSprites.drawText(c, "${b.label.uppercase()} X$n", bx + 14, y, if (n > 0) C_TEXT else 0xFF9A9A9A.toInt(), fp)
+            zones.add(Zone(Rect(bx, y - 2, bx + bw - 34, y + 9)) { if (!busy && n > 0) throwBall(b) })
+        }
+        PokemonSprites.drawText(c, "BACK", bx+bw-28, by+37, C_TEXT, fp)
+        zones.add(Zone(Rect(bx+bw-32, by+33, bx+bw, by+bh)) { if (!busy) showMain() })
     }
 
     private fun drawTextPanel(c: Canvas) {
@@ -746,21 +770,45 @@ class PokemonBattleView @JvmOverloads constructor(
         }, 1200)
     }
 
-    private fun throwBall(ballType: String) {
-        if (gs.enemy.currentHp <= 0) return
-        selectedBallId = ballType; busy = true; gs.phase = BattlePhase.BALL_THROW
+    // ── Hod Makroballem ──────────────────────────────────────────────────────
 
+    /** Jednoduchý časovaný průběh 0..1 (snímky po 16 ms). */
+    private fun tween(ms: Long, update: (Float) -> Unit, end: () -> Unit) {
+        val start = android.os.SystemClock.uptimeMillis()
+        handler.post(object : Runnable {
+            override fun run() {
+                val p = ((android.os.SystemClock.uptimeMillis() - start) / ms.toFloat()).coerceIn(0f, 1f)
+                update(p); invalidate()
+                if (p < 1f) handler.postDelayed(this, 16) else end()
+            }
+        })
+    }
+
+    private fun bounce(p: Float): Float {
+        val n = 7.5625f; val d = 2.75f
+        return when {
+            p < 1f / d -> n * p * p
+            p < 2f / d -> { val q = p - 1.5f / d; n * q * q + 0.75f }
+            p < 2.5f / d -> { val q = p - 2.25f / d; n * q * q + 0.9375f }
+            else -> { val q = p - 2.625f / d; n * q * q + 0.984375f }
+        }
+    }
+
+    private fun throwBall(b: cz.uhk.macroflow.pokemon.balls.Makroball) {
+        if (gs.enemy.currentHp <= 0) return
+        ball = b; busy = true; gs.phase = BattlePhase.BALL_THROW
+        ballCounts[b] = ((ballCounts[b] ?: 1) - 1).coerceAtLeast(0)
         Thread {
-            db.userItemDao().consumeItem(ballType, 1)
-            val newCount = db.userItemDao().getItemCount("poke_ball") ?: 0
-            handler.post { gs.ballCount = newCount }
+            db.userItemDao().consumeItem(b.id, 1)
+            val total = cz.uhk.macroflow.pokemon.balls.Makroball.entries.sumOf { db.userItemDao().getItemCount(it.id) ?: 0 }
+            handler.post { gs.ballCount = total }
         }.start()
 
-        setText("THREW A", "${ballType.uppercase().replace("_", " ")}!")
+        setText("THREW A", "${b.label.uppercase()}!")
 
-        val sx = 28f; val sy = 58f; val tx = 100f; val ty = 28f
-        ballX = sx; ballY = sy; var t = 0f; ballVisible = 1
-
+        // Let obloukem od hráče ke středu soupeře; ball se při letu točí
+        val sx = 30f; val sy = 64f
+        val tx = 112f; val ty = 54f - enemySpriteHeight() / 2f
         val speedStep = when (gs.enemy.name) {
             "FINLET", "SPIRRA", "MYCIT"   -> 0.055f
             "AXLU", "DRAKIRRA"            -> 0.025f
@@ -768,46 +816,66 @@ class PokemonBattleView @JvmOverloads constructor(
             "SOULORD", "PHANTIAX"         -> 0.030f
             else                          -> 0.040f
         }
+        val flightMs = (20f / speedStep).toLong()
+        ballShown = true; ballOpen = 0f; ballRot = 0f; enemyAbsorb = 0f; captureBeam = 0f
+        tween(flightMs, { p ->
+            ballCx = sx + (tx - sx) * p
+            ballCy = sy + (ty - sy) * p - sin(p * PI.toFloat()) * 26f
+            ballRot = p * 720f
+        }) { onBallHit() }
+    }
 
-        fun fly() {
-            if (t >= 1f) {
-                gs.enemyVisible = false; ballX = 100f; ballY = 36f; invalidate()
-                handler.postDelayed({
-                    ballY = 46f; invalidate()
-                    handler.postDelayed({ startWobbleBall() }, 300)
-                }, 350)
-                return
+    /** Dopad: víčko se odklopí, Makromon se změní ve světlo a vletí dovnitř, ball dopadne na zem. */
+    private fun onBallHit() {
+        ballRot = 0f
+        tween(170, { p -> ballOpen = 60f * p; captureBeam = p }) {
+            tween(430, { p -> enemyAbsorb = p }) {
+                gs.enemyVisible = false; enemyAbsorb = 0f
+                tween(170, { p -> ballOpen = 60f * (1f - p); captureBeam = 1f - p }) {
+                    val y0 = ballCy
+                    val ground = 54f - cz.uhk.macroflow.pokemon.balls.Makroball.SIZE / 2f
+                    tween(360, { p -> ballCy = y0 + (ground - y0) * bounce(p) }) { startWobbleBall() }
+                }
             }
-            ballX = sx + (tx - sx) * t
-            ballY = sy + (ty - sy) * t + (-sin(t * PI.toFloat()) * 26f)
-            t += speedStep; invalidate()
-            handler.postDelayed({ fly() }, 20)
         }
-        fly()
     }
 
     private fun startWobbleBall() {
         val baseMultiplier  = BattleFactory.catchMultiplier(gs.enemy)
-        val ballBonus       = if (selectedBallId == "great_ball") 1.5f else 1.0f
-        val finalMultiplier = baseMultiplier * ballBonus
+        val finalMultiplier = baseMultiplier * ball.catchMultiplier
         val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy, finalMultiplier)
         gs.captureSuccess = success; gs.wobbleCount = wobbles; gs.wobbleDone = 0
         gs.phase = BattlePhase.BALL_WOBBLE
-        doWobble()
+        setText("...", "")
+        handler.postDelayed({ doWobble() }, 350)
     }
 
+    /** Kolébání ballu na zemi (pivot ve spodku) – počet podle šance na chycení. */
     private fun doWobble() {
         if (gs.wobbleDone >= gs.wobbleCount) {
-            handler.postDelayed({ if (gs.captureSuccess) caught() else breakFree() }, 600)
+            handler.postDelayed({ if (gs.captureSuccess) caught() else breakFree() }, 380)
             return
         }
         gs.wobbleDone++
-        setText("...", ""); invalidate()
-        handler.postDelayed({ setText("", ""); invalidate(); handler.postDelayed({ doWobble() }, 500) }, 700)
+        tween(540, { p -> ballRot = 24f * sin(p * 2f * PI.toFloat()) * (1f - 0.35f * p) }) {
+            ballRot = 0f
+            handler.postDelayed({ doWobble() }, 420)
+        }
     }
 
     private fun breakFree() {
-        ballVisible = 0; gs.enemyVisible = true; invalidate()
+        // Ball se otevře a Makromon z něj vyskočí zpátky
+        tween(150, { p -> ballOpen = 75f * p; captureBeam = p }) {
+            gs.enemyVisible = true; enemyAbsorb = 1f
+            tween(320, { p -> enemyAbsorb = 1f - p; captureBeam = 1f - p }) {
+                ballShown = false; ballOpen = 0f; enemyAbsorb = 0f; captureBeam = 0f
+                afterBreakFree()
+            }
+        }
+    }
+
+    private fun afterBreakFree() {
+        invalidate()
 
         val runAwayChance = when (gs.enemy.name) {
             "AXLU"              -> 0.40f
@@ -831,10 +899,39 @@ class PokemonBattleView @JvmOverloads constructor(
         }
     }
 
+    /** Ball + záře při otevření + hvězdičky po chycení; kreslí se nad soupeřem. */
+    private fun drawBallOverlay(canvas: Canvas) {
+        if (!ballShown) return
+        val sc = scale
+        if (captureBeam > 0f) {
+            val cx = gbX(ballCx); val cy = gbY(ballCy); val r = 22f * sc * (0.6f + 0.6f * captureBeam)
+            beamPaint.shader = RadialGradient(cx, cy, r,
+                intArrayOf(Color.argb((200 * captureBeam).toInt(), 255, 246, 216), Color.argb(0, 255, 246, 216)),
+                null, Shader.TileMode.CLAMP)
+            canvas.drawCircle(cx, cy, r, beamPaint)
+        }
+        canvas.save()
+        canvas.translate(dstR.left, dstR.top)
+        canvas.scale(sc, sc)
+        cz.uhk.macroflow.pokemon.balls.BallSprites.draw(canvas, ball, ballCx, ballCy, ballRot, ballOpen, ballOpen / 15f)
+        if (clickStars in 0f..1f) {
+            // Tři hvězdičky vyletí z ballu = chyceno
+            fp.color = 0xFFFFD54F.toInt()
+            fp.alpha = ((1f - clickStars) * 255).toInt()
+            for (i in -1..1) {
+                val x = ballCx + i * 8f * (0.4f + clickStars)
+                val y = ballCy - 8f - clickStars * 12f + kotlin.math.abs(i) * 3f
+                canvas.drawRect(x - 2f, y - 0.5f, x + 2f, y + 0.5f, fp)
+                canvas.drawRect(x - 0.5f, y - 2f, x + 0.5f, y + 2f, fp)
+            }
+            fp.alpha = 255
+        }
+        canvas.restore()
+    }
+
     private fun caught() {
         gs.phase = BattlePhase.CAUGHT
-        ballVisible = 2
-        invalidate()
+        tween(650, { p -> clickStars = p }) { clickStars = -1f }
 
         val mId = BattleFactory.makrodexId(gs.enemy)
 

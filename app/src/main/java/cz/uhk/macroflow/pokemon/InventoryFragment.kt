@@ -232,9 +232,8 @@ class InventoryFragment : Fragment() {
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = list[position]
 
-            holder.tvName.text = when (item.itemId) {
-                "poke_ball"  -> "Poké Ball"
-                "great_ball" -> "Great Ball"
+            val ball = cz.uhk.macroflow.pokemon.balls.Makroball.from(item.itemId)
+            holder.tvName.text = ball?.label ?: when (item.itemId) {
                 "lure_lamp"  -> "Spooky Plate"
                 else         -> item.itemId
             }
@@ -244,13 +243,13 @@ class InventoryFragment : Fragment() {
 
             // Itemy zatím stále načítají z URL – nemáme lokální drawable pro itemy
             val imageUrl = when (item.itemId) {
-                "poke_ball"  -> "https://img.pokemondb.net/sprites/items/poke-ball.png"
-                "great_ball" -> "https://img.pokemondb.net/sprites/items/great-ball.png"
                 "lure_lamp"  -> "https://img.pokemondb.net/sprites/items/spooky-plate.png"
                 else         -> ""
             }
 
-            if (imageUrl.isNotEmpty()) {
+            if (ball != null) {
+                holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.icon(ball, (64 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (imageUrl.isNotEmpty()) {
                 holder.ivSprite.load(imageUrl) {
                     placeholder(R.drawable.ic_home)
                     error(R.drawable.ic_home)

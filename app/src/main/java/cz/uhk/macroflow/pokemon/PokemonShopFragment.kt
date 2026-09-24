@@ -27,7 +27,9 @@ data class ShopProduct(
     val price: Int,
     val quantityToGive: Int,
     val imageUrl: String,
-    val category: Int
+    val category: Int,
+    /** Makroball se kreslí z vlastního pixel artu (bez obrázku z internetu). */
+    val ball: cz.uhk.macroflow.pokemon.balls.Makroball? = null
 )
 
 class PokemonShopFragment : Fragment() {
@@ -39,9 +41,10 @@ class PokemonShopFragment : Fragment() {
 
     private var currentTab = 0
 
-    private val allProducts = listOf(
-        ShopProduct("poke_ball", "Poké Ball (5x)", "Základní míček na ranní kardio.", 20, 5, "https://img.pokemondb.net/sprites/items/poke-ball.png", 0),
-        ShopProduct("great_ball", "Great Ball (3x)", "Lepší šance na těžké váhy.", 50, 3, "https://img.pokemondb.net/sprites/items/great-ball.png", 0),
+    // Makrobally z jednoho registru (ceny, balení, popisy), pak ostatní předměty
+    private val allProducts = cz.uhk.macroflow.pokemon.balls.Makroball.entries.map { b ->
+        ShopProduct(b.id, "${b.label} (${b.packSize}x)", b.description, b.price, b.packSize, "", 0, b)
+    } + listOf(
         ShopProduct("lure_lamp", "Spooky Plate", "Zvedne spawn Gengara v noci.", 150, 1, "https://img.pokemondb.net/sprites/items/spooky-plate.png", 1),
         ShopProduct("lure_protein", "Black Belt", "Zaručí spawn Machampa.", 100, 1, "https://img.pokemondb.net/sprites/items/black-belt.png", 1),
 )
@@ -114,10 +117,15 @@ class PokemonShopFragment : Fragment() {
             holder.tvDesc.text = product.desc
             holder.btnBuy.text = "${product.price} 🪙"
 
-            holder.ivIcon.load(product.imageUrl) {
-                crossfade(true)
-                placeholder(R.drawable.ic_home)
-                error(R.drawable.ic_home)
+            val ball = product.ball
+            if (ball != null) {
+                holder.ivIcon.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.icon(ball, (48 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else {
+                holder.ivIcon.load(product.imageUrl) {
+                    crossfade(true)
+                    placeholder(R.drawable.ic_home)
+                    error(R.drawable.ic_home)
+                }
             }
 
             holder.btnBuy.setOnClickListener { handlePurchase(product) }
