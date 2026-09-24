@@ -5,93 +5,59 @@ import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.CheckInEntity
 import cz.uhk.macroflow.data.ConsumedSnackEntity
 import cz.uhk.macroflow.data.FirebaseRepository
+import cz.uhk.macroflow.energy.EnergyModel
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-
-private const val BAZALNI_KROKY = 6000 // Prvních 6000 kroků je v základu (activityMultiplier)
 
 object MacroFlowEngine {
 
-    fun calculateDailyStatus(context: Context, consumedList: List<ConsumedSnackEntity>): DailyStatus {
-        val target = MacroCalculator.calculate(context)
-        val db = AppDatabase.getDatabase(context)
-        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    /**
+     * Stav dne = cíle z [MacroCalculator] (už obsahují kroky i trénink) − snědené.
+     *
+     * Dřív se tu navíc odečítal TEF od snědených kalorií a zvlášť přičítaly kroky
+     * s pevným rozdělením 80 % S / 20 % T. TEF je ale už součástí výdeje (10 %),
+     * takže se počítal dvakrát a deficit při dietě mizel. Viz docs/adr/0002.
+     */
+    fun calculateDailyStatus(context: Context, consumedList: List<ConsumedSnackEntity>): DailyStatus =
+        calculateDailyStatusForDate(context, Date(), consumedList)
 
-        val stepsEntity = runBlocking { db.stepsDao().getStepsForDateSync(todayStr) }
-        val stepsCount = stepsEntity?.count ?: 0
-        val weight = target.weight
+    fun calculateDailyStatusForDate(
+        context: Context,
+        date: Date,
+        consumedList: List<ConsumedSnackEntity>
+    ): DailyStatus {
+        val target = MacroCalculator.calculateForDate(context, date)
 
-        /**
-         * 1. DYNAMICKÝ VÝDEJ Z KROKŮ (Pouze kroky nad bazál)
-         * Tohle je extra pohyb nad rámec plánovaného kardia/tréninku.
-         */
-        val burnedFromSteps = calculateCaloriesFromSteps(stepsCount, weight)
-
-        /**
-         * 2. DYNAMICKÝ TERMICKÝ EFEKT (TEF) - Přesný výpočet ze snědeného
-         * Odčítáme energii, kterou tělo spotřebovalo na trávení, abychom dostali "čistý" příjem.
-         */
         val eatenP = consumedList.sumOf { it.p.toDouble() }
         val eatenS = consumedList.sumOf { it.s.toDouble() }
         val eatenT = consumedList.sumOf { it.t.toDouble() }
         val eatenFiber = consumedList.sumOf { it.fiber.toDouble() }
-        val eatenCalRaw = consumedList.sumOf { it.calories.toDouble() }
+        val eatenCal = consumedList.sumOf { it.calories.toDouble() }
 
-        // Bílkoviny pálí nejvíc (25%), sacharidy (7%), tuky téměř nic (2.5%)
-        val totalTEF = (eatenP * 4 * 0.25) + (eatenS * 4 * 0.07) + (eatenT * 9 * 0.025)
-        val netEatenCalories = eatenCalRaw - totalTEF
-
-        /**
-         * 3. ADAPTIVNÍ NAVÝŠENÍ CÍLŮ PODLE KROKŮ
-         * Přidáváme extra palivo, pokud uživatel nachodil víc, než je jeho běžný standard.
-         */
-        val extraCarbsFromSteps = (burnedFromSteps * 0.8) / 4.0
-        val extraFatFromSteps = (burnedFromSteps * 0.2) / 9.0
-
-        // Výsledný cíl pro dnešek (Základ + Tréninky + Extra kroky)
-        val finalTargetCalories = target.calories + burnedFromSteps
-        val finalTargetCarbs = target.carbs + extraCarbsFromSteps
-        val finalTargetFat = target.fat + extraFatFromSteps
-
-        /**
-         * 4. INTERAKTIVNÍ VÝPOČET VLÁKNINY (Makroflow 2.0 Logic)
-         * Výpočet: 14g na každých 1000 kcal cílového příjmu (včetně extra kalorií z kroků).
-         * Zároveň garantujeme minimum 25g (nebo 0.4g na kg váhy), aby engine neházel nesmysly při nízkém příjmu.
-         */
-        val fiberFromCalories = (finalTargetCalories / 1000.0) * 14.0
-        val fiberFromWeight = weight * 0.4
-        val finalTargetFiber = fiberFromCalories.coerceAtLeast(fiberFromWeight).coerceAtLeast(25.0)
+        // Pro zobrazení skutečně naměřené kroky (model může u dnešku/prázdného dne předpokládat 6000)
+        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date)
+        val recordedSteps = AppDatabase.getDatabase(context).stepsDao().getStepsForDateSync(dateKey)?.count ?: 0
+        val person = MacroCalculator.personOf(
+            AppDatabase.getDatabase(context).userProfileDao().getProfileSync()
+        )
 
         return DailyStatus(
-            caloriesLeft = finalTargetCalories - netEatenCalories,
+            caloriesLeft = target.calories - eatenCal,
             proteinLeft = target.protein - eatenP,
-            carbsLeft = finalTargetCarbs - eatenS,
-            fatLeft = finalTargetFat - eatenT,
-            fiberLeft = finalTargetFiber - eatenFiber,
-            target = target.copy(
-                calories = finalTargetCalories,
-                carbs = finalTargetCarbs,
-                fat = finalTargetFat,
-                fiber = finalTargetFiber
-            ),
+            carbsLeft = target.carbs - eatenS,
+            fatLeft = target.fat - eatenT,
+            fiberLeft = target.fiber - eatenFiber,
+            target = target,
             eatenP = eatenP,
             eatenS = eatenS,
             eatenT = eatenT,
-            eatenFiber = eatenFiber, // Tady to předáš
-            eatenCal = eatenCalRaw,
-            stepsCount = stepsCount,
-            stepsCalories = burnedFromSteps
+            eatenFiber = eatenFiber,
+            eatenCal = eatenCal,
+            stepsCount = recordedSteps,
+            stepsCalories = EnergyModel.walkingNetKcal(recordedSteps, person)
         )
-    }
-
-    fun calculateCaloriesFromSteps(steps: Int, weight: Double): Double {
-        if (steps <= BAZALNI_KROKY) return 0.0
-        val extraSteps = steps - BAZALNI_KROKY
-        // 0.00045 kcal/kg/step pro extra aktivitu nad běžný rámec dne
-        return extraSteps * weight * 0.00045
     }
 
     fun getCoachAdvice(status: DailyStatus, checkIn: CheckInEntity?): String {

@@ -8,9 +8,9 @@
     <string name="btn_save">ULOŽIT</string>
     <string name="toast_saved">Profil uložen!</string>
     <string name="toast_error">Vyplňte prosím všechna pole</string>
-    <string name="desc_lezerni">Ležérní – sedavý životní styl, minimum pohybu (kancelář).</string>
-    <string name="desc_aktivni">Aktivní – hodně chůze během dne, lehčí manuální práce.</string>
-    <string name="desc_sportovec">Sportovec – těžká manuální práce nebo velmi vysoký výdej.</string>
+    <string name="desc_lezerni">Sedavá práce – většinu dne sedíš (kancelář, škola). Kroky a tréninky se počítají zvlášť.</string>
+    <string name="desc_aktivni">Práce v pohybu – většinu dne na nohou (obchod, sklad, obsluha). Kroky a tréninky se počítají zvlášť.</string>
+    <string name="desc_sportovec">Fyzicky náročná práce – stavba, les, těžká manuální práce. Kroky a tréninky se počítají zvlášť.</string>
     <string name="day_monday">Pondělí</string>
     <string name="day_tuesday">Úterý</string>
     <string name="day_wednesday">Středa</string>

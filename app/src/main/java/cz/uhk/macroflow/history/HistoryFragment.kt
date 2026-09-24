@@ -20,7 +20,6 @@ import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.ValueFormatter
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.analytics.BioLogicEngine
-import cz.uhk.macroflow.dashboard.EliteMetabolicEngine
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.CheckInEntity
 import cz.uhk.macroflow.data.ConsumedSnackDao
@@ -202,66 +201,28 @@ class HistoryFragment : Fragment() {
         lifecycleScope.launch {
             val db = AppDatabase.getDatabase(requireContext())
 
-            // 1. NAČTENÍ PROFILU (pro zjištění typu diety)
-            val profile = withContext(Dispatchers.IO) {
-                db.userProfileDao().getProfileSync()
-            }
-            val dietType = profile?.dietType ?: "Vyvážená"
-
-            // 2. TEORETICKÝ ZÁKLAD (Cíle z kalkulačky)
-            val targetData = MacroCalculator.calculateForDate(requireContext(), parsed)
-
-            // 3. NAČTENÍ REÁLNÉ KONZUMACE
+            // Snědené za den
             val consumedList = withContext(Dispatchers.IO) {
                 db.consumedSnackDao().getConsumedByDateSync(dateKey)
             }
 
-            // Výpočet sumy snědených hodnot
-            val eatenCal = consumedList.sumOf { it.calories.toDouble() }
-            val eatenP = consumedList.sumOf { it.p.toDouble() }
-            val eatenS = consumedList.sumOf { it.s.toDouble() }
-            val eatenT = consumedList.sumOf { it.t.toDouble() }
-            val eatenFiber = consumedList.sumOf { it.fiber.toDouble() }
-
-            // 4. KROKY A DYNAMICKÝ VÝDEJ
-            val stepsEntity = withContext(Dispatchers.IO) { db.stepsDao().getStepsForDateSync(dateKey) }
-            val stepsCount = stepsEntity?.count ?: 0
-            val burnedKcalFromSteps = MacroFlowEngine.calculateCaloriesFromSteps(stepsCount, targetData.weight)
-
-            // Dynamické navýšení cílů podle kroků
-            val extraCarbs = (burnedKcalFromSteps * 0.8) / 4.0
-            val extraFat = (burnedKcalFromSteps * 0.2) / 9.0
-
-            val finalTargetCal = targetData.calories + burnedKcalFromSteps
-            val finalTargetCarbs = targetData.carbs + extraCarbs
-            val finalTargetFat = targetData.fat + extraFat
-
-            // 5. LOGIKA VLÁKNINY PODLE TYPU DIETY (shodná s dashboardem)
-            val fiberMultiplier = when (dietType) {
-                "Keto" -> 10.0
-                "Low Carb" -> 12.0
-                "Vegan" -> 18.0
-                "High Protein" -> 15.0
-                else -> 14.0 // Vyvážená
+            // Cíle i výdej pro ten den ze stejného modelu jako dashboard
+            // (kroky dne jsou už započtené v cíli – nic dalšího nepřičítat)
+            val ctx = requireContext().applicationContext
+            val status = withContext(Dispatchers.IO) {
+                MacroFlowEngine.calculateDailyStatusForDate(ctx, parsed, consumedList)
             }
+            val targetData = status.target
 
-            // Výpočet cílové vlákniny (násobitel na 1000kcal, s limity)
-            val finalTargetFiber = ((finalTargetCal / 1000.0) * fiberMultiplier)
-                .coerceAtLeast(targetData.weight * 0.4)
-                .coerceAtLeast(25.0)
-
-            // 6. UPDATE UI
-            tvStepsCount.text = String.format("%, d", stepsCount).replace(',', ' ')
-            tvStepsBurned.text = if (burnedKcalFromSteps > 0) "+${burnedKcalFromSteps.toInt()} kcal" else "+0 kcal"
+            tvStepsCount.text = String.format("%,d", status.stepsCount).replace(',', ' ')
+            tvStepsBurned.text = "+${status.stepsCalories.toInt()} kcal"
 
             // Formát: "Snědeno / Cíl"
-            tvKcal.text = "${eatenCal.toInt()} / ${finalTargetCal.toInt()} kcal"
-            tvProtein.text = "${eatenP.toInt()} / ${targetData.protein.toInt()} g"
-            tvCarbs.text = "${eatenS.toInt()} / ${finalTargetCarbs.toInt()} g"
-            tvFat.text = "${eatenT.toInt()} / ${finalTargetFat.toInt()} g"
-
-            // Vláknina s dynamickým cílem podle diety
-            tvFiber.text = "${String.format("%.1f", eatenFiber)} / ${finalTargetFiber.toInt()} g"
+            tvKcal.text = "${status.eatenCal.toInt()} / ${targetData.calories.toInt()} kcal"
+            tvProtein.text = "${status.eatenP.toInt()} / ${targetData.protein.toInt()} g"
+            tvCarbs.text = "${status.eatenS.toInt()} / ${targetData.carbs.toInt()} g"
+            tvFat.text = "${status.eatenT.toInt()} / ${targetData.fat.toInt()} g"
+            tvFiber.text = "${String.format("%.1f", status.eatenFiber)} / ${targetData.fiber.toInt()} g"
 
             tvTraining.text = targetData.trainingType
 

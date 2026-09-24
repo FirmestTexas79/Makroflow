@@ -34,6 +34,7 @@ import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.common.MakroflowNotifications
 import cz.uhk.macroflow.common.MakroflowTimePicker
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.energy.FoodEnergy
 import cz.uhk.macroflow.training.TrainerFragment
 import cz.uhk.macroflow.training.TrainingTimeManager
 import cz.uhk.macroflow.achievements.AchievementEngine
@@ -479,13 +480,15 @@ class DashboardFragment : Fragment() {
         val tvS = view.findViewById<TextView>(R.id.tvCarbPct)
         val tvT = view.findViewById<TextView>(R.id.tvFatPct)
 
-        val (p, s, t) = when (dietType) {
-            "Keto"         -> Triple(20f, 5f, 75f)
-            "Low Carb"     -> Triple(25f, 15f, 60f)
-            "Vegan"        -> Triple(15f, 60f, 25f)
-            "High Protein" -> Triple(40f, 20f, 40f)
-            else           -> Triple(25f, 45f, 30f)
-        }
+        // Skutečné rozložení z modelu (dřív pevné procento, které neodpovídalo výpočtu cílů)
+        val preview = MacroCalculator.previewForDiet(requireContext(), dietType)
+        val kcalP = preview.protein * FoodEnergy.KCAL_PER_G_PROTEIN
+        val kcalS = preview.carbs * FoodEnergy.KCAL_PER_G_CARBS
+        val kcalT = preview.fat * FoodEnergy.KCAL_PER_G_FAT
+        val sum = (kcalP + kcalS + kcalT).coerceAtLeast(1.0)
+        val p = (kcalP / sum * 100).toFloat()
+        val s = (kcalS / sum * 100).toFloat()
+        val t = (kcalT / sum * 100).toFloat()
 
         pieChart.setRatios(p, s, t)
         tvP?.text = "B: ${p.toInt()}%"

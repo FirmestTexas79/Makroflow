@@ -1,5 +1,7 @@
 package cz.uhk.macroflow.dashboard
 
+import cz.uhk.macroflow.energy.EnergyBreakdown
+
 data class MacroResult(
     val calories: Double,
     val protein: Double,
@@ -9,5 +11,7 @@ data class MacroResult(
     val water: Double,
     val trainingType: String,
     val weight: Double,
-    val isEliteMode: Boolean = false
+    val isEliteMode: Boolean = false,
+    /** Rozpad výdeje (BMR, NEAT, chůze, trénink, TEF) – pro přehled a report. */
+    val expenditure: EnergyBreakdown? = null
 )

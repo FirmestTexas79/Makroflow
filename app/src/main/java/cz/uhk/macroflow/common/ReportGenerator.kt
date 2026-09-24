@@ -39,12 +39,7 @@ object ReportGenerator {
         var yPos = HEADER_END_Y
 
         // --- 1. INFO O UŽIVATELI ---
-        val lifestyleStr = when(profile.activityMultiplier) {
-            1.2f -> "Ležérní (minimum pohybu)"
-            1.4f -> "Aktivní (práce v pohybu)"
-            1.6f -> "Sportovec (těžké tréninky)"
-            else -> "Vlastní (${profile.activityMultiplier})"
-        }
+        val lifestyleStr = cz.uhk.macroflow.energy.Lifestyle.fromStored(profile.activityMultiplier).label
 
         paint.color = Color.BLACK
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)

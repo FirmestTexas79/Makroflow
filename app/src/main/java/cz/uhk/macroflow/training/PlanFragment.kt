@@ -24,6 +24,7 @@ import cz.uhk.macroflow.common.MakroflowTimePicker
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.dashboard.MacroFlowEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -118,15 +119,16 @@ class PlanFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val profile    = withContext(Dispatchers.IO) { db.userProfileDao().getProfileSync() }
             val stepGoal   = profile?.stepGoal ?: 6000
-            val userWeight = profile?.weight ?: 75.0
 
             db.stepsDao().getStepsForDateFlow(todayStr).collect { stepsEntity ->
                 val stepsToday    = stepsEntity?.count ?: 0
                 val isGoalReached = stepsToday >= stepGoal
 
                 tvTotalSteps?.text = "$stepsToday / $stepGoal"
-                val burnedCalories = MacroFlowEngine.calculateCaloriesFromSteps(stepsToday, userWeight)
-                val fatBurnedGrams = burnedCalories / 9.0
+                val burnedCalories = MacroCalculator.walkingKcal(profile, stepsToday)
+                // Ekvivalent tukové tkáně (~7,7 kcal/g), ne „čistý tuk 9 kcal/g“ –
+                // spálené kalorie nejsou ze 100 % tuk a tkáň obsahuje i vodu
+                val fatBurnedGrams = burnedCalories / (cz.uhk.macroflow.energy.MacroPlanner.KCAL_PER_KG_TISSUE / 1000.0)
 
                 if (!isGoalReached) {
                     tvFatLabel?.text = String.format(Locale.getDefault(), "🔥 %.1fg TUKU SPÁLENO", fatBurnedGrams)

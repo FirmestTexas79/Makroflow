@@ -107,9 +107,9 @@ class ProfileFragment : Fragment() {
         tvDesc.visibility = View.INVISIBLE
 
         // Lifestyle Click Listenery
-        view.findViewById<View>(R.id.clickLezerni).setOnClickListener { selectMode(1.2f, "Ležérní - Minimum pohybu") }
-        view.findViewById<View>(R.id.clickAktivni).setOnClickListener { selectMode(1.4f, "Aktivní - Práce v pohybu") }
-        view.findViewById<View>(R.id.clickSportovec).setOnClickListener { selectMode(1.6f, "Sportovec - Těžké tréninky") }
+        view.findViewById<View>(R.id.clickLezerni).setOnClickListener { selectMode(1.2f, "Sedavá práce") }
+        view.findViewById<View>(R.id.clickAktivni).setOnClickListener { selectMode(1.4f, "Práce v pohybu") }
+        view.findViewById<View>(R.id.clickSportovec).setOnClickListener { selectMode(1.6f, "Fyzicky náročná práce") }
 
         view.findViewById<View>(R.id.setupMainLayout).setOnClickListener { if (isExpanded) shrinkCircle() }
         view.findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveAllData() }

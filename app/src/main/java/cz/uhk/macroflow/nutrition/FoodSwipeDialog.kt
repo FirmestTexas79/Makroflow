@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.energy.FoodEnergy
 import cz.uhk.macroflow.training.TrainingTimeManager
 import cz.uhk.macroflow.data.ConsumedSnackEntity
 import cz.uhk.macroflow.data.SnackEntity
@@ -117,7 +118,7 @@ class FoodSwipeDialog : DialogFragment() {
 
         return snacks.sortedByDescending { s ->
             val total = s.p + s.s + s.t + 0.01f
-            val kcal  = (s.p * 4 + s.s * 4 + s.t * 9)
+            val kcal  = FoodEnergy.kcalPreferLabel(s.energyKj, s.p, s.s, s.t, s.fiber)
 
             val macroScore = when (ctx) {
                 TrainingTimeManager.MealContext.PRE_WORKOUT -> {
@@ -180,7 +181,7 @@ class FoodSwipeDialog : DialogFragment() {
         val total     = snack.p + snack.s + snack.t + 0.01f
         val carbRatio = snack.s / total
         val protRatio = snack.p / total
-        val kcal      = (snack.p * 4 + snack.s * 4 + snack.t * 9)
+        val kcal      = FoodEnergy.kcalPreferLabel(snack.energyKj, snack.p, snack.s, snack.t, snack.fiber)
 
         return when (ctx) {
             TrainingTimeManager.MealContext.PRE_WORKOUT ->
@@ -226,7 +227,7 @@ class FoodSwipeDialog : DialogFragment() {
         val current = snackList.firstOrNull() ?: run { dismiss(); return }
         resetCardToDefaultState(view)
 
-        val kcal = ((current.p * 4) + (current.s * 4) + (current.t * 9)).toInt()
+        val kcal = FoodEnergy.kcalPreferLabel(current.energyKj, current.p, current.s, current.t, current.fiber).toInt()
         view.findViewById<TextView>(R.id.tvFoodName).text     = current.name
         view.findViewById<TextView>(R.id.tvFoodCalories).text = "$kcal kcal | ${current.energyKj.toInt()} kJ"
         view.findViewById<TextView>(R.id.tvFoodProtein).text  = "${current.p.toInt()}g"
@@ -258,7 +259,7 @@ class FoodSwipeDialog : DialogFragment() {
         val snack = snackList.removeAt(0)
 
         lifecycleScope.launch {
-            val kcal = ((snack.p * 4) + (snack.s * 4) + (snack.t * 9)).toDouble()
+            val kcal = FoodEnergy.kcalPreferLabel(snack.energyKj, snack.p, snack.s, snack.t, snack.fiber)
             cz.uhk.macroflow.dashboard.MacroFlowEngine.logSwipedFood(
                 context     = requireContext(),
                 name        = snack.name,

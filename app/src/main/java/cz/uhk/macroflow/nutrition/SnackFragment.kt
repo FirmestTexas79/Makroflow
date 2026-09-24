@@ -24,6 +24,7 @@ import com.google.android.material.textfield.TextInputLayout
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.energy.FoodEnergy
 import cz.uhk.macroflow.data.ConsumedSnackEntity
 import cz.uhk.macroflow.data.SnackEntity
 import cz.uhk.macroflow.data.GeminiRepository
@@ -620,15 +621,8 @@ class SnackFragment : Fragment() {
             card.findViewById<TextView>(R.id.tvSnackWeight).text = snack.weight
 
             // --- ZÁCHRANNÁ SÍŤ A VÝPOČET ENERGIE ---
-            // Pokud energyKj chybí (je <= 0.1), vypočítáme ho z maker (B=17kJ, S=17kJ, T=38kJ)
-            val finalEnergyKj = if (snack.energyKj > 0.1f) {
-                snack.energyKj
-            } else {
-                (snack.p * 17f) + (snack.s * 17f) + (snack.t * 38f)
-            }
-
-            // Převod na kcal (1 kcal = 4.184 kJ) a zobrazení v pillu
-            val kcalValue = (finalEnergyKj / 4.184).toInt()
+            // Energie z etikety, jinak z maker (faktory EU 1169/2011)
+            val kcalValue = FoodEnergy.kcalPreferLabel(snack.energyKj, snack.p, snack.s, snack.t, snack.fiber).toInt()
             card.findViewById<TextView>(R.id.tvSnackKcal).text = "$kcalValue kcal"
 
             // Makra texty
@@ -717,7 +711,7 @@ class SnackFragment : Fragment() {
             val s     = perGramS     * g
             val t     = perGramT     * g
             val fiber = perGramFiber * g
-            val kcal  = (p * 4) + (s * 4) + (t * 9)
+            val kcal  = FoodEnergy.kcal(p, s, t, fiber)
 
             tvP.setText("%.1f".format(p).replace(",", "."))
             tvS.setText("%.1f".format(s).replace(",", "."))
@@ -770,8 +764,8 @@ class SnackFragment : Fragment() {
             val s = (snack.s / defaultGrams) * g
             val t = (snack.t / defaultGrams) * g
             val fiber = (snack.fiber / defaultGrams) * g
-            val kcal = ((p * 4) + (s * 4) + (t * 9)).toInt()
-            val kj = (p * 17f) + (s * 17f) + (t * 38f)
+            val kcal = FoodEnergy.kcal(p, s, t, fiber).toInt()
+            val kj = FoodEnergy.kj(p, s, t, fiber)
 
             lifecycleScope.launch(Dispatchers.IO) {
                 // 1. Uložení konzumace do DB
@@ -910,7 +904,7 @@ class SnackFragment : Fragment() {
             val s     = etS.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
             val t     = etT.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
             val fiber = etFiber.text.toString().replace(",", ".").toFloatOrNull() ?: 0f
-            val energy = (p * 17f) + (s * 17f) + (t * 38f)
+            val energy = FoodEnergy.kj(p, s, t, fiber)
 
             if (name.isNotEmpty()) {
                 lifecycleScope.launch(Dispatchers.IO) {

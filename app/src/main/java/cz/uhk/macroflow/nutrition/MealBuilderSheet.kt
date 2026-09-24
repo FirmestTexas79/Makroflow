@@ -11,6 +11,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.energy.FoodEnergy
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.ConsumedSnackEntity
 import cz.uhk.macroflow.data.SnackEntity
@@ -173,7 +174,7 @@ class MealBuilderSheet(private val isPreSelected: Boolean) : BottomSheetDialogFr
     private fun addSnackAsIngredient(snack: SnackEntity) {
         val grams = snack.weight.filter { it.isDigit() }.toFloatOrNull()?.takeIf { it > 0 } ?: 100f
         val kjPerGram = if (snack.energyKj > 0.1f) snack.energyKj / grams
-        else (snack.p * 17f + snack.s * 17f + snack.t * 38f) / grams
+        else FoodEnergy.kj(snack.p, snack.s, snack.t, snack.fiber) / grams
         ingredients.add(Ingredient(
             name         = snack.name,
             weight       = grams,
@@ -219,7 +220,7 @@ class MealBuilderSheet(private val isPreSelected: Boolean) : BottomSheetDialogFr
             time        = SimpleDateFormat("HH:mm",      Locale.getDefault()).format(Date()),
             name        = mealName,
             p = p, s = s, t = t, fiber = fiber, energyKj = kj,
-            calories    = (kj / 4.184).toInt(),
+            calories    = FoodEnergy.kjToKcal(kj.toDouble()).toInt(),
             mealContext = if (isPreSelected) "PRE_WORKOUT" else "POST_WORKOUT"
         )
 
@@ -300,8 +301,7 @@ class MealBuilderSheet(private val isPreSelected: Boolean) : BottomSheetDialogFr
             h.itemView.findViewById<TextView>(R.id.tvSnackName).text  = snack.name
             h.itemView.findViewById<TextView>(R.id.tvSnackWeight).text = snack.weight
 
-            val kcal = if (snack.energyKj > 0.1f) (snack.energyKj / 4.184).toInt()
-            else ((snack.p * 4) + (snack.s * 4) + (snack.t * 9)).toInt()
+            val kcal = FoodEnergy.kcalPreferLabel(snack.energyKj, snack.p, snack.s, snack.t, snack.fiber).toInt()
             h.itemView.findViewById<TextView>(R.id.tvSnackKcal).text = "$kcal kcal"
 
             h.itemView.findViewById<TextView>(R.id.valP).text = "B: ${snack.p.toInt()}g"
