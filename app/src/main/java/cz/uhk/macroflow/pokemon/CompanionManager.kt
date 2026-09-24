@@ -38,12 +38,12 @@ class CompanionManager(
             withContext(Dispatchers.Main) {
                 if (companion == null) { hide(); return@withContext }
                 // OPRAVA: Posíláme ID i Jméno pro správné sestavení drawable
-                show(companion.makromonId, companion.name)
+                show(companion.makromonId, companion.name, companion.isShiny)
             }
         }
     }
 
-    private fun show(makromonId: String, name: String) {
+    private fun show(makromonId: String, name: String, shiny: Boolean) {
         // --- KLÍČOVÁ OPRAVA: Dynamické sestavení názvu podle tvé nové konvence ---
         val shortId = if (makromonId.length >= 3) makromonId.takeLast(2) else makromonId
         val namePart = name.lowercase().trim().replace(" ", "_")
@@ -54,7 +54,7 @@ class CompanionManager(
         val resId = context.resources.getIdentifier(drawableName, "drawable", context.packageName)
         val finalResId = if (resId != 0) resId else R.drawable.ic_home
 
-        ivCompanion.setImageResource(finalResId)
+        cz.uhk.macroflow.pokemon.shiny.ShinySprites.into(ivCompanion, finalResId, makromonId, shiny && resId != 0)
         tvCompanionLabel.text = name
         tvCompanionLabel.setTextColor(android.graphics.Color.WHITE)
 

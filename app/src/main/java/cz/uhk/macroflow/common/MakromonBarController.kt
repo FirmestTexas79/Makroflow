@@ -68,14 +68,12 @@ class MakromonBarController(
                 }
 
                 // Klíč obsahuje makromonId aby se detekovala evoluce
-                // Shiny zatím není součástí klíče — odkomentuj až budou hotové sprity:
-                // val uniqueKey = "${caught.caughtDate}_${caught.makromonId}_${caught.isShiny}"
-                val uniqueKey = "${caught.caughtDate}_${caught.makromonId}"
+                val uniqueKey = "${caught.caughtDate}_${caught.makromonId}_${caught.isShiny}"
 
                 if (uniqueKey == lastLoadedKey) {
                     // Stejný Makromon ve stejné formě — jen zajistíme viditelnost
                     ivPokemon.visibility = View.VISIBLE
-                    if (behavior == null) startBehavior(caught.makromonId)
+                    if (behavior == null) startBehavior(caught.makromonId, caught.isShiny)
                     setupClickListener()
                     return@withContext
                 }
@@ -87,8 +85,6 @@ class MakromonBarController(
 
                 // Sestavení názvu drawable — stejná konvence jako MakrodexFragment a WandererFactory
                 // Formát: makromon_${shortId}_${name}  např. makromon_02_ignaroc
-                // Shiny verze zakomentována – odkomentuj až budou hotové sprity:
-                // val drawableName = if (caught.isShiny) "makromon_${shortId}_${name}_shiny" else "makromon_${shortId}_$name"
                 val shortId = if (caught.makromonId.length >= 3) caught.makromonId.takeLast(2) else caught.makromonId
                 val name = caught.name.lowercase().trim().replace(" ", "_")
                 val drawableName = "makromon_${shortId}_$name"
@@ -98,9 +94,9 @@ class MakromonBarController(
                 )
                 val finalResId = if (resId != 0) resId else R.drawable.ic_home
 
-                ivPokemon.setImageResource(finalResId)
+                cz.uhk.macroflow.pokemon.shiny.ShinySprites.into(ivPokemon, finalResId, caught.makromonId, caught.isShiny && resId != 0)
                 ivPokemon.visibility = View.VISIBLE
-                startBehavior(caught.makromonId)
+                startBehavior(caught.makromonId, caught.isShiny)
                 setupClickListener()
             }
         }
@@ -123,8 +119,8 @@ class MakromonBarController(
         }
     }
 
-    private fun startBehavior(makromonId: String) {
-        behavior = WandererFactory.create(activity, ivPokemon, makromonId)
+    private fun startBehavior(makromonId: String, shiny: Boolean) {
+        behavior = WandererFactory.create(activity, ivPokemon, makromonId, shiny)
         behavior?.start()
     }
 }

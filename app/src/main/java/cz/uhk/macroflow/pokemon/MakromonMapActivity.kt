@@ -57,7 +57,7 @@ class MakromonMapActivity : AppCompatActivity() {
         "les", "domov", "pokedex", "obchod", "hory",
         "vstup_z_town", "krovi1", "krovi2", "voda", "gudwin", "starter_bush",
         "meadow_npc",
-        "vstup_z_meadow", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2"
+        "vstup_z_meadow", "rozcesti_hory", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2"
     )
 
     /** Uzly, kde může vyskočit divoký Makromon (90 % šance). */
@@ -131,7 +131,18 @@ class MakromonMapActivity : AppCompatActivity() {
         findViewById<View>(R.id.btnExitMap).setOnClickListener { finish() }
 
         onBackPressedDispatcher.addCallback(this) {
-            if (supportFragmentManager.backStackEntryCount > 0) supportFragmentManager.popBackStack() else finish()
+            when {
+                questDialogManager.isVisible() -> questDialogManager.hide()   // zpět zavře tutoriál/dialog
+                supportFragmentManager.backStackEntryCount > 0 -> supportFragmentManager.popBackStack()
+                else -> finish()
+            }
+        }
+
+        // Parťák vlevo nahoře: dřív se načetl jen při otevření mapy – změna v Domově se neprojevila.
+        // Obnoví se při změně aktivního Makromona i po návratu z Domova / souboje (level, evoluce).
+        gamePrefs.registerOnSharedPreferenceChangeListener(companionPrefsListener)
+        supportFragmentManager.addOnBackStackChangedListener {
+            if (supportFragmentManager.backStackEntryCount == 0) companionManager.refresh()
         }
 
         mapBackground.post {
@@ -142,9 +153,34 @@ class MakromonMapActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnOpenJournal).setOnClickListener {
             replaceMapContent(QuestJournalFragment(), TAG_JOURNAL)
         }
+        // Ladění shiny (jen debug build): podržením deníku bude příští setkání shiny
+        if (BuildConfig.DEBUG) findViewById<ImageButton>(R.id.btnOpenJournal).setOnLongClickListener {
+            getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit().putBoolean("DEBUG_FORCE_SHINY", true).apply()
+            showMapToast("✦ Debug: příští setkání bude shiny")
+            true
+        }
 
         companionManager.refresh()
         observeGameData()
+    }
+
+    private val gamePrefs by lazy { getSharedPreferences("GamePrefs", Context.MODE_PRIVATE) }
+
+    /** Silná reference – SharedPreferences drží posluchače jen slabě. */
+    private val companionPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "currentOnBarCaughtDate" || key == "currentOnBarCapturedId" || key == "pokemonAcquired") {
+            runOnUiThread { companionManager.refresh() }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::companionManager.isInitialized) companionManager.refresh()
+    }
+
+    override fun onDestroy() {
+        gamePrefs.unregisterOnSharedPreferenceChangeListener(companionPrefsListener)
+        super.onDestroy()
     }
 
     fun getCurrentBiome(): BiomeType = currentBiome
@@ -250,7 +286,8 @@ class MakromonMapActivity : AppCompatActivity() {
             when (nodeName) {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
                 "mine" -> scanInMine()
-                "camp" -> {} // zatím jen cíl průzkumu v questu krále
+                "camp" -> restAtCamp()
+                "rozcesti_hory" -> showMapToast("🪧 ↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku")
                 "starter_bush" -> {
                     getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                         .putString("LAST_BIOME", currentBiome.name)
@@ -280,6 +317,9 @@ class MakromonMapActivity : AppCompatActivity() {
                             .remove("FORCE_ENCOUNTER_ID")
                             .apply()
                         replaceMapContent(PokemonBattleFragment())
+                    } else {
+                        // Dřív se v 10 % nestalo nic a bod působil rozbitě
+                        showMapToast(emptyEncounterText(nodeName))
                     }
                 }
             }
@@ -310,6 +350,35 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 showMapToast(text)
             }
+        }
+    }
+
+    private fun emptyEncounterText(node: String): String = when (node) {
+        "cave" -> "V jeskyni je ticho… jen kape voda. Zkus to znovu."
+        "peak" -> "Na vrcholu fouká, ale nikdo tu není. Výhled na celý Makrosvět ale stojí za to."
+        "skaly1", "skaly2" -> "Mezi skalami se nic nehnulo. Zkus to znovu."
+        "voda" -> "Hladina je klidná. Zkus to znovu."
+        else -> "Křoví se ani nehnulo. Zkus to znovu."
+    }
+
+    /**
+     * Tábor v horách: odpočinek u ohně = přehled dne z funkční části
+     * (kroky a co zbývá z dnešních cílů) – most mezi Makrosvětem a aplikací.
+     */
+    private fun restAtCamp() {
+        lifecycleScope.launch {
+            val status = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                val ctx = applicationContext
+                val today = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())
+                val eaten = AppDatabase.getDatabase(ctx).consumedSnackDao().getConsumedByDateSync(today)
+                cz.uhk.macroflow.dashboard.MacroFlowEngine.calculateDailyStatusForDate(ctx, java.util.Date(), eaten)
+            }
+            fun left(v: Double, unit: String) = if (v > 0) "${v.toInt()} $unit" else "splněno ✓"
+            showMapToast(
+                "🔥 Odpočíváš u táboráku.\n" +
+                    "Dnes ${currentDailySteps} kroků.\n" +
+                    "Zbývá: ${left(status.caloriesLeft, "kcal")} · bílkoviny ${left(status.proteinLeft, "g")}"
+            )
         }
     }
 
@@ -358,6 +427,8 @@ class MakromonMapActivity : AppCompatActivity() {
         val transitionAction = {
             currentBiome = newBiome
             refreshStepBar()
+            // Úvodní tutoriál (otazník) patří zatím jen k městu
+            findViewById<View>(R.id.btnStartTutorial).visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
 
             BiomeRegistry.definition(newBiome)?.questId?.let { questManager.loadQuest(it) }
 

@@ -16,7 +16,9 @@ import kotlin.math.*
 import kotlin.random.Random
 
 class PokemonBattleView @JvmOverloads constructor(
-    context: Context, attrs: AttributeSet? = null
+    context: Context, attrs: AttributeSet? = null,
+    /** Divoký Makromon je shiny – o šanci rozhoduje fragment před vytvořením view (kvůli intru). */
+    private val enemyShiny: Boolean = false
 ) : View(context, attrs) {
 
     var onCaught: (() -> Unit)? = null
@@ -87,7 +89,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
             val mId = caughtEntity?.makromonId ?: backupMakromonId
             val playerLevel = caughtEntity?.level ?: 1
-            val playerIsShiny = false
+            val playerIsShiny = caughtEntity?.isShiny ?: false
 
             val playerWithStats = createPlayerMakromon(mId, playerLevel)
 
@@ -96,7 +98,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
             val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
             val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
-            val enemyIsShiny = false
+            val enemyIsShiny = enemyShiny
 
             val currentPokeballs = db.userItemDao().getItemCount("poke_ball") ?: 0
 
@@ -135,8 +137,12 @@ class PokemonBattleView @JvmOverloads constructor(
 
         // Zbytek zůstává stejný...
         val drawable = context.resources.getDrawable(finalResId, null)
-        val bmp = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+        val plain = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
             ?: Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
+        // Shiny = stejný sprite přebarvený filtrem (rotace odstínu podle druhu)
+        val shiny = if (isPlayer) gs.isPlayerShiny else gs.isEnemyShiny
+        val bmp = if (shiny && resId != 0) cz.uhk.macroflow.pokemon.shiny.ShinySprites.recolor(plain, BattleFactory.makrodexId(makromon))
+            else plain
 
         if (isPlayer) playerBitmap = bmp else enemyBitmap = bmp
         maybeStartIntro()
@@ -186,9 +192,11 @@ class PokemonBattleView @JvmOverloads constructor(
                 val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
                 val sx = gbX(112f) - targetW / 2f + animOffset
                 val sy = gbY(54f) - targetH
+                if (gs.isEnemyShiny) drawShinyGlow(canvas, sx + targetW / 2f, sy + targetH / 2f, targetH)
                 canvas.drawBitmap(bmp, null, RectF(sx, sy, sx + targetW, sy + targetH), spSmooth)
             }
         }
+        drawSparkles(canvas)
 
         playerBitmap?.let { bmp ->
             val targetH = 36f * sc
@@ -238,7 +246,6 @@ class PokemonBattleView @JvmOverloads constructor(
         }
         drawBottomUI(c)
         if (flashOn) { fp.color = 0xBBFFFFFF.toInt(); c.drawRect(0f, 0f, 160f, 144f, fp) }
-        if (gs.shinyAnimFrame > 0) drawShinyStars(c)
     }
 
     private fun drawPlatform(c: Canvas, x: Int, y: Int, w: Int, h: Int) {
@@ -253,6 +260,7 @@ class PokemonBattleView @JvmOverloads constructor(
         PokemonSprites.drawText(c, ":L${gs.enemy.level}", x+48, y+3, C_TEXT, fp)
         PokemonSprites.drawText(c, "HP", x+3, y+13, C_TEXT, fp)
         drawHPBar(c, x+16, y+13, 54, 5, gs.enemy.currentHp, gs.enemy.maxHp)
+        if (gs.isEnemyShiny) PokemonSprites.drawText(c, "*SHINY", x+3, y+20, 0xFFC08A00.toInt(), fp)
     }
 
     private fun drawPlayerHUD(c: Canvas) {
@@ -382,42 +390,133 @@ class PokemonBattleView @JvmOverloads constructor(
         }
     }
 
-    private fun startShinyAnim() {
-        var frame = 0
-        val anim = object : Runnable {
-            override fun run() {
-                frame++
-                gs.shinyAnimFrame = frame
-                invalidate()
-                if (frame < 30) handler.postDelayed(this, 30)
-                else { gs.shinyAnimFrame = 0; busy = false; invalidate() }
+    // ── Shiny: hvězdičkový efekt ─────────────────────────────────────────────
+    //
+    // Částice žijí v souřadnicích GB plátna relativně ke středu soupeře, kreslí se ale
+    // v rozlišení displeje (hladké hvězdy přes pixelové pozadí).
+
+    private data class Sparkle(
+        val x0: Float, val y0: Float,       // start (GB px od středu soupeře)
+        val vx: Float, val vy: Float,       // rychlost (GB px / s)
+        val born: Long, val life: Long,
+        val size: Float,                    // poloměr cípu (GB px)
+        val spin: Float,                    // otočení (° / s)
+        val color: Int
+    )
+
+    private val sparkles = mutableListOf<Sparkle>()
+    private var sparkleLoop = false
+    private var nextTwinkleAt = 0L
+    private var glowUntil = 0L
+    private val starPath = Path()
+    private val starPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val gold = 0xFFFFD54F.toInt()
+    private val paleGold = 0xFFFFF3C4.toInt()
+
+    private fun now() = android.os.SystemClock.uptimeMillis()
+
+    /** Střed soupeře v GB souřadnicích (po doběhnutí intra). */
+    private fun enemyCenterGb(): PointF = PointF(112f + gs.introOffset * 100f, 54f - enemySpriteHeight() / 2f)
+
+    private val sparkleTick = object : Runnable {
+        override fun run() {
+            val t = now()
+            sparkles.removeAll { t - it.born > it.life }
+            // Jemné třpytky dokola, dokud je shiny soupeř na scéně
+            if (gs.isEnemyShiny && gs.enemyVisible && t >= nextTwinkleAt && gs.phase != BattlePhase.CAUGHT) {
+                spawnTwinkle(t)
+                nextTwinkleAt = t + 1800 + Random.nextLong(900)
             }
+            invalidate()
+            if (sparkles.isNotEmpty() || gs.isEnemyShiny) handler.postDelayed(this, 16) else sparkleLoop = false
         }
-        handler.post(anim)
     }
 
-    private fun drawShinyStars(c: Canvas) {
-        val f = gs.shinyAnimFrame
-        val starColor   = 0xFFFFD700.toInt()
-        val shadowColor = 0xFF181818.toInt()
-        val cx = 112f; val cy = 35f
-        val rotation = f * 6.0
-        val dist = f * 1.6f
+    private fun ensureSparkleLoop() {
+        if (!sparkleLoop) { sparkleLoop = true; handler.post(sparkleTick) }
+    }
 
-        for (i in 0 until 8) {
-            val angle = i * 45.0 + rotation
-            val x = cx + cos(Math.toRadians(angle)).toFloat() * dist
-            val y = cy + sin(Math.toRadians(angle)).toFloat() * dist
-            val s = if (f < 15) 2f else 1.5f
-            fp.color = shadowColor
-            c.drawRect(x - s - 1f, y - 1f, x + s + 1f, y + 1f, fp)
-            c.drawRect(x - 1f, y - s - 1f, x + 1f, y + s + 1f, fp)
-            fp.color = starColor
-            c.drawRect(x - s, y - 0.5f, x + s, y + 0.5f, fp)
-            c.drawRect(x - 0.5f, y - s, x + 0.5f, y + s, fp)
-            fp.color = Color.WHITE
-            c.drawRect(x - 0.5f, y - 0.5f, x + 0.5f, y + 0.5f, fp)
+    /** Výbuch hvězd při odhalení shiny soupeře: dvě vlny + záblesk. Po doběhnutí se uvolní ovládání. */
+    private fun startShinyAnim() {
+        val t = now()
+        glowUntil = t + 700
+        repeat(14) { i ->
+            val a = Math.toRadians(i * (360.0 / 14) + Random.nextDouble(-8.0, 8.0))
+            val v = 40f + Random.nextFloat() * 18f
+            sparkles += Sparkle(0f, 0f, (cos(a) * v).toFloat(), (sin(a) * v).toFloat(), t, 900, 3.6f + Random.nextFloat() * 1.6f,
+                if (i % 2 == 0) 220f else -220f, gold)
         }
+        handler.postDelayed({
+            val t2 = now()
+            repeat(10) { i ->
+                val a = Math.toRadians(i * 36.0 + 18.0)
+                val v = 22f + Random.nextFloat() * 10f
+                sparkles += Sparkle(0f, 0f, (cos(a) * v).toFloat(), (sin(a) * v).toFloat(), t2, 800, 2.6f, 160f, paleGold)
+            }
+        }, 260)
+        nextTwinkleAt = t + 1500
+        ensureSparkleLoop()
+        performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+        handler.postDelayed({ busy = false; invalidate() }, 1100)
+    }
+
+    private fun spawnTwinkle(t: Long) {
+        val half = enemySpriteHeight() / 2f
+        repeat(2 + Random.nextInt(2)) { k ->
+            sparkles += Sparkle(
+                (Random.nextFloat() - 0.5f) * half * 1.6f, (Random.nextFloat() - 0.5f) * half * 1.8f,
+                0f, 0f, t + k * 140L, 520, 2.4f + Random.nextFloat() * 1.2f, 90f, if (k == 0) gold else paleGold
+            )
+        }
+    }
+
+    /** Měkká zlatá záře za soupeřem – krátce při odhalení, pak jen jemně pulzuje. */
+    private fun drawShinyGlow(canvas: Canvas, cx: Float, cy: Float, h: Float) {
+        val t = now()
+        val burst = ((glowUntil - t).coerceAtLeast(0) / 700f)
+        val pulse = 0.5f + 0.5f * sin(t / 420.0).toFloat()
+        val alpha = (40 + 25 * pulse + 150 * burst).toInt().coerceIn(0, 255)
+        val r = h * (0.75f + 0.35f * burst)
+        glowPaint.shader = RadialGradient(cx, cy, r,
+            intArrayOf(Color.argb(alpha, 255, 224, 130), Color.argb(0, 255, 224, 130)), null, Shader.TileMode.CLAMP)
+        canvas.drawCircle(cx, cy, r, glowPaint)
+    }
+
+    private fun drawSparkles(canvas: Canvas) {
+        if (sparkles.isEmpty() || !::gs.isInitialized) return
+        val sc = scale
+        val t = now()
+        val c = enemyCenterGb()
+        for (sp in sparkles.toList()) {
+            val age = t - sp.born
+            if (age < 0) continue
+            val p = (age / sp.life.toFloat()).coerceIn(0f, 1f)
+            val sec = age / 1000f
+            // Zpomalování letu (ease-out) a „nádech“ velikosti
+            val travel = sec * (1f - 0.45f * p)
+            val x = gbX(c.x + sp.x0 + sp.vx * travel)
+            val y = gbY(c.y + sp.y0 + sp.vy * travel)
+            val grow = sin(PI * p).toFloat()
+            val r = sp.size * sc * (0.35f + 0.9f * grow)
+            val a = (255 * (if (p < 0.15f) p / 0.15f else 1f - (p - 0.15f) / 0.85f)).toInt().coerceIn(0, 255)
+            drawStar(canvas, x, y, r, sp.spin * sec, sp.color, a)
+        }
+    }
+
+    /** Čtyřcípá hvězda s bílým středem. */
+    private fun drawStar(canvas: Canvas, x: Float, y: Float, r: Float, rotDeg: Float, color: Int, alpha: Int) {
+        val k = 0.24f * r
+        starPath.reset()
+        starPath.moveTo(0f, -r); starPath.lineTo(k, -k); starPath.lineTo(r, 0f); starPath.lineTo(k, k)
+        starPath.lineTo(0f, r); starPath.lineTo(-k, k); starPath.lineTo(-r, 0f); starPath.lineTo(-k, -k); starPath.close()
+        canvas.save()
+        canvas.translate(x, y); canvas.rotate(rotDeg)
+        starPaint.color = color; starPaint.alpha = alpha
+        canvas.drawPath(starPath, starPaint)
+        starPaint.color = Color.WHITE; starPaint.alpha = alpha
+        canvas.drawCircle(0f, 0f, k * 0.9f, starPaint)
+        canvas.restore()
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
@@ -450,7 +549,8 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun startIntro() {
         busy = true
-        setText("WILD ${gs.enemy.name}", "APPEARED!")
+        if (gs.isEnemyShiny) setText("*SHINY* ${gs.enemy.name}", "APPEARED!")
+        else setText("WILD ${gs.enemy.name}", "APPEARED!")
         val startTime = System.currentTimeMillis()
         val duration  = 1000L
 
@@ -742,7 +842,7 @@ class PokemonBattleView @JvmOverloads constructor(
             makromonId = mId,
             name       = gs.enemy.name,
             level      = gs.enemy.level,
-            isShiny    = false,
+            isShiny    = gs.isEnemyShiny,
             caughtDate = System.currentTimeMillis()
         )
 
@@ -760,7 +860,8 @@ class PokemonBattleView @JvmOverloads constructor(
             val isAcquired = prefs.getBoolean("makromonAcquired", false)
 
             handler.post {
-                setText("CAUGHT ${gs.enemy.name.take(7)}!", "")
+                setText((if (gs.isEnemyShiny) "CAUGHT *" else "CAUGHT ") + "${gs.enemy.name.take(7)}!",
+                    if (gs.isEnemyShiny) "SHINY!" else "")
                 busy = false
 
                 if (isAcquired) {
@@ -774,7 +875,7 @@ class PokemonBattleView @JvmOverloads constructor(
                         Rarity.EPIC      -> 100
                         Rarity.LEGENDARY -> 250
                         Rarity.MYTHIC    -> 500
-                    }
+                    } * (if (gs.isEnemyShiny) 2 else 1)   // shiny = dvojnásobná odměna
 
                     awardXpToActiveMakromon(xpReward)
                 }

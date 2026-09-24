@@ -41,6 +41,9 @@ class QuestDialogManager(
     private val questStageNameView: TextView? by lazy {
         overlay.findViewById(R.id.questStageName)
     }
+    private val closeTutorialView: View? by lazy {
+        overlay.findViewById<View>(R.id.btnCloseTutorial)?.apply { setOnClickListener { hide() } }
+    }
 
     private val tutorialSpots = listOf(
         RectF(0f, 0f, 0f, 0f),
@@ -79,6 +82,8 @@ class QuestDialogManager(
         speakerNameView?.text = "Gudwin Oliver"
         speakerNameView?.visibility = View.VISIBLE
         currentTutorialStep = 0
+        closeTutorialView?.visibility = View.VISIBLE
+        sizeSpeaker(R.drawable.makromon_30_gudwin)
         speakerImage.load(R.drawable.makromon_30_gudwin, imageLoader)
         showOverlay()
         showCurrentTutorialStep()
@@ -102,7 +107,9 @@ class QuestDialogManager(
         spotlightRect: RectF? = null
     ) {
         isTutorialActive = false
+        closeTutorialView?.visibility = View.GONE
         questProgressLine.visibility = View.VISIBLE
+        sizeSpeaker(speakerResource)
         speakerImage.load(speakerResource, imageLoader)
 
         if (speakerName.isNotBlank()) {
@@ -126,6 +133,20 @@ class QuestDialogManager(
         showOverlay()
         spotlightView.setTargetSpotlight(spotlightRect ?: RectF(0f, 0f, 0f, 0f))
         preparePagesAndShow(text)
+    }
+
+    /**
+     * Velikost portrétu mluvčího. Král Mlsák má vysoký obrázek (1 : 2), ve čtverci 110 dp byl
+     * poloviční – dostane 110 × 220 dp a stojí nad dialogem (zarovnání řeší centerNpcOnDialog).
+     */
+    private fun sizeSpeaker(resId: Int) {
+        val d = context.resources.displayMetrics.density
+        val (w, h) = if (resId == R.drawable.kral_mlsak) 110 to 220 else 110 to 110
+        val lp = speakerImage.layoutParams as FrameLayout.LayoutParams
+        if (lp.width != (w * d).toInt() || lp.height != (h * d).toInt()) {
+            lp.width = (w * d).toInt(); lp.height = (h * d).toInt()
+            speakerImage.layoutParams = lp
+        }
     }
 
     private fun centerNpcOnDialog() {
@@ -301,6 +322,9 @@ class QuestDialogManager(
     }
 
     fun hide() {
+        textHandler.removeCallbacksAndMessages(null)
+        isTextAnimating = false
+        closeTutorialView?.visibility = View.GONE
         spotlightView.setTargetSpotlight(RectF(0f, 0f, 0f, 0f))
         overlay.animate().alpha(0f).setDuration(300).withEndAction {
             overlay.visibility = View.GONE

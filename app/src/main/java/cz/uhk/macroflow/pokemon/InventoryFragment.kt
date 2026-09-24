@@ -136,7 +136,8 @@ class InventoryFragment : Fragment() {
 
             // 4. KLÍČOVÁ OPRAVA: Načtení správného obrázku podle tvé nové konvence
             // Posíláme ID (např. "018") i Jméno (např. "Drakirra")
-            holder.ivSprite.setImageResource(makromonDrawableRes(item.makromonId, item.name))
+            val spriteRes = makromonDrawableRes(item.makromonId, item.name)
+            cz.uhk.macroflow.pokemon.shiny.ShinySprites.into(holder.ivSprite, spriteRes, item.makromonId, item.isShiny && spriteRes != R.drawable.ic_home)
 
             // 5. Logika zámku (proti nechtěnému smazání)
             val lockIcon = if (item.isLocked)
