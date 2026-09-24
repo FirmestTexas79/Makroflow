@@ -26,6 +26,16 @@ import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.dashboard.MacroFlowEngine
+import cz.uhk.macroflow.training.body.BodyMapView
+import cz.uhk.macroflow.training.body.TrainingMuscles
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.text.InputType
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.GridLayout
+import android.widget.ProgressBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -76,7 +86,7 @@ class PlanFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        view?.let { updateStats(it) }
+        view?.let { updateStats(it); renderGymBag(it) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -87,6 +97,9 @@ class PlanFragment : Fragment() {
         val modeToggle = view.findViewById<MaterialButtonToggleGroup>(R.id.toggleModeGroup)
         modeToggle?.check(if (isKardioMode) R.id.btnModeKardio else R.id.btnModePower)
         applyTheme(view, isKardioMode, animated = false)
+        setupGymBag(view)
+        buildBodyLegend(view)
+        updateBodyWeek(view, animate = false)
 
         modeToggle?.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
@@ -251,6 +264,19 @@ class PlanFragment : Fragment() {
         }
     }
 
+    /** Barva typu tréninku – tlačítka i rozsvícené partie. */
+    private fun typeColor(type: String): Int = when (type) {
+        "stairs" -> colorStairs
+        "full"   -> colorFull
+        "run"    -> colorRun
+        "rope"   -> colorRope
+        "bike"   -> colorBike
+        "push"   -> colorDarkGreen
+        "pull"   -> Color.parseColor("#DDA15E")
+        "legs"   -> Color.parseColor("#BC6C25")
+        else     -> colorDarkGreen
+    }
+
     private fun updateStats(view: View) {
         var full = 0; var a = 0; var b = 0; var c = 0; var rest = 0
         val prefix    = if (isKardioMode) "kardio_type_" else "type_"
@@ -273,6 +299,188 @@ class PlanFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvStatPullCount)?.text  = b.toString()
         view.findViewById<TextView>(R.id.tvStatLegsCount)?.text  = c.toString()
         view.findViewById<TextView>(R.id.tvStatRestCount)?.text  = rest.toString()
+        updateBodyWeek(view, animate = true)
+    }
+
+    // ── Týden na těle ────────────────────────────────────────────────────────
+
+    private fun weekTypes(): List<String?> {
+        val prefix = if (isKardioMode) "kardio_type_" else "type_"
+        return daysMap.map { (key, _, _) -> trainingPrefs.getString("$prefix$key", "rest") }
+    }
+
+    private fun weekColor() = if (isKardioMode) colorRun else Color.parseColor("#606C38")
+
+    /** Intenzita partie = týdenní frekvence / 2 (2× týdně = plná barva). */
+    private fun updateBodyWeek(view: View, animate: Boolean) {
+        val body = view.findViewById<BodyMapView>(R.id.bodyWeek) ?: return
+        val freq = TrainingMuscles.weeklyFrequency(weekTypes())
+        body.setIntensities(freq.mapValues { (it.value / TrainingMuscles.TARGET_PER_WEEK).coerceAtMost(1.0) }, weekColor(), animate)
+        val hint = view.findViewById<TextView>(R.id.tvBodyHint)
+        hint?.text = when {
+            freq.values.all { it == 0.0 } -> "Vyber tréninky na jednotlivé dny a uvidíš, co za týden procvičíš."
+            isKardioMode -> "Kardio zatěžuje hlavně nohy. Frekvenci pro růst svalů hlídej v režimu Power."
+            else -> {
+                val below = TrainingMuscles.belowTarget(freq)
+                if (below.isEmpty()) "Každá partie aspoň 2× týdně ✓"
+                else "Pod 2× týdně: " + below.joinToString(", ") { it.label } +
+                    ". Pro růst svalu se doporučuje každou partii 2× týdně."
+            }
+        }
+        buildBodyLegend(view)
+    }
+
+    private fun buildBodyLegend(view: View) {
+        val ll = view.findViewById<LinearLayout>(R.id.llBodyLegend) ?: return
+        val dp = resources.displayMetrics.density
+        ll.removeAllViews()
+        val body = view.findViewById<BodyMapView>(R.id.bodyWeek)
+        val idle = body?.idleMuscleColor ?: Color.LTGRAY
+        listOf("0×" to idle,
+            "1×" to androidx.core.graphics.ColorUtils.blendARGB(idle, weekColor(), 0.35f + 0.65f * 0.5f),
+            "2×+ týdně" to weekColor()
+        ).forEach { (label, c) ->
+            ll.addView(View(requireContext()).apply {
+                background = GradientDrawable().apply { cornerRadius = 3 * dp; setColor(c) }
+                layoutParams = LinearLayout.LayoutParams((12 * dp).toInt(), (12 * dp).toInt()).apply { marginStart = (10 * dp).toInt() }
+            })
+            ll.addView(TextView(requireContext()).apply {
+                text = label; textSize = 11f; setTextColor(Color.parseColor("#99283618"))
+                setPadding((4 * dp).toInt(), 0, 0, 0)
+            })
+        }
+    }
+
+    // ── Taška do gymu ────────────────────────────────────────────────────────
+
+    private val bagPrefs by lazy { requireContext().getSharedPreferences("GymBagPrefs", Context.MODE_PRIVATE) }
+    private var bagExpanded = true
+
+    private fun todayKey() = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+    private fun loadBag(): GymBagState {
+        val items = GymBag.decodeItems(bagPrefs.getString("items", null))
+        val saved = if (items == null) GymBag.defaults(todayKey())
+            else GymBagState(items, GymBag.decodeChecked(bagPrefs.getString("checked", null)), bagPrefs.getString("date", "") ?: "")
+        return GymBag.forDay(saved, todayKey())
+    }
+
+    private fun saveBag(s: GymBagState) {
+        bagPrefs.edit()
+            .putString("items", GymBag.encodeItems(s.items))
+            .putString("checked", GymBag.encodeChecked(s.checked))
+            .putString("date", s.date)
+            .apply()
+    }
+
+    private fun isTrainingToday(): Boolean {
+        val day = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
+        return trainingPrefs.getString("type_$day", "rest") != "rest" ||
+            trainingPrefs.getString("kardio_type_$day", "rest") != "rest"
+    }
+
+    private fun setupGymBag(view: View) {
+        // Rozbalená jen v tréninkový den, dokud není vše sbalené
+        val s = loadBag()
+        bagExpanded = isTrainingToday() && !s.allPacked
+        view.findViewById<View>(R.id.llBagHeader)?.setOnClickListener {
+            bagExpanded = !bagExpanded
+            renderGymBag(view)
+        }
+        view.findViewById<View>(R.id.btnBagAdd)?.setOnClickListener { showAddBagItem(view) }
+        view.findViewById<View>(R.id.btnBagReset)?.setOnClickListener {
+            val st = GymBag.unpackAll(loadBag()); saveBag(st); renderGymBag(view)
+        }
+        renderGymBag(view)
+    }
+
+    private fun renderGymBag(view: View) {
+        val grid = view.findViewById<GridLayout>(R.id.gridBag) ?: return
+        val s = loadBag()
+        saveBag(s)
+        val dp = resources.displayMetrics.density
+        val done = s.allPacked
+
+        view.findViewById<TextView>(R.id.tvBagTitle)?.text = if (done) "🎒 VŠE SBALENO ✓" else "🎒 TAŠKA DO GYMU"
+        view.findViewById<TextView>(R.id.tvBagCount)?.apply {
+            text = "${s.packedCount}/${s.items.size}"
+            backgroundTintList = ColorStateList.valueOf(Color.parseColor(if (done) "#606C38" else "#1A283618"))
+            setTextColor(if (done) colorCream else colorDarkGreen)
+        }
+        view.findViewById<TextView>(R.id.tvBagChevron)?.text = if (bagExpanded) "▴" else "▾"
+        view.findViewById<ProgressBar>(R.id.pbBag)?.apply {
+            max = s.items.size.coerceAtLeast(1); progress = s.packedCount
+        }
+        view.findViewById<View>(R.id.llBagBody)?.visibility = if (bagExpanded) View.VISIBLE else View.GONE
+        if (!bagExpanded) return
+
+        grid.removeAllViews()
+        s.items.forEach { item ->
+            val packed = s.isPacked(item)
+            grid.addView(TextView(requireContext()).apply {
+                text = (if (packed) "✓  " else "○  ") + item.label
+                textSize = 13f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                typeface = if (packed) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                setTextColor(if (packed) colorCream else colorDarkGreen)
+                setPadding((12 * dp).toInt(), (9 * dp).toInt(), (10 * dp).toInt(), (9 * dp).toInt())
+                background = GradientDrawable().apply {
+                    cornerRadius = 14 * dp
+                    setColor(Color.parseColor(if (packed) "#606C38" else "#0F283618"))
+                }
+                layoutParams = GridLayout.LayoutParams(
+                    GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(GridLayout.UNDEFINED, 1f)
+                ).apply {
+                    width = 0
+                    setMargins((3 * dp).toInt(), (3 * dp).toInt(), (3 * dp).toInt(), (3 * dp).toInt())
+                }
+                setOnClickListener {
+                    val before = loadBag()
+                    val after = GymBag.toggle(before, item.id)
+                    saveBag(after)
+                    performHapticFeedback(if (after.allPacked) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.CONTEXT_CLICK)
+                    renderGymBag(view)
+                }
+                setOnLongClickListener {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Odebrat „${item.label}“?")
+                        .setMessage("Věc zmizí ze seznamu. Kdykoli ji přidáš zpátky.")
+                        .setPositiveButton("Odebrat") { _, _ -> saveBag(GymBag.remove(loadBag(), item.id)); renderGymBag(view) }
+                        .setNegativeButton("Nechat", null)
+                        .show()
+                    true
+                }
+            })
+        }
+    }
+
+    private fun showAddBagItem(view: View) {
+        val dp = resources.displayMetrics.density
+        val input = EditText(requireContext()).apply {
+            hint = "např. Opasek, magnézium, šejkr"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            filters = arrayOf(android.text.InputFilter.LengthFilter(GymBag.MAX_LABEL))
+        }
+        val box = FrameLayout(requireContext()).apply {
+            setPadding((20 * dp).toInt(), (8 * dp).toInt(), (20 * dp).toInt(), 0)
+            addView(input)
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Přidat do tašky")
+            .setView(box)
+            .setPositiveButton("Přidat") { _, _ ->
+                val id = bagPrefs.getInt("next_id", 0)
+                val before = loadBag()
+                val after = GymBag.add(before, input.text.toString(), "u$id")
+                if (after !== before) {
+                    bagPrefs.edit().putInt("next_id", id + 1).apply()
+                    saveBag(after)
+                    renderGymBag(view)
+                }
+            }
+            .setNegativeButton("Zrušit", null)
+            .show()
     }
 
     inner class TrainingPlanAdapter : RecyclerView.Adapter<TrainingPlanAdapter.PlanViewHolder>() {
@@ -293,6 +501,19 @@ class PlanFragment : Fragment() {
             val btnPull: MaterialButton?               = view.findViewById(R.id.btnPull)
             val btnLegs: MaterialButton?               = view.findViewById(R.id.btnLegs)
             val btnDelete: View                        = view.findViewById(R.id.btnDeleteDayData)
+            val llMuscles: View?                       = view.findViewById(R.id.llDayMuscles)
+            val bodyDay: BodyMapView?                  = view.findViewById<BodyMapView>(R.id.bodyDay)?.apply { showCaptions = false }
+            val tvMuscles: TextView?                   = view.findViewById(R.id.tvDayMuscles)
+        }
+
+        /** Rozsvítí partie zvoleného typu v kartě dne (odpočinek = skryto). */
+        private fun updateDayMuscles(holder: PlanViewHolder, type: String, animate: Boolean) {
+            val ll = holder.llMuscles ?: return
+            val muscles = TrainingMuscles.of(type)
+            if (muscles.isEmpty()) { ll.visibility = View.GONE; return }
+            ll.visibility = View.VISIBLE
+            holder.bodyDay?.setIntensities(muscles, typeColor(type), animate)
+            holder.tvMuscles?.text = TrainingMuscles.describe(type)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlanViewHolder {
@@ -334,18 +555,7 @@ class PlanFragment : Fragment() {
                 if (btn != null) {
                     if (selectedType == type) {
                         btn.setTextColor(Color.WHITE)
-                        val activeColor = when (type) {
-                            "stairs" -> colorStairs
-                            "full"   -> colorFull
-                            "run"    -> colorRun
-                            "rope"   -> colorRope
-                            "bike"   -> colorBike
-                            "push"   -> colorDarkGreen
-                            "pull"   -> Color.parseColor("#DDA15E")
-                            "legs"   -> Color.parseColor("#BC6C25")
-                            else     -> colorDarkGreen
-                        }
-                        btn.backgroundTintList = ColorStateList.valueOf(activeColor)
+                        btn.backgroundTintList = ColorStateList.valueOf(typeColor(type))
                         btn.strokeWidth = 0
                     } else {
                         btn.setTextColor(colorDarkGreen)
@@ -377,6 +587,7 @@ class PlanFragment : Fragment() {
             updatePowerCardVisual(holder, savedType)
             updateToggleGroupColors(holder, savedType, false)
             updateTimePill(holder, dayEnglish, savedType, isPower = true)
+            updateDayMuscles(holder, savedType, animate = false)
 
             holder.tvTimePill?.setOnClickListener { showTimePicker(dayEnglish, holder, isPower = true) }
 
@@ -397,6 +608,7 @@ class PlanFragment : Fragment() {
                     updatePowerCardVisual(holder, newType)
                     updateToggleGroupColors(holder, newType, false)
                     updateTimePill(holder, dayEnglish, newType, isPower = true)
+                    updateDayMuscles(holder, newType, animate = true)
                     view?.let { updateStats(it) }
                 }
             }
@@ -434,6 +646,7 @@ class PlanFragment : Fragment() {
             updateKardioCardVisual(holder, savedType)
             updateToggleGroupColors(holder, savedType, true)
             updateTimePill(holder, dayEnglish, savedType, isPower = false)
+            updateDayMuscles(holder, savedType, animate = false)
             updateKardioPills(holder, dayEnglish, savedType)
             updateDeleteButtonVisibility(holder, dayEnglish)
 
@@ -472,6 +685,7 @@ class PlanFragment : Fragment() {
                     updateKardioCardVisual(holder, newType)
                     updateToggleGroupColors(holder, newType, true)
                     updateTimePill(holder, dayEnglish, newType, isPower = false)
+                    updateDayMuscles(holder, newType, animate = true)
                     updateKardioPills(holder, dayEnglish, newType)
                     updateDeleteButtonVisibility(holder, dayEnglish)
                     view?.let { updateStats(it) }
