@@ -18,7 +18,9 @@ import kotlin.random.Random
 class PokemonBattleView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null,
     /** Divoký Makromon je shiny – o šanci rozhoduje fragment před vytvořením view (kvůli intru). */
-    private val enemyShiny: Boolean = false
+    private val enemyShiny: Boolean = false,
+    /** Strážce jeskyně nebo legenda z vrcholu (docs/adr/0014); null = divoké setkání. */
+    private val special: cz.uhk.macroflow.pokemon.legend.SpecialBattle? = null
 ) : View(context, attrs) {
 
     var onCaught: (() -> Unit)? = null
@@ -111,10 +113,14 @@ class PokemonBattleView @JvmOverloads constructor(
             val playerWithStats = createPlayerMakromon(mId, playerLevel)
 
             // --- 🎲 OPRAVENÝ ROLL S BIOMEM ---
-            val baseEnemy = SpawnManager.rollWildEncounter(context, currentBiome.wildBiome)
-
-            val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
-            val enemyWithStats = BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
+            val enemyWithStats = if (special != null) {
+                // Strážce / legenda: pevný Makromon s pevným levelem
+                createPlayerMakromon(special.makromonId, special.level)
+            } else {
+                val baseEnemy = SpawnManager.rollWildEncounter(context, currentBiome.wildBiome)
+                val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
+                BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
+            }
             val enemyIsShiny = enemyShiny
 
             val counts = cz.uhk.macroflow.pokemon.balls.Makroball.entries.associateWith { db.userItemDao().getItemCount(it.id) ?: 0 }
@@ -643,7 +649,8 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun startIntro() {
         busy = true
-        if (gs.isEnemyShiny) setText("*SHINY* ${gs.enemy.name}", "APPEARED!")
+        if (special != null) special.appearLines(gs.enemy.name).let { (a, b) -> setText(a, b) }
+        else if (gs.isEnemyShiny) setText("*SHINY* ${gs.enemy.name}", "APPEARED!")
         else setText("WILD ${gs.enemy.name}", "APPEARED!")
         val startTime = System.currentTimeMillis()
         val duration  = 1000L
@@ -667,6 +674,7 @@ class PokemonBattleView @JvmOverloads constructor(
     private fun startItem()   { itemPage = 0; gs.phase = BattlePhase.ITEM_MENU; zones.clear(); invalidate() }
 
     private fun doRun() {
+        special?.let { sp -> val (a, b) = sp.noRunLines; say(a, b) { showMain() }; return }
         busy = true
         // Paralýza půlí rychlost i při útěku
         val speed = (gs.player.speed * cz.uhk.macroflow.pokemon.status.StatusRules.speedMultiplier(playerCond)).toInt()
@@ -733,7 +741,7 @@ class PokemonBattleView @JvmOverloads constructor(
                 say(name, "IS CONFUSED!") {
                     doFlash {
                         val m = monOf(isPlayer)
-                        m.currentHp = maxOf(0, m.currentHp - pre.damage); invalidate()
+                        hurt(isPlayer, pre.damage); invalidate()
                         say("IT HURT ITSELF", "IN CONFUSION!") {
                             if (m.currentHp <= 0) { if (isPlayer) playerFainted() else enemyFainted() } else skip()
                         }
@@ -764,7 +772,7 @@ class PokemonBattleView @JvmOverloads constructor(
                     val defStat = (def.defense * cz.uhk.macroflow.pokemon.status.StatStages.multiplier(defCond.defStage)).toInt().coerceAtLeast(1)
                     val dmg = BattleEngine.calcDamage(atk.level, power, atkStat, defStat, mv.type, typeOf(def))
                     doFlash {
-                        def.currentHp = maxOf(0, def.currentHp - dmg); invalidate()
+                        hurt(!isPlayer, dmg); invalidate()
                         handler.postDelayed({
                             if (def.currentHp <= 0) { if (isPlayer) enemyFainted() else playerFainted() }
                             else say("IT DEALT", "$dmg DAMAGE!") { applyMoveEffect(isPlayer, mv, statusOnly = false) }
@@ -846,7 +854,7 @@ class PokemonBattleView @JvmOverloads constructor(
         val m = monOf(isPlayer); val c = condOf(isPlayer)
         val d = cz.uhk.macroflow.pokemon.status.StatusRules.endOfTurnDamage(c, m.maxHp)
         if (d == 0 || m.currentHp <= 0) { next(); return }
-        m.currentHp = maxOf(0, m.currentHp - d)
+        hurt(isPlayer, d)
         statusFx(isPlayer, if (c.major == cz.uhk.macroflow.pokemon.status.StatusKind.POISON) cz.uhk.macroflow.pokemon.status.EffectKind.POISON else cz.uhk.macroflow.pokemon.status.EffectKind.BURN)
         invalidate()
         say(m.name, if (c.major == cz.uhk.macroflow.pokemon.status.StatusKind.POISON) "IS HURT BY POISON!" else "IS HURT BY ITS BURN!") {
@@ -854,7 +862,31 @@ class PokemonBattleView @JvmOverloads constructor(
         }
     }
 
+    /** Zranění; legenda z vrcholu neklesne pod 1 HP (nedá se porazit). */
+    private fun hurt(isPlayer: Boolean, dmg: Int) {
+        val m = monOf(isPlayer)
+        m.currentHp = maxOf(0, m.currentHp - dmg)
+        if (!isPlayer && special != null) m.currentHp = special.clampEnemyHp(m.currentHp)
+    }
+
+    private fun gamePrefs() = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+
     private fun playerFainted() {
+        if (special?.kind == cz.uhk.macroflow.pokemon.legend.SpecialBattle.Kind.LEGEND) {
+            // Legenda hráče porazí a uletí → brána na vrcholu se otevře
+            gamePrefs().edit().putBoolean(cz.uhk.macroflow.pokemon.legend.LegendProgress.LEGEND_KEY, true).apply()
+            val (roar, flee) = special.fleeLines(gs.enemy.name)
+            say(gs.player.name, "FAINTED!") {
+                say(roar.first, roar.second) {
+                    gs.enemyVisible = false; invalidate()
+                    gs.phase = BattlePhase.PLAYER_FAINTED
+                    setText(flee.first, flee.second)
+                    busy = false
+                    pendingAction = { onCaught?.invoke() }
+                }
+            }
+            return
+        }
         gs.phase = BattlePhase.PLAYER_FAINTED
         setText("${gs.player.name}", "FAINTED!")
         busy = false
@@ -863,6 +895,10 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun enemyFainted() {
         busy = false
+        // Poražený strážce jeskyně uvolní svůj krystal
+        special?.crystal?.let { c ->
+            gamePrefs().edit().putBoolean(cz.uhk.macroflow.pokemon.legend.LegendProgress.bossKey(c), true).apply()
+        }
         gs.enemyVisible = false
         gs.phase = BattlePhase.ENEMY_FAINTED
         setText("${gs.enemy.name}", "FAINTED!")
@@ -1185,6 +1221,8 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun throwBall(b: cz.uhk.macroflow.pokemon.balls.Makroball) {
         if (gs.enemy.currentHp <= 0) return
+        // Strážce ani legendu chytit nejde – ball se nespotřebuje
+        special?.let { sp -> val (l1, l2) = sp.noCatchLines; say(l1, l2) { showMain() }; return }
         ball = b; busy = true; gs.phase = BattlePhase.BALL_THROW
         ballCounts[b] = ((ballCounts[b] ?: 1) - 1).coerceAtLeast(0)
         Thread {

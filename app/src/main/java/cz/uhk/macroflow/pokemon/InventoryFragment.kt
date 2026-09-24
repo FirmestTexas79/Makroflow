@@ -234,13 +234,14 @@ class InventoryFragment : Fragment() {
 
             val ball = cz.uhk.macroflow.pokemon.balls.Makroball.from(item.itemId)
             val med = cz.uhk.macroflow.pokemon.status.MedItem.from(item.itemId)
-            holder.tvName.text = ball?.label ?: med?.label ?: when (item.itemId) {
+            val crystal = cz.uhk.macroflow.pokemon.cave.CrystalColor.fromItem(item.itemId)
+            holder.tvName.text = ball?.label ?: med?.label ?: crystal?.label ?: when (item.itemId) {
                 "lure_lamp"  -> "Spooky Plate"
                 else         -> item.itemId
             }
 
             holder.tvQuantity.visibility = View.VISIBLE
-            holder.tvQuantity.text = "Vlastníš: ${item.quantity} ks"
+            holder.tvQuantity.text = if (crystal != null) "Klíčový předmět · klepni pro popis" else "Vlastníš: ${item.quantity} ks"
 
             // Itemy zatím stále načítají z URL – nemáme lokální drawable pro itemy
             val imageUrl = when (item.itemId) {
@@ -248,7 +249,11 @@ class InventoryFragment : Fragment() {
                 else         -> ""
             }
 
-            if (med != null) {
+            if (crystal != null) {
+                holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(crystal,
+                    cz.uhk.macroflow.pokemon.cave.Crystals.iconPixels(crystal), cz.uhk.macroflow.pokemon.cave.Crystals.H,
+                    (64 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (med != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(med, med.pixels, cz.uhk.macroflow.pokemon.status.MedItem.SIZE, (64 * holder.itemView.resources.displayMetrics.density).toInt()))
             } else if (ball != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.icon(ball, (64 * holder.itemView.resources.displayMetrics.density).toInt()))
@@ -262,6 +267,14 @@ class InventoryFragment : Fragment() {
             }
 
             holder.itemView.setOnClickListener {
+                if (crystal != null) {
+                    android.app.AlertDialog.Builder(requireContext())
+                        .setTitle("💎 ${crystal.label}")
+                        .setMessage(crystal.description)
+                        .setPositiveButton("OK", null)
+                        .show()
+                    return@setOnClickListener
+                }
                 if (med != null) {
                     Toast.makeText(requireContext(), "${med.label}: ${med.description} Použij v souboji přes ITEM → LÉKÁRNIČKA.", Toast.LENGTH_LONG).show()
                     return@setOnClickListener

@@ -63,7 +63,7 @@ object BiomeRegistry {
         MovementEngine.Waypoint("horni_stezka",   PointF(0.500f, 0.335f), listOf("zapadni_stezka", "skaly1", "cave", "peak")),
         MovementEngine.Waypoint("skaly1",         PointF(0.270f, 0.300f), listOf("horni_stezka")),
         MovementEngine.Waypoint("cave",           PointF(0.790f, 0.345f), listOf("horni_stezka")),
-        MovementEngine.Waypoint("peak",           PointF(0.500f, 0.125f), listOf("horni_stezka"))
+        MovementEngine.Waypoint("peak",           PointF(0.500f, 0.150f), listOf("horni_stezka"))
     )
 
     /** Vše, co mapa potřebuje o biomu vědět, na jednom místě. */

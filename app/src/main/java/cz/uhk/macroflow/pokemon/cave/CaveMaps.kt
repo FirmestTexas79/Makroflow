@@ -49,8 +49,11 @@ data class CaveMap(
     /** Relativní pozice uzlu (zlomek šířky/výšky mapy). */
     fun relative(id: String): Pair<Float, Float>? = node(id)?.let { it.x.toFloat() / artW to it.y.toFloat() / artH }
 
-    /** Pata krystalu na oltáři v art pixelech (oltář je [ALTAR_ABOVE] px nad uzlem). */
-    val crystalBase: Pair<Int, Int> get() = node(crystalNode)!!.let { it.x to it.y - ALTAR_ABOVE - 2 }
+    /**
+     * Pata krystalu v art pixelech: jeden pixel nad podstavcem oltáře (podstavec má horní řádek
+     * 2 px nad středem oltáře, oltář je [ALTAR_ABOVE] px nad uzlem).
+     */
+    val crystalBase: Pair<Int, Int> get() = node(crystalNode)!!.let { it.x to it.y - ALTAR_ABOVE - 3 }
 
     companion object {
         const val ALTAR_ABOVE = 16

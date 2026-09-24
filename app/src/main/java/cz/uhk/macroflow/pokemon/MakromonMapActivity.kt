@@ -35,6 +35,9 @@ import cz.uhk.macroflow.pokemon.cave.CaveTransitionView
 import cz.uhk.macroflow.pokemon.cave.CrystalColor
 import cz.uhk.macroflow.pokemon.cave.Crystals
 import cz.uhk.macroflow.pokemon.cave.MapCamera
+import cz.uhk.macroflow.pokemon.legend.LegendProgress
+import cz.uhk.macroflow.pokemon.legend.PeakShrine
+import cz.uhk.macroflow.pokemon.legend.SpecialBattle
 import cz.uhk.macroflow.pokemon.ui.StepProgressBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,10 +51,12 @@ class MakromonMapActivity : AppCompatActivity() {
     private lateinit var mapWorld:         FrameLayout
     private lateinit var ashView:          ImageView
     private var crystalView: ImageView? = null
+    /** Zvětšení art pixelu v jeskyni (celé číslo z MapCamera.pixelScale); 0 mimo jeskyně. */
+    private var worldScale = 0
+    /** Krystaly, strážci, záře a svatyně – vše, co se překresluje podle stavu příběhu. */
+    private val decorViews = mutableListOf<View>()
     private var crystalGlow: View? = null
     private val crystalAnimators = mutableListOf<android.animation.Animator>()
-    /** Pulzující světlo nad místy setkání v jeskyni (svítící kapradiny). */
-    private val encounterGlows = mutableListOf<View>()
     /** Během přechodu do/z jeskyně se na mapu neklepe. */
     private var transitionRunning = false
     private lateinit var movementEngine:   MovementEngine
@@ -76,7 +81,7 @@ class MakromonMapActivity : AppCompatActivity() {
     )
 
     /** Uzly, kde může vyskočit divoký Makromon (90 % šance). Jeskyně mají vlastní (CaveMap.encounterNodes). */
-    private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2", "peak") +
+    private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2") +
         cz.uhk.macroflow.pokemon.cave.CaveMaps.ALL.flatMap { it.encounterNodes }
 
     /** Přechod mezi mapami. */
@@ -165,7 +170,10 @@ class MakromonMapActivity : AppCompatActivity() {
         // Obnoví se při změně aktivního Makromona i po návratu z Domova / souboje (level, evoluce).
         gamePrefs.registerOnSharedPreferenceChangeListener(companionPrefsListener)
         supportFragmentManager.addOnBackStackChangedListener {
-            if (supportFragmentManager.backStackEntryCount == 0) companionManager.refresh()
+            if (supportFragmentManager.backStackEntryCount == 0) {
+                companionManager.refresh()
+                refreshStoryDecor()     // po souboji se strážcem / legendou
+            }
         }
 
         mapBackground.post {
@@ -320,7 +328,8 @@ class MakromonMapActivity : AppCompatActivity() {
                     enterBiomeAtNode(BiomeType.MOUNTAINS, it.mountainNode, MapTransition.CAVE_OUT)
                 }
                 "tezba" -> scanInMine()
-                "krystal_modry", "krystal_cerveny" -> BiomeRegistry.definition(currentBiome)?.cave?.let { collectCrystal(it) }
+                "krystal_modry", "krystal_cerveny" -> BiomeRegistry.definition(currentBiome)?.cave?.let { onCrystalNode(it) }
+                "peak" -> onShrine()
                 "camp" -> restAtCamp()
                 "rozcesti_hory" -> showMapToast("🪧 ↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku")
                 "starter_bush" -> {
@@ -397,7 +406,6 @@ class MakromonMapActivity : AppCompatActivity() {
         "netopyri" -> "Netopýři se rozletěli, ale nic dalšího se nehnulo. Zkus to znovu."
         "slepa_chodba" -> "Slepá chodba… jen kape voda. Zkus to znovu."
         "hlubina" -> "Z hlubiny zafoukal studený vzduch. Zkus to znovu."
-        "peak" -> "Na vrcholu fouká, ale nikdo tu není. Výhled na celý Makrosvět ale stojí za to."
         "skaly1", "skaly2" -> "Mezi skalami se nic nehnulo. Zkus to znovu."
         "voda" -> "Hladina je klidná. Zkus to znovu."
         else -> "Křoví se ani nehnulo. Zkus to znovu."
@@ -477,7 +485,7 @@ class MakromonMapActivity : AppCompatActivity() {
             gudwinNPC.visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
             starterBush.visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
             meadowBushNPC.visibility = if (newBiome == BiomeType.MEADOW) View.VISIBLE else View.GONE
-            removeCrystal()
+            clearDecor()
 
             if (def != null) {
                 mapBackground.setImageResource(def.backgroundRes)
@@ -505,8 +513,9 @@ class MakromonMapActivity : AppCompatActivity() {
                         meadowBushNPC.y = bushNpcPos.y * mapWorld.height - (meadowBushNPC.height / 0.8f)
                     }
                 }
-                else -> def?.cave?.let { cave -> mapWorld.post { placeCrystal(cave); placeEncounterGlows(cave) } }
+                else -> {}
             }
+            mapWorld.post { refreshStoryDecor() }
             // Ladicí body grafu jen v debug buildu – dřív byly vidět i v produkční verzi.
             if (BuildConfig.DEBUG) mapWorld.post { drawDebugNodes(mapWorld) }
         }
@@ -535,12 +544,14 @@ class MakromonMapActivity : AppCompatActivity() {
         val lp = mapWorld.layoutParams
         mapWorld.translationX = 0f
         mapWorld.translationY = 0f
+        worldScale = 0
         if (cave == null) {
             lp.width = ViewGroup.LayoutParams.MATCH_PARENT
             lp.height = ViewGroup.LayoutParams.MATCH_PARENT
             mapBackground.scaleType = ImageView.ScaleType.CENTER_CROP
         } else {
             val scale = MapCamera.pixelScale(cave.artW, cave.artH, viewport.width, viewport.height, cave.artPixelsAcross)
+            worldScale = scale      // dekorace počítají se stejným násobkem, ne se (možná ještě starou) šířkou světa
             lp.width = cave.artW * scale
             lp.height = cave.artH * scale
             mapBackground.scaleType = ImageView.ScaleType.FIT_XY
@@ -583,81 +594,134 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // KRYSTALY na konci jeskyní (později otevřou legendární souboj)
+    // KRYSTALY, STRÁŽCI A SVATYNĚ NA VRCHOLU (docs/adr/0014)
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun isCollected(c: CrystalColor) = gamePrefs.getBoolean(c.prefKey, false)
+    private val db by lazy { AppDatabase.getDatabase(this) }
 
-    private fun placeCrystal(cave: CaveMap) {
-        removeCrystal()
-        if (isCollected(cave.crystal) || mapWorld.width == 0) return
-        val scale = mapWorld.width / cave.artW.toFloat()
+    /** Postup příběhu krystalů (příznaky v GamePrefs + krystaly v inventáři). */
+    private suspend fun loadLegend(): LegendProgress = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        LegendProgress.load({ gamePrefs.getBoolean(it, false) }, { db.userItemDao().getItemCount(it) ?: 0 })
+    }
+
+    /** Dekorace mapy podle stavu příběhu – po změně biomu i po návratu ze souboje. */
+    private fun refreshStoryDecor() {
+        lifecycleScope.launch {
+            val progress = loadLegend()
+            clearDecor()
+            val cave = BiomeRegistry.definition(currentBiome)?.cave
+            when {
+                cave != null -> { placeCrystal(cave, progress); placeEncounterGlows(cave) }
+                currentBiome == BiomeType.MOUNTAINS -> placeShrineDecor(progress)
+                else -> {}
+            }
+        }
+    }
+
+    private fun pixelView(pixels: IntArray, w: Int, h: Int, viewW: Int, viewH: Int): ImageView {
+        val bmp = android.graphics.Bitmap.createBitmap(pixels, w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        return ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(viewW, viewH)
+            setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, bmp).apply { isFilterBitmap = false })
+            scaleType = ImageView.ScaleType.FIT_XY
+        }
+    }
+
+    private fun glowView(size: Int, color: Int, alphaHex: Int = 0x99): View = View(this).apply {
+        layoutParams = FrameLayout.LayoutParams(size, size)
+        background = android.graphics.drawable.GradientDrawable().apply {
+            gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+            gradientRadius = size / 2f
+            colors = intArrayOf((color and 0x00FFFFFF) or (alphaHex shl 24), Color.TRANSPARENT)
+        }
+    }
+
+    private fun addDecor(v: View) { mapWorld.addView(v); decorViews += v }
+
+    /** Krystal lehce nad oltářem; dokud stojí strážce, je vidět, ale nejde vzít. */
+    private fun placeCrystal(cave: CaveMap, progress: LegendProgress) {
+        val altar = progress.altar(cave.crystal)
+        if (altar == LegendProgress.Altar.EMPTY || worldScale <= 0) return
+        val scale = worldScale.toFloat()
         val (bx, by) = cave.crystalBase
         val w = (Crystals.W * scale).toInt()
         val h = (Crystals.H * scale).toInt()
         val left = bx * scale - w / 2f
         val top = by * scale - h
 
-        val glowSize = (w * 3.2f).toInt()
-        val glow = View(this).apply {
-            layoutParams = FrameLayout.LayoutParams(glowSize, glowSize)
-            background = android.graphics.drawable.GradientDrawable().apply {
-                gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
-                gradientRadius = glowSize / 2f
-                colors = intArrayOf((cave.crystal.glow and 0x00FFFFFF) or 0x99000000.toInt(), Color.TRANSPARENT)
-            }
+        val glowSize = (w * 2.4f).toInt()
+        val glow = glowView(glowSize, cave.crystal.glow).apply {
             x = left + w / 2f - glowSize / 2f
             y = top + h / 2f - glowSize / 2f
             elevation = 1f
         }
-        val bmp = android.graphics.Bitmap.createBitmap(Crystals.pixels(cave.crystal), Crystals.W, Crystals.H, android.graphics.Bitmap.Config.ARGB_8888)
-        val crystal = ImageView(this).apply {
-            layoutParams = FrameLayout.LayoutParams(w, h)
-            setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, bmp).apply { isFilterBitmap = false })
-            scaleType = ImageView.ScaleType.FIT_XY
-            x = left; y = top
-            elevation = 1.5f
+        val crystal = pixelView(Crystals.pixels(cave.crystal), Crystals.W, Crystals.H, w, h).apply {
+            x = left; y = top; elevation = 1.5f
         }
-        mapWorld.addView(glow)
-        mapWorld.addView(crystal)
-        crystalGlow = glow
-        crystalView = crystal
+        addDecor(glow); addDecor(crystal)
+        crystalGlow = glow; crystalView = crystal
 
-        // Krystal se vznáší (po celých art pixelech) a záře pulzuje
-        crystalAnimators += android.animation.ObjectAnimator.ofFloat(crystal, "translationY", 0f, -2 * scale, 0f).apply {
+        // Vznáší se jen o jeden art pixel (po celých pixelech) a záře pulzuje
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(crystal, "translationY", 0f, -scale, 0f).apply {
             duration = 2200; repeatCount = android.animation.ValueAnimator.INFINITE
-            // skoky po celých art pixelech, ne plynule (pixel art)
             setEvaluator(android.animation.TypeEvaluator<Float> { f, _, _ ->
-                -Math.round(2 * kotlin.math.sin(f * Math.PI).toFloat()) * scale
+                -Math.round(kotlin.math.sin(f * Math.PI).toFloat()) * scale
             })
             start()
         }
         crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.45f, 1f, 0.45f).apply {
             duration = 1800; repeatCount = android.animation.ValueAnimator.INFINITE; start()
         }
+
+        if (altar == LegendProgress.Altar.GUARDED) placeGuardian(cave, scale)
+    }
+
+    /** Strážce stojí na cestě před oltářem a pomalu dýchá. */
+    private fun placeGuardian(cave: CaveMap, scale: Float) {
+        val sp = SpecialBattle.guardianOf(cave.crystal)
+        val res = resources.getIdentifier(sp.spriteName, "drawable", packageName)
+        if (res == 0) return
+        val node = cave.node(cave.crystalNode) ?: return
+        val size = (26 * scale).toInt()
+        val shadow = View(this).apply {
+            layoutParams = FrameLayout.LayoutParams((size * 0.7f).toInt(), (size * 0.18f).toInt())
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(0x66000000)
+            }
+            x = node.x * scale - size * 0.35f
+            y = (node.y - 5) * scale - size * 0.09f
+            elevation = 1.6f
+        }
+        val guardian = ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(size, size)
+            setImageResource(res)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            x = node.x * scale - size / 2f
+            y = (node.y - 5) * scale - size
+            elevation = 1.8f
+            pivotY = size.toFloat()
+        }
+        addDecor(shadow); addDecor(guardian)
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(guardian, "scaleY", 1f, 1.05f, 1f).apply {
+            duration = 1600; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
     }
 
     /** Místa setkání v jeskyni: kapradiny jsou v mapě, tady jen pomalu dýchající záře nad nimi. */
     private fun placeEncounterGlows(cave: CaveMap) {
-        if (mapWorld.width == 0) return
-        val scale = mapWorld.width / cave.artW.toFloat()
+        if (worldScale <= 0) return
+        val scale = worldScale.toFloat()
         val size = (30 * scale).toInt()
         cave.encounterNodes.forEachIndexed { i, id ->
             val n = cave.node(id) ?: return@forEachIndexed
-            val glow = View(this).apply {
+            val glow = glowView(size, 0xFF8CF0D2.toInt(), 0x66).apply {
                 layoutParams = FrameLayout.LayoutParams(size, (size * 0.6f).toInt())
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
-                    gradientRadius = size / 2f
-                    colors = intArrayOf(0x668CF0D2, Color.TRANSPARENT)
-                }
                 x = n.x * scale - size / 2f
                 y = (n.y - 3) * scale - size * 0.3f
                 alpha = 0.3f
                 elevation = 1f
             }
-            mapWorld.addView(glow)
-            encounterGlows += glow
+            addDecor(glow)
             crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.25f, 0.9f, 0.25f).apply {
                 duration = 2600; startDelay = i * 450L
                 repeatCount = android.animation.ValueAnimator.INFINITE; start()
@@ -665,39 +729,212 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
-    private fun removeCrystal() {
+    private fun clearDecor() {
         crystalAnimators.forEach { it.cancel() }
         crystalAnimators.clear()
-        encounterGlows.forEach { mapWorld.removeView(it) }
-        encounterGlows.clear()
-        crystalView?.let { mapWorld.removeView(it) }
-        crystalGlow?.let { mapWorld.removeView(it) }
+        decorViews.forEach { mapWorld.removeView(it) }
+        decorViews.clear()
         crystalView = null; crystalGlow = null
     }
 
-    private fun collectCrystal(cave: CaveMap) {
-        val color = cave.crystal
-        if (isCollected(color)) {
-            showMapToast("Oltář je prázdný – ${color.label} už máš u sebe.")
-            return
+    /** Uzel krystalu: strážce → souboj; volný krystal → do inventáře; prázdný oltář → hláška. */
+    private fun onCrystalNode(cave: CaveMap) {
+        lifecycleScope.launch {
+            val progress = loadLegend()
+            val color = cave.crystal
+            when (progress.altar(color)) {
+                LegendProgress.Altar.GUARDED -> {
+                    val sp = SpecialBattle.guardianOf(color)
+                    startSpecialBattle(sp, battleBiome = currentBiome)
+                }
+                LegendProgress.Altar.CRYSTAL_READY -> takeCrystal(color)
+                LegendProgress.Altar.EMPTY -> showMapToast("Oltář je prázdný – ${color.label} už je u tebe.")
+            }
         }
-        gamePrefs.edit().putBoolean(color.prefKey, true).apply()
+    }
+
+    private fun startSpecialBattle(sp: SpecialBattle, battleBiome: BiomeType) {
+        gamePrefs.edit()
+            .putString("LAST_BIOME", battleBiome.name)
+            .putString(SpecialBattle.PREF, sp.id)
+            .remove("FORCE_ENCOUNTER_ID")
+            .apply()
+        replaceMapContent(PokemonBattleFragment())
+    }
+
+    private fun takeCrystal(color: CrystalColor) {
+        gamePrefs.edit().putBoolean(LegendProgress.takenKey(color), true).apply()
+        lifecycleScope.launch(Dispatchers.IO) {
+            db.userItemDao().addItem(color.itemId, 1)
+            if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) {
+                db.userItemDao().getItem(color.itemId)?.let { runCatching { cz.uhk.macroflow.data.FirebaseRepository.uploadUserItem(it) } }
+            }
+        }
         val crystal = crystalView
         val glow = crystalGlow
-        // zastavit jen vznášení a pulz krystalu, záře nad kapradinami běží dál
         crystalAnimators.filter { (it as? android.animation.ObjectAnimator)?.target.let { t -> t === crystal || t === glow } }
             .forEach { it.cancel(); crystalAnimators.remove(it) }
-        crystal?.animate()?.translationYBy(-crystal.height * 0.6f)?.scaleX(1.5f)?.scaleY(1.5f)?.alpha(0f)
-            ?.setDuration(900)?.withEndAction {
-                crystal.visibility = View.GONE; glow?.visibility = View.GONE
-            }?.start()
-        glow?.animate()?.scaleX(3f)?.scaleY(3f)?.alpha(0f)?.setDuration(900)?.start()
+        // Krystal vyletí k hráči a zmizí v batohu
+        crystal?.animate()?.x(ashView.x + ashView.width / 2f - crystal.width / 2f)?.y(ashView.y)
+            ?.scaleX(0.3f)?.scaleY(0.3f)?.alpha(0f)?.setDuration(900)
+            ?.withEndAction { crystal.visibility = View.GONE; glow?.visibility = View.GONE }?.start()
+        glow?.animate()?.scaleX(2.5f)?.scaleY(2.5f)?.alpha(0f)?.setDuration(700)?.start()
+        showMapToast("💎 Získal jsi ${color.label}!\nNajdeš ho v inventáři. Patří do svatyně na vrcholu Hor.")
+    }
 
-        val all = CrystalColor.entries.filter { isCollected(it) }.toSet()
-        val tail = if (Crystals.legendaryUnlocked(all))
-            "Oba krystaly se rozzářily současně… Někde v Makrosvětě se probudila legenda."
-        else "Pulzuje v ruce. Druhý krystal prý leží v jiné jeskyni."
-        showMapToast("💎 Získal jsi ${color.label}!\n$tail")
+    // ── Svatyně na vrcholu Hor ──
+
+    /** Mapa hor je přes celou obrazovku: art pixel → pixel světa zvlášť pro x a y (jako uzly grafu). */
+    private fun peakX(artX: Float) = artX / PeakShrine.ART_W * mapWorld.width
+    private fun peakY(artY: Float) = artY / PeakShrine.ART_H * mapWorld.height
+
+    private fun placeShrineDecor(progress: LegendProgress) {
+        if (mapWorld.width == 0) return
+        progress.socketsFilled.forEach { c -> addSocketCrystal(c, animateIn = false) }
+        if (progress.shrine == LegendProgress.Shrine.GateOpen) addOpenGate()
+    }
+
+    private fun addSocketCrystal(c: CrystalColor, animateIn: Boolean): View {
+        val sx = PeakShrine.SOCKETS.getValue(c).toFloat()
+        val w = (peakX(sx + 1.5f) - peakX(sx - 1.5f)).toInt()
+        val h = (peakY(PeakShrine.SOCKET_BOTTOM.toFloat()) - peakY(PeakShrine.SOCKET_BOTTOM - 6f)).toInt()
+        val glowSize = w * 4
+        val glow = glowView(glowSize, c.glow).apply {
+            x = peakX(sx) - glowSize / 2f
+            y = peakY(PeakShrine.SOCKET_BOTTOM - 3f) - glowSize / 2f
+            elevation = 3f
+        }
+        val v = pixelView(Crystals.smallPixels(c), Crystals.SMALL_W, Crystals.SMALL_H, w, h).apply {
+            x = peakX(sx - 1.5f); y = peakY(PeakShrine.SOCKET_BOTTOM - 6f); elevation = 3.5f
+        }
+        addDecor(glow); addDecor(v)
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.5f, 1f, 0.5f).apply {
+            duration = 1500; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+        if (animateIn) { v.alpha = 0f; glow.scaleX = 0.2f; glow.scaleY = 0.2f
+            v.animate().alpha(1f).setDuration(250).start()
+            glow.animate().scaleX(1f).scaleY(1f).setDuration(400).start() }
+        return v
+    }
+
+    /** Otevřená brána ve skále za svatyní (vede do další lokace – zatím zavřené dál). */
+    private fun addOpenGate() {
+        val gw = PeakShrine.GATE_RIGHT - PeakShrine.GATE_LEFT + 1
+        val gh = PeakShrine.GATE_BOTTOM - PeakShrine.GATE_TOP + 1
+        val left = peakX(PeakShrine.GATE_LEFT.toFloat()); val top = peakY(PeakShrine.GATE_TOP.toFloat())
+        val w = (peakX(PeakShrine.GATE_RIGHT + 1f) - left).toInt()
+        val h = (peakY(PeakShrine.GATE_BOTTOM + 1f) - top).toInt()
+        val glow = glowView((w * 2.2f).toInt(), 0xFFB488FF.toInt(), 0x77).apply {
+            x = left + w / 2f - w * 1.1f; y = top + h / 2f - w * 1.1f; elevation = 2f
+        }
+        val gate = pixelView(PeakShrine.openGatePixels(), gw, gh, w, h).apply { x = left; y = top; elevation = 2.2f }
+        addDecor(glow); addDecor(gate)
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.35f, 0.85f, 0.35f).apply {
+            duration = 2400; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+    }
+
+    private fun onShrine() {
+        lifecycleScope.launch {
+            val p = loadLegend()
+            when (val st = p.shrine) {
+                is LegendProgress.Shrine.NeedCrystals -> showMapToast(
+                    "⛩ Svatyně má dvě prázdná lůžka – modré a červené.\n" +
+                        "Chybí: " + st.missing.joinToString(", ") { it.label } + ".\n" +
+                        "Krystaly hlídají strážci v jeskyni a ve Starém dole.")
+                LegendProgress.Shrine.ReadyToPlace -> placeCrystalsCeremony()
+                LegendProgress.Shrine.LegendAwaits -> {
+                    showMapToast("Krystaly v lůžkách září… Drak se znovu probouzí!")
+                    startSpecialBattle(SpecialBattle.LEGEND_PEAK, BiomeType.MOUNTAINS)
+                }
+                LegendProgress.Shrine.GateOpen -> showMapToast(
+                    "Brána za svatyní zůstala otevřená. Z temnoty za ní táhne studený vítr…\n(Cesta dál se teprve chystá.)")
+            }
+        }
+    }
+
+    /**
+     * Vložení krystalů: oba vyletí od hráče obloukem do lůžek, svatyně se rozzáří,
+     * zemi rozechvěje, ze svatyně vyšlehne paprsek světla a probudí se legenda.
+     */
+    private fun placeCrystalsCeremony() {
+        transitionRunning = true
+        lifecycleScope.launch(Dispatchers.IO) {
+            CrystalColor.entries.forEach { db.userItemDao().consumeItem(it.itemId, 1) }
+            if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) CrystalColor.entries.forEach { c ->
+                db.userItemDao().getItem(c.itemId)?.let { runCatching { cz.uhk.macroflow.data.FirebaseRepository.uploadUserItem(it) } }
+            }
+        }
+        gamePrefs.edit().putBoolean(LegendProgress.PLACED_KEY, true).apply()
+
+        val startX = ashView.x + ashView.width / 2f
+        val startY = ashView.y + ashView.height * 0.2f
+        val size = (peakX(Crystals.W.toFloat()) - peakX(0f)).toInt().coerceAtLeast(24)
+        CrystalColor.entries.forEachIndexed { i, c ->
+            val flying = pixelView(Crystals.pixels(c), Crystals.W, Crystals.H, size, size * Crystals.H / Crystals.W).apply {
+                x = startX - size / 2f; y = startY; elevation = 6f; alpha = 0f
+            }
+            addDecor(flying)
+            val tx = peakX(PeakShrine.SOCKETS.getValue(c).toFloat()) - size / 2f
+            val ty = peakY(PeakShrine.SOCKET_BOTTOM - 6f) - flying.layoutParams.height * 0.5f
+            android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 1100; startDelay = 200L + i * 250L
+                interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+                addUpdateListener { a ->
+                    val t = a.animatedValue as Float
+                    flying.alpha = (t * 4f).coerceAtMost(1f)
+                    flying.x = startX - size / 2f + (tx - startX + size / 2f) * t
+                    // oblouk nahoru
+                    flying.y = startY + (ty - startY) * t - kotlin.math.sin(t * Math.PI).toFloat() * size * 2.5f
+                    flying.rotation = t * 360f
+                    val s = 1f - 0.7f * t; flying.scaleX = s; flying.scaleY = s
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(a: android.animation.Animator) {
+                        flying.visibility = View.GONE
+                        addSocketCrystal(c, animateIn = true)
+                        if (i == CrystalColor.entries.lastIndex) shrineAwakens()
+                    }
+                })
+                start()
+            }
+        }
+    }
+
+    private fun shrineAwakens() {
+        val content = findViewById<View>(R.id.mapMainContent)
+        // otřesy
+        android.animation.ObjectAnimator.ofFloat(content, "translationX", 0f, -14f, 12f, -10f, 9f, -6f, 4f, 0f).apply {
+            duration = 900; startDelay = 250; start()
+        }
+        // paprsek světla ze svatyně k nebi
+        val cx = peakX(86f)
+        val beamW = (peakX(10f) - peakX(0f)).toInt()
+        val beamBottom = peakY(PeakShrine.SOCKET_BOTTOM - 3f)
+        val beam = View(this).apply {
+            layoutParams = FrameLayout.LayoutParams(beamW, beamBottom.toInt().coerceAtLeast(1))
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP,
+                intArrayOf(0xFFFFF6D0.toInt(), 0xCCB488FF.toInt(), 0x00B488FF)
+            )
+            x = cx - beamW / 2f; y = 0f; elevation = 7f
+            pivotY = beamBottom; scaleY = 0f; alpha = 0.9f
+        }
+        addDecor(beam)
+        beam.animate().scaleY(1f).setStartDelay(500).setDuration(700).start()
+        // bílý záblesk přes celou obrazovku → souboj s legendou
+        val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+        val flash = View(this).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(0xFFFFF8E6.toInt()); alpha = 0f; elevation = 250f
+        }
+        root.addView(flash)
+        flash.animate().alpha(1f).setStartDelay(1500).setDuration(450).withEndAction {
+            startSpecialBattle(SpecialBattle.LEGEND_PEAK, BiomeType.MOUNTAINS)
+            flash.animate().alpha(0f).setStartDelay(350).setDuration(500).withEndAction {
+                root.removeView(flash); transitionRunning = false
+            }.start()
+        }.start()
     }
 
     private fun drawDebugNodes(container: FrameLayout) {

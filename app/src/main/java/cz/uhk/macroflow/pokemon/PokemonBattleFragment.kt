@@ -31,7 +31,11 @@ class PokemonBattleFragment : Fragment() {
 
         // Tutoriálové křoví je vždy stejné; ladicí přepínač vynutí shiny jen pro jedno setkání
         val gamePrefs = ctx.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
-        val forced = gamePrefs.contains("FORCE_ENCOUNTER_ID")
+        // Strážce jeskyně / legenda z vrcholu (docs/adr/0014) – příznak platí jen pro tento souboj
+        val special = cz.uhk.macroflow.pokemon.legend.SpecialBattle.from(
+            gamePrefs.getString(cz.uhk.macroflow.pokemon.legend.SpecialBattle.PREF, null))
+        gamePrefs.edit().remove(cz.uhk.macroflow.pokemon.legend.SpecialBattle.PREF).apply()
+        val forced = gamePrefs.contains("FORCE_ENCOUNTER_ID") || special != null
         val debugShiny = gamePrefs.getBoolean("DEBUG_FORCE_SHINY", false)
         if (debugShiny) gamePrefs.edit().remove("DEBUG_FORCE_SHINY").apply()
         isShiny = !forced && (debugShiny || cz.uhk.macroflow.pokemon.shiny.ShinyPalette.roll())
@@ -56,10 +60,15 @@ class PokemonBattleFragment : Fragment() {
         }
 
         val titleTv = TextView(ctx).apply {
-            text      = if (isShiny) "✦  SHINY ENCOUNTER  ✦" else "★  ENCOUNTER  ★"
+            text      = when {
+                special?.kind == cz.uhk.macroflow.pokemon.legend.SpecialBattle.Kind.LEGEND -> "✦  LEGENDARY  ✦"
+                special != null -> "⚔  GUARDIAN  ⚔"
+                isShiny -> "✦  SHINY ENCOUNTER  ✦"
+                else -> "★  ENCOUNTER  ★"
+            }
             textSize  = 10f
             typeface  = Typeface.MONOSPACE
-            setTextColor(Color.parseColor(if (isShiny) "#FFD54F" else "#A8C8F8"))
+            setTextColor(Color.parseColor(if (isShiny || special?.kind == cz.uhk.macroflow.pokemon.legend.SpecialBattle.Kind.LEGEND) "#FFD54F" else if (special != null) "#FF8A80" else "#A8C8F8"))
             gravity   = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -68,7 +77,7 @@ class PokemonBattleFragment : Fragment() {
         }
 
         // V onCreateView fragmentu uprav onCaught takto:
-        val battleView = PokemonBattleView(ctx, null, isShiny).apply {
+        val battleView = PokemonBattleView(ctx, null, isShiny, special).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT

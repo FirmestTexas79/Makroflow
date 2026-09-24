@@ -28,7 +28,7 @@ N = {
     "horni_stezka":   (0.500, 0.335),
     "skaly1":         (0.270, 0.300),
     "cave":           (0.790, 0.345),
-    "peak":           (0.500, 0.125),
+    "peak":           (0.500, 0.150),
 }
 EDGES = [("vstup_z_meadow", "rozcesti_hory"), ("rozcesti_hory", "camp"), ("rozcesti_hory", "kral_mlsak"),
          ("kral_mlsak", "zapadni_stezka"), ("zapadni_stezka", "mine"), ("zapadni_stezka", "horni_stezka"),
@@ -338,14 +338,50 @@ for k in range(0, 22):
         px[rx, ry - 1] = (96, 96, 100); px[rx, ry + 2] = (96, 96, 100)
         if k % 3 == 0: px[rx, ry] = WOOD_D; px[rx, ry + 1] = WOOD_D
 
-# vrchol: mužík z kamenů + praporek
+# vrchol: svatyně se dvěma lůžky pro krystaly + zapečetěná brána ve skále (docs/adr/0014)
+# Souřadnice lůžek a brány = PeakShrine.kt (zdroj pravdy v obou místech).
 cx, cy = P("peak")
-for i, (w, yy) in enumerate(((4, 0), (3, -3), (2, -5), (1, -7))):
-    for xx in range(-w, w + 1): px[cx + xx, cy - 8 + yy] = STONE[1] if xx < 0 else STONE[0]
-    px[cx - w - 1, cy - 8 + yy] = OUT; px[cx + w + 1, cy - 8 + yy] = OUT
-for yy in range(10): px[cx + 1, cy - 16 - yy] = WOOD_D
-for yy in range(4):
-    for xx in range(2, 8 - yy): px[cx + xx, cy - 25 + yy] = (196, 60, 48)
+GATE_W, GATE_TOP, GATE_BOTTOM = 6, cy - 30, cy - 16          # brána: |dx| <= 6, řádky top..bottom
+DOOR = [(120, 112, 118), (140, 132, 138), (100, 94, 100)]
+for yy in range(GATE_TOP - 2, GATE_BOTTOM + 1):              # rám z kvádrů
+    for xx in range(-GATE_W - 2, GATE_W + 3):
+        top = GATE_TOP + GATE_W - int(math.sqrt(max(0, GATE_W * GATE_W - xx * xx)))
+        if yy < top - 2: continue
+        inside = abs(xx) <= GATE_W and yy >= top
+        if inside:
+            c = DOOR[1] if xx < 0 else DOOR[0]
+            if xx == 0: c = OUT                                   # spára mezi křídly
+            if (yy - GATE_TOP) % 5 == 0 and abs(xx) > 1: c = DOOR[2]
+        else:
+            c = STONE[2] if (xx + yy) % 3 else STONE[0]
+            if yy == top - 2 or abs(xx) == GATE_W + 2: c = OUT
+        px[cx + xx, yy] = c
+for a in range(0, 360, 30):                                     # pečeť: kruh přes obě křídla
+    px[cx + round(3 * math.cos(math.radians(a))), GATE_TOP + 8 + round(3 * math.sin(math.radians(a)))] = (86, 70, 110)
+px[cx, GATE_TOP + 8] = (160, 120, 200)
+for xx in range(-GATE_W - 3, GATE_W + 4): px[cx + xx, GATE_BOTTOM + 1] = OUT   # práh
+
+SH = cy - 6                                                    # pata svatyně
+for xx in range(-10, 11):                                      # podesta
+    for yy in (0, 1):
+        px[cx + xx, SH - yy] = STONE[3] if yy == 0 else STONE[1]
+    px[cx + xx, SH + 1] = OUT
+px[cx - 11, SH] = OUT; px[cx + 11, SH] = OUT; px[cx - 11, SH - 1] = OUT; px[cx + 11, SH - 1] = OUT
+for yy in range(2, 9):                                         # tělo
+    for xx in range(-7, 8):
+        c = STONE[2] if xx < -2 else (STONE[1] if xx < 3 else STONE[0])
+        if abs(xx) == 7: c = OUT
+        px[cx + xx, SH - yy] = c
+for xx in range(-8, 9):                                        # deska navrchu
+    px[cx + xx, SH - 9] = STONE[2]; px[cx + xx, SH - 10] = OUT
+px[cx - 8, SH - 9] = OUT; px[cx + 8, SH - 9] = OUT
+for sx in (-4, 4):                                             # lůžka pro krystaly
+    for yy in range(3, 8):
+        for xx in (-1, 0, 1):
+            px[cx + sx + xx, SH - yy] = (38, 30, 40) if yy < 7 else STONE[3]
+    px[cx + sx, SH - 8] = (38, 30, 40)
+for yy in (4, 5, 6): px[cx, SH - yy] = (150, 110, 190)         # runa mezi lůžky
+print("PEAK", cx, cy, "gate", GATE_TOP, GATE_BOTTOM, "shrine base", SH, "sockets y", SH - 8, SH - 3)
 
 # rozcestník u vstupu
 cx, cy = P("rozcesti_hory")
@@ -374,6 +410,9 @@ for _ in range(4000):
     x, y = rnd.randrange(6, AW - 6), rnd.randrange(20, AH - 6)
     if is_rock[y][x] or not is_rock[y - 4][x] or pathd[y][x] < 8 or plaza_d(x, y) < PLAZA_R + 6: continue
     if any(math.hypot(x - A(n)[0], y - A(n)[1]) < 14 for n in N): continue
+    gx, gy = A("peak")
+    if abs(x - gx) < 20 and y < gy + 4:
+        rnd.choice((2, 3, 3, 4)); continue          # před bránou nic (volání rnd zachová zbytek mapy)
     boulder(x, y, rnd.choice((2, 3, 3, 4))); placed += 1
 
 # detaily na horních plochách skal: praskliny, kamínky, trsy
