@@ -175,8 +175,7 @@
             android:visibility="gone"
             app:layout_constraintTop_toBottomOf="@+id/toggleGroup"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintEnd_toEndOf="parent">
 
             <TextView
                 android:id="@+id/tvTrainingTimePill"
@@ -242,6 +241,35 @@
                     android:visibility="invisible" />
 
             </LinearLayout>
+        </LinearLayout>
+
+        <!-- Zapojené partie: rozsvítí se po výběru typu tréninku -->
+        <LinearLayout
+            android:id="@+id/llDayMuscles"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/llPillsContainer"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <cz.uhk.macroflow.training.body.BodyMapView
+                android:id="@+id/bodyDay"
+                android:layout_width="84dp"
+                android:layout_height="84dp" />
+
+            <TextView
+                android:id="@+id/tvDayMuscles"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:textColor="#B3283618"
+                android:textSize="12sp" />
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
