@@ -9,8 +9,14 @@ enum class RequirementType {
     TALK_TO_NPC,    // Jen odkliknutí dialogu
     LOG_MEAL,        // Nové: Zapsání jídla
     BATTLE_TYPE,     // Nové: Souboj s konkrétním typem
-    SCAN_BARCODE     // Naskenování čárového kódu ve funkční části (přes GameEvent log)
+    SCAN_BARCODE,    // Naskenování čárového kódu ve funkční části (přes GameEvent log)
+    LOG_CALORIES,    // Dnešní příjem kcal >= targetValue (odvozeno z consumed_snacks)
+    LOG_MACROS,      // Dnešní příjem makroživiny v g >= targetValue; targetId = protein|carbs|fat
+    BATTLE_BIOME     // Výhry v soubojích v daném biomu; targetId = BiomeType.name
 }
+
+/** Dnešní součty z funkční části – vstup pro odvozené fáze. */
+data class NutritionTotals(val kcal: Int, val proteinG: Float, val carbsG: Float, val fatG: Float)
 
 data class QuestStage(
     val title: String,
@@ -30,6 +36,7 @@ data class QuestDefinition(
 // Objekt se všemi questy ve hře
 object QuestRegistry {
     private const val GUDWIN = "Gudwin Oliver"
+    private const val KRAL = "Král Mlsák"
 
     val TOWN_INTRO_QUEST = QuestDefinition(
         id = "town_intro_oliver",
@@ -98,7 +105,79 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST) }
+    // ════════════════════════════════════════════════════════════════════════
+    // MOUNTAINS – Král Mlsák
+    // Téma: kalorie a makroživiny. Král (kamenná socha uprostřed kaňonu) kdysi
+    // vládl pohoří, ale zapomněl na výživu – hráč mu pomůže znovu nabrat sílu.
+    // ════════════════════════════════════════════════════════════════════════
+    val MOUNTAINS_QUEST = QuestDefinition(
+        id = "mountains_macro_king",
+        stages = listOf(
+            QuestStage(
+                title = "Audience u krále",
+                text = "Konečně! Čekal jsem na někoho, kdo mi pomůže. Já, Král Mlsák, jsem kdysi vládl celému pohoří – ale moje armáda zeslábla. Prý za to může špatná výživa. Nesmysl! Nebo... možná ne. Nejdřív prozkoumej tábor a jeskyni, ať víš, s čím máme tu čest.",
+                speakerResId = R.drawable.kral_mlsak,
+                speakerName = KRAL,
+                requirementType = RequirementType.VISIT_NODE,
+                targetValue = 2,
+                targetId = "camp,cave"
+            ),
+            QuestStage(
+                title = "Královský inventář",
+                text = "Moji vojáci jedí, co najdou – ale netuší, kolik energie tím získají. Ty prý umíš počítat kalorie? Dokaž to! Zapiš si dnes jídla tak, aby tvůj příjem přesáhl 1500 kcal. Výživa je věda, ne náhoda.",
+                speakerResId = R.drawable.kral_mlsak,
+                speakerName = KRAL,
+                requirementType = RequirementType.LOG_CALORIES,
+                targetValue = 1500
+            ),
+            QuestStage(
+                title = "Kámen svalů",
+                text = "Působivé! Jenže kalorie nejsou všechno. Moji kamenní Makromoni potřebují bílkoviny, aby jejich svaly vydržely. Bez proteinu hory nepřekonáš. Zapiš si dnes aspoň 80 g bílkovin – maso, luštěniny, tvaroh, cokoliv, co buduje!",
+                speakerResId = R.drawable.kral_mlsak,
+                speakerName = KRAL,
+                requirementType = RequirementType.LOG_MACROS,
+                targetValue = 80,
+                targetId = "protein"
+            ),
+            QuestStage(
+                title = "Výzva vrcholu",
+                text = "Učíš se rychle! Teď přichází pravá zkouška. V horách sídlí Makromoni silní a tvrdohlaví jako já. Poraz v horách 2 z nich a ukaž, že se tvé znalosti výživy proměnily v bojovou sílu!",
+                speakerResId = R.drawable.kral_mlsak,
+                speakerName = KRAL,
+                requirementType = RequirementType.BATTLE_BIOME,
+                targetValue = 2,
+                targetId = "MOUNTAINS"
+            ),
+            QuestStage(
+                title = "Cukrový pochod",
+                text = "Hmm... vyhrál jsi. Musím uznat tvou sílu. Moji průzkumníci jsou ale pomalí – nemají energii na rychlý pochod. Sacharidy! To je odpověď. Zapiš si dnes 200 g sacharidů – rýže, vločky, ovoce. Ukaž jim, co znamená mít palivo!",
+                speakerResId = R.drawable.kral_mlsak,
+                speakerName = KRAL,
+                requirementType = RequirementType.LOG_MACROS,
+                targetValue = 200,
+                targetId = "carbs"
+            ),
+            QuestStage(
+                title = "Zlatý tuk království",
+                text = "Zbývá poslední tajemství výživy, které jsem přehlížel – tuky. Ne z koblih, ale ty zdravé! Ořechy, avokádo, olivový olej. Zapiš si dnes aspoň 50 g tuku a slibuji reformu královské kuchyně!",
+                speakerResId = R.drawable.kral_mlsak,
+                speakerName = KRAL,
+                requirementType = RequirementType.LOG_MACROS,
+                targetValue = 50,
+                targetId = "fat"
+            ),
+            QuestStage(
+                title = "Královský pochod",
+                text = "Udělal jsi ze mě jiného krále. Moje armáda je silná, najedená a vyvážená. Teď je čas na velký pochod přes celé pohoří! Ujdi se mnou dnes 8000 kroků – poslední zkouška, po které ti udělím titul Výživový rytíř hor!",
+                speakerResId = R.drawable.kral_mlsak,
+                speakerName = KRAL,
+                requirementType = RequirementType.WALK_STEPS,
+                targetValue = 8000
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST) }
 
     fun byId(id: String): QuestDefinition? = ALL.firstOrNull { it.id == id }
 }

@@ -1,5 +1,6 @@
 package cz.uhk.macroflow.pokemon
 
+import cz.uhk.macroflow.pokemon.quests.NutritionTotals
 import cz.uhk.macroflow.pokemon.quests.QuestDefinition
 import cz.uhk.macroflow.pokemon.quests.QuestProgression
 import cz.uhk.macroflow.pokemon.quests.QuestRegistry
@@ -89,5 +90,36 @@ class QuestProgressionTest {
     @Test
     fun `meadow quest končí skenem kódu`() {
         assertEquals(RequirementType.SCAN_BARCODE, QuestRegistry.MEADOW_QUEST.stages.last().requirementType)
+    }
+
+    private val totals = NutritionTotals(kcal = 1620, proteinG = 79.9f, carbsG = 210.4f, fatG = 51f)
+
+    @Test
+    fun `kalorie a makra se berou z dnešních součtů`() {
+        assertEquals(1620, QuestProgression.nutritionValue(stage(RequirementType.LOG_CALORIES, 1500), totals))
+        assertEquals(210, QuestProgression.nutritionValue(stage(RequirementType.LOG_MACROS, 200, "carbs"), totals))
+        assertEquals(51, QuestProgression.nutritionValue(stage(RequirementType.LOG_MACROS, 50, "fat"), totals))
+    }
+
+    @Test
+    fun `gramy se zaokrouhlují dolů – 79,9 g bílkovin nesplní cíl 80 g`() {
+        val s = stage(RequirementType.LOG_MACROS, 80, "protein")
+        val v = QuestProgression.nutritionValue(s, totals)!!
+        assertFalse(QuestProgression.isStageSatisfied(s, v.toString()))
+    }
+
+    @Test
+    fun `nevýživová fáze nemá výživovou hodnotu`() {
+        assertEquals(null, QuestProgression.nutritionValue(stage(RequirementType.WALK_STEPS, 1), totals))
+        assertEquals(null, QuestProgression.nutritionValue(stage(RequirementType.LOG_MACROS, 1, "cukr"), totals))
+    }
+
+    @Test
+    fun `quest krále má 7 fází a všechny mluví za krále`() {
+        val q = QuestRegistry.MOUNTAINS_QUEST
+        assertEquals(7, q.stages.size)
+        assertTrue(q.stages.all { it.speakerName == "Král Mlsák" })
+        q.stages.filter { it.requirementType == RequirementType.LOG_MACROS }
+            .forEach { assertTrue(it.targetId in setOf("protein", "carbs", "fat")) }
     }
 }

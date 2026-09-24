@@ -511,7 +511,9 @@ class PokemonBattleView @JvmOverloads constructor(
                             val enemyType = gs.enemy.moves.firstOrNull()?.type ?: MakromonType.NORMAL
 
                             // Informujeme QuestManager o výhře nad konkrétním typem
-                            (context as? MakromonMapActivity)?.questManager?.onBattleWon(enemyType.name)
+                            (context as? MakromonMapActivity)?.let { map ->
+                                map.questManager.onBattleWon(enemyType.name, biome = map.getCurrentBiome().name)
+                            }
 
                             Thread {
                                 // Logika pro XP a Makrodex

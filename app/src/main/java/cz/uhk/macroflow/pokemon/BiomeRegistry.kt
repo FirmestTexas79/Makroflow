@@ -43,15 +43,21 @@ object BiomeRegistry {
         MovementEngine.Waypoint("hory",          PointF(0.765f, 0.432f), listOf("rozcesti"))
     )
 
-    // ⚠️ PROVIZORNÍ souřadnice – sedí na placeholder pozadí `mountains.png`.
-    // Až bude hotová pixel-art mapa hor, přepočítat podle ní (stejně jako Meadow: x/y = zlomek šířky/výšky obrázku).
+    // Mapa `mountains.png` je generovaná skriptem tools/mapgen/gen_mountains.py –
+    // souřadnice níže jsou ZDROJ PRAVDY i pro skript (slovník N). Při změně upravit obojí.
     val MOUNTAINS_GRAPH = listOf(
-        MovementEngine.Waypoint("vstup_z_meadow", PointF(0.500f, 0.850f), listOf("horska_stezka")),
-        MovementEngine.Waypoint("horska_stezka",  PointF(0.500f, 0.620f), listOf("vstup_z_meadow", "skaly1", "skaly2", "vrchol")),
-        MovementEngine.Waypoint("skaly1",         PointF(0.280f, 0.550f), listOf("horska_stezka")),
-        MovementEngine.Waypoint("skaly2",         PointF(0.720f, 0.480f), listOf("horska_stezka")),
-        // Místo pro budoucího NPC a quest hor (zatím neklikatelné)
-        MovementEngine.Waypoint("vrchol",         PointF(0.500f, 0.300f), listOf("horska_stezka"))
+        MovementEngine.Waypoint("vstup_z_meadow", PointF(0.500f, 0.960f), listOf("rozcesti_hory")),
+        MovementEngine.Waypoint("rozcesti_hory",  PointF(0.500f, 0.820f), listOf("vstup_z_meadow", "camp", "kral_mlsak")),
+        MovementEngine.Waypoint("camp",           PointF(0.300f, 0.780f), listOf("rozcesti_hory")),
+        // Hráč stojí na plošině před sochou krále
+        MovementEngine.Waypoint("kral_mlsak",     PointF(0.500f, 0.625f), listOf("rozcesti_hory", "zapadni_stezka", "skaly2")),
+        MovementEngine.Waypoint("skaly2",         PointF(0.735f, 0.655f), listOf("kral_mlsak")),
+        MovementEngine.Waypoint("zapadni_stezka", PointF(0.300f, 0.505f), listOf("kral_mlsak", "mine", "horni_stezka")),
+        MovementEngine.Waypoint("mine",           PointF(0.130f, 0.470f), listOf("zapadni_stezka")),
+        MovementEngine.Waypoint("horni_stezka",   PointF(0.500f, 0.335f), listOf("zapadni_stezka", "skaly1", "cave", "peak")),
+        MovementEngine.Waypoint("skaly1",         PointF(0.270f, 0.300f), listOf("horni_stezka")),
+        MovementEngine.Waypoint("cave",           PointF(0.790f, 0.345f), listOf("horni_stezka")),
+        MovementEngine.Waypoint("peak",           PointF(0.500f, 0.125f), listOf("horni_stezka"))
     )
 
     /** Vše, co mapa potřebuje o biomu vědět, na jednom místě. */
@@ -70,7 +76,7 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.TOWN, R.drawable.poketown, TOWN_GRAPH, QuestRegistry.TOWN_INTRO_QUEST.id),
             BiomeDefinition(BiomeType.MEADOW, R.drawable.meadow, MEADOW_GRAPH, QuestRegistry.MEADOW_QUEST.id,
                 stepGoalFor = BiomeType.MOUNTAINS),
-            BiomeDefinition(BiomeType.MOUNTAINS, R.drawable.mountains, MOUNTAINS_GRAPH, questId = null)
+            BiomeDefinition(BiomeType.MOUNTAINS, R.drawable.mountains, MOUNTAINS_GRAPH, QuestRegistry.MOUNTAINS_QUEST.id)
         ).associateBy { it.type }
     }
 

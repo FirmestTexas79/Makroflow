@@ -18,6 +18,21 @@ object QuestProgression {
     fun isStageSatisfied(stage: QuestStage, metadata: String): Boolean =
         currentValue(stage, metadata) >= stage.targetValue
 
+    /**
+     * Hodnota odvozené výživové fáze z dnešních součtů, null pokud fáze není výživová.
+     * Gramy se zaokrouhlují dolů – „80 g“ znamená skutečně aspoň 80 g.
+     */
+    fun nutritionValue(stage: QuestStage, totals: NutritionTotals): Int? = when (stage.requirementType) {
+        RequirementType.LOG_CALORIES -> totals.kcal
+        RequirementType.LOG_MACROS -> when (stage.targetId) {
+            "protein" -> totals.proteinG.toInt()
+            "carbs" -> totals.carbsG.toInt()
+            "fat" -> totals.fatG.toInt()
+            else -> null
+        }
+        else -> null
+    }
+
     fun visitedNodes(metadata: String): Set<String> =
         metadata.split(",").map { it.trim() }.filter { it.isNotEmpty() && it.toIntOrNull() == null }.toSet()
 

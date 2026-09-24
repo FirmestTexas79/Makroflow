@@ -3,6 +3,7 @@ package cz.uhk.macroflow.pokemon
 import android.util.Log
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.GameEventType
+import cz.uhk.macroflow.pokemon.quests.NutritionTotals
 import cz.uhk.macroflow.pokemon.quests.QuestDefinition
 import cz.uhk.macroflow.pokemon.quests.QuestProgression
 import cz.uhk.macroflow.pokemon.quests.QuestRegistry
@@ -31,7 +32,7 @@ import java.util.Locale
  *
  * Zdroje postupu:
  *  - **Herní akce** (návštěva uzlu, souboj, chycení) – volá mapa/souboj přímo přes on*().
- *  - **Data z funkční části** (jídla, kroky, skeny kódů) – quest je NEPOČÍTÁ sám,
+ *  - **Data z funkční části** (jídla, kalorie, makra, kroky, skeny kódů) – quest je NEPOČÍTÁ sám,
  *    ale odvozuje z Room DB ([syncDerivedProgress]). Díky tomu se započte i to,
  *    co uživatel udělal, když mapa nebyla otevřená.
  *
@@ -98,8 +99,8 @@ class QuestManager(
                 }
         }
         launch {
+            // Celý seznam (ne jen počet) – změna gramáže/smazání mění součty maker
             today.flatMapLatest { date -> db.consumedSnackDao().getConsumedByDate(date) }
-                .map { it.size }
                 .distinctUntilChanged()
                 .collect { syncDerivedProgress() }
         }
@@ -112,10 +113,17 @@ class QuestManager(
 
     // --- HERNÍ AKCE (volané z mapy / souboje) ---
 
-    fun onBattleWon(biomeOrType: String) = mutate { progress, stage ->
-        if (stage.requirementType == RequirementType.BATTLE_TYPE &&
-            stage.targetId.equals(biomeOrType, ignoreCase = true)
-        ) {
+    /**
+     * @param enemyType typ poraženého Makromona (MakromonType.name)
+     * @param biome biom, ve kterém souboj proběhl (BiomeType.name), pokud je znám
+     */
+    fun onBattleWon(enemyType: String, biome: String? = null) = mutate { progress, stage ->
+        val counts = when (stage.requirementType) {
+            RequirementType.BATTLE_TYPE -> stage.targetId.equals(enemyType, ignoreCase = true)
+            RequirementType.BATTLE_BIOME -> biome != null && stage.targetId.equals(biome, ignoreCase = true)
+            else -> false
+        }
+        if (counts) {
             val next = QuestProgression.currentValue(stage, progress.metadata) + 1
             Log.d(TAG, "Souboj započten: $next / ${stage.targetValue}")
             next.toString()
@@ -158,6 +166,18 @@ class QuestManager(
                     db.stepsDao().getStepsForDateSync(today())?.count ?: 0
                 RequirementType.SCAN_BARCODE ->
                     db.gameEventDao().countSince(GameEventType.BARCODE_SCANNED.name, progress.stageStartedAt)
+                RequirementType.LOG_CALORIES, RequirementType.LOG_MACROS -> {
+                    val meals = db.consumedSnackDao().getConsumedByDateSync(today())
+                    QuestProgression.nutritionValue(
+                        stage,
+                        NutritionTotals(
+                            kcal = meals.sumOf { it.calories },
+                            proteinG = meals.sumOf { it.p.toDouble() }.toFloat(),
+                            carbsG = meals.sumOf { it.s.toDouble() }.toFloat(),
+                            fatG = meals.sumOf { it.t.toDouble() }.toFloat()
+                        )
+                    )
+                }
                 else -> null
             }
         } ?: return

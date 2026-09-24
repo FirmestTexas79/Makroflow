@@ -27,10 +27,13 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import cz.uhk.macroflow.R
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.nutrition.BarcodeProductLookup
 import cz.uhk.macroflow.pokemon.ui.StepProgressBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.sqrt
 
 class MakromonMapActivity : AppCompatActivity() {
@@ -54,11 +57,11 @@ class MakromonMapActivity : AppCompatActivity() {
         "les", "domov", "pokedex", "obchod", "hory",
         "vstup_z_town", "krovi1", "krovi2", "voda", "gudwin", "starter_bush",
         "meadow_npc",
-        "vstup_z_meadow", "skaly1", "skaly2"
+        "vstup_z_meadow", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2"
     )
 
     /** Uzly, kde může vyskočit divoký Makromon (90 % šance). */
-    private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2")
+    private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2", "cave", "peak")
 
     companion object {
         private const val DOUBLE_CLICK_TIME = 300L
@@ -235,7 +238,9 @@ class MakromonMapActivity : AppCompatActivity() {
             questManager.onNodeVisited(nodeName)
 
             when (nodeName) {
-                "gudwin", "meadow_npc" -> questManager.checkNpcInteraction()
+                "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
+                "mine" -> scanInMine()
+                "camp" -> {} // zatím jen cíl průzkumu v questu krále
                 "starter_bush" -> {
                     getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                         .putString("LAST_BIOME", currentBiome.name)
@@ -276,6 +281,28 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Důl v horách: sken čárového kódu přímo z mapy. Jde přes stejný
+     * BarcodeProductLookup jako funkční část, takže se zapíše i herní událost.
+     */
+    private fun scanInMine() {
+        GmsBarcodeScanning.getClient(this).startScan().addOnSuccessListener { barcode ->
+            val code = barcode.rawValue ?: return@addOnSuccessListener
+            lifecycleScope.launch {
+                val product = BarcodeProductLookup.lookup(AppDatabase.getDatabase(this@MakromonMapActivity), code)
+                val text = if (product == null) {
+                    "V dole jsi nic nevytěžil – produkt $code neznám."
+                } else {
+                    "Vytěžil jsi: ${product.name}\n" +
+                        "B %.1f g · S %.1f g · T %.1f g (na 100 g)".format(
+                            Locale.US, product.proteins100g, product.carbs100g, product.fat100g
+                        )
+                }
+                showMapToast(text)
+            }
+        }
+    }
+
     /** Vstup do biomu se zámkem (dnes nachozené kroky). Kontroluje se jen při vstupu. */
     private fun tryEnterBiome(target: BiomeType, entryNode: String) {
         if (BiomeAccess.canEnter(target, currentDailySteps)) {
@@ -291,10 +318,12 @@ class MakromonMapActivity : AppCompatActivity() {
         changeBiome(target, PointF(pos.x, pos.y))
     }
 
-    private fun showStepWarningToast(missingSteps: Int) {
+    private fun showStepWarningToast(missingSteps: Int) =
+        showMapToast("Tohle bys na jeden zátah neušel! Dnes se ještě projdi – chybí ti $missingSteps kroků.")
+
+    private fun showMapToast(message: String) {
         val layout = layoutInflater.inflate(R.layout.layout_custom_toast, null)
-        layout.findViewById<TextView>(R.id.toastText).text =
-            "Tohle bys na jeden zátah neušel! Dnes se ještě projdi – chybí ti $missingSteps kroků."
+        layout.findViewById<TextView>(R.id.toastText).text = message
         with (Toast(applicationContext)) {
             setGravity(Gravity.CENTER, 0, 0)
             duration = Toast.LENGTH_LONG
