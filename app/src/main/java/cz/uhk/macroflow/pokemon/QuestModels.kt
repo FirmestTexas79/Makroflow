@@ -10,13 +10,13 @@ enum class RequirementType {
     LOG_MEAL,        // Nové: Zapsání jídla
     BATTLE_TYPE,     // Nové: Souboj s konkrétním typem
     SCAN_BARCODE,    // Naskenování čárového kódu ve funkční části (přes GameEvent log)
-    LOG_CALORIES,    // Dnešní příjem kcal >= targetValue (odvozeno z consumed_snacks)
-    LOG_MACROS,      // Dnešní příjem makroživiny v g >= targetValue; targetId = protein|carbs|fat
+    /**
+     * Trefit dnes OSOBNÍ cíl (ne pevné číslo) – pásmo podle Adherence.Nutrient.
+     * targetId = kcal | protein | carbs | fat, metadata = snědeno v % cíle.
+     */
+    HIT_TARGET,
     BATTLE_BIOME     // Výhry v soubojích v daném biomu; targetId = BiomeType.name
 }
-
-/** Dnešní součty z funkční části – vstup pro odvozené fáze. */
-data class NutritionTotals(val kcal: Int, val proteinG: Float, val carbsG: Float, val fatG: Float)
 
 data class QuestStage(
     val title: String,
@@ -124,19 +124,20 @@ object QuestRegistry {
             ),
             QuestStage(
                 title = "Královský inventář",
-                text = "Moji vojáci jedí, co najdou – ale netuší, kolik energie tím získají. Ty prý umíš počítat kalorie? Dokaž to! Zapiš si dnes jídla tak, aby tvůj příjem přesáhl 1500 kcal. Výživa je věda, ne náhoda.",
+                text = "Moji vojáci jedí, co najdou – jeden se přejí, druhý hladoví. Ty prý umíš počítat kalorie? Dokaž to! Traf dnes svůj kalorický cíl – ani moc, ani málo, nanejvýš o desetinu vedle. Výživa je věda, ne náhoda.",
                 speakerResId = R.drawable.kral_mlsak,
                 speakerName = KRAL,
-                requirementType = RequirementType.LOG_CALORIES,
-                targetValue = 1500
+                requirementType = RequirementType.HIT_TARGET,
+                targetValue = 100,
+                targetId = "kcal"
             ),
             QuestStage(
                 title = "Kámen svalů",
-                text = "Působivé! Jenže kalorie nejsou všechno. Moji kamenní Makromoni potřebují bílkoviny, aby jejich svaly vydržely. Bez proteinu hory nepřekonáš. Zapiš si dnes aspoň 80 g bílkovin – maso, luštěniny, tvaroh, cokoliv, co buduje!",
+                text = "Působivé! Jenže kalorie nejsou všechno. Moji kamenní Makromoni potřebují bílkoviny, aby jejich svaly vydržely. Bez proteinu hory nepřekonáš. Dosáhni dnes svého cíle bílkovin – maso, luštěniny, tvaroh, cokoliv, co buduje!",
                 speakerResId = R.drawable.kral_mlsak,
                 speakerName = KRAL,
-                requirementType = RequirementType.LOG_MACROS,
-                targetValue = 80,
+                requirementType = RequirementType.HIT_TARGET,
+                targetValue = 100,
                 targetId = "protein"
             ),
             QuestStage(
@@ -150,20 +151,20 @@ object QuestRegistry {
             ),
             QuestStage(
                 title = "Cukrový pochod",
-                text = "Hmm... vyhrál jsi. Musím uznat tvou sílu. Moji průzkumníci jsou ale pomalí – nemají energii na rychlý pochod. Sacharidy! To je odpověď. Zapiš si dnes 200 g sacharidů – rýže, vločky, ovoce. Ukaž jim, co znamená mít palivo!",
+                text = "Hmm... vyhrál jsi. Musím uznat tvou sílu. Moji průzkumníci jsou ale pomalí – nemají energii na pochod. Sacharidy! To je odpověď – ale s rozumem. Traf dnes svůj cíl sacharidů: rýže, vločky, ovoce. Ukaž jim, co znamená mít palivo!",
                 speakerResId = R.drawable.kral_mlsak,
                 speakerName = KRAL,
-                requirementType = RequirementType.LOG_MACROS,
-                targetValue = 200,
+                requirementType = RequirementType.HIT_TARGET,
+                targetValue = 100,
                 targetId = "carbs"
             ),
             QuestStage(
                 title = "Zlatý tuk království",
-                text = "Zbývá poslední tajemství výživy, které jsem přehlížel – tuky. Ne z koblih, ale ty zdravé! Ořechy, avokádo, olivový olej. Zapiš si dnes aspoň 50 g tuku a slibuji reformu královské kuchyně!",
+                text = "Zbývá poslední tajemství výživy, které jsem přehlížel – tuky. Ne z koblih, ale ty zdravé! Ořechy, avokádo, olivový olej. Traf dnes svůj cíl tuků a slibuji reformu královské kuchyně!",
                 speakerResId = R.drawable.kral_mlsak,
                 speakerName = KRAL,
-                requirementType = RequirementType.LOG_MACROS,
-                targetValue = 50,
+                requirementType = RequirementType.HIT_TARGET,
+                targetValue = 100,
                 targetId = "fat"
             ),
             QuestStage(

@@ -317,8 +317,9 @@ class NotificationReceiver : BroadcastReceiver() {
         showNotification(context,
             id      = MakroflowNotifications.ID_POST_WORKOUT,
             channel = MakroflowNotifications.CHANNEL_WORKOUT,
-            title   = "💪 Trénink hotov! POST okno otevřeno",
-            text    = "Nejbližší 2 hodiny jsou kritické — dej bílkoviny hned. Makroflow ti poradí.",
+            title   = "💪 Trénink hotov! Čas na jídlo s bílkovinami",
+            // „Anabolické okno“ je široké (Schoenfeld et al. 2013) – rozhoduje hlavně denní příjem bílkovin
+            text    = "Dej si v nejbližších hodinách jídlo s bílkovinami — rozhoduje hlavně denní součet. Makroflow ti poradí.",
             priority = NotificationCompat.PRIORITY_HIGH
         )
     }

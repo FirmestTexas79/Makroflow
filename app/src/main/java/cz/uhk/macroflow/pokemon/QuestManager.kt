@@ -3,7 +3,7 @@ package cz.uhk.macroflow.pokemon
 import android.util.Log
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.GameEventType
-import cz.uhk.macroflow.pokemon.quests.NutritionTotals
+import cz.uhk.macroflow.energy.Adherence
 import cz.uhk.macroflow.pokemon.quests.QuestDefinition
 import cz.uhk.macroflow.pokemon.quests.QuestProgression
 import cz.uhk.macroflow.pokemon.quests.QuestRegistry
@@ -41,7 +41,9 @@ import java.util.Locale
 class QuestManager(
     private val db: AppDatabase,
     private val dialogManager: QuestDialogManager,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    /** Dnešní OSOBNÍ cíle (volá se na IO vlákně); null = fáze HIT_TARGET se nevyhodnocují. */
+    private val targetsProvider: (() -> Adherence.Targets)? = null
 ) {
     private var activeQuest: QuestDefinition? = null
     private var currentProgress: QuestProgressEntity? = null
@@ -166,16 +168,18 @@ class QuestManager(
                     db.stepsDao().getStepsForDateSync(today())?.count ?: 0
                 RequirementType.SCAN_BARCODE ->
                     db.gameEventDao().countSince(GameEventType.BARCODE_SCANNED.name, progress.stageStartedAt)
-                RequirementType.LOG_CALORIES, RequirementType.LOG_MACROS -> {
+                RequirementType.HIT_TARGET -> {
+                    val targets = targetsProvider?.invoke() ?: return@withContext null
                     val meals = db.consumedSnackDao().getConsumedByDateSync(today())
-                    QuestProgression.nutritionValue(
+                    QuestProgression.targetPercent(
                         stage,
-                        NutritionTotals(
-                            kcal = meals.sumOf { it.calories },
-                            proteinG = meals.sumOf { it.p.toDouble() }.toFloat(),
-                            carbsG = meals.sumOf { it.s.toDouble() }.toFloat(),
-                            fatG = meals.sumOf { it.t.toDouble() }.toFloat()
-                        )
+                        Adherence.Eaten(
+                            kcal = meals.sumOf { it.calories.toDouble() },
+                            protein = meals.sumOf { it.p.toDouble() },
+                            carbs = meals.sumOf { it.s.toDouble() },
+                            fat = meals.sumOf { it.t.toDouble() }
+                        ),
+                        targets
                     )
                 }
                 else -> null

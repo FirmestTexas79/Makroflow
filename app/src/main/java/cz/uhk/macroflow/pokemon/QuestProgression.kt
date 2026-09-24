@@ -1,5 +1,6 @@
 package cz.uhk.macroflow.pokemon.quests
 
+import cz.uhk.macroflow.energy.Adherence
 import cz.uhk.macroflow.pokemon.QuestProgressEntity
 
 /**
@@ -15,22 +16,19 @@ object QuestProgression {
         else -> metadata.toIntOrNull() ?: 0
     }
 
-    fun isStageSatisfied(stage: QuestStage, metadata: String): Boolean =
-        currentValue(stage, metadata) >= stage.targetValue
-
-    /**
-     * Hodnota odvozené výživové fáze z dnešních součtů, null pokud fáze není výživová.
-     * Gramy se zaokrouhlují dolů – „80 g“ znamená skutečně aspoň 80 g.
-     */
-    fun nutritionValue(stage: QuestStage, totals: NutritionTotals): Int? = when (stage.requirementType) {
-        RequirementType.LOG_CALORIES -> totals.kcal
-        RequirementType.LOG_MACROS -> when (stage.targetId) {
-            "protein" -> totals.proteinG.toInt()
-            "carbs" -> totals.carbsG.toInt()
-            "fat" -> totals.fatG.toInt()
-            else -> null
+    fun isStageSatisfied(stage: QuestStage, metadata: String): Boolean {
+        if (stage.requirementType == RequirementType.HIT_TARGET) {
+            val n = Adherence.Nutrient.from(stage.targetId) ?: return false
+            return Adherence.isHitPercent(n, currentValue(stage, metadata))
         }
-        else -> null
+        return currentValue(stage, metadata) >= stage.targetValue
+    }
+
+    /** Snědeno v % osobního cíle pro fázi HIT_TARGET; null pro jiné fáze. */
+    fun targetPercent(stage: QuestStage, eaten: Adherence.Eaten, targets: Adherence.Targets): Int? {
+        if (stage.requirementType != RequirementType.HIT_TARGET) return null
+        val n = Adherence.Nutrient.from(stage.targetId) ?: return null
+        return Adherence.percent(n, eaten, targets)
     }
 
     fun visitedNodes(metadata: String): Set<String> =

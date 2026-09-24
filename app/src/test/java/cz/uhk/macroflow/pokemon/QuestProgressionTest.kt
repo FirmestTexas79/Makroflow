@@ -1,6 +1,6 @@
 package cz.uhk.macroflow.pokemon
 
-import cz.uhk.macroflow.pokemon.quests.NutritionTotals
+import cz.uhk.macroflow.energy.Adherence
 import cz.uhk.macroflow.pokemon.quests.QuestDefinition
 import cz.uhk.macroflow.pokemon.quests.QuestProgression
 import cz.uhk.macroflow.pokemon.quests.QuestRegistry
@@ -92,34 +92,33 @@ class QuestProgressionTest {
         assertEquals(RequirementType.SCAN_BARCODE, QuestRegistry.MEADOW_QUEST.stages.last().requirementType)
     }
 
-    private val totals = NutritionTotals(kcal = 1620, proteinG = 79.9f, carbsG = 210.4f, fatG = 51f)
+    private val targets = Adherence.Targets(kcal = 2500.0, protein = 160.0, carbs = 300.0, fat = 70.0)
 
     @Test
-    fun `kalorie a makra se berou z dnešních součtů`() {
-        assertEquals(1620, QuestProgression.nutritionValue(stage(RequirementType.LOG_CALORIES, 1500), totals))
-        assertEquals(210, QuestProgression.nutritionValue(stage(RequirementType.LOG_MACROS, 200, "carbs"), totals))
-        assertEquals(51, QuestProgression.nutritionValue(stage(RequirementType.LOG_MACROS, 50, "fat"), totals))
+    fun `procento osobního cíle`() {
+        val eaten = Adherence.Eaten(kcal = 2300.0, protein = 143.9, carbs = 330.0, fat = 70.0)
+        assertEquals(92, QuestProgression.targetPercent(stage(RequirementType.HIT_TARGET, 100, "kcal"), eaten, targets))
+        assertEquals(89, QuestProgression.targetPercent(stage(RequirementType.HIT_TARGET, 100, "protein"), eaten, targets))
+        assertEquals(null, QuestProgression.targetPercent(stage(RequirementType.WALK_STEPS, 1), eaten, targets))
     }
 
     @Test
-    fun `gramy se zaokrouhlují dolů – 79,9 g bílkovin nesplní cíl 80 g`() {
-        val s = stage(RequirementType.LOG_MACROS, 80, "protein")
-        val v = QuestProgression.nutritionValue(s, totals)!!
-        assertFalse(QuestProgression.isStageSatisfied(s, v.toString()))
+    fun `HIT_TARGET se splní jen v pásmu – přejedení ani hladovění nevyhrává`() {
+        val kcal = stage(RequirementType.HIT_TARGET, 100, "kcal")
+        assertFalse(QuestProgression.isStageSatisfied(kcal, "85"))
+        assertTrue(QuestProgression.isStageSatisfied(kcal, "95"))
+        assertFalse(QuestProgression.isStageSatisfied(kcal, "130"))
+        val protein = stage(RequirementType.HIT_TARGET, 100, "protein")
+        assertFalse(QuestProgression.isStageSatisfied(protein, "89"))
+        assertTrue(QuestProgression.isStageSatisfied(protein, "120"))
     }
 
     @Test
-    fun `nevýživová fáze nemá výživovou hodnotu`() {
-        assertEquals(null, QuestProgression.nutritionValue(stage(RequirementType.WALK_STEPS, 1), totals))
-        assertEquals(null, QuestProgression.nutritionValue(stage(RequirementType.LOG_MACROS, 1, "cukr"), totals))
-    }
-
-    @Test
-    fun `quest krále má 7 fází a všechny mluví za krále`() {
+    fun `quest krále má 7 fází a výživové fáze míří na osobní cíle`() {
         val q = QuestRegistry.MOUNTAINS_QUEST
         assertEquals(7, q.stages.size)
         assertTrue(q.stages.all { it.speakerName == "Král Mlsák" })
-        q.stages.filter { it.requirementType == RequirementType.LOG_MACROS }
-            .forEach { assertTrue(it.targetId in setOf("protein", "carbs", "fat")) }
+        val nutrition = q.stages.filter { it.requirementType == RequirementType.HIT_TARGET }
+        assertEquals(setOf("kcal", "protein", "carbs", "fat"), nutrition.map { it.targetId }.toSet())
     }
 }

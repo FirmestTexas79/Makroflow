@@ -168,24 +168,18 @@ class QuestJournalFragment : Fragment() {
                     "Cíl: Průzkum ($visited / ${stageToDisplay.targetValue})"
                 }
                 RequirementType.BATTLE_TYPE -> "Cíl: Souboj (${stageToDisplay.targetId})"
-                RequirementType.BATTLE_BIOME,
-                RequirementType.LOG_CALORIES,
-                RequirementType.LOG_MACROS -> {
-                    val value = if (viewingIndex < currentIndex || isAllDone) {
-                        stageToDisplay.targetValue
-                    } else {
-                        QuestProgression.currentValue(stageToDisplay, progress.metadata)
+                RequirementType.BATTLE_BIOME -> {
+                    val value = if (viewingIndex < currentIndex || isAllDone) stageToDisplay.targetValue
+                        else QuestProgression.currentValue(stageToDisplay, progress.metadata)
+                    "Cíl: Výhry v horách ($value / ${stageToDisplay.targetValue})"
+                }
+                RequirementType.HIT_TARGET -> {
+                    val n = cz.uhk.macroflow.energy.Adherence.Nutrient.from(stageToDisplay.targetId)
+                    if (n == null || viewingIndex < currentIndex || isAllDone) "Cíl: Splněno"
+                    else {
+                        val pct = QuestProgression.currentValue(stageToDisplay, progress.metadata)
+                        "Cíl: ${n.label} dnes $pct % tvého cíle (potřeba ${n.minPct}–${n.maxPct} %)"
                     }
-                    val label = when (stageToDisplay.requirementType) {
-                        RequirementType.BATTLE_BIOME -> "Výhry v horách"
-                        RequirementType.LOG_CALORIES -> "Dnešní kcal"
-                        else -> when (stageToDisplay.targetId) {
-                            "protein" -> "Dnešní bílkoviny (g)"
-                            "carbs" -> "Dnešní sacharidy (g)"
-                            else -> "Dnešní tuky (g)"
-                        }
-                    }
-                    "Cíl: $label ($value / ${stageToDisplay.targetValue})"
                 }
                 RequirementType.SCAN_BARCODE -> {
                     val scanned = if (viewingIndex < currentIndex || isAllDone) {

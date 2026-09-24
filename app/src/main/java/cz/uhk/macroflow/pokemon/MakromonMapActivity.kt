@@ -97,7 +97,16 @@ class MakromonMapActivity : AppCompatActivity() {
             findViewById(R.id.questProgressLine)
         )
 
-        questManager = QuestManager(AppDatabase.getDatabase(this), questDialogManager, lifecycleScope)
+        questManager = QuestManager(
+            db = AppDatabase.getDatabase(this),
+            dialogManager = questDialogManager,
+            scope = lifecycleScope,
+            // Osobní cíle dne (fáze A+B) – questy krále odměňují jejich trefení, ne pevná čísla
+            targetsProvider = {
+                val t = cz.uhk.macroflow.dashboard.MacroCalculator.calculate(applicationContext)
+                cz.uhk.macroflow.energy.Adherence.Targets(t.calories, t.protein, t.carbs, t.fat)
+            }
+        )
 
         // PROPOJENÍ: Když se v manageru změní progres (např. onMealLogged), refreshneme UI
         questManager.onProgressChanged = { progress ->

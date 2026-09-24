@@ -10,6 +10,8 @@ import cz.uhk.macroflow.data.ConsumedSnackEntity
 import cz.uhk.macroflow.data.WaterEntity
 import java.text.SimpleDateFormat
 import java.util.*
+import cz.uhk.macroflow.energy.Adherence
+import cz.uhk.macroflow.energy.Goal
 import kotlin.math.abs
 import kotlin.math.exp
 
@@ -126,6 +128,7 @@ object AchievementEngine {
         if (allConsumed.isEmpty()) return result
 
         val byDate = allConsumed.groupBy { it.date }
+        val todayKey = sdf.format(Date())
 
         data class DayResult(
             val date: String,
@@ -135,6 +138,8 @@ object AchievementEngine {
         )
 
         val dayResults = byDate.map { (dateStr, items) ->
+            // Jen uzavřené dny – dnešek se ještě může přehoupnout přes pásmo
+            if (dateStr == todayKey) return@map null
             try {
                 val date = sdf.parse(dateStr) ?: return@map null
                 val target = MacroCalculator.calculateForDate(context, date)
@@ -142,15 +147,14 @@ object AchievementEngine {
                 if (target.protein <= 0 || target.carbs <= 0 || target.fat <= 0)
                     return@map null
 
-                val eatP = items.sumOf { it.p.toDouble() }
-                val eatS = items.sumOf { it.s.toDouble() }
-                val eatT = items.sumOf { it.t.toDouble() }
-
+                val eaten = eatenOf(items)
+                val targets = targetsOf(target)
+                // Trefení osobního cíle v pásmu (Adherence), ne „aspoň 90 % bez stropu“
                 DayResult(
                     date      = dateStr,
-                    proteinOk = eatP >= target.protein * 0.90,
-                    carbsOk   = eatS >= target.carbs   * 0.90,
-                    fatOk     = eatT >= target.fat     * 0.90
+                    proteinOk = Adherence.isHit(Adherence.Nutrient.PROTEIN, eaten, targets),
+                    carbsOk   = Adherence.isHit(Adherence.Nutrient.CARBS, eaten, targets),
+                    fatOk     = Adherence.isHit(Adherence.Nutrient.FAT, eaten, targets)
                 )
             } catch (e: Exception) {
                 null
@@ -309,12 +313,22 @@ object AchievementEngine {
 
         if (all.size >= 10) tryUnlock(db, "weight_silver")?.let { result += it }
 
-        val firstWeight  = all.first().weight
-        val latestWeight = all.last().weight
-        val change       = abs(firstWeight - latestWeight)
+        // Pokrok podle vyhlazeného trendu (ne raw vážení) a jen ve směru cíle zdravým tempem
+        val trend = cz.uhk.macroflow.analytics.BioLogicEngine.trendPoints(all)
+        val startKg = trend.first().level
+        val nowKg   = trend.last().level
+        val days    = trend.last().day - trend.first().day
+        val goal    = Goal.from(db.userProfileDao().getProfileSync()?.goal)
 
-        if (change >= 2.0)  tryUnlock(db, "weight_gold")?.let    { result += it }
-        if (change >= 5.0)  tryUnlock(db, "weight_diamond")?.let { result += it }
+        if (goal == Goal.MAINTAIN) {
+            if (Adherence.isStableMaintenance(startKg, nowKg, days))      tryUnlock(db, "weight_gold")?.let    { result += it }
+            if (Adherence.isStableMaintenance(startKg, nowKg, days) && days >= 90)
+                                                                           tryUnlock(db, "weight_diamond")?.let { result += it }
+        } else {
+            val progress = Adherence.goalProgressKg(goal, startKg, nowKg, days)
+            if (progress >= 2.0) tryUnlock(db, "weight_gold")?.let    { result += it }
+            if (progress >= 5.0) tryUnlock(db, "weight_diamond")?.let { result += it }
+        }
 
         return result
     }
@@ -343,18 +357,29 @@ object AchievementEngine {
         val checkInDates = db.checkInDao().getAllCheckInsSync().map { it.date }.toSet()
         val daysWithData = checkInDates.size
 
-        if (daysWithData >= 3)  tryUnlock(db, "milestone_week")?.let  { result += it }
-        if (daysWithData >= 10) tryUnlock(db, "milestone_month")?.let { result += it }
+        if (daysWithData >= 7)  tryUnlock(db, "milestone_week")?.let  { result += it }
+        if (daysWithData >= 30) tryUnlock(db, "milestone_month")?.let { result += it }
 
         checkPerfectWeek(context, db)?.let { result += it }
 
         return result
     }
 
+    private fun eatenOf(items: List<ConsumedSnackEntity>) = Adherence.Eaten(
+        kcal    = items.sumOf { it.calories.toDouble() },
+        protein = items.sumOf { it.p.toDouble() },
+        carbs   = items.sumOf { it.s.toDouble() },
+        fat     = items.sumOf { it.t.toDouble() }
+    )
+
+    private fun targetsOf(t: cz.uhk.macroflow.dashboard.MacroResult) =
+        Adherence.Targets(t.calories, t.protein, t.carbs, t.fat)
+
     private fun checkPerfectWeek(context: Context, db: AppDatabase): AchievementDef? {
         val cal = Calendar.getInstance()
         val allConsumed = db.consumedSnackDao().getAllConsumedSync().groupBy { it.date }
         val allWater    = db.waterDao().getAllWaterSync().groupBy { it.date }
+        cal.add(Calendar.DAY_OF_YEAR, -1) // posledních 7 UZAVŘENÝCH dní
 
         for (i in 0..6) {
             val dateStr = sdf.format(cal.time)
@@ -368,14 +393,8 @@ object AchievementEngine {
                 val items  = allConsumed[dateStr]
                 if (items == null || target.protein <= 0) return null
 
-                val eatP = items.sumOf { it.p.toDouble() }
-                val eatS = items.sumOf { it.s.toDouble() }
-                val eatT = items.sumOf { it.t.toDouble() }
-
-                val macrosOk = eatP >= target.protein * 0.90 &&
-                        eatS >= target.carbs   * 0.90 &&
-                        eatT >= target.fat     * 0.90
-                if (!macrosOk) return null
+                // Kalorie i všechna makra v pásmu osobního cíle
+                if (!Adherence.isPerfectDay(eatenOf(items), targetsOf(target))) return null
 
                 val goalMl   = (target.water * 1000).toInt()
                 val actualMl = allWater[dateStr]?.sumOf { it.amountMl } ?: 0
