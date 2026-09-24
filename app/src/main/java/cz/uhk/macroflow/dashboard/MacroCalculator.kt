@@ -3,6 +3,7 @@ package cz.uhk.macroflow.dashboard
 import android.content.Context
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.UserProfileEntity
+import cz.uhk.macroflow.energy.AdaptiveExpenditure
 import cz.uhk.macroflow.energy.Diet
 import cz.uhk.macroflow.energy.EnergyModel
 import cz.uhk.macroflow.energy.Exercise
@@ -27,20 +28,34 @@ object MacroCalculator {
 
     fun calculate(context: Context): MacroResult = calculateForDate(context, Date())
 
-    fun calculateForDate(context: Context, date: Date): MacroResult {
+    /**
+     * @param applyAdaptive false = čistý model bez korekce (vstup pro samotný adaptivní odhad)
+     */
+    fun calculateForDate(context: Context, date: Date, applyAdaptive: Boolean = true): MacroResult {
         val db = AppDatabase.getDatabase(context)
         val profile: UserProfileEntity? = runBlocking { db.userProfileDao().getProfileSync() }
         val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date)
         val isToday = dateKey == SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val recordedSteps = runBlocking { db.stepsDao().getStepsForDateSync(dateKey)?.count }
 
+        // Adaptivní odhad platný k tomuto dni (max. 14 dní starý)
+        val adaptive = db.adaptiveTdeeDao().getLatestOnOrBeforeSync(dateKey)
+            ?.takeIf { daysBetween(it.date, dateKey) <= 14 }
+        val factor = if (!applyAdaptive) 1.0
+            else adaptive?.takeIf { it.status == AdaptiveExpenditure.Status.OK.name }?.factor ?: 1.0
+
         return calculateFor(
             profile = profile,
             exercises = plannedExercises(context, date),
             strengthLabel = strengthLabel(context, date),
-            steps = EnergyModel.stepsForDay(recordedSteps, isToday)
+            steps = EnergyModel.stepsForDay(recordedSteps, isToday),
+            adaptiveFactor = factor,
+            trendWeightKg = adaptive?.trendWeightKg
         )
     }
+
+    private fun daysBetween(from: String, to: String): Long =
+        java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(from), java.time.LocalDate.parse(to))
 
     /** Náhled pro jiný typ diety (výběr diety v Elite módu) – bez ukládání. */
     fun previewForDiet(context: Context, dietLabel: String): MacroResult {
@@ -57,8 +72,12 @@ object MacroCalculator {
     fun walkingKcal(profile: UserProfileEntity?, steps: Int): Double =
         EnergyModel.walkingNetKcal(steps, personOf(profile))
 
-    fun personOf(profile: UserProfileEntity?): Person = Person(
-        weightKg = profile?.weight ?: 75.0,
+    /**
+     * @param trendWeightKg vyhlazená hmotnost z trendu (bez denních výkyvů vody) – má přednost
+     *                      před posledním vážením uloženým v profilu
+     */
+    fun personOf(profile: UserProfileEntity?, trendWeightKg: Double? = null): Person = Person(
+        weightKg = trendWeightKg ?: profile?.weight ?: 75.0,
         heightCm = profile?.height ?: 175.0,
         ageYears = profile?.age ?: 22,
         sex = Sex.from(profile?.gender),
@@ -70,16 +89,19 @@ object MacroCalculator {
         profile: UserProfileEntity?,
         exercises: List<Exercise>,
         strengthLabel: String,
-        steps: Int
+        steps: Int,
+        adaptiveFactor: Double = 1.0,
+        trendWeightKg: Double? = null
     ): MacroResult {
-        val person = personOf(profile)
+        val person = personOf(profile, trendWeightKg)
         val t = MacroPlanner.plan(
             p = person,
             goal = Goal.from(profile?.goal),
             diet = Diet.from(profile?.dietType),
             lifestyle = Lifestyle.fromStored(profile?.activityMultiplier ?: 1.2f),
             steps = steps,
-            exercises = exercises
+            exercises = exercises,
+            adaptiveFactor = adaptiveFactor
         )
         return MacroResult(
             calories = t.kcal,

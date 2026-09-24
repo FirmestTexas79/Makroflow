@@ -116,9 +116,12 @@ data class EnergyBreakdown(
     val walking: Double,
     val exercise: Double,
     val tef: Double,
-    val steps: Int
+    val steps: Int,
+    /** Korekce z adaptivního výdeje (fáze B): kladná = tělo pálí víc, než říkají rovnice. */
+    val adaptive: Double = 0.0
 ) {
-    val total: Double get() = bmr + lifestyleNeat + walking + exercise + tef
+    val modelTotal: Double get() = bmr + lifestyleNeat + walking + exercise + tef
+    val total: Double get() = modelTotal + adaptive
 }
 
 object EnergyModel {
@@ -214,7 +217,16 @@ object EnergyModel {
 
     // ── Celkový výdej ───────────────────────────────────────────────────────
 
-    fun expenditure(p: Person, lifestyle: Lifestyle, steps: Int, exercises: List<Exercise>): EnergyBreakdown {
+    /**
+     * @param adaptiveFactor korekční faktor k z [AdaptiveExpenditure] (1.0 = čistý model)
+     */
+    fun expenditure(
+        p: Person,
+        lifestyle: Lifestyle,
+        steps: Int,
+        exercises: List<Exercise>,
+        adaptiveFactor: Double = 1.0
+    ): EnergyBreakdown {
         val bmr = bmr(p)
         val neat = bmr * (lifestyle.factor - 1.0)
         val walking = walkingNetKcal(steps, p)
@@ -222,7 +234,8 @@ object EnergyModel {
         // TEF je podíl z CELKOVÉHO výdeje: total = (ostatní) / (1 − TEF)
         val withoutTef = bmr + neat + walking + exercise
         val tef = withoutTef / (1.0 - TEF_FRACTION) * TEF_FRACTION
-        return EnergyBreakdown(bmr, neat, walking, exercise, tef, steps)
+        val modelTotal = withoutTef + tef
+        return EnergyBreakdown(bmr, neat, walking, exercise, tef, steps, adaptive = modelTotal * (adaptiveFactor - 1.0))
     }
 }
 
@@ -286,9 +299,10 @@ object MacroPlanner {
         diet: Diet,
         lifestyle: Lifestyle,
         steps: Int,
-        exercises: List<Exercise>
+        exercises: List<Exercise>,
+        adaptiveFactor: Double = 1.0
     ): MacroTargets {
-        val exp = EnergyModel.expenditure(p, lifestyle, steps, exercises)
+        val exp = EnergyModel.expenditure(p, lifestyle, steps, exercises, adaptiveFactor)
         val kcal = targetKcal(p, goal, exp.total, exp.bmr)
         val fiber = fiberG(kcal)
 

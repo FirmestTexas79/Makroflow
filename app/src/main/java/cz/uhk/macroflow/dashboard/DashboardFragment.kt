@@ -223,6 +223,10 @@ class DashboardFragment : Fragment() {
 
                 analyticsResult?.let { db.analyticsDao().insertAnalytics(it) }
 
+                // Adaptivní výdej (fáze B) – přepočet po novém vážení
+                try { AdaptiveTdeeRepository.recompute(requireContext().applicationContext) }
+                catch (e: Exception) { android.util.Log.e("AdaptiveTDEE", "Přepočet selhal: ${e.message}") }
+
                 if (FirebaseRepository.isLoggedIn) {
                     try {
                         FirebaseRepository.uploadCheckIn(checkInEntity)

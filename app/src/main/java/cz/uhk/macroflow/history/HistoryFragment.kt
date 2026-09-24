@@ -253,27 +253,9 @@ class HistoryFragment : Fragment() {
             val db = AppDatabase.getDatabase(requireContext())
             val profile = withContext(Dispatchers.IO) { db.userProfileDao().getProfileSync() }
 
-            val isElite = profile?.isEliteMode ?: false
-            val rawDiet = (profile?.dietType ?: "Vyvážená").lowercase().trim()
-            val bodyFat = profile?.bodyFatPercentage ?: 22.0
-            val height = profile?.height ?: 175.0
-            val wrist = profile?.lastWristMeasurement ?: 16.0
-
             val rangeDays = 7f // Středový bod
             val totalDays = 14f
-
-            // --- 1. ENGINE LOGIKA ---
-            val trendSensitivity = if (isElite) 1.0f else 0.35f
-            val (tef, stability) = when {
-                rawDiet.contains("protein") -> 0.22 to 0.80f
-                rawDiet.contains("keto")    -> 0.08 to 0.50f
-                rawDiet.contains("low")     -> 0.16 to 0.60f
-                rawDiet.contains("vegan")   -> 0.13 to 0.90f
-                else                        -> 0.11 to 1.00f
-            }
-            val bfFactor = if (bodyFat < 12.0) 0.65 else 1.0 + ((bodyFat - 22.0) / 100.0)
             val sortedHistory = allHistory.sortedBy { it.date }
-            val lastWeight = sortedHistory.lastOrNull()?.weight?.toFloat() ?: 75f
 
             // --- 2. PLNĚNÍ HISTORIE (Index 0 až 7) ---
             val historyMap = sortedHistory.associateBy { it.date }
@@ -291,33 +273,23 @@ class HistoryFragment : Fragment() {
                 }
             }
 
-            // --- 3. PREDIKCE (Index 7 až 14) ---
-            if (currentAnalytics != null) {
-                val baseSlope = currentAnalytics.trendSlope.toFloat() * trendSensitivity
-                val metabolicPower = (tef * bfFactor).toFloat()
-                val slopeAdjustment = (metabolicPower - 0.12f) * (if (isElite) 0.5f else 0.15f)
-                val targetSlope = (baseSlope - slopeAdjustment).coerceIn(-0.4f, 0.4f)
+            // --- 3. PREDIKCE (Index 7 až 14) – Kalmanův trend + 95% interval ---
+            // U minulého dne jen data známá k tomu dni → predikci lze porovnat se skutečností
+            val selectedKey = dateKeySdf.format(selectedDate)
+            val knownHistory = sortedHistory.filter { it.date <= selectedKey }
+            if (knownHistory.isNotEmpty()) {
+                val selectedDay = BioLogicEngine.dayOf(selectedKey)
+                val lastObsDay = BioLogicEngine.dayOf(knownHistory.last().date)
+                val offset = (selectedDay - lastObsDay).coerceAtLeast(0)
+                val forecast = BioLogicEngine.forecast(knownHistory, days = offset + 7)
 
-                val wristRatio = height / wrist
-                val somatotypeFactor = when {
-                    wristRatio > 10.4 -> 0.85f
-                    wristRatio < 9.6 -> 1.30f
-                    else -> 1.05f
-                }
-                val biologicSpreadMultiplier = stability * somatotypeFactor * (bodyFat / 22.0).coerceIn(0.7, 1.5).toFloat()
-
-                // i=0 je DNES (index 7), i=7 je +7 dní (index 14)
+                // i=0 je vybraný den (index 7), i=7 je +7 dní (index 14)
                 for (i in 0..7) {
+                    val f = forecast.getOrNull(offset + i) ?: break
                     val x = rangeDays + i
-                    val damping = (1.0 - (i * 0.03)).coerceAtLeast(0.5)
-                    val predWeight = lastWeight + (targetSlope * i * damping).toFloat()
-
-                    val spreadBase = if (isElite) 0.12f else 0.28f
-                    val spread = (spreadBase + (i * 0.07f)) * biologicSpreadMultiplier
-
-                    predMainEntries.add(Entry(x, predWeight))
-                    upperEntries.add(Entry(x, predWeight + spread))
-                    lowerEntries.add(Entry(x, predWeight - spread))
+                    predMainEntries.add(Entry(x, f.mean.toFloat()))
+                    upperEntries.add(Entry(x, f.upper.toFloat()))
+                    lowerEntries.add(Entry(x, f.lower.toFloat()))
 
                     if (i > 0) { // Nechceme přepsat label pro dnešek
                         val futCal = Calendar.getInstance().apply {

@@ -109,6 +109,18 @@ object ReportGenerator {
             canvas.drawText("B: ${target.protein.toInt()}g | S: ${target.carbs.toInt()}g | T: ${target.fat.toInt()}g | Vl: ${target.fiber.toInt()}g", MARGIN + 180f, yPos, paint)
             yPos += 16f
         }
+        // Adaptivní výdej (fáze B) – jak se model přizpůsobil reálným datům
+        cz.uhk.macroflow.data.AppDatabase.getDatabase(context).adaptiveTdeeDao().getLatestSync()?.let { a ->
+            yPos += 6f
+            val line = if (a.status == cz.uhk.macroflow.energy.AdaptiveExpenditure.Status.OK.name)
+                "Adaptivní výdej: ${a.adaptiveTdee.toInt()} kcal (rovnice ${a.modelTdee.toInt()} kcal, " +
+                    "korekce ${"%+.0f".format((a.factor - 1) * 100)} %, jistota ${(a.confidence * 100).toInt()} %, " +
+                    "${a.weighIns} vážení / ${a.loggedDays} zapsaných dní)"
+            else
+                "Adaptivní výdej: zatím málo dat (${a.weighIns} vážení, ${a.loggedDays} zapsaných dní za 28 dní)"
+            canvas.drawText(line, MARGIN, yPos, paint)
+            yPos += 16f
+        }
         yPos += 30f
 
         // --- 4. SOUHRN AKTIVITY (Voda + Kroky) ---

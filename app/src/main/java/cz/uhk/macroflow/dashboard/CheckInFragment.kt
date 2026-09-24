@@ -92,6 +92,11 @@ class CheckInFragment : Fragment() {
 
                 analyticsResult?.let { db.analyticsDao().insertAnalytics(it) }
 
+                // 3b. Adaptivní výdej (nové vážení = nová informace o energetické bilanci)
+                val adaptiveMsg = try {
+                    AdaptiveTdeeRepository.userMessage(AdaptiveTdeeRepository.recompute(appContext))
+                } catch (e: Exception) { Log.e("CHECKIN", "Adaptivní výdej: ${e.message}"); null }
+
                 // 4. Cloud Sync
                 if (FirebaseRepository.isLoggedIn) {
                     try {
@@ -102,7 +107,8 @@ class CheckInFragment : Fragment() {
                 }
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(appContext, "Zápis dokončen a profil aktualizován!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, adaptiveMsg ?: "Zápis dokončen a profil aktualizován!",
+                        if (adaptiveMsg != null) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
                     parentFragmentManager.popBackStack()
                 }
             } catch (e: Exception) {
