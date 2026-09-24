@@ -72,6 +72,9 @@ abstract class BarbellDao {
     @Query("SELECT * FROM barbell_sets WHERE date >= :fromDate ORDER BY startedAt ASC")
     abstract fun getSetsSince(fromDate: String): List<BarbellSetEntity>
 
+    @Query("SELECT * FROM barbell_sets WHERE exercise = :exercise AND date >= :fromDate ORDER BY startedAt ASC")
+    abstract fun getExerciseSetsSince(exercise: String, fromDate: String): List<BarbellSetEntity>
+
     @Query("SELECT * FROM barbell_sets WHERE date = :date ORDER BY startedAt ASC")
     abstract fun getSetsForDate(date: String): List<BarbellSetEntity>
 

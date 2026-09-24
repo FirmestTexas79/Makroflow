@@ -3,6 +3,9 @@ package cz.uhk.macroflow.training
 import cz.uhk.macroflow.data.BarbellRepEntity
 import cz.uhk.macroflow.data.BarbellSetEntity
 import cz.uhk.macroflow.training.analysis.Lift
+import cz.uhk.macroflow.training.analysis.LoadVelocity
+import cz.uhk.macroflow.training.analysis.LoadVelocityProfile
+import cz.uhk.macroflow.training.analysis.LvPoint
 import cz.uhk.macroflow.training.analysis.RepMetrics
 import cz.uhk.macroflow.training.analysis.SetSummary
 
@@ -27,6 +30,20 @@ object BarbellMapper {
             totalMs = r.totalMs, meanVelocity = r.meanConcentricVelocity, peakVelocity = r.peakConcentricVelocity,
             deviationCm = r.deviationCm, quality = r.quality
         )
+    }
+
+    fun toLvPoint(set: BarbellSetEntity): LvPoint? =
+        set.loadKg?.let { LvPoint(it, set.bestMcv, set.quality) }
+
+    /**
+     * Profil zátěž–rychlost pro [date]: z jeho sérií, a když na přímku nestačí,
+     * se sklonem z předchozích dnů v [sets] (sety jednoho cviku, typicky 6 týdnů zpět).
+     */
+    fun profileFor(lift: Lift, date: String, sets: List<BarbellSetEntity>): LoadVelocityProfile? {
+        val mine = sets.filter { it.exercise == lift.name }
+        val today = mine.filter { it.date == date }.mapNotNull(::toLvPoint)
+        val earlier = mine.filter { it.date < date }.groupBy { it.date }.values.map { d -> d.mapNotNull(::toLvPoint) }
+        return LoadVelocity.fit(lift, today, LoadVelocity.historicalSlopes(lift, earlier))
     }
 
     fun toSummary(set: BarbellSetEntity, reps: List<BarbellRepEntity>) = SetSummary(

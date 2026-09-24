@@ -84,6 +84,22 @@
             android:orientation="horizontal" />
     </HorizontalScrollView>
 
+    <!-- Cíl tréninku (VBT): určuje doporučenou zátěž a kdy zazní STOP -->
+    <HorizontalScrollView
+        android:id="@+id/goalScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="16dp"
+        app:layout_constraintTop_toBottomOf="@id/liftScroll">
+
+        <LinearLayout
+            android:id="@+id/goalChips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
     <!-- Živý panel: počet repů a poslední rep -->
     <LinearLayout
         android:id="@+id/livePanel"
@@ -97,7 +113,7 @@
         android:paddingHorizontal="18dp"
         android:paddingVertical="10dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/liftScroll">
+        app:layout_constraintTop_toBottomOf="@id/goalScroll">
 
         <TextView
             android:id="@+id/tvRepCount"
@@ -126,7 +142,7 @@
         android:gravity="center"
         android:shadowColor="#000000"
         android:shadowRadius="4"
-        android:text="Telefon bokem ke čince, 2–3 m daleko, celý kotouč v záběru.\nŤukni na kotouč pro zamčení."
+        android:text="Telefon bokem ke čince, 2–3 m daleko, celý kotouč v záběru.\nŤukni na kotouč pro zamčení. Se zátěží spočítám i odhad maxima."
         android:textColor="@color/white"
         android:textSize="12sp"
         app:layout_constraintBottom_toTopOf="@id/inputRow"

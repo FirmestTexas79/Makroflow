@@ -13,6 +13,7 @@ import androidx.core.graphics.ColorUtils
 import cz.uhk.macroflow.training.analysis.RepRating
 import cz.uhk.macroflow.training.analysis.RepRating.Metric
 import cz.uhk.macroflow.training.analysis.SetSummary
+import cz.uhk.macroflow.training.analysis.VbtAdvice
 import java.util.Locale
 
 /**
@@ -30,7 +31,9 @@ object SetSummaryViews {
         title: String,
         set: SetSummary,
         todaysSets: List<SetSummary>,
-        currentSetNumber: Int
+        currentSetNumber: Int,
+        advice: VbtAdvice? = null,
+        onUseLoad: ((Double) -> Unit)? = null
     ): View {
         val dp = ctx.resources.displayMetrics.density
         fun px(v: Int) = (v * dp).toInt()
@@ -43,6 +46,35 @@ object SetSummaryViews {
 
         root.addView(text(ctx, title, 20f, bold = true))
         root.addView(text(ctx, statsLine(set), 13f).apply { setPadding(0, px(6), 0, px(12)) })
+
+        // ── Podle rychlosti (VBT): odhad maxima a co dál ──
+        if (advice != null && advice.lines.isNotEmpty()) {
+            val box = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(px(14), px(10), px(14), px(12))
+                background = GradientDrawable().apply {
+                    cornerRadius = 12 * dp
+                    setColor(Color.parseColor("#E9E5C8"))
+                }
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    .apply { bottomMargin = px(12) }
+            }
+            box.addView(text(ctx, "Podle rychlosti", 14f, bold = true))
+            advice.lines.forEach { box.addView(text(ctx, "• $it", 12.5f).apply { setPadding(0, px(3), 0, 0) }) }
+            val kg = advice.suggestedLoadKg
+            if (kg != null && onUseLoad != null) {
+                box.addView(text(ctx, String.format(Locale.US, "POUŽÍT %.1f kg NA DALŠÍ SÉRII", kg), 12f, bold = true).apply {
+                    setTextColor(Color.parseColor(CREAM))
+                    gravity = Gravity.CENTER
+                    setPadding(px(12), px(8), px(12), px(8))
+                    background = GradientDrawable().apply { cornerRadius = 18 * dp; setColor(Color.parseColor("#BC6C25")) }
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                        .apply { topMargin = px(8) }
+                    setOnClickListener { onUseLoad(kg) }
+                })
+            }
+            root.addView(box)
+        }
 
         // ── Tabulka opakování ──
         val table = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }

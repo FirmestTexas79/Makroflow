@@ -8,6 +8,8 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -39,12 +41,16 @@ import com.google.mlkit.vision.objects.ObjectDetector
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.training.analysis.Autoregulation
 import cz.uhk.macroflow.training.analysis.Lift
 import cz.uhk.macroflow.training.analysis.PlateTracker
 import cz.uhk.macroflow.training.analysis.RepAnalyzer
 import cz.uhk.macroflow.training.analysis.Sample
 import cz.uhk.macroflow.training.analysis.SetDetector
 import cz.uhk.macroflow.training.analysis.SetSummary
+import cz.uhk.macroflow.training.analysis.VbtAdvice
+import cz.uhk.macroflow.training.analysis.VbtGoal
+import cz.uhk.macroflow.training.analysis.VelocityLoss
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,6 +78,8 @@ class TrainerFragment : Fragment() {
     private lateinit var etLoad: EditText
     private lateinit var etPlate: EditText
     private lateinit var liftChips: LinearLayout
+    private lateinit var goalChips: LinearLayout
+    private lateinit var livePanel: View
     private lateinit var graphicOverlay: GraphicOverlay
 
     private var objectDetector: ObjectDetector? = null
@@ -84,6 +92,10 @@ class TrainerFragment : Fragment() {
 
     private var isActive = false
     private var lift = Lift.SQUAT
+    private var goal = VbtGoal.FREE
+    /** STOP už v této sérii zazněl (jen jednou – telefon leží na zemi, pípání by rušilo). */
+    private var stopCued = false
+    private var tone: ToneGenerator? = null
     private var setStartedAt = 0L
     private var lastLiveAnalysis = 0L
     private var lastPathY: Float? = null
@@ -105,6 +117,8 @@ class TrainerFragment : Fragment() {
         etLoad = root.findViewById(R.id.etLoad)
         etPlate = root.findViewById(R.id.etPlate)
         liftChips = root.findViewById(R.id.liftChips)
+        goalChips = root.findViewById(R.id.goalChips)
+        livePanel = root.findViewById(R.id.livePanel)
         graphicOverlay = root.findViewById(R.id.graphicOverlay)
 
         analysisExecutor = Executors.newSingleThreadExecutor()
@@ -117,8 +131,11 @@ class TrainerFragment : Fragment() {
         )
 
         lift = Lift.from(prefs.getString("tracker_lift", Lift.SQUAT.name))
+        goal = VbtGoal.from(prefs.getString("tracker_goal", VbtGoal.FREE.name))
         etPlate.setText(prefs.getString("tracker_plate_cm", "45"))
+        prefs.getString("tracker_load_kg", null)?.let { etLoad.setText(it) }
         buildLiftChips()
+        buildGoalChips()
         applyMode(false)
 
         btnMode.setOnClickListener { applyMode(!isActive) }
@@ -148,30 +165,45 @@ class TrainerFragment : Fragment() {
 
     // ── UI ──────────────────────────────────────────────────────────────────
 
-    private fun buildLiftChips() {
+    private fun buildLiftChips(): Unit = buildChips(liftChips, Lift.entries, lift, { it.label }, small = false) { l ->
+        lift = l
+        prefs.edit().putString("tracker_lift", l.name).apply()
+        buildLiftChips()
+    }
+
+    private fun buildGoalChips(): Unit = buildChips(goalChips, VbtGoal.entries, goal, { g ->
+        g.stopLossPct?.let { "${g.label} · stop ${it.toInt()} %" } ?: g.label
+    }, small = true) { g ->
+        goal = g
+        prefs.edit().putString("tracker_goal", g.name).apply()
+        buildGoalChips()
+    }
+
+    private fun <T> buildChips(
+        container: LinearLayout, items: List<T>, selectedItem: T, label: (T) -> String, small: Boolean, onPick: (T) -> Unit
+    ) {
         val dp = resources.displayMetrics.density
-        liftChips.removeAllViews()
-        Lift.entries.forEach { l ->
-            liftChips.addView(TextView(requireContext()).apply {
-                text = l.label
-                textSize = 13f
-                setPadding((14 * dp).toInt(), (8 * dp).toInt(), (14 * dp).toInt(), (8 * dp).toInt())
-                val selected = l == lift
+        container.removeAllViews()
+        items.forEach { item ->
+            container.addView(TextView(requireContext()).apply {
+                text = label(item)
+                textSize = if (small) 11f else 13f
+                val padV = if (small) 5 else 8
+                setPadding((14 * dp).toInt(), (padV * dp).toInt(), (14 * dp).toInt(), (padV * dp).toInt())
+                val selected = item == selectedItem
                 setTextColor(Color.parseColor(if (selected) "#FEFAE0" else "#283618"))
                 background = GradientDrawable().apply {
                     cornerRadius = 18 * dp
-                    setColor(Color.parseColor(if (selected) "#283618" else "#CCFEFAE0"))
+                    setColor(Color.parseColor(if (selected) (if (small) "#BC6C25" else "#283618") else "#CCFEFAE0"))
                 }
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-                    .apply { marginEnd = (8 * dp).toInt(); topMargin = (8 * dp).toInt() }
+                    .apply { marginEnd = (8 * dp).toInt(); topMargin = ((if (small) 6 else 8) * dp).toInt() }
                 setOnClickListener {
                     if (detector.state == SetDetector.State.ACTIVE) {
-                        Toast.makeText(requireContext(), "Cvik změníš po dokončení série", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Změníš po dokončení série", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
-                    lift = l
-                    prefs.edit().putString("tracker_lift", l.name).apply()
-                    buildLiftChips()
+                    onPick(item)
                 }
             })
         }
@@ -196,6 +228,21 @@ class TrainerFragment : Fragment() {
     private fun resetLive() {
         tvRepCount.text = "0"
         tvLastRep.text = if (isActive) "čekám na pohyb…" else "opakování"
+        stopCued = false
+        livePanel.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#99283618"))
+    }
+
+    /** Živý signál konce série: červený panel + krátké pípnutí (telefon leží u činky, displej není vidět). */
+    private fun cueStop(lossPct: Double) {
+        stopCued = true
+        livePanel.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#DDE53935"))
+        tvLastRep.text = String.format(Locale("cs", "CZ"), "STOP · ztráta %.0f %%", lossPct)
+        try {
+            if (tone == null) tone = ToneGenerator(AudioManager.STREAM_MUSIC, 90)
+            tone?.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 500)
+        } catch (e: RuntimeException) {
+            Log.w("TRAINER", "Tón nejde přehrát", e)   // některá zařízení ToneGenerator odmítnou
+        }
     }
 
     private fun plateDiameter(): Double =
@@ -285,8 +332,15 @@ class TrainerFragment : Fragment() {
         lastLiveAnalysis = tMs
         val s = RepAnalyzer.analyze(detector.currentSet(), lift, plateDiameter()) ?: return
         tvRepCount.text = s.repCount.toString()
+        if (stopCued) return
+        if (VelocityLoss.shouldStop(s, goal, live = true)) {
+            cueStop(VelocityLoss.lossPct(s, live = true) ?: 0.0)
+            return
+        }
         val r = s.reps.last()
-        tvLastRep.text = String.format(Locale("cs", "CZ"), "posl.: %.0f cm · %.2f m/s", r.romCm, r.meanConcentricVelocity)
+        val loss = VelocityLoss.lossPct(s, live = true)
+        tvLastRep.text = String.format(Locale("cs", "CZ"), "posl.: %.0f cm · %.2f m/s", r.romCm, r.meanConcentricVelocity) +
+            (loss?.let { String.format(Locale("cs", "CZ"), " · ztráta %.0f %%", it) } ?: "")
     }
 
     // ── Konec série ─────────────────────────────────────────────────────────
@@ -303,28 +357,41 @@ class TrainerFragment : Fragment() {
         val ctx = requireContext().applicationContext
         val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(setStartedAt))
         val load = loadKg()
+        val setLift = lift
+        val setGoal = goal
+        prefs.edit().putString("tracker_load_kg", etLoad.text.toString()).apply()
         viewLifecycleOwner.lifecycleScope.launch {
-            val (setNo, todays) = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 val dao = AppDatabase.getDatabase(ctx).barbellDao()
-                val no = dao.countSets(date, lift.name) + 1
+                val no = dao.countSets(date, setLift.name) + 1
                 dao.insertSetWithReps(
                     BarbellMapper.toSetEntity(summary, date, setStartedAt, no, load, diameter),
                     BarbellMapper.toRepEntities(summary)
                 )
-                val sets = dao.getSetsForDate(date).filter { it.exercise == lift.name }
+                val sets = dao.getSetsForDate(date).filter { it.exercise == setLift.name }
                     .map { BarbellMapper.toSummary(it, dao.getReps(it.id)) }
-                no to sets
+                // Profil zátěž–rychlost: dnešní série + sklon z posledních 6 týdnů
+                val from = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(Date(setStartedAt - 42L * 24 * 3600 * 1000))
+                val profile = BarbellMapper.profileFor(setLift, date, dao.getExerciseSetsSince(setLift.name, from))
+                Triple(no, sets, Autoregulation.advise(setGoal, profile, summary, load))
             }
-            if (isAdded) showSummary(summary, setNo, todays, load)
+            val (setNo, todays, advice) = result
+            if (isAdded) showSummary(summary, setNo, todays, load, advice)
             resetLive()
         }
     }
 
-    private fun showSummary(s: SetSummary, setNo: Int, todays: List<SetSummary>, load: Double?) {
+    private fun showSummary(s: SetSummary, setNo: Int, todays: List<SetSummary>, load: Double?, advice: VbtAdvice) {
         val title = "Série $setNo · ${s.lift.label}" + (load?.let { String.format(Locale.US, " · %.1f kg", it) } ?: "")
         val sheet = BottomSheetDialog(requireContext())
         sheet.setContentView(ScrollView(requireContext()).apply {
-            addView(SetSummaryViews.build(requireContext(), title, s, todays, setNo))
+            // Zátěž se nepřepisuje sama – uložila by se k sérii, i kdyby kotouče nikdo nepřeložil
+            addView(SetSummaryViews.build(requireContext(), title, s, todays, setNo, advice) { kg ->
+                etLoad.setText(String.format(Locale.US, "%.1f", kg))
+                prefs.edit().putString("tracker_load_kg", etLoad.text.toString()).apply()
+                sheet.dismiss()
+            })
         })
         sheet.show()
     }
@@ -334,5 +401,7 @@ class TrainerFragment : Fragment() {
         activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         objectDetector?.close()
         analysisExecutor.shutdown()
+        tone?.release()
+        tone = null
     }
 }

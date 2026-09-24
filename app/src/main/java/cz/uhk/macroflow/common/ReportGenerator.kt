@@ -9,6 +9,9 @@ import androidx.core.content.FileProvider
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.training.BarbellMapper
+import cz.uhk.macroflow.training.analysis.Confidence
+import cz.uhk.macroflow.training.analysis.Lift
 import cz.uhk.macroflow.training.analysis.RepRating
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -293,12 +296,55 @@ object ReportGenerator {
         c.drawText("SLEDOVÁNÍ ČINKY (posledních 14 dní)", MARGIN, y, paint)
         y += 22f
 
+        // Profil zátěž–rychlost potřebuje i starší dny (sklon), proto 6 týdnů zpět
+        val profileFrom = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            .format(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -42) }.time)
+        val profileSets = dao.getSetsSince(profileFrom)
+        val profiles = sets.map { it.date to it.exercise }.distinct().associateWith { (date, ex) ->
+            BarbellMapper.profileFor(Lift.from(ex), date, profileSets)
+        }
+
+        // ── Vývoj odhadu maxima ──
+        if (profiles.values.any { it != null }) {
+            paint.textSize = 11f; paint.typeface = Typeface.DEFAULT_BOLD; paint.color = Color.parseColor("#283618")
+            c.drawText("Odhad maxima z rychlosti (e1RM)", MARGIN, y, paint)
+            y += 14f
+            paint.textSize = 8.5f; paint.color = Color.BLACK
+            profiles.entries.filter { it.value != null }.groupBy { it.key.second }.forEach { (ex, entries) ->
+                val lift = Lift.from(ex)
+                val parts = entries.sortedBy { it.key.first }.map { (k, p) ->
+                    String.format(Locale.US, "%s %.1f kg%s", k.first.substring(5).replace('-', '.'), p!!.e1rmKg,
+                        when (p.confidence) { Confidence.HIGH -> ""; Confidence.MEDIUM -> " (±)"; Confidence.LOW -> " (?)" })
+                }
+                var line = "${lift.label}: "
+                parts.forEachIndexed { i, part ->
+                    val candidate = line + (if (i > 0 && !line.endsWith(": ")) "  ·  " else "") + part
+                    if (paint.measureText(candidate) > PAGE_WIDTH - 2 * MARGIN) {
+                        newPageIfNeeded(12f); c.drawText(line, MARGIN, y, paint); y += 11f; line = "    $part"
+                    } else line = candidate
+                }
+                newPageIfNeeded(12f); c.drawText(line, MARGIN, y, paint); y += 11f
+            }
+            paint.typeface = Typeface.DEFAULT; paint.textSize = 7.5f; paint.color = Color.DKGRAY
+            c.drawText("Přímka z nejrychlejšího repu každé série se zadanou zátěží, maximum = zátěž při minimální rychlosti cviku " +
+                "(dřep 0,30 · bench 0,17 · tlaky 0,19 · MT 0,15 m/s). (±) střední, (?) nízká spolehlivost.", MARGIN, y, paint)
+            y += 18f
+        }
+
         sets.groupBy { it.date to it.exercise }.forEach { (key, daySets) ->
-            val summaries = daySets.map { cz.uhk.macroflow.training.BarbellMapper.toSummary(it, dao.getReps(it.id)) }
-            newPageIfNeeded(40f)
+            val summaries = daySets.map { BarbellMapper.toSummary(it, dao.getReps(it.id)) }
+            newPageIfNeeded(52f)
             paint.textSize = 12f; paint.typeface = Typeface.DEFAULT_BOLD; paint.color = Color.parseColor("#283618")
-            c.drawText("${key.first} · ${cz.uhk.macroflow.training.analysis.Lift.from(key.second).label}", MARGIN, y, paint)
+            c.drawText("${key.first} · ${Lift.from(key.second).label}", MARGIN, y, paint)
             y += 16f
+            profiles[key]?.let { p ->
+                paint.textSize = 8.5f; paint.typeface = Typeface.DEFAULT; paint.color = Color.BLACK
+                val fit = if (p.fromHistory) "sklon z dřívějších dnů" else
+                    String.format(Locale.US, "v = %.2f %+.4f·kg, R² %.2f, %d zátěže", p.intercept, p.slope, p.r2, p.distinctLoads)
+                c.drawText(String.format(Locale.US, "Profil zátěž–rychlost: e1RM %.1f kg · spolehlivost %s · %s",
+                    p.e1rmKg, p.confidence.label, fit), MARGIN, y, paint)
+                y += 14f
+            }
 
             daySets.zip(summaries).forEach { (set, sum) ->
                 newPageIfNeeded(34f + 13f * (sum.reps.size + 1))

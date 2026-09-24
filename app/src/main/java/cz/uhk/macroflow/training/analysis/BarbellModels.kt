@@ -8,17 +8,20 @@ package cz.uhk.macroflow.training.analysis
  * @param minRomCm menší pohyb se nepočítá jako opakování (odlehčení, přešlap, sundání z držáků)
  * @param maxDeviationCm odchylka dráhy do strany, od které je hodnocení „červené“.
  *        U benche je dráha přirozeně šikmá (tzv. J-křivka), proto víc.
+ * @param mvt minimální rychlost (m/s), kterou má průměrná rychlost zvedání při 1RM – populační
+ *        hodnoty z literatury (viz docs/adr/0006). Z ní se z profilu zátěž–rychlost odhaduje maximum.
  */
 enum class Lift(
     val label: String,
     val eccentricFirst: Boolean,
     val minRomCm: Double,
-    val maxDeviationCm: Double
+    val maxDeviationCm: Double,
+    val mvt: Double
 ) {
-    SQUAT("Dřep", eccentricFirst = true, minRomCm = 20.0, maxDeviationCm = 8.0),
-    BENCH("Bench press", eccentricFirst = true, minRomCm = 12.0, maxDeviationCm = 14.0),
-    OHP("Tlaky nad hlavu", eccentricFirst = false, minRomCm = 20.0, maxDeviationCm = 10.0),
-    DEADLIFT("Mrtvý tah", eccentricFirst = false, minRomCm = 20.0, maxDeviationCm = 8.0);
+    SQUAT("Dřep", eccentricFirst = true, minRomCm = 20.0, maxDeviationCm = 8.0, mvt = 0.30),
+    BENCH("Bench press", eccentricFirst = true, minRomCm = 12.0, maxDeviationCm = 14.0, mvt = 0.17),
+    OHP("Tlaky nad hlavu", eccentricFirst = false, minRomCm = 20.0, maxDeviationCm = 10.0, mvt = 0.19),
+    DEADLIFT("Mrtvý tah", eccentricFirst = false, minRomCm = 20.0, maxDeviationCm = 8.0, mvt = 0.15);
 
     companion object {
         fun from(name: String?): Lift = entries.firstOrNull { it.name == name } ?: SQUAT

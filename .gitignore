@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Buildy aplikace (podepsané .aab/.apk do repa nepatří)
+/app/release/
+*.aab
+*.apk
