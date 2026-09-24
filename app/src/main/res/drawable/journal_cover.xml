@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kožená vazba deníku: tmavě olivová deska se zlatým prošitím (paleta aplikace). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <solid android:color="#1F2A12" />
+        </shape>
+    </item>
+    <item android:bottom="3dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="14dp" />
+            <gradient android:angle="90" android:startColor="#283618" android:endColor="#3A4A22" />
+        </shape>
+    </item>
+    <item android:left="5dp" android:top="5dp" android:right="5dp" android:bottom="8dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="10dp" />
+            <stroke android:width="1.5dp" android:color="#DDA15E" android:dashWidth="6dp" android:dashGap="4dp" />
+        </shape>
+    </item>
+</layer-list>

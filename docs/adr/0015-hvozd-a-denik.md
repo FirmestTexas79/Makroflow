@@ -19,8 +19,13 @@
   dokončený quest = všechny jeho fáze (`ForestMap.completedTasks`).
 
 ## Deník
-Dvoustránková kniha přes celou výšku displeje (úzké sloupce, spousta prázdna) → kompaktní
-karta uprostřed: hlavička s kapitolou (MĚSTO / LOUKA / HORY), šipkami a počtem splněných
-fází; portrét zadavatele, název fáze a cíl jako štítek; příběh (nejvýš ~170 dp, pak se
-posouvá); tečky postupu a seznam fází se značkami ✓ / ▸ / ???. Listování šipkami místo
-neviditelného klepání na okraje.
+Zůstává **rozevřená kniha** (levá strana příběh fáze, pravá postup a seznam fází), ale:
+* výška nejvýš ~68 % obrazovky / 600 dp (dřív se roztáhla skoro přes celý displej),
+* kožená vazba v barvách aplikace (tmavě olivová deska, zlaté prošití, oranžová záložka),
+* větší písmo (příběh 18 sp, nadpis 25 sp, fáze 17 sp), cíl jako zvýrazněný štítek,
+  u kapitoly název lokace (I · MĚSTO, II · LOUKA, III · HORY),
+* listování: viditelné šipky v rozích (vektorové ikony – znaky ‹ › pixelové písmo nemá,
+  proto byly v mezikroku neviditelné), klepnutí na okraj stránky i tah prstem (i přes
+  posuvné texty), krátká animace otočení listu,
+* fáze v seznamu jsou barevně odlišené (splněné zeleně, aktuální oranžově, zamčené šedě)
+  a klepnutím se přečtou na levé straně.
