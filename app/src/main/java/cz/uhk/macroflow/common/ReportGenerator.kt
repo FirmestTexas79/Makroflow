@@ -9,6 +9,7 @@ import androidx.core.content.FileProvider
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.training.analysis.RepRating
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -302,8 +303,8 @@ object ReportGenerator {
             daySets.zip(summaries).forEach { (set, sum) ->
                 newPageIfNeeded(34f + 13f * (sum.reps.size + 1))
                 // Souhrn série se zabarvením proti nejlepší sérii dne
-                val setScore = cz.uhk.macroflow.training.analysis.RepRating.setScore(sum, summaries)
-                paint.color = cz.uhk.macroflow.training.analysis.RepRating.color(setScore); paint.alpha = 110
+                val setScore = RepRating.setScore(sum, summaries)
+                paint.color = RepRating.color(setScore); paint.alpha = 110
                 c.drawRect(MARGIN, y - 10f, PAGE_WIDTH - MARGIN, y + 14f, paint)
                 paint.alpha = 255; paint.color = Color.BLACK; paint.typeface = Typeface.DEFAULT_BOLD; paint.textSize = 9f
                 val load = set.loadKg?.let { String.format(Locale.US, " · %.1f kg", it) } ?: ""
@@ -323,21 +324,20 @@ object ReportGenerator {
 
                 paint.typeface = Typeface.DEFAULT; paint.textSize = 8f
                 sum.reps.forEach { r ->
-                    val rr = cz.uhk.macroflow.training.analysis.RepRating
                     val cells = listOf(
                         "${r.index}" to null,
                         String.format(Locale.US, "%.0f / %.0f / %.0f", r.startCm, r.turnCm, r.endCm) to null,
-                        String.format(Locale.US, "%.1f cm", r.romCm) to rr.score(rr.Metric.ROM, r, sum),
-                        String.format(Locale.US, "%.2f s", r.eccentricMs / 1000.0) to rr.score(rr.Metric.ECCENTRIC, r, sum),
-                        String.format(Locale.US, "%.2f s", r.concentricMs / 1000.0) to rr.score(rr.Metric.CONCENTRIC, r, sum),
-                        String.format(Locale.US, "%.2f m/s", r.meanConcentricVelocity) to rr.score(rr.Metric.VELOCITY, r, sum),
-                        String.format(Locale.US, "%.1f cm", r.deviationCm) to rr.score(rr.Metric.DEVIATION, r, sum),
+                        String.format(Locale.US, "%.1f cm", r.romCm) to RepRating.score(RepRating.Metric.ROM, r, sum),
+                        String.format(Locale.US, "%.2f s", r.eccentricMs / 1000.0) to RepRating.score(RepRating.Metric.ECCENTRIC, r, sum),
+                        String.format(Locale.US, "%.2f s", r.concentricMs / 1000.0) to RepRating.score(RepRating.Metric.CONCENTRIC, r, sum),
+                        String.format(Locale.US, "%.2f m/s", r.meanConcentricVelocity) to RepRating.score(RepRating.Metric.VELOCITY, r, sum),
+                        String.format(Locale.US, "%.1f cm", r.deviationCm) to RepRating.score(RepRating.Metric.DEVIATION, r, sum),
                         String.format(Locale.US, "%.0f %%", r.quality * 100) to null
                     )
                     x = MARGIN
                     cells.forEachIndexed { i, (txt, score) ->
                         if (score != null) {
-                            paint.color = rr.color(score); paint.alpha = 120
+                            paint.color = RepRating.color(score); paint.alpha = 120
                             c.drawRect(x, y + 1f, x + cols[i] - 2f, y + 12f, paint)
                             paint.alpha = 255
                         }
@@ -357,7 +357,6 @@ object ReportGenerator {
     }
 
     private fun drawBarbellLegend(c: Canvas, paint: Paint) {
-        val rr = cz.uhk.macroflow.training.analysis.RepRating
         var y = PAGE_HEIGHT - 140f
         paint.color = Color.BLACK; paint.textSize = 9f; paint.typeface = Typeface.DEFAULT_BOLD
         c.drawText("Legenda barev", MARGIN, y, paint)
@@ -365,7 +364,7 @@ object ReportGenerator {
         val w = PAGE_WIDTH - 2 * MARGIN
         val steps = 60
         for (i in 0 until steps) {
-            paint.color = rr.color(i / (steps - 1.0))
+            paint.color = RepRating.color(i / (steps - 1.0))
             c.drawRect(MARGIN + w * i / steps, y, MARGIN + w * (i + 1) / steps + 0.5f, y + 8f, paint)
         }
         y += 18f
@@ -374,7 +373,7 @@ object ReportGenerator {
         val right = "červená = výrazně horší"
         c.drawText(right, PAGE_WIDTH - MARGIN - paint.measureText(right), y, paint)
         y += 11f
-        rr.Metric.entries.forEach { m -> c.drawText("${m.label}: ${m.legend}", MARGIN, y, paint); y += 10f }
+        RepRating.Metric.entries.forEach { m -> c.drawText("${m.label}: ${m.legend}", MARGIN, y, paint); y += 10f }
         c.drawText("Rychlost = průměrná rychlost zvedání (m/s). Vážený rozsah = průměr vážený kvalitou sledování repu. Série se srovnávají s nejlepší sérií dne.", MARGIN, y, paint)
     }
 
