@@ -185,9 +185,9 @@ class MakromonMapActivity : AppCompatActivity() {
             replaceMapContent(QuestJournalFragment(), TAG_JOURNAL)
         }
         // Ladění shiny (jen debug build): podržením deníku bude příští setkání shiny
+        // Ladicí menu (jen debug build): podržení deníku
         if (BuildConfig.DEBUG) findViewById<ImageButton>(R.id.btnOpenJournal).setOnLongClickListener {
-            getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit().putBoolean("DEBUG_FORCE_SHINY", true).apply()
-            showMapToast("✦ Debug: příští setkání bude shiny")
+            showDebugMenu()
             true
         }
 
@@ -750,6 +750,70 @@ class MakromonMapActivity : AppCompatActivity() {
                 LegendProgress.Altar.CRYSTAL_READY -> takeCrystal(color)
                 LegendProgress.Altar.EMPTY -> showMapToast("Oltář je prázdný – ${color.label} už je u tebe.")
             }
+        }
+    }
+
+    // ── Ladění příběhu (jen debug build) ──
+
+    private fun showDebugMenu() {
+        val items = arrayOf(
+            "✦ Příští setkání bude shiny",
+            "💎 Reset krystalů, strážců a legendy",
+            "⚔ Porazit oba strážce",
+            "🎒 Dát oba krystaly do inventáře"
+        )
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Debug – Makrosvět")
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> {
+                        gamePrefs.edit().putBoolean("DEBUG_FORCE_SHINY", true).apply()
+                        showMapToast("✦ Debug: příští setkání bude shiny")
+                    }
+                    1 -> debugResetLegend()
+                    2 -> {
+                        gamePrefs.edit().apply {
+                            CrystalColor.entries.forEach { putBoolean(LegendProgress.bossKey(it), true) }
+                        }.apply()
+                        showMapToast("⚔ Debug: strážci poraženi – krystaly jdou vzít")
+                        refreshStoryDecor()
+                    }
+                    3 -> lifecycleScope.launch {
+                        kotlinx.coroutines.withContext(Dispatchers.IO) {
+                            CrystalColor.entries.forEach { c ->
+                                if ((db.userItemDao().getItemCount(c.itemId) ?: 0) == 0) db.userItemDao().addItem(c.itemId, 1)
+                            }
+                        }
+                        gamePrefs.edit().apply {
+                            CrystalColor.entries.forEach {
+                                putBoolean(LegendProgress.bossKey(it), true); putBoolean(LegendProgress.takenKey(it), true)
+                            }
+                        }.apply()
+                        showMapToast("🎒 Debug: oba krystaly jsou v inventáři")
+                        refreshStoryDecor()
+                    }
+                }
+            }
+            .show()
+    }
+
+    /** Vrátí celý příběh krystalů na začátek: strážci zpět, krystaly na oltářích, svatyně prázdná. */
+    private fun debugResetLegend() {
+        gamePrefs.edit().apply {
+            CrystalColor.entries.forEach { remove(LegendProgress.bossKey(it)); remove(LegendProgress.takenKey(it)) }
+            remove(LegendProgress.PLACED_KEY); remove(LegendProgress.LEGEND_KEY)
+        }.apply()
+        lifecycleScope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                CrystalColor.entries.forEach { c ->
+                    db.userItemDao().insertOrUpdateItem(UserItemEntity(c.itemId, 0))
+                    if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) {
+                        runCatching { cz.uhk.macroflow.data.FirebaseRepository.uploadUserItem(UserItemEntity(c.itemId, 0)) }
+                    }
+                }
+            }
+            showMapToast("💎 Debug: krystaly, strážci i legenda jsou zpět na začátku")
+            refreshStoryDecor()
         }
     }
 

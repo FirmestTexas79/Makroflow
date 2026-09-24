@@ -54,7 +54,9 @@ data class LegendProgress(
         /** Sestaví stav z úložiště klíč → boolean a počtů předmětů. */
         fun load(flag: (String) -> Boolean, itemCount: (String) -> Int): LegendProgress = LegendProgress(
             bossesDefeated = CrystalColor.entries.filter { flag(bossKey(it)) }.toSet(),
-            crystalsTaken = CrystalColor.entries.filter { flag(takenKey(it)) }.toSet(),
+            // Starší verze (před strážci) uměla krystal „sebrat“ bez předmětu do inventáře.
+            // Sebrání bez poraženého strážce proto neplatí → krystal je zase na oltáři.
+            crystalsTaken = CrystalColor.entries.filter { flag(takenKey(it)) && flag(bossKey(it)) }.toSet(),
             crystalsInBag = CrystalColor.entries.filter { itemCount(it.itemId) > 0 }.toSet(),
             crystalsPlaced = flag(PLACED_KEY),
             legendFaced = flag(LEGEND_KEY)

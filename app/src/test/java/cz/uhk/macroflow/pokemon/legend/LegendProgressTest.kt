@@ -67,4 +67,12 @@ class LegendProgressTest {
         PeakShrine.SOCKETS.values.forEach { assertTrue(it in PeakShrine.GATE_LEFT..PeakShrine.GATE_RIGHT) }
         assertTrue(PeakShrine.SOCKET_BOTTOM > PeakShrine.GATE_BOTTOM)
     }
+
+    @Test
+    fun crystalPickedUpByOldVersionReturnsToTheAltar() {
+        // Starší verze zapsala jen „sebráno“ – bez strážce a bez předmětu v inventáři
+        val p = LegendProgress.load({ it == LegendProgress.takenKey(RED) }, { 0 })
+        assertEquals(LegendProgress.Altar.GUARDED, p.altar(RED))
+        assertEquals(emptySet<CrystalColor>(), p.crystalsTaken)
+    }
 }
