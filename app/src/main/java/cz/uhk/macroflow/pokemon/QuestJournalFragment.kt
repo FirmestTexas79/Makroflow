@@ -47,24 +47,9 @@ class QuestJournalFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
-        // PŘEPÍNÁNÍ STRÁNEK KLIKEM NA OKRAJE
-        val paperBody = rootView.findViewById<View>(R.id.journalPaperBody)
-        paperBody.setOnTouchListener { v, event ->
-            if (event.action == android.view.MotionEvent.ACTION_UP) {
-                val width = v.width
-                val x = event.x
-
-                if (x < width * 0.25f) { // Klik vlevo
-                    flipPage(-1)
-                } else if (x > width * 0.75f) { // Klik vpravo
-                    flipPage(1)
-                } else { // Klik uprostřed
-                    selectedStageIndex = null
-                    renderCurrentPage()
-                }
-            }
-            true
-        }
+        // Listování kapitolami šipkami v hlavičce (dřív neviditelné klepání na okraje stránky)
+        rootView.findViewById<View>(R.id.btnPrevPage).setOnClickListener { flipPage(-1) }
+        rootView.findViewById<View>(R.id.btnNextPage).setOnClickListener { flipPage(1) }
 
         loadDataAndSetup()
         return rootView
@@ -117,10 +102,14 @@ class QuestJournalFragment : Fragment() {
         if (!::rootView.isInitialized) return
 
         if (unlockedQuests.isEmpty()) {
+            rootView.findViewById<TextView>(R.id.chapterLabel).text = "DENÍK"
             rootView.findViewById<TextView>(R.id.chapterTitle).text = "Prázdný deník"
             rootView.findViewById<TextView>(R.id.storyText).text = "Zatím jsi nezačal žádné dobrodružství."
+            rootView.findViewById<View>(R.id.taskListText).visibility = View.GONE
+            listOf(R.id.btnPrevPage, R.id.btnNextPage).forEach { rootView.findViewById<View>(it).alpha = 0.2f }
             return
         }
+        rootView.findViewById<View>(R.id.taskListText).visibility = View.VISIBLE
 
         val progress = unlockedQuests.getOrNull(currentPageIndex) ?: return
         val quest = QuestRegistry.byId(progress.questId) ?: QuestRegistry.TOWN_INTRO_QUEST
@@ -130,9 +119,12 @@ class QuestJournalFragment : Fragment() {
         val viewingIndex = selectedStageIndex ?: if (isAllDone) quest.stages.size - 1 else currentIndex
 
         // STRÁNKOVÁNÍ
-        val dateTextView = rootView.findViewById<TextView>(R.id.dateText)
-        dateTextView.text = "Strana ${currentPageIndex + 1} / ${unlockedQuests.size}"
-        if (currentPageIndex < unlockedQuests.size - 1) dateTextView.append("  →")
+        rootView.findViewById<TextView>(R.id.chapterLabel).text = chapterName(quest.id)
+        val done = if (isAllDone) quest.stages.size else currentIndex
+        rootView.findViewById<TextView>(R.id.dateText).text =
+            "Kapitola ${currentPageIndex + 1} z ${unlockedQuests.size} · splněno $done/${quest.stages.size}"
+        rootView.findViewById<View>(R.id.btnPrevPage).alpha = if (currentPageIndex > 0) 1f else 0.2f
+        rootView.findViewById<View>(R.id.btnNextPage).alpha = if (currentPageIndex < unlockedQuests.size - 1) 1f else 0.2f
 
         // OBSAH
         val stageToDisplay = quest.stages.getOrNull(viewingIndex)
@@ -191,42 +183,62 @@ class QuestJournalFragment : Fragment() {
                 }
                 else -> if (viewingIndex < currentIndex || isAllDone) "Cíl: Splněno" else "Cíl: Aktivní"
             }
-            rootView.findViewById<TextView>(R.id.taskListText).text = "• $brief"
+            rootView.findViewById<TextView>(R.id.taskListText).text = brief.removePrefix("Cíl: ").let { "🎯 $it" }
+            capStoryHeight()
         }
 
         renderStagesList(quest, currentIndex, isAllDone)
         drawTracker(rootView.findViewById(R.id.journalQuestProgressLine), quest.stages.size, if (isAllDone) quest.stages.size else currentIndex)
     }
 
+    /** Příběh může být dlouhý – karta ale nemá přerůst obrazovku, text se pak posouvá. */
+    private fun capStoryHeight() {
+        val scroll = rootView.findViewById<View>(R.id.storyScroll)
+        val max = (170 * resources.displayMetrics.density).toInt()
+        scroll.layoutParams.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        scroll.requestLayout()
+        scroll.post {
+            if (scroll.height > max) { scroll.layoutParams.height = max; scroll.requestLayout() }
+        }
+    }
+
+    private fun chapterName(questId: String): String = when (questId) {
+        QuestRegistry.TOWN_INTRO_QUEST.id -> "MĚSTO"
+        QuestRegistry.MEADOW_QUEST.id -> "LOUKA"
+        QuestRegistry.MOUNTAINS_QUEST.id -> "HORY"
+        else -> "DOBRODRUŽSTVÍ"
+    }
+
     private fun renderStagesList(quest: QuestDefinition, currentIdx: Int, allDone: Boolean) {
         val listTextView = rootView.findViewById<TextView>(R.id.tvQuestStagesList)
         val builder = SpannableStringBuilder()
+        val colorDone = Color.parseColor("#606C38")
+        val colorActive = Color.parseColor("#BC6C25")
+        val colorLocked = Color.parseColor("#99283618")
 
         quest.stages.forEachIndexed { index, stage ->
-            val isKnown = allDone || index <= currentIdx
-            if (isKnown) {
-                val prefix = when {
-                    allDone || index < currentIdx -> "[X] "
-                    index == currentIdx -> "[>] "
-                    else -> "[ ] "
-                }
-                val start = builder.length
-                builder.append("$prefix${index + 1}. ${stage.title}\n")
+            val done = allDone || index < currentIdx
+            val active = !allDone && index == currentIdx
+            val start = builder.length
+            if (done || active) {
+                builder.append(if (done) "✓  " else "▸  ").append(stage.title)
                 val end = builder.length
-
+                val selected = selectedStageIndex == index
                 builder.setSpan(object : ClickableSpan() {
                     override fun onClick(widget: View) {
                         selectedStageIndex = index
                         renderCurrentPage()
                     }
                     override fun updateDrawState(ds: TextPaint) {
-                        ds.isUnderlineText = false
-                        ds.color = if (selectedStageIndex == index) Color.parseColor("#BC6C25") else Color.parseColor("#283618")
+                        ds.isUnderlineText = selected
+                        ds.color = if (active || selected) colorActive else colorDone
                     }
                 }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             } else {
-                builder.append("[ ] ???\n")
+                builder.append("·  ???")
+                builder.setSpan(android.text.style.ForegroundColorSpan(colorLocked), start, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
+            if (index < quest.stages.size - 1) builder.append("\n")
         }
 
         listTextView.text = builder

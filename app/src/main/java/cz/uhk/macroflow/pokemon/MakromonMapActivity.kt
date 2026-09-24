@@ -76,13 +76,14 @@ class MakromonMapActivity : AppCompatActivity() {
     private val clickableNodes = listOf(
         "les", "domov", "pokedex", "obchod", "hory",
         "vstup_z_town", "krovi1", "krovi2", "voda", "gudwin", "starter_bush",
-        "meadow_npc",
+        "meadow_npc", "les_sever",
         "vstup_z_meadow", "rozcesti_hory", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2"
     )
 
     /** Uzly, kde může vyskočit divoký Makromon (90 % šance). Jeskyně mají vlastní (CaveMap.encounterNodes). */
     private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2") +
-        cz.uhk.macroflow.pokemon.cave.CaveMaps.ALL.flatMap { it.encounterNodes }
+        cz.uhk.macroflow.pokemon.cave.CaveMaps.ALL.flatMap { it.encounterNodes } +
+        cz.uhk.macroflow.pokemon.cave.ForestMap.MAP.encounterNodes
 
     /** Přechod mezi mapami. */
     private enum class MapTransition { NONE, FADE, CAVE_IN, CAVE_OUT }
@@ -324,10 +325,13 @@ class MakromonMapActivity : AppCompatActivity() {
                     val entry = BiomeRegistry.definition(cave)?.cave?.exitNode ?: return@let
                     enterBiomeAtNode(cave, entry, MapTransition.CAVE_IN)
                 }
-                "vychod_jeskyne", "vychod_dolu" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
-                    enterBiomeAtNode(BiomeType.MOUNTAINS, it.mountainNode, MapTransition.CAVE_OUT)
+                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
+                    enterBiomeAtNode(BiomeType.valueOf(it.parentBiome), it.mountainNode,
+                        if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
                 "tezba" -> scanInMine()
+                "les_sever" -> tryEnterForest()
+                "mytina" -> showMapToast("🌳 Mýtina v srdci Hvozdu. Na prastarém pařezu rostou rudé houby a v korunách je slyšet šepot…\n(Tady příběh teprve začne.)")
                 "krystal_modry", "krystal_cerveny" -> BiomeRegistry.definition(currentBiome)?.cave?.let { onCrystalNode(it) }
                 "peak" -> onShrine()
                 "camp" -> restAtCamp()
@@ -356,7 +360,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 in encounterNodes -> {
                     if ((1..100).random() <= 90) {
                         // Jeskyně ukládají svůj biom (vlastní intro); Makromoni a questy jsou horské (wildBiome)
-                        val encounterBiome = if (nodeName == "voda") BiomeType.WATER else currentBiome
+                        // Jezírka ve Hvozdu jsou vodní setkání
+                        val encounterBiome = if (nodeName == "voda" || nodeName.startsWith("jezirko_")) BiomeType.WATER else currentBiome
                         getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                             .putString("LAST_BIOME", encounterBiome.name)
                             .remove("FORCE_ENCOUNTER_ID")
@@ -406,6 +411,9 @@ class MakromonMapActivity : AppCompatActivity() {
         "netopyri" -> "Netopýři se rozletěli, ale nic dalšího se nehnulo. Zkus to znovu."
         "slepa_chodba" -> "Slepá chodba… jen kape voda. Zkus to znovu."
         "hlubina" -> "Z hlubiny zafoukal studený vzduch. Zkus to znovu."
+        "trava_1", "trava_2", "trava_3", "houstina" -> "Vysoká tráva se jen zavlnila ve větru. Zkus to znovu."
+        "jezirko_1", "jezirko_2" -> "Po hladině přeběhla vážka, víc nic. Zkus to znovu."
+        "stary_dub" -> "Ve starém dubu to zašustilo… jen veverka. Zkus to znovu."
         "skaly1", "skaly2" -> "Mezi skalami se nic nehnulo. Zkus to znovu."
         "voda" -> "Hladina je klidná. Zkus to znovu."
         else -> "Křoví se ani nehnulo. Zkus to znovu."
@@ -611,7 +619,7 @@ class MakromonMapActivity : AppCompatActivity() {
             clearDecor()
             val cave = BiomeRegistry.definition(currentBiome)?.cave
             when {
-                cave != null -> { placeCrystal(cave, progress); placeEncounterGlows(cave) }
+                cave != null -> { placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave) }
                 currentBiome == BiomeType.MOUNTAINS -> placeShrineDecor(progress)
                 else -> {}
             }
@@ -640,7 +648,8 @@ class MakromonMapActivity : AppCompatActivity() {
 
     /** Krystal lehce nad oltářem; dokud stojí strážce, je vidět, ale nejde vzít. */
     private fun placeCrystal(cave: CaveMap, progress: LegendProgress) {
-        val altar = progress.altar(cave.crystal)
+        val color = cave.crystal ?: return          // les žádný krystal nemá
+        val altar = progress.altar(color)
         if (altar == LegendProgress.Altar.EMPTY || worldScale <= 0) return
         val scale = worldScale.toFloat()
         val (bx, by) = cave.crystalBase
@@ -650,12 +659,12 @@ class MakromonMapActivity : AppCompatActivity() {
         val top = by * scale - h
 
         val glowSize = (w * 2.4f).toInt()
-        val glow = glowView(glowSize, cave.crystal.glow).apply {
+        val glow = glowView(glowSize, color.glow).apply {
             x = left + w / 2f - glowSize / 2f
             y = top + h / 2f - glowSize / 2f
             elevation = 1f
         }
-        val crystal = pixelView(Crystals.pixels(cave.crystal), Crystals.W, Crystals.H, w, h).apply {
+        val crystal = pixelView(Crystals.pixels(color), Crystals.W, Crystals.H, w, h).apply {
             x = left; y = top; elevation = 1.5f
         }
         addDecor(glow); addDecor(crystal)
@@ -673,15 +682,15 @@ class MakromonMapActivity : AppCompatActivity() {
             duration = 1800; repeatCount = android.animation.ValueAnimator.INFINITE; start()
         }
 
-        if (altar == LegendProgress.Altar.GUARDED) placeGuardian(cave, scale)
+        if (altar == LegendProgress.Altar.GUARDED) placeGuardian(cave, color, scale)
     }
 
     /** Strážce stojí na cestě před oltářem a pomalu dýchá. */
-    private fun placeGuardian(cave: CaveMap, scale: Float) {
-        val sp = SpecialBattle.guardianOf(cave.crystal)
+    private fun placeGuardian(cave: CaveMap, color: CrystalColor, scale: Float) {
+        val sp = SpecialBattle.guardianOf(color)
         val res = resources.getIdentifier(sp.spriteName, "drawable", packageName)
         if (res == 0) return
-        val node = cave.node(cave.crystalNode) ?: return
+        val node = cave.node(cave.crystalNode ?: return) ?: return
         val size = (26 * scale).toInt()
         val shadow = View(this).apply {
             layoutParams = FrameLayout.LayoutParams((size * 0.7f).toInt(), (size * 0.18f).toInt())
@@ -741,7 +750,7 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun onCrystalNode(cave: CaveMap) {
         lifecycleScope.launch {
             val progress = loadLegend()
-            val color = cave.crystal
+            val color = cave.crystal ?: return@launch
             when (progress.altar(color)) {
                 LegendProgress.Altar.GUARDED -> {
                     val sp = SpecialBattle.guardianOf(color)
@@ -814,6 +823,26 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             showMapToast("💎 Debug: krystaly, strážci i legenda jsou zpět na začátku")
             refreshStoryDecor()
+        }
+    }
+
+    /** Hvozd: vstup až po [ForestMap.REQUIRED_TASKS] splněných fázích úkolů (celkem ze všech questů). */
+    private fun tryEnterForest() {
+        lifecycleScope.launch {
+            val done = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.cave.ForestMap.completedTasks(db.questDao().getAllQuests().map { p ->
+                    val total = cz.uhk.macroflow.pokemon.quests.QuestRegistry.byId(p.questId)?.stages?.size ?: 0
+                    Triple(total, p.currentStageIndex, p.isCompleted)
+                })
+            }
+            if (cz.uhk.macroflow.pokemon.cave.ForestMap.canEnter(done)) {
+                val entry = cz.uhk.macroflow.pokemon.cave.ForestMap.MAP.exitNode
+                enterBiomeAtNode(BiomeType.FOREST, entry, MapTransition.FADE)
+            } else {
+                val need = cz.uhk.macroflow.pokemon.cave.ForestMap.REQUIRED_TASKS
+                showMapToast("🌲 Hvozd je hustý a cesta se v něm snadno ztratí.\n" +
+                    "Pustí tě dál, až splníš $need úkolů (máš $done z $need). Mrkni do deníku!")
+            }
         }
     }
 

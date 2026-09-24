@@ -10,7 +10,9 @@ import cz.uhk.macroflow.pokemon.quests.QuestRegistry
 enum class BiomeType {
     TOWN, MEADOW, MOUNTAINS, LAKE, WATER,
     /** Jeskyně v Horách (docs/adr/0013) – mapy větší než obrazovka s pohyblivou kamerou. */
-    CAVE_OPEN, CAVE_MAZE
+    CAVE_OPEN, CAVE_MAZE,
+    /** Hvozd nad loukou (docs/adr/0015) – bludiště palouků, stejná kamera jako jeskyně. */
+    FOREST
 }
 
 object BiomeRegistry {
@@ -37,7 +39,10 @@ object BiomeRegistry {
 
     val MEADOW_GRAPH = listOf(
         MovementEngine.Waypoint("vstup_z_town", PointF(0.340f, 0.640f), listOf("rozcesti")),
-        MovementEngine.Waypoint("rozcesti",      PointF(0.500f, 0.425f), listOf("vstup_z_town", "krovi1", "krovi2", "voda", "meadow_npc", "hory")),
+        MovementEngine.Waypoint("rozcesti",      PointF(0.500f, 0.425f), listOf("vstup_z_town", "krovi1", "krovi2", "voda", "meadow_npc", "hory", "cesta_sever")),
+        // Cesta nahoru do Hvozdu (zamčeno: 5 splněných fází úkolů)
+        MovementEngine.Waypoint("cesta_sever",   PointF(0.500f, 0.280f), listOf("rozcesti", "les_sever")),
+        MovementEngine.Waypoint("les_sever",     PointF(0.470f, 0.090f), listOf("cesta_sever")),
 
         MovementEngine.Waypoint("meadow_npc",         PointF(0.630f, 0.410f), listOf("rozcesti")),
 
@@ -88,7 +93,9 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.CAVE_OPEN, R.drawable.cave_open, graphOf(CaveMaps.OPEN), questId = null,
                 cave = CaveMaps.OPEN),
             BiomeDefinition(BiomeType.CAVE_MAZE, R.drawable.cave_maze, graphOf(CaveMaps.MAZE), questId = null,
-                cave = CaveMaps.MAZE)
+                cave = CaveMaps.MAZE),
+            BiomeDefinition(BiomeType.FOREST, R.drawable.forest, graphOf(cz.uhk.macroflow.pokemon.cave.ForestMap.MAP), questId = null,
+                cave = cz.uhk.macroflow.pokemon.cave.ForestMap.MAP)
         ).associateBy { it.type }
     }
 
@@ -99,7 +106,7 @@ object BiomeRegistry {
 
     /** Jeskyně, do které vede uzel v Horách („cave“, „mine“), nebo null. */
     fun caveBehind(mountainNode: String): BiomeType? =
-        DEFINITIONS.values.firstOrNull { it.cave?.mountainNode == mountainNode }?.type
+        DEFINITIONS.values.firstOrNull { it.cave?.isCave == true && it.cave.mountainNode == mountainNode }?.type
 
     fun definition(type: BiomeType): BiomeDefinition? = DEFINITIONS[type]
 

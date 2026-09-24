@@ -21,7 +21,7 @@ class CaveMapsTest {
             assertEquals(ids.size, ids.toSet().size)
             cave.edges.forEach { (a, b) -> assertNotNull(cave.node(a)); assertNotNull(cave.node(b)) }
             assertTrue(cave.encounterNodes.all { it in ids })
-            assertTrue(cave.crystalNode in ids && cave.exitNode in ids)
+            assertTrue(cave.crystalNode!! in ids && cave.exitNode in ids)
         }
     }
 
@@ -44,7 +44,7 @@ class CaveMapsTest {
                 val n = queue.removeFirst()
                 for (m in cave.neighbors(n)) if (m !in depth) { depth[m] = depth[n]!! + 1; queue.addLast(m) }
             }
-            assertEquals(depth.values.max(), depth[cave.crystalNode])
+            assertEquals(depth.values.max(), depth[cave.crystalNode!!])
         }
     }
 
@@ -58,7 +58,7 @@ class CaveMapsTest {
     fun everyNodeIsHorizontallyOnScreenWhereverTheCameraIs() {
         // Dřív byla mapa 2× širší než displej a body na stranách nešlo naklikat
         for ((vw, vh) in listOf(1080 to 2340, 720 to 1600, 1440 to 3120, 1080 to 1920)) {
-            CaveMaps.ALL.forEach { cave ->
+            (CaveMaps.ALL + ForestMap.MAP).forEach { cave ->
                 val s = MapCamera.pixelScale(cave.artW, cave.artH, vw, vh, cave.artPixelsAcross)
                 val worldW = cave.artW * s
                 cave.nodes.forEach { player ->

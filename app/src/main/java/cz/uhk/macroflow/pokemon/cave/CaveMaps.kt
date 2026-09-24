@@ -14,20 +14,24 @@ data class CaveMap(
     val artH: Int,
     val nodes: List<CaveNode>,
     val edges: List<Pair<String, String>>,
-    /** Uzel u ústí – odtud se vychází zpět do Hor. */
+    /** Uzel u ústí – odtud se vychází zpět do nadřazené lokace. */
     val exitNode: String,
-    /** Uzel v Horách, kam se hráč po odchodu vrátí. */
+    /** Uzel v nadřazené lokaci ([parentBiome]), kam se hráč po odchodu vrátí. */
     val mountainNode: String,
-    /** Uzel před oltářem s krystalem na konci jeskyně. */
-    val crystalNode: String,
-    val crystal: CrystalColor,
+    /** Uzel před oltářem s krystalem (jen jeskyně; les žádný krystal nemá). */
+    val crystalNode: String?,
+    val crystal: CrystalColor?,
     /** Místa, kde může vyskočit divoký Makromon. */
     val encounterNodes: Set<String>,
     /**
      * Kolik art pixelů je vidět na šířku obrazovky. Výchozí = celá šířka mapy: všechny body
      * jsou vodorovně vždy na obrazovce a dají se naklikat, kamera jezdí svisle.
      */
-    val artPixelsAcross: Int = artW
+    val artPixelsAcross: Int = artW,
+    /** Název BiomeType, do kterého vede východ (bez závislosti na Androidu). */
+    val parentBiome: String = "MOUNTAINS",
+    /** Jeskyně = tmavý mechový přechod a jeskynní intro; les = běžné prolnutí a křoví. */
+    val isCave: Boolean = true
 ) {
     private val byId = nodes.associateBy { it.id }
 
@@ -53,7 +57,7 @@ data class CaveMap(
      * Pata krystalu v art pixelech: jeden pixel nad podstavcem oltáře (podstavec má horní řádek
      * 2 px nad středem oltáře, oltář je [ALTAR_ABOVE] px nad uzlem).
      */
-    val crystalBase: Pair<Int, Int> get() = node(crystalNode)!!.let { it.x to it.y - ALTAR_ABOVE - 3 }
+    val crystalBase: Pair<Int, Int> get() = node(crystalNode!!)!!.let { it.x to it.y - ALTAR_ABOVE - 3 }
 
     companion object {
         const val ALTAR_ABOVE = 16

@@ -30,5 +30,6 @@ object BiomeAccess {
 val BiomeType.wildBiome: BiomeType
     get() = when (this) {
         BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE -> BiomeType.MOUNTAINS
+        BiomeType.FOREST -> BiomeType.MEADOW
         else -> this
     }
