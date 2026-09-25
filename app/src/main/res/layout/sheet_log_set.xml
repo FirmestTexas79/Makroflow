@@ -34,6 +34,49 @@
         android:alpha="0.75"
         android:textColor="@color/brand_primary"
         android:textSize="13sp" />
+
+    <!-- Náčiní (docs/adr/0028): animovaný obrázek podle váhy, volba náčiní a rozpis kotoučů -->
+    <LinearLayout
+        android:id="@+id/cardEquipment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_stat_tile"
+        android:orientation="vertical"
+        android:paddingHorizontal="10dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="10dp">
+
+        <cz.uhk.macroflow.training.equipment.EquipmentView
+            android:id="@+id/equipmentView"
+            android:layout_width="match_parent"
+            android:layout_height="150dp" />
+
+        <TextView
+            android:id="@+id/tvEquipmentSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:textColor="@color/brand_dark"
+            android:textSize="13.5sp" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipsEquipment"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:chipSpacingHorizontal="6dp"
+                app:selectionRequired="true"
+                app:singleLine="true"
+                app:singleSelection="true" />
+        </HorizontalScrollView>
+    </LinearLayout>
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

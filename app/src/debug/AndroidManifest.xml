@@ -12,5 +12,9 @@
             android:name="cz.uhk.macroflow.widget.WidgetPreviewActivity"
             android:exported="true"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+        <activity
+            android:name="cz.uhk.macroflow.training.equipment.EquipmentPreviewActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
     </application>
 </manifest>

@@ -12,7 +12,14 @@ import android.widget.Toast
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.materialswitch.MaterialSwitch
+import android.content.res.ColorStateList
+import androidx.core.widget.NestedScrollView
+import cz.uhk.macroflow.training.equipment.EquipmentView
+import cz.uhk.macroflow.training.equipment.Rig
+import cz.uhk.macroflow.training.equipment.RigMath
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.WorkoutSetEntity
 import cz.uhk.macroflow.training.exercises.Equipment
@@ -40,7 +47,8 @@ object LogSetSheet {
     ) {
         val dialog = BottomSheetDialog(ctx)
         val v = View.inflate(ctx, R.layout.sheet_log_set, null)
-        dialog.setContentView(v)
+        // s obrázkem náčiní je panel vyšší – na menších displejích se musí dát posouvat
+        dialog.setContentView(NestedScrollView(ctx).apply { addView(v) })
         dialog.setOnShowListener {
             dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(Color.TRANSPARENT)
             dialog.behavior.skipCollapsed = true; dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
@@ -54,12 +62,35 @@ object LogSetSheet {
         val startR = lastToday?.reps ?: prefillReps ?: range.min
 
         v.findViewById<TextView>(R.id.tvLogSetTitle).text = exercise.name
-        v.findViewById<TextView>(R.id.tvLogSetSub).text = when {
+        val tvSub = v.findViewById<TextView>(R.id.tvLogSetSub)
+
+        // ── Náčiní (docs/adr/0028) ──
+        val prefs = ctx.getSharedPreferences(RIG_PREFS, Context.MODE_PRIVATE)
+        var rig: Rig? = Rig.resolve(exercise, prefs.getString("rig_${exercise.id}", null))
+        val eqView = v.findViewById<EquipmentView>(R.id.equipmentView)
+        val tvEq = v.findViewById<TextView>(R.id.tvEquipmentSummary)
+        val chipsEq = v.findViewById<ChipGroup>(R.id.chipsEquipment)
+        fun subText() = when {
             bodyweight -> "Váha = přidaná zátěž (vesta, kotouč); 0 = jen vlastní váha"
+            rig != null -> rig!!.weightHint
             exercise.equipment == Equipment.DUMBBELL -> "Váha jedné jednoručky"
             exercise.equipment == Equipment.BARBELL -> "Celková váha včetně osy"
             else -> "Váha na stroji / kladce"
         } + " · ${todaySets.size + 1}. série" + (template?.let { " · ${WorkoutTemplates.label(it)}" } ?: "")
+        tvSub.text = subText()
+        val options = Rig.options(exercise)
+        v.findViewById<View>(R.id.cardEquipment).visibility = if (rig == null) View.GONE else View.VISIBLE
+        val dark = ctx.getColor(R.color.brand_dark); val cream = ctx.getColor(R.color.brand_cream)
+        val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+        if (options.size > 1) options.forEach { o ->
+            chipsEq.addView(Chip(ctx).apply {
+                id = View.generateViewId(); tag = o
+                text = o.label; isCheckable = true; isCheckedIconVisible = false; isChecked = o == rig
+                chipBackgroundColor = ColorStateList(states, intArrayOf(dark, ctx.getColor(R.color.brand_primary_alpha10)))
+                setTextColor(ColorStateList(states, intArrayOf(cream, dark)))
+                chipStrokeWidth = 0f
+            })
+        } else chipsEq.visibility = View.GONE
 
         val etW = v.findViewById<EditText>(R.id.etWeight)
         val etR = v.findViewById<EditText>(R.id.etReps)
@@ -73,7 +104,22 @@ object LogSetSheet {
         fun r() = etR.text.toString().toIntOrNull()?.coerceAtLeast(0) ?: 0
         val prevBest = history.filter { it.exerciseId == exercise.id }.mapNotNull { StrengthModel.setEstimate(it) }.maxOrNull()
 
+        fun refreshEquipment() {
+            val r = rig ?: return
+            eqView.set(r, w())
+            tvEq.text = RigMath.summary(r, w())
+        }
+        chipsEq.setOnCheckedStateChangeListener { group, ids ->
+            val chosen = ids.firstOrNull()?.let { group.findViewById<View>(it)?.tag as? Rig } ?: return@setOnCheckedStateChangeListener
+            rig = chosen
+            prefs.edit().putString("rig_${exercise.id}", chosen.name).apply()
+            tvSub.text = subText()
+            refreshEquipment()
+            v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+
         fun refresh() {
+            refreshEquipment()
             val probe = LoggedSet(day = 0, exerciseId = exercise.id, weightKg = w(), reps = r(), slowEccentric = swSlow.isChecked, rir = rir)
             val e1 = StrengthModel.setEstimate(probe)
             tvE.text = when {
@@ -124,6 +170,8 @@ object LogSetSheet {
         }
         dialog.show()
     }
+
+    private const val RIG_PREFS = "EquipmentPrefs"
 
     fun kg(v: Double) = String.format(Locale.US, "%.1f", v).replace('.', ',').removeSuffix(",0")
     private fun plain(v: Double) = String.format(Locale.US, "%.2f", v).trimEnd('0').trimEnd('.')
