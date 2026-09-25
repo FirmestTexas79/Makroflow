@@ -242,7 +242,13 @@ class MakrodexFragment : Fragment() {
         }
 
         // Evoluce tlačítko
-        if (isInInventory) {
+        if (isInInventory && entry.makrodexId == cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.SPIRRA_ID) {
+            // Spirra se vyvíjí podle činností, ne podle levelu (docs/adr/0031)
+            btnTestEvo.visibility = View.VISIBLE
+            btnTestEvo.text = "Cesty vývoje"
+            btnTestEvo.setOnClickListener { showSpirraPaths() }
+        } else if (isInInventory) {
+            btnTestEvo.text = getString(R.string.pokedex_btn_evo_test)
             val profile = MakromonGrowthManager.getProfile(entry.makrodexId)
             if (profile != null && profile.evolutionToId.isNotEmpty()) {
                 btnTestEvo.visibility = View.VISIBLE
@@ -281,6 +287,35 @@ class MakrodexFragment : Fragment() {
             }
         } else {
             btnTestEvo.visibility = View.GONE
+        }
+    }
+
+    /** Přehled větví vývoje Spirry a postupu aktivní Spirry. */
+    private fun showSpirraPaths() {
+        val ctx = requireContext().applicationContext
+        lifecycleScope.launch {
+            val (active, progress) = withContext(Dispatchers.IO) {
+                val sp = cz.uhk.macroflow.pokemon.evolution.SpirraBond.activeSpirra(ctx)
+                sp to sp?.let { cz.uhk.macroflow.pokemon.evolution.SpirraBond.progress(ctx, it.id) }
+            }
+            if (!isAdded) return@launch
+            val SE = cz.uhk.macroflow.pokemon.evolution.SpirraEvolution
+            val text = buildString {
+                append(if (active == null) "Počítá se, jen když je Spirra tvým aktivním parťákem na liště. Nastav ji v inventáři.\n\n"
+                       else "Spirra se vyvine podle toho, který cíl splníš první:\n\n")
+                SE.Branch.entries.forEach { b ->
+                    val v = progress?.get(b) ?: 0
+                    val pct = (SE.fraction(b, v) * 100).toInt()
+                    append("${b.displayName.uppercase()}\n${b.task}\n")
+                    append(if (progress != null) "${SE.progressText(b, v)}  ($pct %)\n\n" else "\n")
+                }
+                append("DRAKIRRA\n??? – tajná, zatím jen k ulovení")
+            }
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Cesty vývoje Spirry")
+                .setMessage(text)
+                .setPositiveButton("Zavřít", null)
+                .show()
         }
     }
 
