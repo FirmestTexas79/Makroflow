@@ -237,7 +237,7 @@
 
     <string name="history_badge">DENÍK POKROKU</string>
     <string name="history_title">HISTORIE</string>
-    <string name="history_subtitle">Vyber den a sleduj svůj plán a symetrii</string>
+    <string name="history_subtitle">Vyber den – uvidíš váhu, jídlo, pohyb i symetrii</string>
     <string name="history_month_placeholder">Březen 2026</string>
     <string name="history_today_label">DNES</string>
     <string name="history_label_kcal_plan">KCAL PLÁN</string>
@@ -319,4 +319,5 @@
     <string name="profile_delete_account">Smazat účet a všechna data</string>
     <string name="label_generate_report">Generovat report</string>
     <string name="label_dev_tools">Vývojářské nástroje</string>
+    <string name="label_settings">Nastavení</string>
 </resources>

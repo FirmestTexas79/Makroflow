@@ -393,6 +393,7 @@ class MainActivity : AppCompatActivity() {
                     findViewById<BottomNavigationView>(R.id.bottomNavigation)
                         .selectedItemId = R.id.nav_profile
                 }
+                R.id.drawerAppSettings   -> replaceFragment(AppSettingsFragment())
                 R.id.drawerSettings      -> replaceFragment(SettingsFragment())
                 R.id.drawerAchievements  -> replaceFragment(AchievementsFragment())
 
@@ -405,9 +406,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-                R.id.drawerDisclaimer -> {
-                    Toast.makeText(this, "Aplikace nenahrazuje lékařskou pomoc.", Toast.LENGTH_LONG).show()
-                }
+                R.id.drawerDisclaimer -> AboutInfo.show(this)
 
                 // ── Účet ──────────────────────────────────────────────
                 R.id.drawerSignOut -> handleSignOut()

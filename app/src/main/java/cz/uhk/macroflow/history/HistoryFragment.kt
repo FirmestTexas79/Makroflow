@@ -87,11 +87,19 @@ class HistoryFragment : Fragment() {
         tvHeatSummary    = view.findViewById(R.id.tvHeatSummary)
         tvHeatNote       = view.findViewById(R.id.tvHeatNote)
 
+        tvCalToggle = view.findViewById(R.id.tvCalToggle)
+        btnNextMonth = view.findViewById(R.id.btnNextMonth)
+        weekAnchor = LocalDate.parse(selectedDateKey)
+        calExpanded = requireContext().getSharedPreferences("HistoryPrefs", Context.MODE_PRIVATE).getBoolean("cal_expanded", false)
         view.findViewById<ImageButton>(R.id.btnPrevMonth).setOnClickListener {
-            calendar.add(Calendar.MONTH, -1)
+            if (calExpanded) calendar.add(Calendar.MONTH, -1) else weekAnchor = weekAnchor.minusWeeks(1)
             renderCalendar()
         }
         view.findViewById<ImageButton>(R.id.btnNextMonth).setOnClickListener {
+            if (!calExpanded) {
+                if (CalendarWeek.canGoForward(weekAnchor, LocalDate.now())) { weekAnchor = weekAnchor.plusWeeks(1); renderCalendar() }
+                return@setOnClickListener
+            }
             val now = Calendar.getInstance()
             if (calendar.get(Calendar.YEAR) < now.get(Calendar.YEAR) ||
                 (calendar.get(Calendar.YEAR) == now.get(Calendar.YEAR) &&
@@ -99,6 +107,15 @@ class HistoryFragment : Fragment() {
                 calendar.add(Calendar.MONTH, 1)
                 renderCalendar()
             }
+        }
+        view.findViewById<TextView>(R.id.tvCalToggle).setOnClickListener {
+            calExpanded = !calExpanded
+            requireContext().getSharedPreferences("HistoryPrefs", Context.MODE_PRIVATE).edit().putBoolean("cal_expanded", calExpanded).apply()
+            if (calExpanded) {
+                calendar.time = Date.from(weekAnchor.atStartOfDay(ZoneId.systemDefault()).toInstant())
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+            } else weekAnchor = LocalDate.parse(selectedDateKey)
+            renderCalendar()
         }
 
         calendar.set(Calendar.DAY_OF_MONTH, 1)
@@ -115,10 +132,29 @@ class HistoryFragment : Fragment() {
         return view
     }
 
+    /** Týden ⇄ celý měsíc (docs/adr/0022); výchozí je kompaktní týden vybraného dne. */
+    private var calExpanded = false
+    private var tvCalToggle: TextView? = null
+    private var btnNextMonth: View? = null
+    private var weekAnchor: LocalDate = LocalDate.now()
+
     private fun renderCalendar() {
-        tvMonthLabel.text = monthSdf.format(calendar.time).replaceFirstChar { it.uppercase() }
         calGrid.removeAllViews()
         val today = dateKeySdf.format(Date())
+        tvCalToggle?.text = if (calExpanded) "JEN TÝDEN  ▴" else "CELÝ MĚSÍC  ▾"
+        if (!calExpanded) {
+            val now = LocalDate.now()
+            tvMonthLabel.text = CalendarWeek.label(weekAnchor, now)
+            btnNextMonth?.alpha = if (CalendarWeek.canGoForward(weekAnchor, now)) 1f else 0.35f
+            CalendarWeek.days(weekAnchor).forEach { d ->
+                val key = d.toString()
+                calGrid.addView(makeDayCell(d.dayOfMonth.toString(), key, key == today, key == selectedDateKey,
+                    isFuture = d.isAfter(now), isWeekend = d.dayOfWeek.value >= 6))
+            }
+            return
+        }
+        btnNextMonth?.alpha = 1f
+        tvMonthLabel.text = monthSdf.format(calendar.time).replaceFirstChar { it.uppercase() }
         val displayCal = calendar.clone() as Calendar
         displayCal.set(Calendar.DAY_OF_MONTH, 1)
         var firstDow = displayCal.get(Calendar.DAY_OF_WEEK) - Calendar.MONDAY
@@ -172,6 +208,7 @@ class HistoryFragment : Fragment() {
     /** Výběr dne z kalendáře i z heatmapy: kalendář přeskočí na měsíc dne. */
     private fun selectDate(dateKey: String) {
         selectedDateKey = dateKey
+        weekAnchor = LocalDate.parse(dateKey)
         dateKeySdf.parse(dateKey)?.let { calendar.time = it; calendar.set(Calendar.DAY_OF_MONTH, 1) }
         renderCalendar()
         loadData(dateKey)

@@ -18,6 +18,12 @@
             android:checkable="true" />
 
         <item
+            android:id="@+id/drawerAppSettings"
+            android:icon="@drawable/ic_line_gear"
+            android:title="@string/label_settings"
+            android:checkable="true" />
+
+        <item
             android:id="@+id/nav_generate_report"
             android:icon="@drawable/ic_description"
             android:title="@string/label_generate_report" />

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vlastní linková ikona (styl aplikace) – docs/adr/0018, 0022: nastavení (posuvníky) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M4,7 L20,7 M4,12 L20,12 M4,17 L20,17" android:strokeColor="#283618" android:strokeWidth="1.8" android:strokeLineCap="round" android:fillColor="#00000000" />
+    <path android:pathData="M9,5 A2,2 0 1,1 8.99,5 Z" android:strokeColor="#283618" android:strokeWidth="1.8" android:fillColor="#FEFAE0" />
+    <path android:pathData="M15,10 A2,2 0 1,1 14.99,10 Z" android:strokeColor="#283618" android:strokeWidth="1.8" android:fillColor="#FEFAE0" />
+    <path android:pathData="M7,15 A2,2 0 1,1 6.99,15 Z" android:strokeColor="#283618" android:strokeWidth="1.8" android:fillColor="#FEFAE0" />
+</vector>

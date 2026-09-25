@@ -51,7 +51,8 @@ class MakromonBarController(
         val acquired = prefs.getBoolean("pokemonAcquired", false)
         val activeCaughtDate = prefs.getLong("currentOnBarCaughtDate", -1L)
 
-        if (!acquired || activeCaughtDate == -1L) {
+        // Parťák jde v Nastavení schovat (zakrývá spodní část obrazovek) – docs/adr/0022
+        if (!acquired || activeCaughtDate == -1L || !AppSettings.companionOnScreen(activity)) {
             hide()
             return
         }

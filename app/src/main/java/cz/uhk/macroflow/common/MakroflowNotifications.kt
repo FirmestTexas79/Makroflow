@@ -27,6 +27,9 @@ import java.util.*
  * MakroflowNotifications — centrální správa všech notifikací.
  *
  * Notifikace:
+ *  Každé upozornění jde vypnout v Nastavení; časy ranního, večerního a „série“ jdou změnit
+ *  (AppSettings + Reminder, docs/adr/0022).
+ *
  *  1. MORNING_RITUAL    — 8:00 každý den → připomínka ranního rituálu
  *  2. PRE_WORKOUT       — 30 min před tréninkem → čas na PRE jídlo
  *  3. POST_WORKOUT      — po skončení tréninku (+75min) → POST okno otevřeno
@@ -109,32 +112,37 @@ object MakroflowNotifications {
     // ═══════════════════════════════════════════════════════════════
     // Naplánování všech notifikací
     // ═══════════════════════════════════════════════════════════════
+    /**
+     * Naplánuje zapnutá upozornění a zruší vypnutá (AppSettings, docs/adr/0022).
+     * Volá se při startu, po restartu telefonu a po každé změně v Nastavení.
+     */
     fun scheduleAll(context: Context) {
-        scheduleMorningRitual(context)
-        scheduleWorkoutNotifications(context)
-        scheduleWaterReminders(context)
-        scheduleEveningLog(context)
-        scheduleStreakRisk(context)
+        fun on(r: Reminder) = AppSettings.isOn(context, r)
+        if (on(Reminder.MORNING)) scheduleMorningRitual(context) else cancelAlarm(context, REQ_MORNING_RITUAL, ACTION_MORNING_RITUAL)
+        if (on(Reminder.WORKOUT)) scheduleWorkoutNotifications(context) else cancelWorkoutNotifications(context)
+        if (on(Reminder.WATER)) scheduleWaterReminders(context) else cancelAlarm(context, REQ_WATER, ACTION_WATER_REMINDER)
+        if (on(Reminder.EVENING)) scheduleEveningLog(context) else cancelAlarm(context, REQ_EVENING_LOG, ACTION_EVENING_LOG)
+        if (on(Reminder.STREAK)) scheduleStreakRisk(context) else cancelAlarm(context, REQ_STREAK_RISK, ACTION_STREAK_RISK)
+    }
+
+    /** Čas denního upozornění v ms podle nastavení. */
+    private fun nextDailyMs(context: Context, r: Reminder): Long {
+        val minutes = AppSettings.minutes(context, r) ?: r.defaultMinutes ?: 0
+        val t = ReminderSchedule.nextDaily(java.time.LocalDateTime.now(), minutes)
+        return t.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
 
     // Přeplánuj jen workout notifikace (při změně času tréninku)
     fun rescheduleWorkout(context: Context) {
         cancelWorkoutNotifications(context)
-        scheduleWorkoutNotifications(context)
+        if (AppSettings.isOn(context, Reminder.WORKOUT)) scheduleWorkoutNotifications(context)
     }
 
     // ═══════════════════════════════════════════════════════════════
     // 1. RANNÍ RITUÁL — každý den 8:00
     // ═══════════════════════════════════════════════════════════════
     private fun scheduleMorningRitual(context: Context) {
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 8)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (before(Calendar.getInstance())) add(Calendar.DAY_OF_YEAR, 1)
-        }
-        setRepeatingAlarm(context, cal.timeInMillis,
+        setRepeatingAlarm(context, nextDailyMs(context, Reminder.MORNING),
             AlarmManager.INTERVAL_DAY, REQ_MORNING_RITUAL, ACTION_MORNING_RITUAL)
     }
 
@@ -175,31 +183,18 @@ object MakroflowNotifications {
     // 4. VODA — každé 2 hodiny 9:00–21:00
     // ═══════════════════════════════════════════════════════════════
     private fun scheduleWaterReminders(context: Context) {
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 9)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            if (before(Calendar.getInstance())) {
-                // Najdi příští celou hodinu
-                add(Calendar.HOUR_OF_DAY, 2)
-            }
-        }
-        // Každé 2 hodiny
-        setRepeatingAlarm(context, cal.timeInMillis,
-            AlarmManager.INTERVAL_HOUR * 2, REQ_WATER, ACTION_WATER_REMINDER)
+        val next = ReminderSchedule.nextWaterSlot(java.time.LocalDateTime.now())
+            .atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        // Každé 2 hodiny; mimo 9–21 h receiver nic neukáže
+        setRepeatingAlarm(context, next,
+            AlarmManager.INTERVAL_HOUR * ReminderSchedule.WATER_EVERY_HOURS, REQ_WATER, ACTION_WATER_REMINDER)
     }
 
     // ═══════════════════════════════════════════════════════════════
     // 5. VEČERNÍ LOG — 20:00 každý den
     // ═══════════════════════════════════════════════════════════════
     private fun scheduleEveningLog(context: Context) {
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 20)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            if (before(Calendar.getInstance())) add(Calendar.DAY_OF_YEAR, 1)
-        }
-        setRepeatingAlarm(context, cal.timeInMillis,
+        setRepeatingAlarm(context, nextDailyMs(context, Reminder.EVENING),
             AlarmManager.INTERVAL_DAY, REQ_EVENING_LOG, ACTION_EVENING_LOG)
     }
 
@@ -207,13 +202,7 @@ object MakroflowNotifications {
     // 6. STREAK RISK — 21:00 každý den
     // ═══════════════════════════════════════════════════════════════
     private fun scheduleStreakRisk(context: Context) {
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 21)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            if (before(Calendar.getInstance())) add(Calendar.DAY_OF_YEAR, 1)
-        }
-        setRepeatingAlarm(context, cal.timeInMillis,
+        setRepeatingAlarm(context, nextDailyMs(context, Reminder.STREAK),
             AlarmManager.INTERVAL_DAY, REQ_STREAK_RISK, ACTION_STREAK_RISK)
     }
 
@@ -241,7 +230,7 @@ object MakroflowNotifications {
             makePendingIntent(context, reqCode, action))
     }
 
-    private fun cancelAlarm(context: Context, reqCode: Int, action: String) {
+    fun cancelAlarm(context: Context, reqCode: Int, action: String) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         am.cancel(makePendingIntent(context, reqCode, action))
     }
@@ -262,6 +251,16 @@ object MakroflowNotifications {
 class NotificationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        // Staré alarmy po vypnutí v Nastavení nic neukážou
+        val reminder = when (intent.action) {
+            MakroflowNotifications.ACTION_MORNING_RITUAL -> Reminder.MORNING
+            MakroflowNotifications.ACTION_PRE_WORKOUT, MakroflowNotifications.ACTION_POST_WORKOUT -> Reminder.WORKOUT
+            MakroflowNotifications.ACTION_WATER_REMINDER -> Reminder.WATER
+            MakroflowNotifications.ACTION_EVENING_LOG -> Reminder.EVENING
+            MakroflowNotifications.ACTION_STREAK_RISK -> Reminder.STREAK
+            else -> null
+        }
+        if (reminder != null && !AppSettings.isOn(context, reminder)) return
         when (intent.action) {
             MakroflowNotifications.ACTION_MORNING_RITUAL -> handleMorningRitual(context)
             MakroflowNotifications.ACTION_PRE_WORKOUT    -> handlePreWorkout(context)
@@ -340,9 +339,12 @@ class NotificationReceiver : BroadcastReceiver() {
         }
 
         val totalMl = AppDatabase.Companion.getDatabase(context).waterDao().getTotalMlForDateSync(today)
-        if (totalMl >= 2500) return  // Splnil cíl — neruš
+        // Osobní cíl pitného režimu (dřív napevno 2,5 l)
+        val targetMl = runCatching { (cz.uhk.macroflow.dashboard.MacroCalculator.calculate(context).water * 1000).toInt() }
+            .getOrDefault(2500).takeIf { it > 0 } ?: 2500
+        if (totalMl >= targetMl) return  // Splnil cíl — neruš
 
-        val remaining = 2500 - totalMl
+        val remaining = targetMl - totalMl
         showNotification(context,
             id      = MakroflowNotifications.ID_WATER_REMINDER,
             channel = MakroflowNotifications.CHANNEL_WATER,
@@ -385,9 +387,10 @@ class NotificationReceiver : BroadcastReceiver() {
         val checkIn = AppDatabase.Companion.getDatabase(context).checkInDao().getCheckInByDateSync(today)
         if (checkIn != null) return  // Rituál udělán — streak v bezpečí
 
-        // Zjisti jak dlouhý streak má uživatel
-        val allCheckIns = AppDatabase.Companion.getDatabase(context).checkInDao().getAllCheckInsSync()
-        val streakDays = allCheckIns.size.coerceAtLeast(0)
+        // Série = po sobě jdoucí dny s check-inem končící včerejškem (dřív počet všech check-inů)
+        val days = AppDatabase.Companion.getDatabase(context).checkInDao().getAllCheckInsSync()
+            .mapNotNull { runCatching { java.time.LocalDate.parse(it.date) }.getOrNull() }.toSet()
+        val streakDays = ReminderSchedule.streakAtRisk(days, java.time.LocalDate.now())
 
         if (streakDays < 2) return  // Nemá streak co ztratit
 

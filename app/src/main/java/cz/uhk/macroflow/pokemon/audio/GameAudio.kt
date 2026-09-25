@@ -7,6 +7,7 @@ import android.media.SoundPool
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import cz.uhk.macroflow.common.AppSettings
 
 /**
  * Hudba a zvuky Makrosvěta (docs/adr/0017).
@@ -15,7 +16,8 @@ import android.os.SystemClock
  *   skladba ztiší a nová náběhem zesílí. Stejná skladba při přechodu (louka ↔ hvozd) hraje dál.
  * * Během souboje se hudba ztiší na [MusicMap.BATTLE_DUCK].
  * * Zvuky: SoundPool (začátek souboje, chycení, poražení).
- * * Vypínač zvuku v Makrosvětě: GamePrefs „soundEnabled“ (výchozí zapnuto).
+ * * Hudba a efekty se vypínají zvlášť v Nastavení (AppSettings, docs/adr/0022); tlačítko
+ *   v mapě přepíná obojí najednou.
  */
 object GameAudio {
     enum class Sfx(val res: String) { BATTLE_START("sfx_battle_start"), CATCH("sfx_catch"), VICTORY("sfx_victory") }
@@ -34,10 +36,19 @@ object GameAudio {
         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
         .build()
 
-    fun isEnabled(ctx: Context) = ctx.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).getBoolean(PREF, true)
+    /** Hraje něco? (tlačítko v mapě ukazuje zapnuto, když je zapnutá hudba nebo efekty) */
+    fun isEnabled(ctx: Context) = AppSettings.musicEnabled(ctx) || AppSettings.sfxEnabled(ctx)
 
+    /** Tlačítko v mapě: hudba i efekty najednou. */
     fun setEnabled(ctx: Context, on: Boolean) {
         ctx.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit().putBoolean(PREF, on).apply()
+        AppSettings.setSfxEnabled(ctx, on)
+        setMusicEnabled(ctx, on)
+    }
+
+    /** Nastavení: jen hudba. */
+    fun setMusicEnabled(ctx: Context, on: Boolean) {
+        AppSettings.setMusicEnabled(ctx, on)
         if (on) { val t = track; track = null; t?.let { playTrack(ctx, it) } } else stopMusic(fade = true)
     }
 
@@ -52,7 +63,7 @@ object GameAudio {
     private fun playTrack(ctx: Context, name: String) {
         if (name == track && player != null) return
         track = name
-        if (!isEnabled(ctx)) return
+        if (!AppSettings.musicEnabled(ctx)) return
         val old = player
         player = null
         if (old != null) fadeOutAndRelease(old)
@@ -104,7 +115,7 @@ object GameAudio {
 
     fun resume(ctx: Context) {
         paused = false
-        if (!isEnabled(ctx)) return
+        if (!AppSettings.musicEnabled(ctx)) return
         runCatching { player?.start() }
     }
 
@@ -134,7 +145,7 @@ object GameAudio {
     fun preload(ctx: Context) { pool(ctx) }
 
     fun sfx(ctx: Context, s: Sfx) {
-        if (!isEnabled(ctx)) return
+        if (!AppSettings.sfxEnabled(ctx)) return
         val id = sfxIds[s] ?: run { pool(ctx); sfxIds[s] } ?: return
         pool(ctx).play(id, 1f, 1f, 1, 0, 1f)
     }

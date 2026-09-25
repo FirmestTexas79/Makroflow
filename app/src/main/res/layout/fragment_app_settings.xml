@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Nastavení (docs/adr/0022): upozornění (každé zvlášť, u denních i čas), zvuk, parťák na obrazovce,
+    promo kódy a informace o aplikaci. Řádky se skládají v AppSettingsFragment z item_setting_row.
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/brand_cream">
+
+    <ImageView
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-40dp"
+        android:layout_marginEnd="-70dp"
+        android:alpha="0.07"
+        android:importantForAccessibility="no"
+        android:rotation="-30"
+        android:src="@drawable/bg_monstera_leaf_1"
+        app:tint="@color/brand_dark" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="190dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="56dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="@color/brand_primary"
+                android:letterSpacing="0.12"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="6dp"
+                android:text="APLIKACE"
+                android:textColor="@color/brand_cream"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="10dp"
+                android:fontFamily="sans-serif-black"
+                android:lineSpacingMultiplier="0.9"
+                android:text="Nastavení"
+                android:textColor="@color/brand_dark"
+                android:textSize="40sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="4dp"
+                android:alpha="0.75"
+                android:text="Upozornění, zvuky a to, co se ti zobrazuje"
+                android:textColor="@color/brand_primary"
+                android:textSize="13sp" />
+
+            <TextView style="@style/ProfileSection" android:text="UPOZORNĚNÍ" />
+            <!-- Systém má upozornění pro aplikaci vypnutá -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardNotifBlocked"
+                style="@style/ProfileCard"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/brand_dark"
+                app:strokeWidth="0dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:lineSpacingExtra="1dp"
+                        android:text="Telefon má upozornění Makroflow vypnutá – nastavení níže se neprojeví."
+                        android:textColor="@color/brand_cream"
+                        android:textSize="13sp" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnNotifAllow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:backgroundTint="@color/brand_accent_warm"
+                        android:text="Povolit"
+                        android:textColor="@color/brand_dark"
+                        app:cornerRadius="14dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout android:id="@+id/llNotifications" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="4dp" />
+            </com.google.android.material.card.MaterialCardView>
+            <TextView style="@style/ProfileSection" android:text="ZVUK" />
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout android:id="@+id/llSound" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="4dp" />
+            </com.google.android.material.card.MaterialCardView>
+            <TextView style="@style/ProfileSection" android:text="ZOBRAZENÍ" />
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout android:id="@+id/llDisplay" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="4dp" />
+            </com.google.android.material.card.MaterialCardView>
+            <TextView style="@style/ProfileSection" android:text="ODMĚNY" />
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilPromo"
+                        style="@style/ProfileField"
+                        android:hint="Promo kód"
+                        app:startIconDrawable="@drawable/ic_line_gift"
+                        app:startIconTint="@color/brand_primary">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etPromo"
+                            style="@style/ProfileFieldInput"
+                            android:imeOptions="actionDone"
+                            android:inputType="textCapCharacters|textNoSuggestions" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPromo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="56dp"
+                        android:layout_marginStart="10dp"
+                        android:backgroundTint="@color/brand_dark"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Uplatnit"
+                        android:textColor="@color/brand_cream"
+                        app:cornerRadius="14dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView style="@style/ProfileSection" android:text="O APLIKACI" />
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout android:id="@+id/llAbout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="4dp" />
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

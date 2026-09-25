@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stopa vypínače v Nastavení: zapnuto značková zelená, vypnuto tlumená. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/brand_primary" android:state_checked="true" android:state_enabled="true" />
+    <item android:color="@color/brand_dark_alpha20" android:state_enabled="false" />
+    <item android:color="@color/brand_dark_alpha40" />
+</selector>
