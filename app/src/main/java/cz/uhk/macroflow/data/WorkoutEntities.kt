@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.Flow
 /**
  * Zapsaná série z tréninkového deníku (docs/adr/0023, 0024). [exerciseId] = ExerciseLibrary id,
  * [weightKg] 0 = vlastní váha, u jednoruček váha jedné jednoručky, [slowEccentric] = pomalé
- * spouštění, [template] = šablona dne („PUSH_A“), null = zápis mimo šablonu (z atlasu).
+ * spouštění, [template] = šablona dne („PUSH_A“), null = zápis mimo šablonu (z atlasu),
+ * [rir] = opakování v rezervě (výchozí 2, viz StrengthModel.DEFAULT_RIR).
  */
 @Entity(tableName = "workout_sets", indices = [Index(value = ["exerciseId", "date"]), Index(value = ["date"])])
 data class WorkoutSetEntity(
@@ -25,12 +26,13 @@ data class WorkoutSetEntity(
     val weightKg: Double,
     val reps: Int,
     val slowEccentric: Boolean = false,
-    val template: String? = null
+    val template: String? = null,
+    val rir: Int = 2
 ) {
     fun toLogged(order: Int = 0) = LoggedSet(
         id = id, day = java.time.LocalDate.parse(date).toEpochDay().toInt(),
         exerciseId = exerciseId, weightKg = weightKg, reps = reps, order = order,
-        slowEccentric = slowEccentric, template = template
+        slowEccentric = slowEccentric, template = template, rir = rir
     )
 }
 

@@ -62,7 +62,7 @@ class WorkoutLogSection(private val fragment: Fragment, private val root: View, 
             ?: "Začni vahou, se kterou zvládneš ${range.max} opakování s 1–2 v rezervě. Příště ti poradím, kdy přidat."
         root.findViewById<TextView>(R.id.tvLogLast).apply {
             visibility = if (last != null) View.VISIBLE else View.GONE
-            text = last?.let { s -> "Minule (${date(s.day)}): " + s.sets.joinToString(" · ") { setLabel(it.weightKg, it.reps, it.slowEccentric) } } ?: ""
+            text = last?.let { s -> "Minule (${date(s.day)}): " + s.sets.joinToString(" · ") { setLabel(it.weightKg, it.reps, it.slowEccentric, it.rir) } } ?: ""
         }
 
         // Dnešní série
@@ -72,7 +72,7 @@ class WorkoutLogSection(private val fragment: Fragment, private val root: View, 
         chips.removeAllViews()
         todaySets.forEachIndexed { i, s ->
             chips.addView(Chip(ctx).apply {
-                text = "${i + 1}.  ${setLabel(s.weightKg, s.reps, s.slowEccentric)}"
+                text = "${i + 1}.  ${setLabel(s.weightKg, s.reps, s.slowEccentric, s.rir)}"
                 isCloseIconVisible = true
                 closeIconContentDescription = "Smazat sérii"
                 chipBackgroundColor = ContextCompat.getColorStateList(ctx, R.color.brand_primary_alpha10)
@@ -104,8 +104,9 @@ class WorkoutLogSection(private val fragment: Fragment, private val root: View, 
 
     private fun kg(v: Double) = String.format(Locale.US, "%.1f", v).replace('.', ',').removeSuffix(",0")
 
-    private fun setLabel(w: Double, r: Int, slow: Boolean = false) =
-        (if (w <= 0.0) "$r ×" else "${kg(w)} kg × $r") + if (slow) " (pomalu)" else ""
+    private fun setLabel(w: Double, r: Int, slow: Boolean = false, rir: Int = StrengthModel.DEFAULT_RIR) =
+        (if (w <= 0.0) "$r ×" else "${kg(w)} kg × $r") + listOfNotNull(if (slow) "pomalu" else null, if (rir != StrengthModel.DEFAULT_RIR) "RIR $rir" else null)
+            .takeIf { it.isNotEmpty() }?.joinToString(", ", " (", ")").orEmpty()
 
     private fun date(day: Int) = LocalDate.ofEpochDay(day.toLong()).let { "${it.dayOfMonth}. ${it.monthValue}." }
 }

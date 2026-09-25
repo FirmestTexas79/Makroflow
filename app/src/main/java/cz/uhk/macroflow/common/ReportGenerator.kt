@@ -408,7 +408,7 @@ object ReportGenerator {
     /**
      * Stránka „Silový deník“ (docs/adr/0024): cviky zapsané za posledních 28 dní, u každého model
      * síly (1RM s 95% intervalem, týdenní trend, předpověď na další trénink, připravenost),
-     * mini graf vývoje a poslední tréninky se sériemi (p = pomalé spouštění).
+     * mini graf vývoje a poslední tréninky se sériemi (p = pomalé spouštění, @n = RIR odlišné od 2).
      */
     private fun drawStrengthSection(pdf: PdfDocument, title: String, context: Context, db: AppDatabase) {
         val today = java.time.LocalDate.now()
@@ -434,9 +434,11 @@ object ReportGenerator {
         c.drawText("SILOVÝ DENÍK (posledních 28 dní)", MARGIN, y, paint)
         y += 14f
         paint.textSize = 8f; paint.typeface = Typeface.DEFAULT; paint.color = Color.DKGRAY
-        c.drawText("1RM = odhad maxima na 1 opakování z modelu síly (Kalmanův filtr nad odhady z Epleyho vzorce, pomalé spouštění přepočteno).", MARGIN, y, paint)
+        c.drawText("1RM = odhad maxima na 1 opakování z modelu síly (Kalmanův filtr nad Epleyho odhady, přepočteno tempo a RIR).", MARGIN, y, paint)
         y += 10f
-        c.drawText("Připraven = váha pro cílová opakování se 2 opakováními v rezervě. Série: váha × opakování, p = pomalé spouštění.", MARGIN, y, paint)
+        c.drawText("Připraven = váha pro cílová opakování se 2 opakováními v rezervě (RIR 2).", MARGIN, y, paint)
+        y += 10f
+        c.drawText("Série: váha × opakování, p = pomalé spouštění, @n = n opakování v rezervě (bez značky = RIR 2).", MARGIN, y, paint)
         y += 18f
 
         // Pořadí: podle šablon (PUSH A…), pak ostatní
@@ -494,7 +496,8 @@ object ReportGenerator {
             sessions.entries.toList().takeLast(4).forEach { (day, sets) ->
                 val best = sets.mapNotNull { cz.uhk.macroflow.training.log.StrengthModel.setEstimate(it) }.maxOrNull()
                 val txt = "${date(day)}  " + sets.sortedBy { it.order }.joinToString("  ") { s ->
-                    (if (s.weightKg > 0) "${kg(s.weightKg)}×${s.reps}" else "${s.reps}×") + if (s.slowEccentric) "p" else ""
+                    (if (s.weightKg > 0) "${kg(s.weightKg)}×${s.reps}" else "${s.reps}×") + (if (s.slowEccentric) "p" else "") +
+                        (if (s.rir != cz.uhk.macroflow.training.log.StrengthModel.DEFAULT_RIR) "@${s.rir}" else "")
                 } + (best?.let { "   (≈ ${kg(it)} kg)" } ?: "")
                 c.drawText(txt, MARGIN + 6f, y, paint)
                 y += 11f

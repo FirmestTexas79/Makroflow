@@ -18,8 +18,17 @@ class StrengthModelTest {
         val normal = StrengthModel.setEstimate(set(1, 60.0, 8))!!
         val slow = StrengthModel.setEstimate(set(1, 60.0, 8, slow = true))!!
         assertTrue(slow > normal)
-        assertEquals(60.0 * (1 + (8 * StrengthModel.TEMPO_FACTOR + StrengthModel.ASSUMED_RIR) / 30), slow, 1e-9)
-        assertEquals(60.0 * (1 + (8 + StrengthModel.ASSUMED_RIR) / 30), normal, 1e-9)
+        assertEquals(60.0 * (1 + (8 * StrengthModel.TEMPO_FACTOR + StrengthModel.DEFAULT_RIR) / 30.0), slow, 1e-9)
+        assertEquals(60.0 * (1 + (8 + StrengthModel.DEFAULT_RIR) / 30.0), normal, 1e-9)
+    }
+
+    @Test
+    fun loggedRirChangesEstimate() {
+        val toFailure = StrengthModel.setEstimate(LoggedSet(day = 1, exerciseId = "x", weightKg = 60.0, reps = 8, rir = 0))!!
+        val default = StrengthModel.setEstimate(LoggedSet(day = 1, exerciseId = "x", weightKg = 60.0, reps = 8))!!
+        assertEquals(60.0 * (1 + 8 / 30.0), toFailure, 1e-9)
+        assertEquals(60.0 * (1 + 10 / 30.0), default, 1e-9)            // výchozí RIR 2
+        assertEquals(StrengthModel.effectiveReps(8, false, 5), StrengthModel.effectiveReps(8, false, 9), 1e-9)   // omezeno na 5
     }
 
     @Test
@@ -27,15 +36,15 @@ class StrengthModelTest {
         assertNull(StrengthModel.setEstimate(set(1, 0.0, 10)))      // vlastní váha
         assertNull(StrengthModel.setEstimate(set(1, 20.0, 25)))     // přes 20 opakování
         assertNull(StrengthModel.setEstimate(set(1, 60.0, 0)))
-        assertEquals(100.0 * (1 + (1 + StrengthModel.ASSUMED_RIR) / 30), StrengthModel.setEstimate(set(1, 100.0, 1))!!, 1e-9)
+        assertEquals(100.0 * (1 + (1 + StrengthModel.DEFAULT_RIR) / 30.0), StrengthModel.setEstimate(set(1, 100.0, 1))!!, 1e-9)
     }
 
     @Test
     fun onlyBestSetPerDayIsObservation() {
         val obs = StrengthModel.observations(listOf(set(1, 60.0, 10), set(1, 60.0, 8), set(1, 40.0, 12), set(3, 62.5, 8)))
         assertEquals(2, obs.size)
-        assertEquals(60.0 * (1 + 11 / 30.0), obs[0].e1rm, 1e-9)       // 60 × 10 (+1 rezerva)
-        assertTrue(obs[0].sd > StrengthModel.obsSd(9.0))
+        assertEquals(60.0 * (1 + 12 / 30.0), obs[0].e1rm, 1e-9)       // 60 × 10 (+2 rezerva)
+        assertTrue(obs[0].sd > StrengthModel.obsSd(10.0))
     }
 
     @Test
@@ -43,7 +52,7 @@ class StrengthModelTest {
         // 1RM roste z 80 o 0,5 kg každý trénink (co 3 dny) – série odpovídají přesně Epleymu
         val sets = (0 until 12).map { i ->
             val oneRm = 80.0 + 0.5 * i
-            set(i * 3, oneRm / (1 + (8 + StrengthModel.ASSUMED_RIR) / 30.0), 8)
+            set(i * 3, oneRm / (1 + (8 + StrengthModel.DEFAULT_RIR) / 30.0), 8)
         }
         val e = StrengthModel.estimate(sets, 33)!!
         assertEquals(12, e.sessions)
@@ -57,8 +66,8 @@ class StrengthModelTest {
     @Test
     fun singleSessionHasWideInterval() {
         val e = StrengthModel.estimate(listOf(set(0, 60.0, 8)), 0)!!
-        assertEquals(60.0 * (1 + 9 / 30.0), e.e1rm, 0.01)
-        assertTrue(e.lower < 75 && e.upper > 81)
+        assertEquals(60.0 * (1 + 10 / 30.0), e.e1rm, 0.01)
+        assertTrue(e.lower < 77 && e.upper > 83)
         assertNull(StrengthModel.estimate(emptyList(), 0))
         assertNull(StrengthModel.estimate(listOf(set(5, 60.0, 8)), 4))   // jen budoucí zápis
     }

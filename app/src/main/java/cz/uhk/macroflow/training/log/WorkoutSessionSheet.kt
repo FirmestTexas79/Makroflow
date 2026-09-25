@@ -140,14 +140,14 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
             row.findViewById<TextView>(R.id.tvSxLast).apply {
                 val last = insight.last
                 visibility = if (last != null) View.VISIBLE else View.GONE
-                text = last?.let { s -> "Minule (${date(s.day)}): " + s.sets.joinToString(" · ") { label(it.weightKg, it.reps, it.slowEccentric) } } ?: ""
+                text = last?.let { s -> "Minule (${date(s.day)}): " + s.sets.joinToString(" · ") { label(it.weightKg, it.reps, it.slowEccentric, it.rir) } } ?: ""
             }
 
             val todaySets = entities.filter { it.exerciseId == e.id && it.date == today.toString() }.sortedBy { it.createdAt }
             val chips = row.findViewById<ChipGroup>(R.id.chipsSxToday)
             todaySets.forEachIndexed { n, s ->
                 chips.addView(Chip(requireContext()).apply {
-                    text = "${n + 1}.  ${label(s.weightKg, s.reps, s.slowEccentric)}"
+                    text = "${n + 1}.  ${label(s.weightKg, s.reps, s.slowEccentric, s.rir)}"
                     isCloseIconVisible = true
                     closeIconContentDescription = "Smazat sérii"
                     chipBackgroundColor = ContextCompat.getColorStateList(requireContext(), R.color.brand_primary_alpha10)
@@ -167,8 +167,9 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private fun label(w: Double, r: Int, slow: Boolean) =
-        (if (w <= 0.0) "$r ×" else "${LogSetSheet.kg(w)} kg × $r") + if (slow) " (pomalu)" else ""
+    private fun label(w: Double, r: Int, slow: Boolean, rir: Int = StrengthModel.DEFAULT_RIR) =
+        (if (w <= 0.0) "$r ×" else "${LogSetSheet.kg(w)} kg × $r") + listOfNotNull(if (slow) "pomalu" else null, if (rir != StrengthModel.DEFAULT_RIR) "RIR $rir" else null)
+            .takeIf { it.isNotEmpty() }?.joinToString(", ", " (", ")").orEmpty()
 
     private fun date(day: Int) = LocalDate.ofEpochDay(day.toLong()).let { "${it.dayOfMonth}. ${it.monthValue}." }
 }

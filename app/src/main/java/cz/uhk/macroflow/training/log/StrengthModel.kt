@@ -10,8 +10,8 @@ import kotlin.math.sqrt
  *
  * 1. **Pozorování ze série**: odhad 1RM Epleyho vzorcem w·(1 + r/30), kde r jsou „ekvivalentní
  *    opakování do selhání“: zapsaná opakování · [TEMPO_FACTOR] u pomalého spouštění (se stejnou
- *    vahou jich člověk udělá méně) + [ASSUMED_RIR] (série obvykle nejdou do úplného selhání –
- *    bez této korekce model sílu systematicky podhodnocoval, viz simulace v ADR).
+ *    vahou jich člověk udělá méně) + zapsaná rezerva RIR (výchozí [DEFAULT_RIR]). Série obvykle
+ *    nejdou do úplného selhání – bez rezervy model sílu systematicky podhodnocoval (ADR 0024).
  *    Nejistota: σ = 3 % + 0,2 % za opakování (Epley je přesný hlavně do ~10 opakování).
  * 2. **Trénink = jedno pozorování**: nejlepší série dne. Další série jsou ovlivněné únavou,
  *    proto se nepočítají jako nezávislá měření.
@@ -24,8 +24,10 @@ object StrengthModel {
 
     /** O kolik víc opakování by série zvládla s normálním tempem (modelový předpoklad). */
     const val TEMPO_FACTOR = 1.15
-    /** Předpokládaná rezerva zapsaných sérií (kulturistický trénink bývá 0–2 opakování do selhání). */
-    const val ASSUMED_RIR = 1.0
+    /** Výchozí rezerva série, když ji uživatel nezmění (docs/adr/0025). */
+    const val DEFAULT_RIR = 2
+    /** Rozsah, který jde zapsat. */
+    const val MAX_RIR = 5
     /** Nad tímto počtem (ekvivalentních) opakování už odhad 1RM není použitelný. */
     const val MAX_REPS = 20
     /** Rezerva opakování (RIR) při doporučení váhy. */
@@ -37,14 +39,14 @@ object StrengthModel {
     private const val SLOPE_SD = 0.0004         // jak rychle se může měnit tempo růstu
     private const val SLOPE_PRIOR_SD = 0.003    // ±2 % týdně na začátku
 
-    /** Ekvivalentní opakování do selhání (tempo + předpokládaná rezerva). */
-    fun effectiveReps(reps: Int, slow: Boolean): Double =
-        (if (slow) reps * TEMPO_FACTOR else reps.toDouble()) + ASSUMED_RIR
+    /** Ekvivalentní opakování do selhání (tempo + rezerva). */
+    fun effectiveReps(reps: Int, slow: Boolean, rir: Int = DEFAULT_RIR): Double =
+        (if (slow) reps * TEMPO_FACTOR else reps.toDouble()) + rir.coerceIn(0, MAX_RIR)
 
     /** Odhad 1RM ze série, nebo null (vlastní váha, 0 opakování, příliš mnoho opakování). */
     fun setEstimate(s: LoggedSet): Double? {
         if (s.weightKg <= 0.0 || s.reps <= 0) return null
-        val r = effectiveReps(s.reps, s.slowEccentric)
+        val r = effectiveReps(s.reps, s.slowEccentric, s.rir)
         if (r > MAX_REPS) return null
         return s.weightKg * (1.0 + r / 30.0)
     }
@@ -56,7 +58,7 @@ object StrengthModel {
     /** Jedno pozorování na trénink: nejlepší série dne. */
     fun observations(sets: List<LoggedSet>): List<Observation> =
         sets.groupBy { it.day }.mapNotNull { (day, daySets) ->
-            daySets.mapNotNull { s -> setEstimate(s)?.let { it to effectiveReps(s.reps, s.slowEccentric) } }
+            daySets.mapNotNull { s -> setEstimate(s)?.let { it to effectiveReps(s.reps, s.slowEccentric, s.rir) } }
                 .maxByOrNull { it.first }
                 ?.let { (e, r) -> Observation(day, e, obsSd(r)) }
         }.sortedBy { it.day }

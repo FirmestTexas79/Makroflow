@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Zápis série do tréninkového deníku (docs/adr/0023): váha a opakování s krokováním, odhad 1RM. -->
+<!-- Zápis série do tréninkového deníku (docs/adr/0023): váha a opakování s krokováním, RIR, tempo, odhad 1RM. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -169,12 +169,80 @@
             app:tint="@color/brand_dark" />
     </LinearLayout>
 
+    <!-- RIR: kolik opakování zbývalo do selhání; výchozí 2 (StrengthModel.DEFAULT_RIR) -->
+    <LinearLayout
+        android:id="@+id/rowLogRir"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_stat_tile"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp"
+        android:paddingVertical="6dp">
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="Opakování v rezervě (RIR)"
+                android:textColor="@color/brand_dark"
+                android:textSize="14sp" />
+            <TextView
+                android:id="@+id/tvRirHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.6"
+                android:text="kolik bys ještě zvládl · 0 = do selhání"
+                android:textColor="@color/brand_dark"
+                android:textSize="11.5sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btnRirMinus"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_primary_alpha10"
+            android:contentDescription="Méně"
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_line_minus"
+            app:tint="@color/brand_dark" />
+
+        <TextView
+            android:id="@+id/tvRir"
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:textColor="@color/brand_dark"
+            android:textSize="22sp" />
+
+        <ImageButton
+            android:id="@+id/btnRirPlus"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_primary_alpha10"
+            android:contentDescription="Více"
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_line_plus"
+            app:tint="@color/brand_dark" />
+    </LinearLayout>
+
     <!-- Tempo: pomalé spouštění snižuje počet opakování při stejné váze – model to přepočítá -->
     <LinearLayout
         android:id="@+id/rowLogSlow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:background="@drawable/bg_stat_tile"
         android:gravity="center_vertical"
         android:orientation="horizontal"

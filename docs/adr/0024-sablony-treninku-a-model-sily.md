@@ -60,6 +60,6 @@ ale zachytí i pokles síly (pauza, dieta) a dává interval.
   (body = tréninky, čára = model) a poslední 4 tréninky se sériemi.
 
 ## Důsledky
-* Tempový faktor 1,15 a rezerva 1 jsou modelové předpoklady; zapisování RIR/RPE by je nahradilo
-  skutečnými daty (další krok). Deload/přestávky model zvládá jen přes rostoucí nejistotu.
+* Tempový faktor 1,15 je modelový předpoklad. Předpokládanou rezervu 1 nahradil zapsaný RIR
+  s výchozí hodnotou 2 – viz ADR 0025. Deload/přestávky model zvládá jen přes rostoucí nejistotu.
 * Šablony jsou vázané na typy dne z Plánu (push/pull/legs); FULL body šablonu zatím nemá.

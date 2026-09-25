@@ -238,7 +238,7 @@ object FirebaseRepository {
         val data = mapOf(
             "date" to set.date, "createdAt" to set.createdAt, "exerciseId" to set.exerciseId,
             "weightKg" to set.weightKg, "reps" to set.reps,
-            "slowEccentric" to set.slowEccentric, "template" to set.template
+            "slowEccentric" to set.slowEccentric, "template" to set.template, "rir" to set.rir
         )
         userDoc().collection("workout_sets").document(set.createdAt.toString()).set(data, SetOptions.merge()).await()
     }
@@ -258,7 +258,8 @@ object FirebaseRepository {
                 weightKg = doc.getDouble("weightKg") ?: 0.0,
                 reps = (doc.getLong("reps") ?: 0L).toInt(),
                 slowEccentric = doc.getBoolean("slowEccentric") ?: false,
-                template = doc.getString("template")
+                template = doc.getString("template"),
+                rir = (doc.getLong("rir") ?: 2L).toInt()
             )
         }
     }

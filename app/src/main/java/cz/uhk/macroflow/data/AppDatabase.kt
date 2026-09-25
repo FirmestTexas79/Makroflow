@@ -134,7 +134,7 @@ abstract class AppDatabase : RoomDatabase() {
                         "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` TEXT NOT NULL, " +
                         "`createdAt` INTEGER NOT NULL, `exerciseId` TEXT NOT NULL, " +
                         "`weightKg` REAL NOT NULL, `reps` INTEGER NOT NULL, " +
-                        "`slowEccentric` INTEGER NOT NULL, `template` TEXT)"
+                        "`slowEccentric` INTEGER NOT NULL, `template` TEXT, `rir` INTEGER NOT NULL)"
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_sets_exerciseId_date` ON `workout_sets` (`exerciseId`, `date`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_sets_date` ON `workout_sets` (`date`)")

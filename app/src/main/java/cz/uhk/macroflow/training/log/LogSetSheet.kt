@@ -24,6 +24,7 @@ import java.util.Locale
 /**
  * Panel „Zapsat sérii“ (docs/adr/0023, 0024) – z atlasu i z tréninku podle šablony.
  * Předvyplnění: poslední dnešní série → [prefillWeight]/[prefillReps] (připravenost) → spodní hranice rozsahu.
+ * RIR (opakování v rezervě) se převezme z poslední dnešní série, jinak výchozí [StrengthModel.DEFAULT_RIR].
  */
 object LogSetSheet {
 
@@ -65,13 +66,15 @@ object LogSetSheet {
         val swSlow = v.findViewById<MaterialSwitch>(R.id.swLogSlow)
         swSlow.isChecked = lastToday?.slowEccentric ?: false
         v.findViewById<View>(R.id.rowLogSlow).setOnClickListener { swSlow.toggle() }
+        val tvRir = v.findViewById<TextView>(R.id.tvRir)
+        var rir = (lastToday?.rir ?: StrengthModel.DEFAULT_RIR).coerceIn(0, StrengthModel.MAX_RIR)
         val tvE = v.findViewById<TextView>(R.id.tvLogSetE1rm)
         fun w() = etW.text.toString().replace(',', '.').toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
         fun r() = etR.text.toString().toIntOrNull()?.coerceAtLeast(0) ?: 0
         val prevBest = history.filter { it.exerciseId == exercise.id }.mapNotNull { StrengthModel.setEstimate(it) }.maxOrNull()
 
         fun refresh() {
-            val probe = LoggedSet(day = 0, exerciseId = exercise.id, weightKg = w(), reps = r(), slowEccentric = swSlow.isChecked)
+            val probe = LoggedSet(day = 0, exerciseId = exercise.id, weightKg = w(), reps = r(), slowEccentric = swSlow.isChecked, rir = rir)
             val e1 = StrengthModel.setEstimate(probe)
             tvE.text = when {
                 r() <= 0 -> "Zadej počet opakování"
@@ -81,6 +84,9 @@ object LogSetSheet {
                 else -> "Odhad 1RM ${kg(e1)} kg"
             }
             v.findViewById<View>(R.id.btnLogSetSave).isEnabled = r() > 0
+            tvRir.text = if (rir >= StrengthModel.MAX_RIR) "${StrengthModel.MAX_RIR}+" else rir.toString()
+            v.findViewById<View>(R.id.btnRirMinus).alpha = if (rir > 0) 1f else 0.35f
+            v.findViewById<View>(R.id.btnRirPlus).alpha = if (rir < StrengthModel.MAX_RIR) 1f else 0.35f
         }
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
@@ -95,6 +101,8 @@ object LogSetSheet {
         v.findViewById<View>(R.id.btnWeightPlus).setOnClickListener { etW.setText(plain(w() + wStep)) }
         v.findViewById<View>(R.id.btnRepsMinus).setOnClickListener { etR.setText((r() - 1).coerceAtLeast(1).toString()) }
         v.findViewById<View>(R.id.btnRepsPlus).setOnClickListener { etR.setText((r() + 1).toString()) }
+        v.findViewById<View>(R.id.btnRirMinus).setOnClickListener { rir = (rir - 1).coerceAtLeast(0); refresh() }
+        v.findViewById<View>(R.id.btnRirPlus).setOnClickListener { rir = (rir + 1).coerceAtMost(StrengthModel.MAX_RIR); refresh() }
         refresh()
 
         v.findViewById<View>(R.id.btnLogSetSave).setOnClickListener {
@@ -103,7 +111,7 @@ object LogSetSheet {
             val entity = WorkoutSetEntity(
                 date = LocalDate.now().toString(), createdAt = System.currentTimeMillis(),
                 exerciseId = exercise.id, weightKg = weight, reps = reps,
-                slowEccentric = swSlow.isChecked, template = template
+                slowEccentric = swSlow.isChecked, template = template, rir = rir
             )
             val e1 = StrengthModel.setEstimate(entity.toLogged())
             val isPr = e1 != null && prevBest != null && e1 > prevBest
