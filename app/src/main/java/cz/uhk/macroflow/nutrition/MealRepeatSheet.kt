@@ -130,6 +130,12 @@ class MealRepeatSheet(
                 setPadding(0, dp(4), 0, dp(4))
             })
         }
+        if (templates.isNotEmpty()) {
+            content.addView(TextView(ctx).apply {
+                text = "Podržením šablonu smažeš"
+                textSize = 11.5f; alpha = 0.6f; setTextColor(ctx.getColor(R.color.brand_dark))
+            })
+        }
         templates.forEach { t ->
             val items = MealRepeat.decode(t.items)
             val isDay = t.kind == Kind.DAY.name
