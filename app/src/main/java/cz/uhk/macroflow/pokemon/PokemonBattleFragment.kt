@@ -130,6 +130,7 @@ class PokemonBattleFragment : Fragment() {
         val introOverlay = when (biome) {
             BiomeType.MOUNTAINS -> buildMountainIntro(ctx, dp, battleContent)
             BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE -> buildCaveIntro(ctx, dp, battleContent)
+            BiomeType.WATER, BiomeType.LAKE -> buildWaterIntro(ctx, dp, battleContent)
             else -> buildIntroOverlay(ctx, dp, battleContent, biome)
         }
         root.addView(introOverlay)
@@ -261,7 +262,37 @@ class PokemonBattleFragment : Fragment() {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // KŘOVÍ (louka, město, voda)
+    // VODA: soumrak, splávek, stín pod hladinou a vodní sloup (docs/adr/0030)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun buildWaterIntro(ctx: Context, dp: Float, battleContent: View): FrameLayout {
+        val overlay = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(Color.BLACK)
+        }
+        val scene = cz.uhk.macroflow.pokemon.encounter.PixelEncounterView(
+            ctx,
+            factory = { w, h -> cz.uhk.macroflow.pokemon.encounter.WaterScene(w, h) },
+            revealAt = cz.uhk.macroflow.pokemon.encounter.WaterIntro.REVEAL_AT,
+            end = cz.uhk.macroflow.pokemon.encounter.WaterIntro.END,
+            skipTo = cz.uhk.macroflow.pokemon.encounter.WaterIntro.PULL_UNDER
+        ).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+        overlay.addView(scene)
+        scene.onReveal = {
+            introDone = true
+            // chladný záblesk vodní tříště
+            revealBattle(ctx, overlay, battleContent, overlay.width.toFloat(), overlay.height.toFloat(), dp,
+                baseFlash = Color.argb(235, 214, 244, 255))
+        }
+        overlay.setOnClickListener { if (!introDone) scene.skip() }
+        introHandler.postDelayed({ scene.start() }, 120)
+        return overlay
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // KŘOVÍ (louka, město)
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun buildIntroOverlay(

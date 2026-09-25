@@ -954,7 +954,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
             handler.post {
                 // Makro penízky za výhru (1–5), pak po 2 s zpět na mapu
-                if (coins > 0) handler.postDelayed({ setText("${gs.enemy.name}", "+$coins COINS!") }, 900)
+                if (coins > 0) handler.postDelayed({ setText("YOU GOT", if (coins == 1) "1 MAKRO COIN!" else "$coins MAKRO COINS!") }, 900)
                 handler.postDelayed({
                     onCaught?.invoke()
                 }, if (coins > 0) 2600 else 2000)
