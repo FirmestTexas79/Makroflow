@@ -312,7 +312,7 @@ object FirebaseRepository {
 
     suspend fun deleteCapturedMakromon(caughtDate: Long) {
         if (!isLoggedIn) return
-        userDoc().collection("captured_makromon").document(caughtDate.toString()).delete().await()
+        userDoc().collection("captured_makromons").document(caughtDate.toString()).delete().await()   // dřív „captured_makromon“ – mazalo se jinde, než se ukládá
     }
 
     // ========== POKÉDEX, ITEMS, XP ==========
@@ -599,16 +599,20 @@ object FirebaseRepository {
 
     fun signOut() = auth.signOut()
 
+    /** Všechny podkolekce users/{uid}. Při přidání nové kolekce ji doplň sem (hlídá FirebaseCollectionsTest). */
+    val USER_COLLECTIONS = listOf(
+        "data", "checkins", "body_metrics", "analytics", "custom_snacks", "consumed_history",
+        "water", "wallet", "user_items", "captured_makromons", "makrodex_status", "makromon_xp",
+        "unlocked_achievements", "steps", "quest_progress", "workout_sets"
+    )
+
     suspend fun deleteAllUserData() {
         val uid = auth.currentUser?.uid ?: return
         val db = FirebaseFirestore.getInstance()
 
-        // Smazání všech kolekcí uživatele
-        listOf(
-            "profiles", "checkIns", "bodyMetrics", "analytics",
-            "capturedMakromon", "water", "consumedSnacks", "trainingPlans",
-            "quest_progress"
-        ).forEach { collection ->
+        // Smazání všech kolekcí uživatele – názvy MUSÍ odpovídat těm, do kterých se ukládá
+        // (dřív tu byly jiné názvy – checkIns, consumedSnacks… – a většina dat v cloudu zůstala).
+        USER_COLLECTIONS.forEach { collection ->
             try {
                 val docs = db.collection("users").document(uid)
                     .collection(collection).get().await()
