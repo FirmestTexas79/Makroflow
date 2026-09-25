@@ -195,9 +195,10 @@ class EvolutionDialog(
     }
 
     private fun showMoveLearning(newMove: Move) {
-        val currentMoves = activeMakromon.moveListStr.split(",")
-            .filter { it.isNotEmpty() }
-            .toMutableList()
+        // Bez uložené sady = základní útoky druhu (jinak by se Makromon „naučil“ jediný útok a zbytek zapomněl)
+        val currentMoves = cz.uhk.macroflow.pokemon.wild.MovePool.resolve(
+            activeMakromon.moveListStr, BattleFactory.createById(activeMakromon.makromonId).moves
+        ).map { it.name }.toMutableList()
 
         if (currentMoves.contains(newMove.name)) {
             ivEvoSprite.postDelayed({ dismiss(); onComplete() }, 1500)

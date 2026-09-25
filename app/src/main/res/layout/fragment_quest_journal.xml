@@ -13,11 +13,56 @@
     android:clickable="true"
     android:focusable="true">
 
+    <!-- Záložky deníku: Příběh / Denní úkoly (docs/adr/0029) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/journalTabs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:layout_marginStart="30dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tabStory"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:background="@drawable/bg_journal_tab"
+            android:backgroundTint="#BC6C25"
+            android:fontFamily="@font/jersey_15"
+            android:gravity="center"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="6dp"
+            android:text="Příběh"
+            android:textColor="#FEFAE0"
+            android:textSize="19sp" />
+
+        <TextView
+            android:id="@+id/tabDaily"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_journal_tab"
+            android:backgroundTint="#606C38"
+            android:fontFamily="@font/jersey_15"
+            android:gravity="center"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="6dp"
+            android:text="Denní úkoly"
+            android:textColor="#FEFAE0"
+            android:textSize="19sp" />
+    </LinearLayout>
+
     <FrameLayout
         android:id="@+id/journalBook"
         android:layout_width="match_parent"
         android:layout_height="520dp"
-        android:layout_gravity="center"
+        android:layout_marginTop="-6dp"
         android:layout_marginStart="10dp"
         android:layout_marginEnd="10dp"
         android:background="@drawable/journal_cover"
@@ -220,6 +265,29 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:tint="@color/journal_chapter_title_ink" />
+            <!-- DENNÍ ÚKOLY přes obě stránky (plní QuestJournalFragment) -->
+            <ScrollView
+                android:id="@+id/dailyPage"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:fadingEdgeLength="16dp"
+                android:requiresFadingEdge="vertical"
+                android:scrollbars="none"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <LinearLayout
+                    android:id="@+id/llDaily"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="20dp"
+                    android:paddingTop="18dp"
+                    android:paddingBottom="24dp" />
+            </ScrollView>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <!-- Záložka (stužka) přes horní hranu -->
@@ -244,4 +312,5 @@
             android:src="@android:drawable/ic_menu_close_clear_cancel"
             app:tint="@color/journal_ink" />
     </FrameLayout>
+    </LinearLayout>
 </FrameLayout>

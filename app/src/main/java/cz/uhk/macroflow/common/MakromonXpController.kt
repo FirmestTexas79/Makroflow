@@ -64,8 +64,8 @@ class MakromonXpController(
             val makromon = db.capturedMakromonDao().getMakromonById(activeCapturedId) ?: return@launch
 
             val oldLevel = makromon.level
-            makromon.xp += DailyXpGate.REWARD_XP
-            val newLevel = PokemonLevelCalc.levelFromXp(makromon.xp)
+            val (gainedXp, newLevel) = PokemonLevelCalc.gain(makromon.level, makromon.xp, DailyXpGate.REWARD_XP)
+            makromon.xp = gainedXp
             makromon.level = newLevel
 
             db.capturedMakromonDao().updateMakromon(makromon)
@@ -111,8 +111,8 @@ class MakromonXpController(
             val makromon = db.capturedMakromonDao().getMakromonById(activeCapturedId) ?: return@launch
 
             val oldLevel = makromon.level
-            makromon.xp += xpAmount
-            val newLevel = PokemonLevelCalc.levelFromXp(makromon.xp)
+            val (gainedXp, newLevel) = PokemonLevelCalc.gain(makromon.level, makromon.xp, xpAmount)
+            makromon.xp = gainedXp
             makromon.level = newLevel
 
             db.capturedMakromonDao().updateMakromon(makromon)

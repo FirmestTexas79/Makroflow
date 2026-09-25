@@ -110,16 +110,30 @@ class PokemonBattleView @JvmOverloads constructor(
             val playerLevel = caughtEntity?.level ?: 1
             val playerIsShiny = caughtEntity?.isShiny ?: false
 
-            val playerWithStats = createPlayerMakromon(mId, playerLevel)
+            // Útoky chyceného Makromona (uložená sada), jinak základní útoky druhu; typ = typ druhu
+            val playerBase = BattleFactory.createById(mId)
+            val playerWithStats = createPlayerMakromon(mId, playerLevel).copy(
+                moves = cz.uhk.macroflow.pokemon.wild.MovePool.resolve(caughtEntity?.moveListStr.orEmpty(), playerBase.moves),
+                type = playerBase.speciesType
+            )
 
             // --- 🎲 OPRAVENÝ ROLL S BIOMEM ---
             val enemyWithStats = if (special != null) {
                 // Strážce / legenda: pevný Makromon s pevným levelem
                 createPlayerMakromon(special.makromonId, special.level)
             } else {
+                // Level podle lokality (docs/adr/0029) – jeskyně mají vlastní rozpětí, i když
+                // druhy Makromonů sdílí s Horami; útoky náhodně z poolu druhu podle levelu
                 val baseEnemy = SpawnManager.rollWildEncounter(context, currentBiome.wildBiome)
-                val randomEnemyLevel = (playerLevel + Random.nextInt(-2, 3)).coerceAtLeast(1)
-                BattleEngine.initializeStatsForLevel(baseEnemy, randomEnemyLevel)
+                val wildLevel = cz.uhk.macroflow.pokemon.wild.WildLevels.roll(currentBiome)
+                val enemyId = BattleFactory.makrodexId(baseEnemy)
+                BattleEngine.initializeStatsForLevel(
+                    baseEnemy.copy(
+                        moves = cz.uhk.macroflow.pokemon.wild.MovePool.wildMoveset(enemyId, wildLevel),
+                        type = baseEnemy.speciesType
+                    ),
+                    wildLevel
+                )
             }
             val enemyIsShiny = enemyShiny
 
@@ -404,7 +418,7 @@ class PokemonBattleView @JvmOverloads constructor(
         }
         val tx = 108; val ty = 97; val tw = 50; val th = 46; drawUIBox(c, tx, ty, tw, th)
         PokemonSprites.drawText(c, "TYPE/", tx+3, ty+5, C_TEXT, fp)
-        PokemonSprites.drawText(c, gs.player.moves[0].type.name.take(7), tx+3, ty+15, C_TEXT, fp)
+        PokemonSprites.drawText(c, gs.player.speciesType.name.take(7), tx+3, ty+15, C_TEXT, fp)
         PokemonSprites.drawText(c, "BACK", tx+3, ty+38, C_TEXT, fp)
         zones.clear()
         gs.player.moves.forEachIndexed { i, _ ->
@@ -700,7 +714,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private val rng = Random.Default
 
-    private fun typeOf(m: Makromon) = m.moves.firstOrNull()?.type ?: MakromonType.NORMAL
+    private fun typeOf(m: Makromon) = m.speciesType
 
     private fun say(l1: String, l2: String, then: () -> Unit) { setText(l1, l2); scheduleAfterText(then) }
 
@@ -912,11 +926,13 @@ class PokemonBattleView @JvmOverloads constructor(
 
         // --- QUEST SYSTÉM: OZNÁMENÍ VÝHRY ---
         // Zjistíme typ nepřítele (bereme typ prvního útoku, jak to máš v dmg výpočtu)
-        val enemyType = gs.enemy.moves.firstOrNull()?.type ?: MakromonType.NORMAL
+        val enemyType = gs.enemy.speciesType
+        val coins = if (special == null) cz.uhk.macroflow.pokemon.wild.BattleRewards.coinsForWin() else 0
 
         // Informujeme QuestManager o výhře nad konkrétním typem
         (context as? MakromonMapActivity)?.let { map ->
             map.questManager.onBattleWon(enemyType.name, biome = map.getCurrentBiome().wildBiome.name)
+            cz.uhk.macroflow.pokemon.daily.DailyQuestStore.recordWin(context, enemyType.name, map.getCurrentBiome().name)
         }
 
         Thread {
@@ -934,12 +950,14 @@ class PokemonBattleView @JvmOverloads constructor(
             }
             val totalBattleXp = baseScore + (gs.enemy.level * 3)
             awardXpToActiveMakromon(totalBattleXp)
+            if (coins > 0) db.coinDao().addCoins(coins)
 
             handler.post {
-                // Počkej 2 sekundy, než se vrátíš na mapu/ukončíš souboj
+                // Makro penízky za výhru (1–5), pak po 2 s zpět na mapu
+                if (coins > 0) handler.postDelayed({ setText("${gs.enemy.name}", "+$coins COINS!") }, 900)
                 handler.postDelayed({
                     onCaught?.invoke()
-                }, 2000)
+                }, if (coins > 0) 2600 else 2000)
             }
         }.start()
     }
@@ -1149,43 +1167,8 @@ class PokemonBattleView @JvmOverloads constructor(
      * Vytvoří hráčova Makromona podle ID a levelu.
      * Používá nový BattleFactory s Makromony.
      */
-    fun createPlayerMakromon(id: String, level: Int): Makromon {
-        val base = when (id) {
-            "001" -> BattleFactory.createIgnar()
-            "002" -> BattleFactory.createIgnaroc()
-            "003" -> BattleFactory.createIgnaroth()
-            "004" -> BattleFactory.createAqulin()
-            "005" -> BattleFactory.createAqlind()
-            "006" -> BattleFactory.createAqulinox()
-            "007" -> BattleFactory.createFlori()
-            "008" -> BattleFactory.createFlorind()
-            "009" -> BattleFactory.createFlorindra()
-            "010" -> BattleFactory.createUmbex()
-            "011" -> BattleFactory.createLumex()
-            "012" -> BattleFactory.createSpirra()
-            "013" -> BattleFactory.createFlamirra()
-            "014" -> BattleFactory.createAquirra()
-            "015" -> BattleFactory.createVerdirra()
-            "016" -> BattleFactory.createShadirra()
-            "017" -> BattleFactory.createCharmirra()
-            "018" -> BattleFactory.createGlacirra()
-            "019" -> BattleFactory.createDrakirra()
-            "020" -> BattleFactory.createFinlet()
-            "021" -> BattleFactory.createSerpfin()
-            "022" -> BattleFactory.createMycit()
-            "023" -> BattleFactory.createMydrus()
-            "024" -> BattleFactory.createSoulu()
-            "025" -> BattleFactory.createSoulex()
-            "026" -> BattleFactory.createSoulord()
-            "027" -> BattleFactory.createPhantil()
-            "028" -> BattleFactory.createPhantius()
-            "029" -> BattleFactory.createPhantiax()
-            "030" -> BattleFactory.createGudwin()
-            "031" -> BattleFactory.createAxlu()
-            else  -> BattleFactory.createSpirra() // Spirra jako bezpečný fallback
-        }
-        return BattleEngine.initializeStatsForLevel(base, level)
-    }
+    fun createPlayerMakromon(id: String, level: Int): Makromon =
+        BattleEngine.initializeStatsForLevel(BattleFactory.createById(id), level)
 
     private fun scheduleAfterText(action: () -> Unit) {
         busy = false; gs.phase = BattlePhase.TEXT_WAIT; pendingAction = action; invalidate()
@@ -1371,16 +1354,20 @@ class PokemonBattleView @JvmOverloads constructor(
 
         val mId = BattleFactory.makrodexId(gs.enemy)
 
+        // Chycený Makromon si nese level i útoky z divočiny (docs/adr/0029)
         val entity = CapturedMakromonEntity(
             makromonId = mId,
             name       = gs.enemy.name,
             level      = gs.enemy.level,
+            xp         = PokemonLevelCalc.xpForLevel(gs.enemy.level),
+            moveListStr = cz.uhk.macroflow.pokemon.wild.MovePool.namesOf(gs.enemy.moves),
             isShiny    = gs.isEnemyShiny,
             caughtDate = System.currentTimeMillis()
         )
 
         Thread {
             db.capturedMakromonDao().insertMakromon(entity)
+            cz.uhk.macroflow.pokemon.daily.DailyQuestStore.recordCatch(context)
 
             if (FirebaseRepository.isLoggedIn) {
                 kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
@@ -1432,8 +1419,9 @@ class PokemonBattleView @JvmOverloads constructor(
                 ?: return@Thread
 
             val oldLevel = makromon.level
-            makromon.xp += xpAmount
-            makromon.level = PokemonLevelCalc.levelFromXp(makromon.xp)
+            val (gainedXp, gainedLevel) = PokemonLevelCalc.gain(makromon.level, makromon.xp, xpAmount)
+            makromon.xp = gainedXp
+            makromon.level = gainedLevel
 
             // 1. Uložíme do lokální DB
             localDb.capturedMakromonDao().updateMakromon(makromon)

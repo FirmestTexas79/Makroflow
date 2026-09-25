@@ -88,12 +88,156 @@ class QuestJournalFragment : Fragment() {
         }
 
         loadDataAndSetup()
+        // Záložky: Příběh / Denní úkoly (docs/adr/0029)
+        rootView.findViewById<View>(R.id.tabStory).setOnClickListener { showTab(daily = false) }
+        rootView.findViewById<View>(R.id.tabDaily).setOnClickListener { showTab(daily = true) }
+        showTab(daily = showDailyFirst)
         return rootView
     }
 
     // Metoda pro refresh zvenčí (z MakromonMapActivity)
     fun refreshData() {
         loadDataAndSetup()
+        if (dailyShown) renderDaily()
+    }
+
+    // ── Denní úkoly ─────────────────────────────────────────────────────────
+
+    private var dailyShown = false
+    /** Nastaví se před zobrazením, když má deník otevřít rovnou denní úkoly. */
+    var showDailyFirst = false
+
+    private fun showTab(daily: Boolean) {
+        dailyShown = daily
+        val storyViews = listOf(R.id.leftPage, R.id.rightPage, R.id.bindingShadowContainer, R.id.btnPrevPage, R.id.btnNextPage)
+        storyViews.forEach { rootView.findViewById<View>(it)?.visibility = if (daily) View.GONE else View.VISIBLE }
+        rootView.findViewById<View>(R.id.dailyPage).visibility = if (daily) View.VISIBLE else View.GONE
+        rootView.findViewById<View>(R.id.tabStory).alpha = if (daily) 0.55f else 1f
+        rootView.findViewById<View>(R.id.tabDaily).alpha = if (daily) 1f else 0.55f
+        if (daily) renderDaily()
+    }
+
+    private fun renderDaily() {
+        val ctx = context?.applicationContext ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (quests, facts, claimed) = withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.daily.DailyQuestStore.prune(ctx)
+                val q = cz.uhk.macroflow.pokemon.daily.DailyQuestStore.questsToday(ctx)
+                Triple(q, cz.uhk.macroflow.pokemon.daily.DailyQuestStore.facts(ctx),
+                    q.map { cz.uhk.macroflow.pokemon.daily.DailyQuestStore.isClaimed(ctx, it.index) })
+            }
+            if (!isAdded) return@launch
+            buildDaily(quests, facts, claimed)
+        }
+    }
+
+    private fun buildDaily(
+        quests: List<cz.uhk.macroflow.pokemon.daily.DailyQuests.Quest>,
+        facts: cz.uhk.macroflow.pokemon.daily.DailyQuests.Facts,
+        claimed: List<Boolean>
+    ) {
+        val DQ = cz.uhk.macroflow.pokemon.daily.DailyQuests
+        val box = rootView.findViewById<LinearLayout>(R.id.llDaily)
+        box.removeAllViews()
+        val ctx = requireContext()
+        val dp = resources.displayMetrics.density
+        val font = androidx.core.content.res.ResourcesCompat.getFont(ctx, R.font.jersey_15)
+        val ink = ctx.getColor(R.color.journal_ink)
+        val deep = Color.parseColor("#9A5518")
+        fun tv(text: String, size: Float, color: Int, gravity: Int = Gravity.START) = TextView(ctx).apply {
+            this.text = text; textSize = size; setTextColor(color); typeface = font; this.gravity = gravity
+        }
+
+        box.addView(tv("Denní úkoly", 27f, ctx.getColor(R.color.journal_chapter_title_ink), Gravity.CENTER).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        })
+        val now = java.time.LocalDateTime.now()
+        val left = java.time.Duration.between(now, now.toLocalDate().plusDays(1).atStartOfDay())
+        box.addView(tv("Nové úkoly za ${left.toHours()} h ${left.toMinutes() % 60} min · 3 úkoly denně",
+            15f, ink, Gravity.CENTER).apply {
+            alpha = 0.7f
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { bottomMargin = (10 * dp).toInt() }
+        })
+
+        quests.forEachIndexed { i, q ->
+            val done = DQ.isDone(q, facts)
+            val isClaimed = claimed.getOrElse(i) { false }
+            val card = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding((14 * dp).toInt(), (10 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt())
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 14 * dp
+                    setColor(if (isClaimed) Color.parseColor("#1F606C38") else Color.parseColor("#2EBC6C25"))
+                    setStroke((1.5f * dp).toInt(), if (done) Color.parseColor("#606C38") else Color.parseColor("#55BC6C25"))
+                }
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    .apply { bottomMargin = (10 * dp).toInt() }
+            }
+            val head = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            head.addView(tv(q.title, 21f, deep).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            head.addView(tv("+${q.reward} ${getString(R.string.coin_emoji)}", 21f, deep))
+            card.addView(head)
+            card.addView(tv(q.description, 17f, ink))
+            // postup
+            val bar = FrameLayout(ctx).apply {
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (10 * dp).toInt())
+                    .apply { topMargin = (8 * dp).toInt() }
+                background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 5 * dp; setColor(Color.parseColor("#33283618")) }
+            }
+            val fill = View(ctx).apply {
+                background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 5 * dp; setColor(if (done) Color.parseColor("#606C38") else Color.parseColor("#BC6C25")) }
+            }
+            bar.addView(fill, FrameLayout.LayoutParams(0, FrameLayout.LayoutParams.MATCH_PARENT))
+            bar.post {
+                val target = (bar.width * DQ.fraction(q, facts)).toInt()
+                fill.layoutParams = fill.layoutParams.apply { width = target.coerceAtLeast(if (DQ.fraction(q, facts) > 0f) (10 * dp).toInt() else 0) }
+                fill.scaleX = 0f; fill.pivotX = 0f
+                fill.animate().scaleX(1f).setDuration(500).setStartDelay(i * 120L).start()
+            }
+            card.addView(bar)
+            val foot = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = (6 * dp).toInt() }
+            }
+            foot.addView(tv(DQ.progressText(q, facts), 16f, ink).apply {
+                alpha = 0.8f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            when {
+                isClaimed -> foot.addView(tv("Vyzvednuto ✓", 17f, Color.parseColor("#606C38")))
+                done -> foot.addView(tv("Vyzvednout", 18f, Color.parseColor("#FEFAE0"), Gravity.CENTER).apply {
+                    setPadding((14 * dp).toInt(), (4 * dp).toInt(), (14 * dp).toInt(), (6 * dp).toInt())
+                    background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 12 * dp; setColor(Color.parseColor("#606C38")) }
+                    setOnClickListener { claimDaily(q) }
+                })
+                else -> {}
+            }
+            card.addView(foot)
+            box.addView(card)
+        }
+    }
+
+    private fun claimDaily(q: cz.uhk.macroflow.pokemon.daily.DailyQuests.Quest) {
+        val ctx = context?.applicationContext ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val got = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.daily.DailyQuestStore.claim(ctx, q) }
+            if (got > 0) {
+                rootView.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                android.widget.Toast.makeText(ctx, "+$got makro penízků", android.widget.Toast.LENGTH_SHORT).show()
+                // zůstatek i do cloudu
+                if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) withContext(Dispatchers.IO) {
+                    runCatching {
+                        cz.uhk.macroflow.data.AppDatabase.getDatabase(ctx).coinDao().getBalance()
+                            ?.let { cz.uhk.macroflow.data.FirebaseRepository.uploadCoins(it) }
+                    }
+                }
+            }
+            renderDaily()
+        }
     }
 
     private fun flipPage(direction: Int) {

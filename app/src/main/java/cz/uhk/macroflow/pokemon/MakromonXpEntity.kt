@@ -55,7 +55,18 @@ interface MakromonXpDao {
 /** Pomocný objekt pro výpočty levelu z XP – název zachován kvůli referencím v jiných souborech */
 object PokemonLevelCalc {
 
-    private val THRESHOLDS = listOf(0, 50, 150, 300, 500, 800, 1200, 1800, 2500, 3500)
+    const val MAX_LEVEL = 30
+
+    /**
+     * Kumulativní XP pro level 1, 2, 3 … Do levelu 10 původní křivka; dál přidává o 200 víc
+     * než předchozí krok (jeskyně mají divoké Makromony až na levelu 12 – docs/adr/0029).
+     */
+    private val THRESHOLDS: List<Int> = run {
+        val t = mutableListOf(0, 50, 150, 300, 500, 800, 1200, 1800, 2500, 3500)
+        var step = 1000
+        while (t.size < MAX_LEVEL) { step += 200; t += t.last() + step }
+        t
+    }
 
     fun levelFromXp(xp: Int): Int {
         var level = 1
@@ -63,6 +74,19 @@ object PokemonLevelCalc {
             if (xp >= threshold) level = i + 1
         }
         return level.coerceIn(1, THRESHOLDS.size)
+    }
+
+    /** XP na začátku levelu (chycený Makromon levelu 7 začíná s touto hodnotou). */
+    fun xpForLevel(level: Int): Int = THRESHOLDS[(level.coerceIn(1, THRESHOLDS.size)) - 1]
+
+    /**
+     * Přičte XP a vrátí (nové XP, nový level). Level nikdy neklesne – starší chycení Makromoni
+     * mají level z divočiny, ale XP 0; dřív je první odměna shodila na level 1–2.
+     */
+    fun gain(level: Int, xp: Int, amount: Int): Pair<Int, Int> {
+        val base = maxOf(xp, xpForLevel(level))
+        val newXp = base + amount
+        return newXp to maxOf(level, levelFromXp(newXp))
     }
 
     fun xpForNextLevel(currentXp: Int): Int {

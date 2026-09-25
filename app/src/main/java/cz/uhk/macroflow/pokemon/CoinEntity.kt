@@ -80,8 +80,7 @@ interface CapturedMakromonDao {
         val m = getMakromonByCaughtDate(timestamp)
         if (m != null) {
             val oldLevel = m.level
-            val newXp    = m.xp + amount
-            val newLevel = PokemonLevelCalc.levelFromXp(newXp)
+            val (newXp, newLevel) = PokemonLevelCalc.gain(m.level, m.xp, amount)
             val updated  = m.copy(xp = newXp, level = newLevel)
             updateMakromon(updated)
             return Pair(oldLevel, newLevel)

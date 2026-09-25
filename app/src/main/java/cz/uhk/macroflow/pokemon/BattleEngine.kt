@@ -41,8 +41,13 @@ data class Makromon(
     val defense: Int,
     val speed: Int,
     val moves: List<Move>,
-    var alive: Boolean = true
-)
+    var alive: Boolean = true,
+    /** Typ druhu (docs/adr/0029); null = typ prvního útoku (dřívější chování). */
+    val type: MakromonType? = null
+) {
+    /** Typ pro výpočet účinnosti – s náhodnými útoky už nejde brát první útok. */
+    val speciesType: MakromonType get() = type ?: moves.firstOrNull()?.type ?: MakromonType.NORMAL
+}
 
 enum class BattlePhase {
     INTRO, MAIN_MENU, FIGHT_MENU, ITEM_MENU,
@@ -561,6 +566,42 @@ object BattleFactory {
     }
 
     /** Vrátí Makrodex ID pro daného Makromona */
+    /** Základní (level 1) Makromon podle čísla v Makrodexu; neznámé číslo → Spirra. */
+    fun createById(id: String): Makromon = when (id) {
+            "001" -> BattleFactory.createIgnar()
+            "002" -> BattleFactory.createIgnaroc()
+            "003" -> BattleFactory.createIgnaroth()
+            "004" -> BattleFactory.createAqulin()
+            "005" -> BattleFactory.createAqlind()
+            "006" -> BattleFactory.createAqulinox()
+            "007" -> BattleFactory.createFlori()
+            "008" -> BattleFactory.createFlorind()
+            "009" -> BattleFactory.createFlorindra()
+            "010" -> BattleFactory.createUmbex()
+            "011" -> BattleFactory.createLumex()
+            "012" -> BattleFactory.createSpirra()
+            "013" -> BattleFactory.createFlamirra()
+            "014" -> BattleFactory.createAquirra()
+            "015" -> BattleFactory.createVerdirra()
+            "016" -> BattleFactory.createShadirra()
+            "017" -> BattleFactory.createCharmirra()
+            "018" -> BattleFactory.createGlacirra()
+            "019" -> BattleFactory.createDrakirra()
+            "020" -> BattleFactory.createFinlet()
+            "021" -> BattleFactory.createSerpfin()
+            "022" -> BattleFactory.createMycit()
+            "023" -> BattleFactory.createMydrus()
+            "024" -> BattleFactory.createSoulu()
+            "025" -> BattleFactory.createSoulex()
+            "026" -> BattleFactory.createSoulord()
+            "027" -> BattleFactory.createPhantil()
+            "028" -> BattleFactory.createPhantius()
+            "029" -> BattleFactory.createPhantiax()
+            "030" -> BattleFactory.createGudwin()
+            "031" -> BattleFactory.createAxlu()
+            else  -> BattleFactory.createSpirra() // Spirra jako bezpečný fallback
+        }
+
     fun makrodexId(makromon: Makromon): String = when (makromon.name) {
         "IGNAR"     -> "001"
         "IGNAROC"   -> "002"
