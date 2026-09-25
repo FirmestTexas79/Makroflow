@@ -206,7 +206,8 @@ class ProfileFragment : Fragment() {
             ?: "Sportovec"
         v.findViewById<TextView>(R.id.tvHeroName).text = name
         v.findViewById<TextView>(R.id.tvHeroInitial).text = name.first().uppercase()
-        val w = etWeight.text.toString(); val h = etHeight.text.toString(); val a = etAge.text.toString()
+        fun clean(t: CharSequence?) = t.toString().removeSuffix(".0")      // 70.0 → 70
+        val w = clean(etWeight.text); val h = clean(etHeight.text); val a = clean(etAge.text)
         v.findViewById<TextView>(R.id.tvHeroSub).text = "$w kg · $h cm · $a let"
         v.findViewById<TextView>(R.id.tvHeroGoal).text = selectedGoal
         lifecycleScope.launch {

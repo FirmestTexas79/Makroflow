@@ -293,7 +293,7 @@
 
     <string name="label_achievements">Úspěchy</string>
     <string name="label_my_collection">MOJE SBÍRKA</string>
-    <string name="label_inventory">Kapsa a Batoh</string>
+    <string name="label_inventory">Kapsa a batoh</string>
     <string name="label_disclaimer">Prohlášení</string>
     <string name="label_delete_achievements">Smazat úspěchy (debug)</string>
     <string name="label_sign_out">Odhlásit se</string>

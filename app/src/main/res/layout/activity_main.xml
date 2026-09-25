@@ -117,6 +117,6 @@
 
         app:itemIconTint="@color/brand_dark"
         app:itemTextColor="@color/brand_dark"
-        app:itemShapeFillColor="@color/brand_primary_alpha20"
+        app:itemShapeFillColor="@color/drawer_item_fill"
         app:itemTextAppearance="@style/DrawerItemText"/>
 </androidx.drawerlayout.widget.DrawerLayout>
