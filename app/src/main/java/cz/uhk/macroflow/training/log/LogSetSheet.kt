@@ -89,6 +89,7 @@ object LogSetSheet {
                 chipBackgroundColor = ColorStateList(states, intArrayOf(dark, ctx.getColor(R.color.brand_primary_alpha10)))
                 setTextColor(ColorStateList(states, intArrayOf(cream, dark)))
                 chipStrokeWidth = 0f
+                textSize = 13f
             })
         } else chipsEq.visibility = View.GONE
 
@@ -124,6 +125,7 @@ object LogSetSheet {
             val e1 = StrengthModel.setEstimate(probe)
             tvE.text = when {
                 r() <= 0 -> "Zadej počet opakování"
+                w() <= 0.0 && !bodyweight -> "Zadej váhu – obrázek ukáže, co naložit"
                 w() <= 0.0 -> "${r()} opakování s vlastní vahou"
                 e1 == null -> "Přes ${StrengthModel.MAX_REPS} opakování – do odhadu 1RM se nepočítá"
                 prevBest != null && e1 > prevBest -> "Odhad 1RM ${kg(e1)} kg – nový rekord 🏆"

@@ -21,11 +21,11 @@ import kotlin.math.roundToInt
 enum class Rig(val label: String, val weightHint: String) {
     DUMBBELL_PAIR("2 jednoručky", "Váha jedné jednoručky"),
     DUMBBELL_SINGLE("1 jednoručka", "Váha jednoručky"),
-    OLYMPIC_BAR("Osa s kotouči", "Celkem včetně osy 20 kg"),
+    OLYMPIC_BAR("Osa + kotouče", "Celkem včetně osy 20 kg"),
     STRAIGHT_BAR("Rovná činka", "Váha pevné činky"),
     EZ_BAR("EZ činka", "Váha pevné EZ činky"),
-    MACHINE_BOTH("Kotouče obě strany", "Váha na jednu stranu"),
-    MACHINE_ONE("Kotouče jedna strana", "Váha na zatíženou stranu"),
+    MACHINE_BOTH("Obě strany", "Váha na jednu stranu"),
+    MACHINE_ONE("Jedna strana", "Váha na zatíženou stranu"),
     STACK("Blok závaží", "Váha na bloku závaží");
 
     val usesPlates: Boolean get() = this == OLYMPIC_BAR || this == MACHINE_BOTH || this == MACHINE_ONE
