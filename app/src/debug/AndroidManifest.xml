@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Jen debug build: náhled vykreslení widgetu (adb shell am start -n cz.uhk.macroflow/.widget.WidgetPreviewActivity) -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application>
+        <!-- Jen debug: přímé spuštění hlavní obrazovky přes adb (UI kontrola na emulátoru bez přihlášení) -->
+        <activity
+            android:name="cz.uhk.macroflow.common.MainActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
         <activity
             android:name="cz.uhk.macroflow.widget.WidgetPreviewActivity"
             android:exported="true"
