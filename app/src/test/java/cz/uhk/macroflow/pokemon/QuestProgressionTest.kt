@@ -114,12 +114,12 @@ class QuestProgressionTest {
     }
 
     @Test
-    fun `quest krále má 7 fází a výživové fáze míří na osobní cíle`() {
+    fun `quest krále má 8 fází a výživové fáze míří na osobní cíle`() {
         val q = QuestRegistry.MOUNTAINS_QUEST
-        assertEquals(7, q.stages.size)
+        assertEquals(8, q.stages.size)
         assertTrue(q.stages.all { it.speakerName == "Král Mlsák" })
         val nutrition = q.stages.filter { it.requirementType == RequirementType.HIT_TARGET }
-        assertEquals(setOf("kcal", "protein", "carbs", "fat"), nutrition.map { it.targetId }.toSet())
+        assertEquals(setOf("kcal", "protein", "carbs", "fat", QuestProgression.ALL_MACROS), nutrition.map { it.targetId }.toSet())
     }
 }
 

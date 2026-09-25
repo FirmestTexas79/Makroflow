@@ -316,50 +316,50 @@ abstract class AppDatabase : RoomDatabase() {
             MakromonEntry(
                 id = "013", drawableName = "makromon_flamirra", displayName = "Flamirra",
                 type = "OHEŇ / EVOLUCE",
-                desc = "Ohnivá evoluce Spirry. Zlatooranžová spirála spaluje tuky jako šílená.",
-                hint = "Flamirra se toulá v každém počasí. Pravidelný trénink ji přiláká.",
+                desc = "Ohnivá evoluce Spirry. Zlatooranžová spirála spaluje tuky jako šílená. Má ráda, když se pořádně zapotíš – Spirra se v ni promění, když spolu spálíte hodně kalorií pohybem.",
+                hint = "Vyvine se ze Spirry, která s tebou pořádně zapotí.",
                 evolveLevel = 0, evolveToId = ""
             ),
             MakromonEntry(
                 id = "014", drawableName = "makromon_aquirra", displayName = "Aquirra",
                 type = "VODA / EVOLUCE",
-                desc = "Vodní evoluce Spirry. Teal modrá spirála pro dokonalou hydrataci.",
-                hint = "Aquirra se objeví, když splníš svůj denní vodní cíl.",
+                desc = "Vodní evoluce Spirry. Teal modrá spirála pro dokonalou hydrataci. Má ráda, když se pořádně napiješ – Spirra se v ni promění, když spolu vypijete spoustu vody.",
+                hint = "Vyvine se ze Spirry, se kterou se pořádně napiješ.",
                 evolveLevel = 0, evolveToId = ""
             ),
             MakromonEntry(
                 id = "015", drawableName = "makromon_verdirra", displayName = "Verdirra",
                 type = "PŘÍRODA / EVOLUCE",
-                desc = "Travní evoluce Spirry. Zelená spirála pro sílu ze země.",
-                hint = "Verdirra miluje čerstvý vzduch. Cvič venku a přilákáš ji!",
+                desc = "Travní evoluce Spirry. Zelená spirála pro sílu ze země. Má ráda, když má vláknina svou míru – Spirra se v ni promění po pár dnech v řadě se správnou dávkou vlákniny.",
+                hint = "Vyvine se ze Spirry, se kterou jíš zeleninu den co den.",
                 evolveLevel = 0, evolveToId = ""
             ),
             MakromonEntry(
                 id = "016", drawableName = "makromon_shadirra", displayName = "Shadirra",
                 type = "DUCH / EVOLUCE",
-                desc = "Temná evoluce Spirry. Fialová spirála skrývající tajemství noci.",
-                hint = "Shadirra se toulá pouze v noci po 19:00.",
+                desc = "Temná evoluce Spirry. Fialová spirála skrývající tajemství noci. Má ráda, když si večer zdravě zamlsáš – Spirra se v ni promění po řadě nočních svačinek.",
+                hint = "Vyvine se ze Spirry, se kterou si večer zdravě zamlsáš.",
                 evolveLevel = 0, evolveToId = ""
             ),
             MakromonEntry(
                 id = "017", drawableName = "makromon_charmirra", displayName = "Charmirra",
                 type = "VÍLA / EVOLUCE",
-                desc = "Fairy evoluce Spirry. Růžová pastelová spirála plná šarmu.",
-                hint = "Charmirra je přátelská. Splň svá makra a ona tě navštíví!",
+                desc = "Fairy evoluce Spirry. Růžová pastelová spirála plná šarmu. Má ráda dlouhé procházky – Spirra se v ni promění, když spolu nachodíte spoustu kroků.",
+                hint = "Vyvine se ze Spirry, se kterou nachodíš spoustu kilometrů.",
                 evolveLevel = 0, evolveToId = ""
             ),
             MakromonEntry(
                 id = "018", drawableName = "ic_home", displayName = "Glacirra",
                 type = "LED / EVOLUCE",
-                desc = "Ledová evoluce Spirry. Chladná a precizní jako tvůj tréninkový plán.",
-                hint = "Glacirra přichází nečekaně. Buď konzistentní a najdeš ji!",
+                desc = "Ledová evoluce Spirry. Chladná a precizní jako tvůj tréninkový plán. Má ráda, když poctivě dřeš v posilovně – Spirra se v ni promění po spoustě zapsaných sérií.",
+                hint = "Vyvine se ze Spirry, se kterou poctivě dřeš v posilovně.",
                 evolveLevel = 0, evolveToId = ""
             ),
             MakromonEntry(
                 id = "019", drawableName = "makromon_drakirra", displayName = "Drakirra",
                 type = "DRAK / SKRYTÁ EVOLUCE",
                 desc = "Tajemná dračí evoluce Spirry. Zlatá a teal spirála plná prastaré síly.",
-                hint = "Drakirra je skrytá evoluce. Jen ti nejdisciplinovanější ji spatří – 30 check-inů!",
+                hint = "Tajná evoluce Spirry. Ani Spirra neví, jak se jí stát – zatím ji jde jen ulovit.",
                 evolveLevel = 0, evolveToId = ""
             ),
 

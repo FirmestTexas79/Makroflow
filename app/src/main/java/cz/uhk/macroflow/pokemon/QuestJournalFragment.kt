@@ -348,7 +348,10 @@ class QuestJournalFragment : Fragment() {
                 }
                 RequirementType.HIT_TARGET -> {
                     val n = cz.uhk.macroflow.energy.Adherence.Nutrient.from(stageToDisplay.targetId)
-                    if (n == null || viewingIndex < currentIndex || isAllDone) "Cíl: Splněno"
+                    val allMacros = stageToDisplay.targetId == QuestProgression.ALL_MACROS
+                    if (allMacros && !(viewingIndex < currentIndex || isAllDone))
+                        "Cíl: B/S/T dnes (${QuestProgression.currentValue(stageToDisplay, progress.metadata)} / 3 trefeno)"
+                    else if (n == null || viewingIndex < currentIndex || isAllDone) "Cíl: Splněno"
                     else {
                         val pct = QuestProgression.currentValue(stageToDisplay, progress.metadata)
                         "Cíl: ${n.label} dnes $pct % tvého cíle (potřeba ${n.minPct}–${n.maxPct} %)"

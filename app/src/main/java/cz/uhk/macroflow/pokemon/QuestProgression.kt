@@ -10,6 +10,10 @@ import cz.uhk.macroflow.pokemon.QuestProgressEntity
  */
 object QuestProgression {
 
+    /** HIT_TARGET se všemi třemi makry najednou; metadata = kolik z B/S/T je dnes trefeno (0–3). */
+    const val ALL_MACROS = "macros"
+    private val MACROS = listOf(Adherence.Nutrient.PROTEIN, Adherence.Nutrient.CARBS, Adherence.Nutrient.FAT)
+
     /** Kolik z cíle fáze je splněno podle metadat (pro deník i vyhodnocení). */
     fun currentValue(stage: QuestStage, metadata: String): Int = when (stage.requirementType) {
         RequirementType.VISIT_NODE -> visitedNodes(metadata).size
@@ -18,6 +22,7 @@ object QuestProgression {
 
     fun isStageSatisfied(stage: QuestStage, metadata: String): Boolean {
         if (stage.requirementType == RequirementType.HIT_TARGET) {
+            if (stage.targetId == ALL_MACROS) return currentValue(stage, metadata) >= MACROS.size
             val n = Adherence.Nutrient.from(stage.targetId) ?: return false
             return Adherence.isHitPercent(n, currentValue(stage, metadata))
         }
@@ -27,6 +32,7 @@ object QuestProgression {
     /** Snědeno v % osobního cíle pro fázi HIT_TARGET; null pro jiné fáze. */
     fun targetPercent(stage: QuestStage, eaten: Adherence.Eaten, targets: Adherence.Targets): Int? {
         if (stage.requirementType != RequirementType.HIT_TARGET) return null
+        if (stage.targetId == ALL_MACROS) return MACROS.count { Adherence.isHit(it, eaten, targets) }
         val n = Adherence.Nutrient.from(stage.targetId) ?: return null
         return Adherence.percent(n, eaten, targets)
     }
@@ -57,7 +63,8 @@ object QuestProgression {
             RequirementType.SCAN_BARCODE -> "Pořád čekám na čárový kód! Naskenuj ho u jídla v sekci Jídlo."
             RequirementType.HIT_TARGET -> {
                 val n = Adherence.Nutrient.from(stage.targetId)
-                if (n == null) stage.text
+                if (stage.targetId == ALL_MACROS) "Dnes máš trefená $v ze 3 maker. Potřebuju bílkoviny, sacharidy i tuky – všechno v jednom dni!"
+                else if (n == null) stage.text
                 else "Dnes máš ${n.label} na $v % svého cíle. Potřebuješ ${n.minPct}–${n.maxPct} %."
             }
             RequirementType.TALK_TO_NPC -> stage.text

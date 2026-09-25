@@ -174,11 +174,20 @@ object QuestRegistry {
             ),
             QuestStage(
                 title = "Královský pochod",
-                text = "Udělal jsi ze mě jiného krále. Moje armáda je silná, najedená a vyvážená. Teď je čas na velký pochod přes celé pohoří! Ujdi se mnou dnes 8000 kroků – poslední zkouška, po které ti udělím titul Výživový rytíř hor!",
+                text = "Udělal jsi ze mě jiného krále. Moje armáda je silná a najedená. Teď je čas na velký pochod přes celé pohoří! Ujdi se mnou dnes 8000 kroků – a pak tě čeká poslední zkouška.",
                 speakerResId = R.drawable.kral_mlsak,
                 speakerName = KRAL,
                 requirementType = RequirementType.WALK_STEPS,
                 targetValue = 8000
+            ),
+            QuestStage(
+                title = "Královská hostina",
+                text = "Bílkoviny, sacharidy, tuky – každé zvlášť už umíš. Opravdový rytíř je ale umí všechny najednou! Traf dnes v jednom dni svůj cíl bílkovin, sacharidů i tuků. Pak ti udělím titul Výživový rytíř hor a moje kuchyně bude navždy vyvážená!",
+                speakerResId = R.drawable.kral_mlsak,
+                speakerName = KRAL,
+                requirementType = RequirementType.HIT_TARGET,
+                targetValue = 3,
+                targetId = QuestProgression.ALL_MACROS
             )
         )
     )
