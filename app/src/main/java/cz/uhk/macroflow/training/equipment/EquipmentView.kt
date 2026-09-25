@@ -45,7 +45,7 @@ class EquipmentView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
         kg >= 20.0 -> 0.80f; kg >= 10.0 -> 0.62f; kg >= 5.0 -> 0.47f; kg >= 2.5 -> 0.37f; else -> 0.29f
     }
     private fun plateThickness(kg: Double) = when {
-        kg >= 20.0 -> 0.080f; kg >= 10.0 -> 0.062f; kg >= 5.0 -> 0.048f; kg >= 2.5 -> 0.038f; else -> 0.030f
+        kg >= 20.0 -> 0.125f; kg >= 10.0 -> 0.098f; kg >= 5.0 -> 0.076f; kg >= 2.5 -> 0.060f; else -> 0.048f
     }
 
     // ── Stav ────────────────────────────────────────────────────────────────
@@ -144,8 +144,8 @@ class EquipmentView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
 
         when (rg) {
             Rig.DUMBBELL_PAIR -> {
-                drawDumbbell(canvas, w * 0.60f, h * 0.44f, h * 0.82f, alpha, back = true)
-                drawDumbbell(canvas, w * 0.42f, h * 0.58f, h, alpha, back = false)
+                drawDumbbell(canvas, w * 0.58f, h * 0.50f, h * 0.86f, alpha, back = true)
+                drawDumbbell(canvas, w * 0.43f, h * 0.60f, h, alpha, back = false)
             }
             Rig.DUMBBELL_SINGLE -> drawDumbbell(canvas, w * 0.5f, h * 0.54f, h * 1.05f, alpha, back = false)
             Rig.STRAIGHT_BAR, Rig.EZ_BAR -> drawFixedBar(canvas, w, h, rg == Rig.EZ_BAR, alpha)
@@ -189,7 +189,7 @@ class EquipmentView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
             r.set(left + t * 0.2f, cy - d * 0.42f, left + t * 0.45f, cy + d * 0.42f)
             canvas.drawRoundRect(r, t * 0.1f, t * 0.1f, p)
             // hodnota na kotouči (u silnějších)
-            if (t > h * 0.045f) {
+            if (t > h * 0.07f) {
                 canvas.save()
                 canvas.rotate(-90f, left + t / 2, cy - d * 0.3f)
                 text.textSize = min(t * 0.62f, h * 0.06f)
@@ -331,21 +331,21 @@ class EquipmentView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
         p.shader = null; p.style = Paint.Style.FILL
         // základna a sloup
         p.color = cDark; p.alpha = alpha
-        r.set(w * 0.16f, h * 0.84f, w * 0.84f, h * 0.89f); canvas.drawRoundRect(r, h * 0.02f, h * 0.02f, p)
-        r.set(w * 0.47f, h * 0.10f, w * 0.53f, h * 0.86f); canvas.drawRoundRect(r, h * 0.02f, h * 0.02f, p)
+        r.set(w * 0.30f, h * 0.88f, w * 0.70f, h * 0.93f); canvas.drawRoundRect(r, h * 0.02f, h * 0.02f, p)
+        r.set(w * 0.47f, h * 0.10f, w * 0.53f, h * 0.90f); canvas.drawRoundRect(r, h * 0.02f, h * 0.02f, p)
         // opěrka
         p.color = cPrimary; p.alpha = alpha
         r.set(w * 0.425f, h * 0.06f, w * 0.575f, h * 0.44f); canvas.drawRoundRect(r, h * 0.05f, h * 0.05f, p)
         p.color = lighten(cPrimary, 0.25f); p.alpha = (alpha * 0.7f).toInt()
         r.set(w * 0.44f, h * 0.08f, w * 0.47f, h * 0.42f); canvas.drawRoundRect(r, h * 0.02f, h * 0.02f, p)
         // rameno stroje a madla
-        val armY = h * 0.60f
+        val armY = h * 0.52f
         p.color = darken(cDark, 0.1f); p.alpha = alpha
         r.set(w * 0.22f, armY - h * 0.028f, w * 0.78f, armY + h * 0.028f); canvas.drawRoundRect(r, h * 0.028f, h * 0.028f, p)
         for (x in floatArrayOf(w * 0.31f, w * 0.69f)) {
-            r.set(x - h * 0.018f, h * 0.28f, x + h * 0.018f, armY); canvas.drawRoundRect(r, h * 0.018f, h * 0.018f, p)
+            r.set(x - h * 0.018f, h * 0.22f, x + h * 0.018f, armY); canvas.drawRoundRect(r, h * 0.018f, h * 0.018f, p)
             p.color = cDeep; p.alpha = alpha
-            r.set(x - h * 0.04f, h * 0.22f, x + h * 0.04f, h * 0.31f); canvas.drawRoundRect(r, h * 0.03f, h * 0.03f, p)
+            r.set(x - h * 0.04f, h * 0.14f, x + h * 0.04f, h * 0.24f); canvas.drawRoundRect(r, h * 0.03f, h * 0.03f, p)
             p.color = darken(cDark, 0.1f); p.alpha = alpha
         }
         // trny na kotouče
