@@ -6,14 +6,19 @@ import cz.uhk.macroflow.training.exercises.Exercise
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
-/** Jedna zapsaná série (bez Androidu). [day] = epochDay, [order] = pořadí v rámci dne. */
+/**
+ * Jedna zapsaná série (bez Androidu). [day] = epochDay, [order] = pořadí v rámci dne,
+ * [slowEccentric] = záměrně pomalé spouštění (~3 s a víc), [template] = šablona dne („PUSH_A“).
+ */
 data class LoggedSet(
     val id: Long = 0,
     val day: Int,
     val exerciseId: String,
     val weightKg: Double,
     val reps: Int,
-    val order: Int = 0
+    val order: Int = 0,
+    val slowEccentric: Boolean = false,
+    val template: String? = null
 )
 
 /**

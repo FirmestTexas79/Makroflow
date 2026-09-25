@@ -27,6 +27,9 @@ import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.dashboard.MacroFlowEngine
 import cz.uhk.macroflow.training.atlas.MuscleAtlasSheet
+import cz.uhk.macroflow.training.log.WorkoutRepository
+import cz.uhk.macroflow.training.log.WorkoutSessionSheet
+import cz.uhk.macroflow.training.log.WorkoutTemplates
 import cz.uhk.macroflow.training.body.BodyMapView
 import cz.uhk.macroflow.training.body.Muscle
 import cz.uhk.macroflow.training.body.TrainingMuscles
@@ -331,6 +334,55 @@ class PlanFragment : Fragment() {
             }
         }
         buildBodyLegend(view)
+        refreshTodayWorkout(view)
+    }
+
+    // ── Dnešní trénink podle šablony (docs/adr/0024) ─────────────────────────
+
+    private fun refreshTodayWorkout(view: View) {
+        val card = view.findViewById<View>(R.id.cardTodayWorkout) ?: return
+        if (isKardioMode) { card.visibility = View.GONE; return }
+        val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
+        val kind = WorkoutTemplates.Kind.fromPlanType(trainingPrefs.getString("type_$dayName", "rest"))
+        val ctx = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            val history = withContext(Dispatchers.IO) {
+                WorkoutRepository.toLogged(AppDatabase.getDatabase(ctx).workoutDao().getAllSync())
+            }
+            val todayDay = java.time.LocalDate.now().toEpochDay().toInt()
+            card.visibility = View.VISIBLE
+            val title = view.findViewById<TextView>(R.id.tvTodayWorkout)
+            val sub = view.findViewById<TextView>(R.id.tvTodayWorkoutSub)
+            val start = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnStartWorkout)
+            if (kind != null) {
+                val variant = WorkoutTemplates.variantFor(kind, history, todayDay)
+                val key = WorkoutTemplates.key(kind, variant)
+                val count = WorkoutRepository.templateIds(ctx, key).size
+                val doneToday = history.count { it.day == todayDay && it.template == key }
+                title.text = WorkoutTemplates.label(key)
+                sub.text = if (doneToday > 0) "$count cviků · dnes zapsáno $doneToday sérií"
+                    else "$count cviků · střídá se s ${WorkoutTemplates.label(WorkoutTemplates.key(kind, if (variant == 'A') 'B' else 'A'))}"
+                start.text = if (doneToday > 0) "Pokračovat" else "Začít trénink"
+                start.setOnClickListener { WorkoutSessionSheet.show(childFragmentManager, kind, variant) }
+            } else {
+                title.text = "Bez šablony"
+                sub.text = "Dnes nemáš v plánu PUSH / PULL / LEGS. Chceš si i tak zacvičit?"
+                start.text = "Vybrat trénink"
+                start.setOnClickListener { pickWorkout(history, todayDay) }
+            }
+            view.findViewById<View>(R.id.btnPickWorkout).setOnClickListener { pickWorkout(history, todayDay) }
+        }
+    }
+
+    private fun pickWorkout(history: List<cz.uhk.macroflow.training.log.LoggedSet>, todayDay: Int) {
+        val options = WorkoutTemplates.Kind.entries.flatMap { k -> WorkoutTemplates.VARIANTS.map { k to it } }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Který trénink?")
+            .setItems(options.map { (k, v) ->
+                val next = WorkoutTemplates.variantFor(k, history, todayDay) == v
+                WorkoutTemplates.label(WorkoutTemplates.key(k, v)) + if (next) "  · na řadě" else ""
+            }.toTypedArray()) { _, i -> WorkoutSessionSheet.show(childFragmentManager, options[i].first, options[i].second) }
+            .show()
     }
 
     /** Klepnutí na kartu otevře atlas svalů; klepnutí přímo na sval ho v atlasu rovnou vybere. */

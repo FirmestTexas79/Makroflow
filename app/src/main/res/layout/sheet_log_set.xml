@@ -169,6 +169,44 @@
             app:tint="@color/brand_dark" />
     </LinearLayout>
 
+    <!-- Tempo: pomalé spouštění snižuje počet opakování při stejné váze – model to přepočítá -->
+    <LinearLayout
+        android:id="@+id/rowLogSlow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_stat_tile"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp"
+        android:paddingVertical="6dp">
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="Pomalé spouštění"
+                android:textColor="@color/brand_dark"
+                android:textSize="14sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.6"
+                android:text="negativní fáze asi 3 s a déle"
+                android:textColor="@color/brand_dark"
+                android:textSize="11.5sp" />
+        </LinearLayout>
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/swLogSlow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/tvLogSetE1rm"
         android:layout_width="match_parent"

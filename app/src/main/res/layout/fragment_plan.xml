@@ -164,6 +164,85 @@
 
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
+            <!-- Dnešní trénink podle šablony PUSH/PULL/LEGS A/B (docs/adr/0024) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTodayWorkout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/brand_dark"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.14"
+                        android:text="DNEŠNÍ TRÉNINK"
+                        android:textColor="@color/brand_accent_warm"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTodayWorkout"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="sans-serif-black"
+                        android:textColor="@color/brand_cream"
+                        android:textSize="28sp" />
+
+                    <TextView
+                        android:id="@+id/tvTodayWorkoutSub"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:alpha="0.75"
+                        android:textColor="@color/brand_cream"
+                        android:textSize="12.5sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnStartWorkout"
+                            android:layout_width="0dp"
+                            android:layout_height="52dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="@color/brand_accent_warm"
+                            android:fontFamily="sans-serif-black"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="Začít trénink"
+                            android:textColor="@color/brand_dark"
+                            app:cornerRadius="16dp"
+                            app:icon="@drawable/ic_ls_lift"
+                            app:iconGravity="textStart"
+                            app:iconTint="@color/brand_dark" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnPickWorkout"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="52dp"
+                            android:layout_marginStart="8dp"
+                            android:text="Jiný"
+                            android:textColor="@color/brand_cream" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Stat cards — 5 bloků, FULL/STAIRS jako první -->
             <LinearLayout
                 android:layout_width="match_parent"

@@ -247,6 +247,9 @@ object ReportGenerator {
         drawFooter(canvas)
         pdfDocument.finishPage(currentPage)
 
+        // Samostatná stránka pro trenéra: silový deník s modelem síly (docs/adr/0024)
+        drawStrengthSection(pdfDocument, reportTitle, context, db)
+
         // Samostatná stránka pro trenéra: sledování činky kamerou
         drawBarbellSection(pdfDocument, reportTitle, context, db)
 
@@ -398,6 +401,106 @@ object ReportGenerator {
             y += 6f
         }
         drawBarbellLegend(c, paint)
+        drawFooter(c)
+        pdf.finishPage(page)
+    }
+
+    /**
+     * Stránka „Silový deník“ (docs/adr/0024): cviky zapsané za posledních 28 dní, u každého model
+     * síly (1RM s 95% intervalem, týdenní trend, předpověď na další trénink, připravenost),
+     * mini graf vývoje a poslední tréninky se sériemi (p = pomalé spouštění).
+     */
+    private fun drawStrengthSection(pdf: PdfDocument, title: String, context: Context, db: AppDatabase) {
+        val today = java.time.LocalDate.now()
+        val todayDay = today.toEpochDay().toInt()
+        val all = cz.uhk.macroflow.training.log.WorkoutRepository.toLogged(db.workoutDao().getAllSync())
+        val recentIds = all.filter { it.day > todayDay - 28 }.map { it.exerciseId }.distinct()
+        if (recentIds.isEmpty()) return
+
+        val paint = Paint().apply { isAntiAlias = true }
+        var page = createNewPage(pdf, title, context)
+        var c = page.canvas
+        var y = HEADER_END_Y
+        fun newPageIfNeeded(need: Float) {
+            if (y + need > PAGE_HEIGHT - 70) {
+                drawFooter(c); pdf.finishPage(page)
+                page = createNewPage(pdf, title, context); c = page.canvas; y = HEADER_END_Y
+            }
+        }
+        fun kg(v: Double) = String.format(Locale.US, "%.1f", v).replace('.', ',').removeSuffix(",0")
+        fun date(d: Int) = java.time.LocalDate.ofEpochDay(d.toLong()).let { "${it.dayOfMonth}.${it.monthValue}." }
+
+        paint.color = Color.BLACK; paint.textSize = 14f; paint.typeface = Typeface.DEFAULT_BOLD
+        c.drawText("SILOVÝ DENÍK (posledních 28 dní)", MARGIN, y, paint)
+        y += 14f
+        paint.textSize = 8f; paint.typeface = Typeface.DEFAULT; paint.color = Color.DKGRAY
+        c.drawText("1RM = odhad maxima na 1 opakování z modelu síly (Kalmanův filtr nad odhady z Epleyho vzorce, pomalé spouštění přepočteno).", MARGIN, y, paint)
+        y += 10f
+        c.drawText("Připraven = váha pro cílová opakování se 2 opakováními v rezervě. Série: váha × opakování, p = pomalé spouštění.", MARGIN, y, paint)
+        y += 18f
+
+        // Pořadí: podle šablon (PUSH A…), pak ostatní
+        val order = cz.uhk.macroflow.training.log.WorkoutTemplates.DEFAULTS.values.flatten()
+        recentIds.sortedBy { id -> order.indexOf(id).let { if (it < 0) 999 else it } }.forEach { id ->
+            val e = cz.uhk.macroflow.training.exercises.ExerciseLibrary.byId(id) ?: return@forEach
+            val insight = cz.uhk.macroflow.training.log.ExerciseInsight.of(e, all, todayDay + 1)
+            val mine = all.filter { it.exerciseId == id }
+            val sessions = mine.groupBy { it.day }.toSortedMap()
+            newPageIfNeeded(40f + 12f * minOf(4, sessions.size))
+
+            paint.color = Color.parseColor("#283618"); paint.textSize = 11.5f; paint.typeface = Typeface.DEFAULT_BOLD
+            c.drawText(e.name, MARGIN, y, paint)
+            val templates = mine.mapNotNull { it.template }.distinct().joinToString(", ") { cz.uhk.macroflow.training.log.WorkoutTemplates.label(it) }
+            if (templates.isNotEmpty()) {
+                paint.typeface = Typeface.DEFAULT; paint.textSize = 8.5f; paint.color = Color.GRAY
+                c.drawText(templates, MARGIN + 8f + Paint(paint).apply { textSize = 11.5f; typeface = Typeface.DEFAULT_BOLD }.measureText(e.name), y, paint)
+            }
+            y += 13f
+
+            paint.typeface = Typeface.DEFAULT; paint.textSize = 9f; paint.color = Color.BLACK
+            val est = insight.estimate
+            val line = if (est == null) "Zatím bez použitelného odhadu 1RM (vlastní váha nebo 20+ opakování)." else buildString {
+                append("1RM ${kg(est.e1rm)} kg (${kg(est.lower)}–${kg(est.upper)})")
+                append("  ·  trend ${if (est.weeklyChangePct >= 0) "+" else "−"}${String.format(Locale.US, "%.1f", kotlin.math.abs(est.weeklyChangePct)).replace('.', ',')} % týdně")
+                insight.nextEstimate?.let { append("  ·  za ~${insight.nextInDays} d ${kg(it.e1rm)} kg") }
+                insight.readyWeightKg?.let { append("  ·  připraven ${kg(it)} kg × ${insight.readyReps}") }
+            }
+            c.drawText(line, MARGIN, y, paint)
+            y += 4f
+
+            // Mini graf: body = nejlepší odhad z tréninku, čára = model
+            val obs = cz.uhk.macroflow.training.log.StrengthModel.observations(mine)
+            val chartTop = y + 2f
+            val chartH = 34f
+            val chartX = PAGE_WIDTH - MARGIN - 150f
+            if (obs.size >= 2) {
+                val modelPts = obs.map { o -> o.day to (cz.uhk.macroflow.training.log.StrengthModel.estimate(mine, o.day)?.e1rm ?: o.e1rm) }
+                val lo = (obs.map { it.e1rm } + modelPts.map { it.second }).min() * 0.98
+                val hi = (obs.map { it.e1rm } + modelPts.map { it.second }).max() * 1.02
+                val d0 = obs.first().day; val d1 = obs.last().day.coerceAtLeast(d0 + 1)
+                fun px(d: Int) = chartX + (d - d0).toFloat() / (d1 - d0) * 150f
+                fun py(v: Double) = (chartTop + chartH - (v - lo) / (hi - lo) * chartH).toFloat()
+                paint.color = Color.parseColor("#1F283618"); c.drawRect(chartX, chartTop, chartX + 150f, chartTop + chartH, paint)
+                paint.color = Color.parseColor("#606C38"); paint.strokeWidth = 1.6f
+                modelPts.zipWithNext().forEach { (a, b) -> c.drawLine(px(a.first), py(a.second), px(b.first), py(b.second), paint) }
+                paint.color = Color.parseColor("#BC6C25")
+                obs.forEach { o -> c.drawCircle(px(o.day), py(o.e1rm), 1.8f, paint) }
+                paint.strokeWidth = 0f
+            }
+
+            // Poslední tréninky
+            y += 12f
+            paint.color = Color.BLACK; paint.textSize = 8.5f
+            sessions.entries.toList().takeLast(4).forEach { (day, sets) ->
+                val best = sets.mapNotNull { cz.uhk.macroflow.training.log.StrengthModel.setEstimate(it) }.maxOrNull()
+                val txt = "${date(day)}  " + sets.sortedBy { it.order }.joinToString("  ") { s ->
+                    (if (s.weightKg > 0) "${kg(s.weightKg)}×${s.reps}" else "${s.reps}×") + if (s.slowEccentric) "p" else ""
+                } + (best?.let { "   (≈ ${kg(it)} kg)" } ?: "")
+                c.drawText(txt, MARGIN + 6f, y, paint)
+                y += 11f
+            }
+            y = maxOf(y, chartTop + chartH + 4f) + 10f
+        }
         drawFooter(c)
         pdf.finishPage(page)
     }

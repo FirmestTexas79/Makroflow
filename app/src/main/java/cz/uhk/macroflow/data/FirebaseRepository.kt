@@ -237,7 +237,8 @@ object FirebaseRepository {
         if (!isLoggedIn) return
         val data = mapOf(
             "date" to set.date, "createdAt" to set.createdAt, "exerciseId" to set.exerciseId,
-            "weightKg" to set.weightKg, "reps" to set.reps
+            "weightKg" to set.weightKg, "reps" to set.reps,
+            "slowEccentric" to set.slowEccentric, "template" to set.template
         )
         userDoc().collection("workout_sets").document(set.createdAt.toString()).set(data, SetOptions.merge()).await()
     }
@@ -255,8 +256,24 @@ object FirebaseRepository {
                 createdAt = doc.getLong("createdAt") ?: return@mapNotNull null,
                 exerciseId = doc.getString("exerciseId") ?: return@mapNotNull null,
                 weightKg = doc.getDouble("weightKg") ?: 0.0,
-                reps = (doc.getLong("reps") ?: 0L).toInt()
+                reps = (doc.getLong("reps") ?: 0L).toInt(),
+                slowEccentric = doc.getBoolean("slowEccentric") ?: false,
+                template = doc.getString("template")
             )
+        }
+    }
+
+    /** Šablona dne = jeden dokument (PUSH_A …) se seznamem cviků v pořadí. */
+    suspend fun uploadWorkoutTemplate(key: String, exerciseIds: List<String>) {
+        if (!isLoggedIn) return
+        userDoc().collection("workout_templates").document(key).set(mapOf("exercises" to exerciseIds)).await()
+    }
+
+    suspend fun downloadAllWorkoutTemplates(): Map<String, List<String>> {
+        if (!isLoggedIn) return emptyMap()
+        return userDoc().collection("workout_templates").get().await().documents.associate { doc ->
+            @Suppress("UNCHECKED_CAST")
+            doc.id to ((doc.get("exercises") as? List<String>) ?: emptyList())
         }
     }
 
@@ -542,6 +559,9 @@ object FirebaseRepository {
 
         localDb.questDao().getAllQuests().forEach { uploadQuestProgress(it) }
         localDb.workoutDao().getAllSync().forEach { uploadWorkoutSet(it) }
+        localDb.workoutDao().allTemplatesSync().groupBy { it.templateKey }.forEach { (key, rows) ->
+            uploadWorkoutTemplate(key, rows.sortedBy { it.position }.map { it.exerciseId })
+        }
 
         Log.d("FB_SYNC", "Upload dokončen")
     }
@@ -572,6 +592,7 @@ object FirebaseRepository {
 
             val questProgress = downloadAllQuestProgress()
             val workoutSets   = downloadAllWorkoutSets()
+            val workoutTemplates = downloadAllWorkoutTemplates()
 
             profile?.let { localDb.userProfileDao().saveProfile(it) }
             if (plan.isNotEmpty()) {
@@ -620,6 +641,7 @@ object FirebaseRepository {
                 localDb.workoutDao().deleteAllLocally()
                 workoutSets.forEach { localDb.workoutDao().insert(it) }
             }
+            workoutTemplates.forEach { (key, ids) -> localDb.workoutDao().replaceTemplate(key, ids) }
 
             if (analytics.isNotEmpty()) {
                 localDb.analyticsDao().deleteAllLocally()
@@ -640,7 +662,7 @@ object FirebaseRepository {
     val USER_COLLECTIONS = listOf(
         "data", "checkins", "body_metrics", "analytics", "custom_snacks", "consumed_history",
         "water", "wallet", "user_items", "captured_makromons", "makrodex_status", "makromon_xp",
-        "unlocked_achievements", "steps", "quest_progress", "workout_sets"
+        "unlocked_achievements", "steps", "quest_progress", "workout_sets", "workout_templates"
     )
 
     suspend fun deleteAllUserData() {

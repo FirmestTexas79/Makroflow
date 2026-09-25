@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cvik v tréninku (docs/adr/0024): model síly, připravenost, minule a dnešní série. -->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/ProfileCard"
+    android:layout_marginTop="10dp"
+    app:cardCornerRadius="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <LinearLayout
+            android:id="@+id/rowExHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvSxIndex"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:background="@drawable/bg_step_number"
+                android:gravity="center"
+                android:textColor="@color/brand_cream"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/tvSxName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-black"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="15sp" />
+                <TextView
+                    android:id="@+id/tvSxModel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:alpha="0.65"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="11.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_chevron_right"
+                app:tint="@color/brand_dark_alpha40" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_stat_tile"
+            android:backgroundTint="@color/brand_accent_deep_alpha20"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="10dp">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.1"
+                    android:text="DNES PŘIPRAVEN"
+                    android:textColor="@color/brand_accent_deep"
+                    android:textSize="9sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tvSxReady"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-black"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="17sp" />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/tvSxNext"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:textColor="@color/brand_dark"
+                android:textSize="11.5sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvSxLast"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:alpha="0.7"
+            android:textColor="@color/brand_dark"
+            android:textSize="12sp" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipsSxToday"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            app:chipSpacingHorizontal="6dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSxLog"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="6dp"
+            android:backgroundTint="@color/brand_dark"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Zapsat sérii"
+            android:textColor="@color/brand_cream"
+            app:cornerRadius="14dp"
+            app:icon="@drawable/ic_line_plus"
+            app:iconGravity="textStart"
+            app:iconTint="@color/brand_cream" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

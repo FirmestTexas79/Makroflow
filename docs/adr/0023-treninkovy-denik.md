@@ -1,6 +1,6 @@
 # 0023 – Tréninkový deník v atlasu cviků
 
-**Stav:** návrh (větev `feature/workout-log`) · **Datum:** 2026-09-25
+**Stav:** návrh (větev `feature/workout-log`, rozšířeno v ADR 0024) · **Datum:** 2026-09-25
 
 ## Kontext
 Atlas svalů (ADR 0019) vysvětluje cviky, ale nic si nepamatuje. Pro progresivní přetížení –

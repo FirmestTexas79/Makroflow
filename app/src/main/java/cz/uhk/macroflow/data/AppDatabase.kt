@@ -35,7 +35,8 @@ import kotlin.concurrent.thread
         AdaptiveTdeeEntity::class,
         BarbellSetEntity::class,
         BarbellRepEntity::class,
-        WorkoutSetEntity::class
+        WorkoutSetEntity::class,
+        WorkoutTemplateEntity::class
     ],
     version = 37,
     exportSchema = false
@@ -125,17 +126,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /** v37: tréninkový deník – zapsané série z atlasu cviků (docs/adr/0023). */
+        /** v37: tréninkový deník – série (s tempem a šablonou) a šablony dnů PUSH/PULL/LEGS A/B (docs/adr/0023, 0024). */
         val MIGRATION_36_37 = object : Migration(36, 37) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS `workout_sets` (" +
                         "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` TEXT NOT NULL, " +
                         "`createdAt` INTEGER NOT NULL, `exerciseId` TEXT NOT NULL, " +
-                        "`weightKg` REAL NOT NULL, `reps` INTEGER NOT NULL)"
+                        "`weightKg` REAL NOT NULL, `reps` INTEGER NOT NULL, " +
+                        "`slowEccentric` INTEGER NOT NULL, `template` TEXT)"
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_sets_exerciseId_date` ON `workout_sets` (`exerciseId`, `date`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_sets_date` ON `workout_sets` (`date`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `workout_templates` (" +
+                        "`templateKey` TEXT NOT NULL, `position` INTEGER NOT NULL, `exerciseId` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`templateKey`, `position`))"
+                )
             }
         }
 
