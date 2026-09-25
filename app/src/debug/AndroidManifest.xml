@@ -16,5 +16,9 @@
             android:name="cz.uhk.macroflow.training.equipment.EquipmentPreviewActivity"
             android:exported="true"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+        <activity
+            android:name="cz.uhk.macroflow.pokemon.MakromonMapActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
     </application>
 </manifest>
