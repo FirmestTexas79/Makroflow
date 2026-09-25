@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Přidání vlastního množství (docs/adr/0021): rychlé porce, krokování po 10 g,
+    tmavá karta s kcal, podílem maker a tím, kolik to udělá z dnešního cíle.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_sheet_cream"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp"
+    android:paddingBottom="24dp">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="@color/brand_dark_alpha20" />
+
+    <TextView
+        android:id="@+id/tvConsumeGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="@color/brand_primary"
+        android:letterSpacing="0.12"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="5dp"
+        android:textColor="@color/brand_cream"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvConsumeName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:fontFamily="sans-serif-black"
+        android:lineSpacingMultiplier="0.9"
+        android:maxLines="2"
+        android:textColor="@color/brand_dark"
+        android:textSize="26sp" />
+
+    <TextView
+        android:id="@+id/tvConsumePortion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:alpha="0.75"
+        android:textColor="@color/brand_primary"
+        android:textSize="13sp" />
+
+    <!-- Rychlé porce -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipsPortion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        app:chipSpacingHorizontal="6dp"
+        app:selectionRequired="false"
+        app:singleSelection="true" />
+
+    <!-- Množství s krokováním -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_search_soft"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp">
+
+        <ImageButton
+            android:id="@+id/btnConsumeMinus"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_primary_alpha10"
+            android:contentDescription="Ubrat 10 g"
+            android:padding="13dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_line_minus"
+            app:tint="@color/brand_dark" />
+
+        <EditText
+            android:id="@+id/etConsumeWeight"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:inputType="numberDecimal"
+            android:maxLength="6"
+            android:selectAllOnFocus="true"
+            android:textColor="@color/brand_dark"
+            android:textSize="28sp" />
+
+        <TextView
+            android:id="@+id/tvConsumeUnit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:text="g"
+            android:textColor="@color/brand_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnConsumePlus"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_primary_alpha10"
+            android:contentDescription="Přidat 10 g"
+            android:padding="13dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_line_plus"
+            app:tint="@color/brand_dark" />
+    </LinearLayout>
+
+    <!-- Souhrn -->
+    <com.google.android.material.card.MaterialCardView
+        style="@style/ProfileCard"
+        android:layout_marginTop="12dp"
+        app:cardBackgroundColor="@color/brand_dark"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <cz.uhk.macroflow.nutrition.MacroDonutView
+                android:id="@+id/donutConsume"
+                android:layout_width="92dp"
+                android:layout_height="92dp" />
+
+            <LinearLayout
+                android:id="@+id/llConsumeMacros"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/tvConsumeHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:alpha="0.6"
+        android:gravity="center"
+        android:text="Světlá část pruhu = už snědeno dnes, sytá = tahle porce."
+        android:textColor="@color/brand_dark"
+        android:textSize="11sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnConsumeConfirm"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:layout_marginTop="14dp"
+        android:backgroundTint="@color/brand_dark"
+        android:fontFamily="sans-serif-black"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:text="Přidat do deníku"
+        android:textColor="@color/brand_cream"
+        android:textSize="15sp"
+        app:cornerRadius="18dp"
+        app:icon="@drawable/ic_line_plus"
+        app:iconGravity="textStart"
+        app:iconTint="@color/brand_cream" />
+</LinearLayout>

@@ -168,7 +168,7 @@
             android:textColor="@color/brand_dark"
             android:textColorHint="@color/brand_dark_alpha40"
             android:paddingHorizontal="16dp"
-            android:background="@drawable/bg_search_field" />
+            android:background="@drawable/bg_search_soft" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvPantryResults"

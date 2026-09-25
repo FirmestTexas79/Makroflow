@@ -225,7 +225,7 @@ class MealBuilderSheet(private val isPreSelected: Boolean) : BottomSheetDialogFr
         )
 
         lifecycleScope.launch(Dispatchers.IO) {
-            db.consumedSnackDao().insertConsumed(entity)
+            FoodLog.insert(requireContext().applicationContext, entity)   // lokálně i do cloudu
             withContext(Dispatchers.Main) {
                 Toast.makeText(requireContext(), "Jídlo uloženo do deníku", Toast.LENGTH_SHORT).show()
                 dismiss()
@@ -289,51 +289,12 @@ class MealBuilderSheet(private val isPreSelected: Boolean) : BottomSheetDialogFr
 
         inner class VH(v: View) : RecyclerView.ViewHolder(v)
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            // Použijeme jednoduchý row layout — dva TextViews a click
-            val row = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_snack_block, parent, false)
-            return VH(row)
-        }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
+            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_snack_row, parent, false))
 
         override fun onBindViewHolder(h: VH, pos: Int) {
-            val snack = list[pos]
-            h.itemView.findViewById<TextView>(R.id.tvSnackName).text  = snack.name
-            h.itemView.findViewById<TextView>(R.id.tvSnackWeight).text = snack.weight
-
-            val kcal = FoodEnergy.kcalPreferLabel(snack.energyKj, snack.p, snack.s, snack.t, snack.fiber).toInt()
-            h.itemView.findViewById<TextView>(R.id.tvSnackKcal).text = "$kcal kcal"
-
-            h.itemView.findViewById<TextView>(R.id.valP).text = "B: ${snack.p.toInt()}g"
-            h.itemView.findViewById<TextView>(R.id.valS).text = "S: ${snack.s.toInt()}g"
-            h.itemView.findViewById<TextView>(R.id.valT).text = "T: ${snack.t.toInt()}g"
-
-            // Vláknina
-            val tvFiber     = h.itemView.findViewById<TextView>(R.id.valFiber)
-            val divFiber    = h.itemView.findViewById<View>(R.id.dividerFiber)
-            if (snack.fiber > 0.05f) {
-                tvFiber?.visibility  = View.VISIBLE
-                tvFiber?.text        = "V: ${"%.1f".format(snack.fiber)}g"
-                divFiber?.visibility = View.VISIBLE
-            } else {
-                tvFiber?.visibility  = View.GONE
-                divFiber?.visibility = View.GONE
-            }
-
-            // Progress bary — jen vizuálně, ceiling z lokálního maxima listu
-            val ceiling = (list.flatMap { listOf(it.p, it.s, it.t) }.maxOrNull() ?: 1f) * 1.1f
-            fun setBar(bar: View?, value: Float) {
-                bar ?: return
-                val p = bar.layoutParams as LinearLayout.LayoutParams
-                p.weight = if (value > 0) ((value / ceiling) * 30f) else 0f
-                bar.layoutParams = p
-            }
-            setBar(h.itemView.findViewById(R.id.barP), snack.p)
-            setBar(h.itemView.findViewById(R.id.barS), snack.s)
-            setBar(h.itemView.findViewById(R.id.barT), snack.t)
-
-            // Klik = přidej do jídla
-            h.itemView.setOnClickListener { onSelect(snack) }
+            // Stejný řádek jako ve Snacích; klepnutí i „+“ přidá surovinu do jídla
+            SnackRowBinder.bind(h.itemView, list[pos], onClick = onSelect, onQuickAdd = onSelect)
         }
 
         override fun getItemCount() = list.size

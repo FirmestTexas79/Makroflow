@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Oddělovač skupiny v seznamu Snacků (stejný jazyk jako sekce v profilu). -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tvSnackHeader"
+    style="@style/ProfileSection"
+    android:layout_marginHorizontal="20dp"
+    android:layout_marginTop="18dp"
+    android:layout_marginBottom="6dp" />

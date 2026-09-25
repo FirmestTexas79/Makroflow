@@ -30,4 +30,12 @@ interface SnackDao {
 
     @Query("SELECT * FROM snack_usage_metadata WHERE snackName = :name LIMIT 1")
     fun getUsageStats(name: String): SnackUsageEntity?
+
+    /** Počty použití všech potravin – pro oddíl Oblíbené. */
+    @Query("SELECT * FROM snack_usage_metadata")
+    fun getAllUsage(): Flow<List<SnackUsageEntity>>
+
+    /** Vložení s vráceným ID (pro nahrání vlastní potraviny do cloudu). */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertSnackGetId(snack: SnackEntity): Long
 }

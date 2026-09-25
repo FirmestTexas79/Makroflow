@@ -207,6 +207,11 @@ object FirebaseRepository {
         userDoc().collection("custom_snacks").document(snack.id.toString()).set(data, SetOptions.merge()).await()
     }
 
+    suspend fun deleteCustomSnack(id: Int) {
+        if (!isLoggedIn) return
+        userDoc().collection("custom_snacks").document(id.toString()).delete().await()
+    }
+
     suspend fun downloadAllCustomSnacks(): List<SnackEntity> {
         if (!isLoggedIn) return emptyList()
         val snaps = userDoc().collection("custom_snacks").get().await()

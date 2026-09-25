@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vlastní linková ikona (styl aplikace) – docs/adr/0018, 0021 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M4,8 A2,2 0 0,1 6,6 L8,6 L9.5,4 L14.5,4 L16,6 L18,6 A2,2 0 0,1 20,8 L20,18 A2,2 0 0,1 18,20 L6,20 A2,2 0 0,1 4,18 Z" android:strokeColor="#283618" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M12,9.5 A3.5,3.5 0 1,1 11.99,9.5 Z" android:strokeColor="#283618" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+</vector>
