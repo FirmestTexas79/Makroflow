@@ -132,6 +132,48 @@ class WeightTrend(
     }
 
     /**
+     * Posune odhad o [days] dní bez vážení (jen predikční krok filtru) – např. když vybraný den
+     * leží za posledním vážením. Vrací celý stav včetně kovariancí.
+     */
+    fun predict(from: Point, days: Int): Point {
+        var p = from
+        repeat(days.coerceAtLeast(0)) {
+            p = Point(
+                day = p.day + 1,
+                level = p.level + p.slope,
+                slope = p.slope,
+                varLevel = p.varLevel + 2 * p.covLevelSlope + p.varSlope + levelSd * levelSd,
+                varSlope = p.varSlope + slopeSd * slopeSd,
+                covLevelSlope = p.covLevelSlope + p.varSlope
+            )
+        }
+        return p
+    }
+
+    /**
+     * Zpřesní odhad nezávislou informací o tempu (kg/den ± [sd]), např. z energetické bilance.
+     * Kalmanova korekce s H = [0, 1]: tempo se posune úměrně nejistotám a přes kovarianci
+     * se lehce opraví i úroveň. Vrací nový stav a váhu, s jakou se informace uplatnila (0..1).
+     */
+    fun observeSlope(from: Point, slope: Double, sd: Double): Pair<Point, Double> {
+        val r = sd * sd
+        val sInn = from.varSlope + r
+        if (sInn <= 0.0) return from to 0.0
+        val innovation = slope - from.slope
+        val kL = from.covLevelSlope / sInn
+        val kS = from.varSlope / sInn
+        val updated = Point(
+            day = from.day,
+            level = from.level + kL * innovation,
+            slope = from.slope + kS * innovation,
+            varLevel = from.varLevel - kL * from.covLevelSlope,
+            varSlope = from.varSlope - kS * from.varSlope,
+            covLevelSlope = from.covLevelSlope - kL * from.varSlope
+        )
+        return updated to kS
+    }
+
+    /**
      * Predikce skutečné hmotnosti za [daysAhead] dní z posledního odhadu.
      * @return (střed, směrodatná odchylka) – pro interval ±1,96·sd.
      */

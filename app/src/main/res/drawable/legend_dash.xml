@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Značka „projekce“ v legendě: čárkovaná čára. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="line">
+    <stroke android:width="2.4dp" android:color="@color/brand_accent_deep"
+        android:dashWidth="5dp" android:dashGap="3dp" />
+</shape>

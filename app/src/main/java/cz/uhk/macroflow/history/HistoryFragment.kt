@@ -11,20 +11,14 @@ import android.widget.*
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.github.mikephil.charting.animation.Easing
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.components.LimitLine
-import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.*
-import com.github.mikephil.charting.formatter.ValueFormatter
 import cz.uhk.macroflow.R
-import cz.uhk.macroflow.analytics.BioLogicEngine
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.CheckInEntity
 import cz.uhk.macroflow.data.ConsumedSnackDao
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.dashboard.MacroFlowEngine
+import cz.uhk.macroflow.energy.WeightProjection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,7 +31,7 @@ import kotlin.math.*
 class HistoryFragment : Fragment() {
 
     private lateinit var graph: SymmetryGraphView
-    private lateinit var historyChart: LineChart
+    private lateinit var projectionChart: WeightProjectionView
     private lateinit var tvDate: TextView
     private lateinit var tvKcal: TextView
     private lateinit var tvTraining: TextView
@@ -74,7 +68,7 @@ class HistoryFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_history, container, false)
 
         graph            = view.findViewById(R.id.historySymmetryGraph)
-        historyChart     = view.findViewById(R.id.historyChart)
+        projectionChart  = view.findViewById(R.id.projectionChart)
         tvDate           = view.findViewById(R.id.tvSelectedDate)
         tvKcal           = view.findViewById(R.id.tvHistoryKcal)
         tvTraining       = view.findViewById(R.id.tvHistoryTraining)
@@ -92,8 +86,6 @@ class HistoryFragment : Fragment() {
         heatChips        = view.findViewById(R.id.heatMetricChips)
         tvHeatSummary    = view.findViewById(R.id.tvHeatSummary)
         tvHeatNote       = view.findViewById(R.id.tvHeatNote)
-
-        setupChartStyle()
 
         view.findViewById<ImageButton>(R.id.btnPrevMonth).setOnClickListener {
             calendar.add(Calendar.MONTH, -1)
@@ -121,40 +113,6 @@ class HistoryFragment : Fragment() {
         loadHeatmap()
 
         return view
-    }
-
-    private fun setupChartStyle() {
-        historyChart.apply {
-            description.isEnabled = false
-            setTouchEnabled(true)
-            isDragEnabled = true
-            setScaleEnabled(false)
-            setPinchZoom(false)
-            setDrawGridBackground(false)
-
-            xAxis.apply {
-                textColor = ContextCompat.getColor(requireContext(), R.color.brand_dark)
-                gridColor = ContextCompat.getColor(requireContext(), R.color.brand_dark_alpha5)
-                position = XAxis.XAxisPosition.BOTTOM
-                setDrawGridLines(true)
-                // Formátování osy X: Timestamp na Datum
-                valueFormatter = object : ValueFormatter() {
-                    private val labelSdf = SimpleDateFormat("d.M.", Locale("cs"))
-                    override fun getFormattedValue(value: Float): String {
-                        return labelSdf.format(Date(value.toLong()))
-                    }
-                }
-            }
-
-            axisLeft.apply {
-                textColor = ContextCompat.getColor(requireContext(), R.color.brand_dark)
-                gridColor = ContextCompat.getColor(requireContext(), R.color.brand_dark_alpha5)
-                setDrawGridLines(true)
-                setDrawZeroLine(false)
-            }
-            axisRight.isEnabled = false
-            legend.isEnabled = false
-        }
     }
 
     private fun renderCalendar() {
@@ -306,157 +264,112 @@ class HistoryFragment : Fragment() {
 
             tvTraining.text = targetData.trainingType
 
-            // 7. GRAFY A ANALYTIKA
-            val allHistory = withContext(Dispatchers.IO) { db.checkInDao().getAllCheckInsSync() }
-            val freshAnalytics = if (allHistory.isNotEmpty()) {
-                cz.uhk.macroflow.analytics.BioLogicEngine.calculateFullAnalytics(allHistory)
-            } else null
-
-            updateBioLogicChart(allHistory, freshAnalytics)
+            // 7. BIOLOGICKÁ PROJEKCE A SYMETRIE
+            updateProjection(dateKey)
             updateSymmetry(dateKey)
         }
     }
 
-    // --- TATO ČÁST JE PŘEPSANÁ POŘÁDNĚ ---
-    private fun updateBioLogicChart(allHistory: List<CheckInEntity>, currentAnalytics: cz.uhk.macroflow.data.AnalyticsCacheEntity?) {
-        if (allHistory.isEmpty()) return
+    // ── Biologická projekce (docs/adr/0020) ─────────────────────────────────
 
-        val selectedDate = dateKeySdf.parse(selectedDateKey) ?: Date()
-        val historyEntries = mutableListOf<Entry>()
-        val predMainEntries = mutableListOf<Entry>()
-        val upperEntries = mutableListOf<Entry>()
-        val lowerEntries = mutableListOf<Entry>()
-        val dayLabels = mutableMapOf<Float, String>()
-        val displaySdf = SimpleDateFormat("d.M", Locale.getDefault())
+    private var projectionJob: kotlinx.coroutines.Job? = null
 
-        lifecycleScope.launch {
-            val db = AppDatabase.getDatabase(requireContext())
-            val profile = withContext(Dispatchers.IO) { db.userProfileDao().getProfileSync() }
-
-            val rangeDays = 7f // Středový bod
-            val totalDays = 14f
-            val sortedHistory = allHistory.sortedBy { it.date }
-
-            // --- 2. PLNĚNÍ HISTORIE (Index 0 až 7) ---
-            val historyMap = sortedHistory.associateBy { it.date }
-            for (i in 0..rangeDays.toInt()) {
-                val checkCal = Calendar.getInstance().apply {
-                    time = selectedDate
-                    add(Calendar.DAY_OF_YEAR, -(rangeDays.toInt() - i))
-                }
-                val key = dateKeySdf.format(checkCal.time)
-                val xPos = i.toFloat()
-                dayLabels[xPos] = displaySdf.format(checkCal.time)
-
-                historyMap[key]?.let { checkIn ->
-                    historyEntries.add(Entry(xPos, checkIn.weight.toFloat()))
-                }
+    private fun updateProjection(dateKey: String) {
+        val root = view ?: return
+        projectionJob?.cancel()
+        projectionJob = lifecycleScope.launch {
+            val ctx = requireContext().applicationContext
+            val result = withContext(Dispatchers.IO) {
+                runCatching { ProjectionRepository.load(ctx, LocalDate.parse(dateKey)) }
+                    .onFailure { Log.e("Projection", "Výpočet projekce selhal", it) }
+                    .getOrNull()
             }
-
-            // --- 3. PREDIKCE (Index 7 až 14) – Kalmanův trend + 95% interval ---
-            // U minulého dne jen data známá k tomu dni → predikci lze porovnat se skutečností
-            val selectedKey = dateKeySdf.format(selectedDate)
-            val knownHistory = sortedHistory.filter { it.date <= selectedKey }
-            if (knownHistory.isNotEmpty()) {
-                val selectedDay = BioLogicEngine.dayOf(selectedKey)
-                val lastObsDay = BioLogicEngine.dayOf(knownHistory.last().date)
-                val offset = (selectedDay - lastObsDay).coerceAtLeast(0)
-                val forecast = BioLogicEngine.forecast(knownHistory, days = offset + 7)
-
-                // i=0 je vybraný den (index 7), i=7 je +7 dní (index 14)
-                for (i in 0..7) {
-                    val f = forecast.getOrNull(offset + i) ?: break
-                    val x = rangeDays + i
-                    predMainEntries.add(Entry(x, f.mean.toFloat()))
-                    upperEntries.add(Entry(x, f.upper.toFloat()))
-                    lowerEntries.add(Entry(x, f.lower.toFloat()))
-
-                    if (i > 0) { // Nechceme přepsat label pro dnešek
-                        val futCal = Calendar.getInstance().apply {
-                            time = selectedDate
-                            add(Calendar.DAY_OF_YEAR, i)
-                        }
-                        dayLabels[x] = displaySdf.format(futCal.time)
-                    }
-                }
-            }
-
-            // --- 4. DATASETS (Prémiový styling & Fix kornoutu) ---
-            val lineData = LineData()
-
-            if (upperEntries.isNotEmpty()) {
-                // S - Horní stín (BC6C25)
-                lineData.addDataSet(LineDataSet(upperEntries, "S").apply {
-                    color = Color.TRANSPARENT; setDrawCircles(false); setDrawValues(false)
-                    setDrawFilled(true); fillColor = Color.parseColor("#BC6C25"); fillAlpha = 45
-                    mode = LineDataSet.Mode.CUBIC_BEZIER
-                })
-                // C - Spodní maska (FEFAE0 - musí být 255 alpha)
-                lineData.addDataSet(LineDataSet(lowerEntries, "C").apply {
-                    color = Color.TRANSPARENT; setDrawCircles(false); setDrawValues(false)
-                    setDrawFilled(true); fillColor = Color.parseColor("#FEFAE0"); fillAlpha = 255
-                    mode = LineDataSet.Mode.CUBIC_BEZIER
-                })
-            }
-
-            // P - Predikce (DDA15E)
-            lineData.addDataSet(LineDataSet(predMainEntries, "P").apply {
-                color = Color.parseColor("#DDA15E"); lineWidth = 2.2f
-                enableDashedLine(12f, 10f, 0f); setDrawCircles(false); setDrawValues(false)
-                mode = LineDataSet.Mode.CUBIC_BEZIER
-            })
-
-            // H - Historie (606C38)
-            lineData.addDataSet(LineDataSet(historyEntries, "H").apply {
-                color = Color.parseColor("#606C38"); lineWidth = 3.5f
-                setCircleColor(Color.parseColor("#606C38"))
-                circleRadius = 5f; setDrawCircleHole(true); circleHoleColor = Color.parseColor("#FEFAE0")
-                setDrawValues(false); mode = LineDataSet.Mode.CUBIC_BEZIER
-            })
-
-            // --- 5. FINÁLNÍ NASTAVENÍ GRAFU ---
-            historyChart.apply {
-                data = lineData
-                description.isEnabled = false; legend.isEnabled = false
-                setExtraOffsets(10f, 10f, 10f, 15f)
-                setTouchEnabled(true); setPinchZoom(false); setScaleEnabled(false)
-
-                xAxis.apply {
-                    position = XAxis.XAxisPosition.BOTTOM
-                    textColor = Color.parseColor("#80283618")
-                    textSize = 10f
-                    setDrawGridLines(false); setDrawAxisLine(false)
-                    axisMinimum = 0f; axisMaximum = totalDays; labelCount = 7
-
-                    valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
-                        override fun getFormattedValue(value: Float): String = dayLabels[value] ?: ""
-                    }
-
-                    removeAllLimitLines()
-                    addLimitLine(LimitLine(rangeDays).apply {
-                        lineColor = Color.parseColor("#40283618")
-                        lineWidth = 1.5f; enableDashedLine(10f, 10f, 0f)
-                    })
-                }
-
-                axisLeft.apply {
-                    textColor = Color.parseColor("#80283618")
-                    textSize = 10f; setDrawGridLines(true); setDrawAxisLine(false)
-                    gridColor = Color.parseColor("#15283618")
-                    xOffset = 12f
-
-                    val allY = (historyEntries + upperEntries + lowerEntries).map { it.y }
-                    if (allY.isNotEmpty()) {
-                        axisMinimum = (allY.minOrNull() ?: 70f) - 1.5f
-                        axisMaximum = (allY.maxOrNull() ?: 80f) + 1.5f
-                    }
-                }
-                axisRight.isEnabled = false
-                animateY(1000, Easing.EaseOutCubic)
-                invalidate()
-            }
+            bindProjection(root, result)
         }
     }
+
+    private fun bindProjection(root: View, r: ProjectionRepository.Result?) {
+        val tag = root.findViewById<TextView>(R.id.tvCurrentTrendTag)
+        val now = root.findViewById<TextView>(R.id.tvProjNow)
+        val nowSub = root.findViewById<TextView>(R.id.tvProjNowSub)
+        val pace = root.findViewById<TextView>(R.id.tvProjPace)
+        val paceSub = root.findViewById<TextView>(R.id.tvProjPaceSub)
+        val end = root.findViewById<TextView>(R.id.tvProjEnd)
+        val endSub = root.findViewById<TextView>(R.id.tvProjEndSub)
+        val verdictBox = root.findViewById<View>(R.id.llProjVerdict)
+        val verdict = root.findViewById<TextView>(R.id.tvProjVerdict)
+        val dot = root.findViewById<View>(R.id.vProjVerdictDot)
+        val check = root.findViewById<TextView>(R.id.tvProjCheck)
+        val source = root.findViewById<TextView>(R.id.tvProjSource)
+
+        projectionChart.setData(r?.chart)
+        if (r == null) {
+            tag.text = "BEZ DAT"
+            tag.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.brand_dark_alpha40))
+            listOf(now, pace, end).forEach { it.text = "–" }
+            listOf(nowSub, paceSub, endSub).forEach { it.text = "" }
+            verdictBox.visibility = View.GONE
+            check.visibility = View.GONE
+            source.text = "Projekce potřebuje aspoň jedno ranní vážení do vybraného dne."
+            return
+        }
+
+        val p = r.projection
+        val ctx = requireContext()
+        val color = ContextCompat.getColor(ctx, when (r.pace.verdict) {
+            WeightProjection.Verdict.ON_TRACK -> R.color.brand_primary
+            WeightProjection.Verdict.TOO_SLOW -> R.color.brand_accent_warm
+            WeightProjection.Verdict.TOO_FAST, WeightProjection.Verdict.WRONG_WAY -> R.color.brand_accent_deep
+            WeightProjection.Verdict.UNCERTAIN -> R.color.brand_dark_alpha40
+        })
+        tag.text = when (r.pace.direction) {
+            WeightProjection.Direction.LOSING -> "HUBNUTÍ"
+            WeightProjection.Direction.STABLE -> "STABILNÍ"
+            WeightProjection.Direction.GAINING -> "NABÍRÁNÍ"
+        }
+        tag.backgroundTintList = ColorStateList.valueOf(color)
+
+        now.text = "${kg(p.start.level)} kg"
+        nowSub.text = "± ${kg(1.96 * p.start.sdLevel)} kg"
+        val week = p.slopeKgPerWeek
+        pace.text = "${signed(week)} kg"
+        paceSub.text = "týdně · ${signed(r.pace.percentPerWeek)} %"
+        end.text = "${kg(p.end.mean)} kg"
+        endSub.text = "${kg(p.end.lower)}–${kg(p.end.upper)}"
+
+        verdictBox.visibility = View.VISIBLE
+        dot.backgroundTintList = ColorStateList.valueOf(color)
+        verdict.text = r.pace.message
+
+        // Minulý den: porovnání projekce se skutečností
+        val lastActual = r.actualAfter.maxByOrNull { it.key }
+        if (lastActual != null) {
+            val f = p.forecast.firstOrNull { it.day == lastActual.key }
+            val date = LocalDate.ofEpochDay(lastActual.key.toLong())
+            val inside = f != null && lastActual.value in f.lower..f.upper
+            check.visibility = View.VISIBLE
+            check.text = if (f == null) "" else
+                "Skutečnost ${date.dayOfMonth}.${date.monthValue}.: ${kg(lastActual.value)} kg · projekce ${kg(f.mean)} kg " +
+                "(${kg(f.lower)}–${kg(f.upper)}) " + if (inside) "✓ v pásmu" else "✗ mimo pásmo"
+        } else check.visibility = View.GONE
+
+        val e = p.energy
+        val energyPct = (p.energyWeight * 100).roundToInt()
+        source.text = buildString {
+            append("Tempo: ${100 - energyPct} % z vážení (${p.weighIns}×), $energyPct % z energetické bilance")
+            if (e != null) {
+                append(" – ")
+                append(if (e.source == WeightProjection.IntakeSource.LOGGED) "Ø zapsaný příjem " else "cíl ")
+                append("${e.intakeKcal.roundToInt()} kcal vs. výdej ${e.expenditureKcal.roundToInt()} kcal")
+                append(" (${signedInt(e.balanceKcal)} kcal/den).")
+            } else append(".")
+            append(" Pásmo = 95% interval; body jsou ranní vážení, čára vyhlazený trend bez výkyvů vody.")
+        }
+    }
+
+    private fun kg(v: Double) = String.format(Locale.US, "%.1f", v).replace('.', ',')
+    private fun signed(v: Double) = (if (v > 0.049) "+" else if (v < -0.049) "−" else "") + kg(abs(v))
+    private fun signedInt(v: Double) = (if (v > 0) "+" else if (v < 0) "−" else "") + abs(v).roundToInt()
 
     private fun updateSymmetry(dateKey: String) {
         lifecycleScope.launch {
