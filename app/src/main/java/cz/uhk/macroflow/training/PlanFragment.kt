@@ -26,7 +26,9 @@ import cz.uhk.macroflow.common.MainActivity
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.dashboard.MacroFlowEngine
+import cz.uhk.macroflow.training.atlas.MuscleAtlasSheet
 import cz.uhk.macroflow.training.body.BodyMapView
+import cz.uhk.macroflow.training.body.Muscle
 import cz.uhk.macroflow.training.body.TrainingMuscles
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.graphics.Typeface
@@ -100,6 +102,7 @@ class PlanFragment : Fragment() {
         setupGymBag(view)
         buildBodyLegend(view)
         updateBodyWeek(view, animate = false)
+        setupBodyAtlas(view)
 
         modeToggle?.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
@@ -328,6 +331,20 @@ class PlanFragment : Fragment() {
             }
         }
         buildBodyLegend(view)
+    }
+
+    /** Klepnutí na kartu otevře atlas svalů; klepnutí přímo na sval ho v atlasu rovnou vybere. */
+    private fun setupBodyAtlas(view: View) {
+        val body = view.findViewById<BodyMapView>(R.id.bodyWeek) ?: return
+        val open = { m: Muscle? ->
+            MuscleAtlasSheet.show(childFragmentManager, TrainingMuscles.weeklyFrequency(weekTypes()), weekColor(), m)
+        }
+        view.findViewById<View>(R.id.cardBodyWeek)?.setOnClickListener { open(null) }
+        body.setOnClickListener { open(null) }
+        body.onMuscleTap = { m ->
+            body.select(null, animate = false)   // malá postava výběr nedrží, rozsvítí se až v atlasu
+            open(m)
+        }
     }
 
     private fun buildBodyLegend(view: View) {

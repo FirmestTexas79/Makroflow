@@ -89,5 +89,6 @@
 
 
     <!-- Světlá karta na krémovém pozadí (profil a další sekce) -->
+    <color name="exercise_mistake">#A63D2A</color>
     <color name="profile_card">#FBF8E8</color>
 </resources>

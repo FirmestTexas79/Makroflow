@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Detail cviku (docs/adr/0019): jak cvik provést krok za krokem, tipy, časté chyby a které
+    svaly zapojuje – česky na postavě a latinsky podle Terminologia Anatomica.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_sheet_cream"
+    android:orientation="vertical">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="@color/brand_dark_alpha20" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="32dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvExBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="@color/brand_primary"
+                    android:letterSpacing="0.12"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="6dp"
+                    android:textColor="@color/brand_cream"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <ImageButton
+                    android:id="@+id/btnCloseExercise"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Zavřít"
+                    android:src="@drawable/ic_close"
+                    app:tint="@color/brand_dark" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvExTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="8dp"
+                android:fontFamily="sans-serif-black"
+                android:lineSpacingMultiplier="0.9"
+                android:textColor="@color/brand_dark"
+                android:textSize="30sp" />
+
+            <TextView
+                android:id="@+id/tvExSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="4dp"
+                android:alpha="0.75"
+                android:textColor="@color/brand_primary"
+                android:textSize="13sp" />
+
+            <!-- Zapojené svaly -->
+            <TextView
+                style="@style/ProfileSection"
+                android:text="ZAPOJENÉ SVALY" />
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/ProfileCard"
+                app:cardBackgroundColor="@color/brand_dark">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <cz.uhk.macroflow.training.body.BodyMapView
+                        android:id="@+id/exBody"
+                        android:layout_width="match_parent"
+                        android:layout_height="220dp"
+                        android:importantForAccessibility="no" />
+
+                    <LinearLayout
+                        android:id="@+id/llExLegend"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:orientation="horizontal" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:letterSpacing="0.14"
+                        android:text="HLAVNÍ PRÁCE"
+                        android:textColor="@color/brand_accent_warm"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvExPrimary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="serif"
+                        android:lineSpacingExtra="4dp"
+                        android:textColor="@color/brand_cream"
+                        android:textSize="14sp"
+                        android:textStyle="italic" />
+
+                    <TextView
+                        android:id="@+id/tvExSecondaryLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:letterSpacing="0.14"
+                        android:text="POMÁHAJÍ"
+                        android:textColor="@color/brand_accent_warm"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvExSecondary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:alpha="0.85"
+                        android:fontFamily="serif"
+                        android:lineSpacingExtra="4dp"
+                        android:textColor="@color/brand_cream"
+                        android:textSize="13.5sp"
+                        android:textStyle="italic" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Provedení -->
+            <TextView
+                style="@style/ProfileSection"
+                android:text="PROVEDENÍ" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout
+                    android:id="@+id/llExSteps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="14dp" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/ProfileSection"
+                android:text="TIPY" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout
+                    android:id="@+id/llExTips"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="14dp" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/ProfileSection"
+                android:text="ČASTÉ CHYBY" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout
+                    android:id="@+id/llExMistakes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="14dp" />
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

@@ -495,7 +495,10 @@
                 app:cardBackgroundColor="#FAFAF5"
                 app:cardElevation="0dp"
                 app:strokeWidth="1.5dp"
-                app:strokeColor="#20283618">
+                app:strokeColor="#20283618"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -503,14 +506,36 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="TÝDEN NA TĚLE"
-                        android:textColor="@color/brand_dark"
-                        android:textSize="14sp"
-                        android:fontFamily="sans-serif-black"
-                        android:letterSpacing="0.04" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="TÝDEN NA TĚLE"
+                            android:textColor="@color/brand_dark"
+                            android:textSize="14sp"
+                            android:fontFamily="sans-serif-black"
+                            android:letterSpacing="0.04" />
+
+                        <!-- Vstup do atlasu svalů (klikací je celá karta i jednotlivé svaly) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="@color/brand_primary_alpha10"
+                            android:letterSpacing="0.08"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="5dp"
+                            android:text="ATLAS CVIKŮ  ›"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
 
                     <cz.uhk.macroflow.training.body.BodyMapView
                         android:id="@+id/bodyWeek"

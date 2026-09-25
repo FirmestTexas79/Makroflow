@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Atlas svalů (docs/adr/0019): velká postava, klepnutím se partie rozsvítí a pod ní se
+    vysune popis partie a seznam cviků. Otevírá se z karty „Týden na těle“ v Plánu.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_sheet_cream"
+    android:orientation="vertical">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="@color/brand_dark_alpha20" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/atlasScroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="32dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="8dp">
+
+            <!-- Hlavička -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="@color/brand_primary"
+                    android:letterSpacing="0.12"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="6dp"
+                    android:text="ATLAS SVALŮ"
+                    android:textColor="@color/brand_cream"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <ImageButton
+                    android:id="@+id/btnCloseAtlas"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Zavřít"
+                    android:src="@drawable/ic_close"
+                    app:tint="@color/brand_dark" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvAtlasTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="8dp"
+                android:fontFamily="sans-serif-black"
+                android:lineSpacingMultiplier="0.9"
+                android:text="Klepni na sval"
+                android:textColor="@color/brand_dark"
+                android:textSize="32sp" />
+
+            <TextView
+                android:id="@+id/tvAtlasSub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="4dp"
+                android:alpha="0.75"
+                android:text="Rozsvítí se a ukážu ti cviky, které ho posilují."
+                android:textColor="@color/brand_primary"
+                android:textSize="13sp" />
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleSide"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSideFront"
+                    style="@style/ProfileToggleButton"
+                    android:text="ZEPŘEDU" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSideBack"
+                    style="@style/ProfileToggleButton"
+                    android:text="ZEZADU" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <!-- Velká postava -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/ProfileCard"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="14dp">
+
+                    <cz.uhk.macroflow.training.body.BodyMapView
+                        android:id="@+id/atlasBody"
+                        android:layout_width="match_parent"
+                        android:layout_height="440dp"
+                        android:contentDescription="Postava – klepnutím vyber partii" />
+
+                    <LinearLayout
+                        android:id="@+id/llAtlasLegend"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center"
+                        android:orientation="horizontal" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Všechny partie jako čipy (i ty, které jsou vidět jen z druhé strany) -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/llMuscleChips"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <!-- Detail vybrané partie -->
+            <LinearLayout
+                android:id="@+id/llMuscleDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/ProfileSection"
+                    android:text="PARTIE" />
+
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/ProfileCard"
+                    app:cardBackgroundColor="@color/brand_dark">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvMuscleName"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-black"
+                                android:textColor="@color/brand_cream"
+                                android:textSize="24sp" />
+
+                            <TextView
+                                android:id="@+id/tvMuscleFreq"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_status_pill"
+                                android:backgroundTint="@color/brand_accent_deep"
+                                android:paddingHorizontal="12dp"
+                                android:paddingVertical="5dp"
+                                android:textColor="@color/brand_cream"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvMuscleFunction"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:alpha="0.85"
+                            android:lineSpacingExtra="2dp"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="13.5sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:letterSpacing="0.14"
+                            android:text="LATINSKY"
+                            android:textColor="@color/brand_accent_warm"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvMuscleLatin"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="serif"
+                            android:lineSpacingExtra="4dp"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="14sp"
+                            android:textStyle="italic" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    android:id="@+id/tvExercisesSection"
+                    style="@style/ProfileSection"
+                    android:text="CVIKY" />
+
+                <LinearLayout
+                    android:id="@+id/llExercises"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

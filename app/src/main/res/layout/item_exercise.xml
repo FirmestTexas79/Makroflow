@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Řádek cviku v atlasu svalů: název, běžný název, pomůcka a obtížnost, role partie. -->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/ProfileCard"
+    android:layout_marginTop="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardCornerRadius="18dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="72dp"
+        android:orientation="horizontal"
+        android:paddingVertical="12dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp">
+
+        <View
+            android:id="@+id/vRole"
+            android:layout_width="4dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_accent_deep" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvExName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:textColor="@color/brand_dark"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/tvExAlias"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:alpha="0.6"
+                android:textColor="@color/brand_dark"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvExMeta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:letterSpacing="0.06"
+                android:textColor="@color/brand_primary"
+                android:textSize="10.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvExRole"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_accent_deep_alpha20"
+            android:letterSpacing="0.08"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:textColor="@color/brand_accent_deep"
+            android:textSize="9.5sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginStart="2dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="@color/brand_dark_alpha40" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
