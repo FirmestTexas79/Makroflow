@@ -25,7 +25,7 @@ import cz.uhk.macroflow.training.exercises.ExerciseLibrary
 
 /**
  * Detail cviku (docs/adr/0019): zapojené partie na postavě + latinsky, provedení krok za krokem,
- * tipy a časté chyby. Data z [ExerciseLibrary].
+ * tipy a časté chyby. Data z [ExerciseLibrary]. Nahoře tréninkový deník (docs/adr/0023).
  */
 class ExerciseDetailSheet : BottomSheetDialogFragment() {
 
@@ -54,6 +54,7 @@ class ExerciseDetailSheet : BottomSheetDialogFragment() {
         view.findViewById<TextView>(R.id.tvExSubtitle).text = "${e.alias} · ${e.levelLabel}"
 
         bindMuscles(view, e)
+        cz.uhk.macroflow.training.log.WorkoutLogSection(this, view, e).start()
         fillNumbered(view.findViewById(R.id.llExSteps), e.steps)
         fillBullets(view.findViewById(R.id.llExTips), e.tips, R.drawable.ic_check_circle, R.color.brand_primary)
         fillBullets(view.findViewById(R.id.llExMistakes), e.mistakes, R.drawable.ic_close, R.color.exercise_mistake)

@@ -230,6 +230,36 @@ object FirebaseRepository {
         }
     }
 
+    // ========== TRÉNINKOVÝ DENÍK (docs/adr/0023) ==========
+    // Dokument = createdAt (ms) – stejně jako u konzumace je jedinečný a stejný na všech zařízeních.
+
+    suspend fun uploadWorkoutSet(set: WorkoutSetEntity) {
+        if (!isLoggedIn) return
+        val data = mapOf(
+            "date" to set.date, "createdAt" to set.createdAt, "exerciseId" to set.exerciseId,
+            "weightKg" to set.weightKg, "reps" to set.reps
+        )
+        userDoc().collection("workout_sets").document(set.createdAt.toString()).set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun deleteWorkoutSet(createdAt: Long) {
+        if (!isLoggedIn) return
+        userDoc().collection("workout_sets").document(createdAt.toString()).delete().await()
+    }
+
+    suspend fun downloadAllWorkoutSets(): List<WorkoutSetEntity> {
+        if (!isLoggedIn) return emptyList()
+        return userDoc().collection("workout_sets").get().await().documents.mapNotNull { doc ->
+            WorkoutSetEntity(
+                date = doc.getString("date") ?: return@mapNotNull null,
+                createdAt = doc.getLong("createdAt") ?: return@mapNotNull null,
+                exerciseId = doc.getString("exerciseId") ?: return@mapNotNull null,
+                weightKg = doc.getDouble("weightKg") ?: 0.0,
+                reps = (doc.getLong("reps") ?: 0L).toInt()
+            )
+        }
+    }
+
     // ========== KONZUMACE ==========
 
     suspend fun uploadConsumedSnack(consumed: ConsumedSnackEntity) {
@@ -511,6 +541,7 @@ object FirebaseRepository {
         localDb.achievementDao().getAllUnlocked().forEach   { uploadAchievement(it) }
 
         localDb.questDao().getAllQuests().forEach { uploadQuestProgress(it) }
+        localDb.workoutDao().getAllSync().forEach { uploadWorkoutSet(it) }
 
         Log.d("FB_SYNC", "Upload dokončen")
     }
@@ -540,6 +571,7 @@ object FirebaseRepository {
             val analytics    = downloadAllAnalytics()
 
             val questProgress = downloadAllQuestProgress()
+            val workoutSets   = downloadAllWorkoutSets()
 
             profile?.let { localDb.userProfileDao().saveProfile(it) }
             if (plan.isNotEmpty()) {
@@ -583,6 +615,11 @@ object FirebaseRepository {
             steps.forEach        { localDb.stepsDao().insertSteps(it) }
 
             questProgress.forEach { localDb.questDao().saveQuestProgress(it) }
+
+            if (workoutSets.isNotEmpty()) {
+                localDb.workoutDao().deleteAllLocally()
+                workoutSets.forEach { localDb.workoutDao().insert(it) }
+            }
 
             if (analytics.isNotEmpty()) {
                 localDb.analyticsDao().deleteAllLocally()

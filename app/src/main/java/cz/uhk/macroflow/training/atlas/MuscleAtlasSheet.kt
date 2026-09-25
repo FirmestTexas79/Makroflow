@@ -14,6 +14,10 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.os.bundleOf
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -61,6 +65,9 @@ class MuscleAtlasSheet : BottomSheetDialogFragment() {
     private var side = BodySide.FRONT
     private var selected: Muscle? = null
 
+    /** Tvrdé série z tréninkového deníku za tento týden (Po–Ne), docs/adr/0023. */
+    private var weeklyLogged: Map<Muscle, Double> = emptyMap()
+
     private lateinit var body: BodyMapView
     private lateinit var toggle: MaterialButtonToggleGroup
     private lateinit var chips: LinearLayout
@@ -106,6 +113,31 @@ class MuscleAtlasSheet : BottomSheetDialogFragment() {
         buildLegend(view.findViewById(R.id.llAtlasLegend))
         buildChips()
         Muscle.entries.getOrNull(initial)?.let { select(it, scrollToDetail = false, animate = false) }
+        loadWeeklyLog()
+    }
+
+    private fun loadWeeklyLog() {
+        val ctx = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            val monday = cz.uhk.macroflow.history.CalendarWeek.monday(java.time.LocalDate.now())
+            val sets = withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.data.AppDatabase.getDatabase(ctx).workoutDao()
+                    .betweenSync(monday.toString(), monday.plusDays(6).toString())
+            }
+            weeklyLogged = cz.uhk.macroflow.training.log.Progression.weeklySets(sets.map { it.toLogged() }, ExerciseLibrary::byId)
+            selected?.let { showDetail(it, animate = false) }
+        }
+    }
+
+    private fun weeklyLine(m: Muscle): String {
+        val n = weeklyLogged[m] ?: 0.0
+        if (n <= 0.0) return "Deník: tento týden zatím žádná série."
+        val sets = if (n % 1.0 == 0.0) n.toInt().toString() else n.toString().replace('.', ',')
+        return "Deník: tento týden $sets sérií · " + when (cz.uhk.macroflow.training.log.Progression.volume(n)) {
+            cz.uhk.macroflow.training.log.Progression.Volume.LOW -> "pro růst cíl 10–20"
+            cz.uhk.macroflow.training.log.Progression.Volume.HIGH -> "nad 20 – pozor na regeneraci"
+            else -> "v doporučeném rozsahu 10–20 ✓"
+        }
     }
 
     override fun onStart() {
@@ -160,7 +192,7 @@ class MuscleAtlasSheet : BottomSheetDialogFragment() {
         v.findViewById<TextView>(R.id.tvMuscleName).text = AtlasFormat.capitalized(m)
         v.findViewById<TextView>(R.id.tvMuscleFreq).text = AtlasFormat.frequency(perWeek).uppercase()
         v.findViewById<TextView>(R.id.tvMuscleFunction).text =
-            "${MuscleAnatomy.FUNCTION[m].orEmpty()}\n${AtlasFormat.frequencyNote(m, perWeek)}"
+            "${MuscleAnatomy.FUNCTION[m].orEmpty()}\n${AtlasFormat.frequencyNote(m, perWeek)}\n${weeklyLine(m)}"
         v.findViewById<TextView>(R.id.tvMuscleLatin).text =
             MuscleAnatomy.LATIN[m].orEmpty().joinToString("\n") { "• $it" }
 

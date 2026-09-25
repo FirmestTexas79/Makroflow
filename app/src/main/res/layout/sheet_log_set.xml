@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Zápis série do tréninkového deníku (docs/adr/0023): váha a opakování s krokováním, odhad 1RM. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_sheet_cream"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp"
+    android:paddingBottom="24dp">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="@color/brand_dark_alpha20" />
+
+    <TextView
+        android:id="@+id/tvLogSetTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:fontFamily="sans-serif-black"
+        android:maxLines="2"
+        android:textColor="@color/brand_dark"
+        android:textSize="24sp" />
+
+    <TextView
+        android:id="@+id/tvLogSetSub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:alpha="0.75"
+        android:textColor="@color/brand_primary"
+        android:textSize="13sp" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:letterSpacing="0.1"
+        android:text="VÁHA"
+        android:textColor="@color/brand_primary"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_search_soft"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp">
+
+        <ImageButton
+            android:id="@+id/btnWeightMinus"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_primary_alpha10"
+            android:contentDescription="Méně"
+            android:padding="13dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_line_minus"
+            app:tint="@color/brand_dark" />
+
+        <EditText
+            android:id="@+id/etWeight"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:inputType="numberDecimal"
+            android:maxLength="6"
+            android:selectAllOnFocus="true"
+            android:textColor="@color/brand_dark"
+            android:textSize="28sp" />
+
+        <TextView
+            android:id="@+id/tvWeightUnit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:text="kg"
+            android:textColor="@color/brand_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnWeightPlus"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_primary_alpha10"
+            android:contentDescription="Více"
+            android:padding="13dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_line_plus"
+            app:tint="@color/brand_dark" />
+    </LinearLayout>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:letterSpacing="0.1"
+        android:text="OPAKOVÁNÍ"
+        android:textColor="@color/brand_primary"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_search_soft"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp">
+
+        <ImageButton
+            android:id="@+id/btnRepsMinus"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_primary_alpha10"
+            android:contentDescription="Méně"
+            android:padding="13dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_line_minus"
+            app:tint="@color/brand_dark" />
+
+        <EditText
+            android:id="@+id/etReps"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:inputType="numberDecimal"
+            android:maxLength="6"
+            android:selectAllOnFocus="true"
+            android:textColor="@color/brand_dark"
+            android:textSize="28sp" />
+
+        <TextView
+            android:id="@+id/tvRepsUnit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:text="×"
+            android:textColor="@color/brand_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnRepsPlus"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_primary_alpha10"
+            android:contentDescription="Více"
+            android:padding="13dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_line_plus"
+            app:tint="@color/brand_dark" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvLogSetE1rm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:textColor="@color/brand_dark"
+        android:textSize="13sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnLogSetSave"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:layout_marginTop="14dp"
+        android:backgroundTint="@color/brand_dark"
+        android:fontFamily="sans-serif-black"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:text="Uložit sérii"
+        android:textColor="@color/brand_cream"
+        android:textSize="15sp"
+        app:cornerRadius="18dp"
+        app:icon="@drawable/ic_check_circle"
+        app:iconGravity="textStart"
+        app:iconTint="@color/brand_cream" />
+</LinearLayout>

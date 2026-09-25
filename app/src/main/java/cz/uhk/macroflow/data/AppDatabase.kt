@@ -34,9 +34,10 @@ import kotlin.concurrent.thread
         GameEventEntity::class,
         AdaptiveTdeeEntity::class,
         BarbellSetEntity::class,
-        BarbellRepEntity::class
+        BarbellRepEntity::class,
+        WorkoutSetEntity::class
     ],
-    version = 36,
+    version = 37,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -60,6 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gameEventDao(): GameEventDao
     abstract fun adaptiveTdeeDao(): AdaptiveTdeeDao
     abstract fun barbellDao(): BarbellDao
+    abstract fun workoutDao(): WorkoutDao
 
     companion object {
         /** v34: log herních událostí + začátek fáze questu. */
@@ -123,6 +125,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v37: tréninkový deník – zapsané série z atlasu cviků (docs/adr/0023). */
+        val MIGRATION_36_37 = object : Migration(36, 37) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `workout_sets` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` TEXT NOT NULL, " +
+                        "`createdAt` INTEGER NOT NULL, `exerciseId` TEXT NOT NULL, " +
+                        "`weightKg` REAL NOT NULL, `reps` INTEGER NOT NULL)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_sets_exerciseId_date` ON `workout_sets` (`exerciseId`, `date`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_sets_date` ON `workout_sets` (`date`)")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -133,7 +149,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36)
+                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37)
                     // Destruktivní fallback jen pro verze PŘED zavedením migrací.
                     // Od v33 se lokální data uživatelů už nikdy nesmažou potichu:
                     // chybějící migrace = pád při vývoji, ne ztráta dat v produkci.
