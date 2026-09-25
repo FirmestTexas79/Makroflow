@@ -303,7 +303,7 @@ class MakrodexFragment : Fragment() {
             val text = buildString {
                 append(if (active == null) "Počítá se, jen když je Spirra tvým aktivním parťákem na liště. Nastav ji v inventáři.\n\n"
                        else "Spirra se vyvine podle toho, který cíl splníš první:\n\n")
-                SE.Branch.entries.forEach { b ->
+                cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.Branch.entries.forEach { b ->
                     val v = progress?.get(b) ?: 0
                     val pct = (SE.fraction(b, v) * 100).toInt()
                     append("${b.displayName.uppercase()}\n${b.task}\n")
