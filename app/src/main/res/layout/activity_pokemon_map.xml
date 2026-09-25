@@ -63,6 +63,8 @@
             android:orientation="vertical"
             android:elevation="15dp">
             <ImageButton android:id="@+id/btnExitMap" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginBottom="12dp" android:background="@drawable/bg_status_pill" android:backgroundTint="#283618" android:src="@android:drawable/ic_menu_close_clear_cancel" app:tint="#FEFAE0" />
+            <!-- Zvuk a hudba Makrosvěta (docs/adr/0017) -->
+            <ImageButton android:id="@+id/btnSound" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginBottom="12dp" android:background="@drawable/bg_status_pill" android:backgroundTint="#606C38" android:contentDescription="Zvuk" android:src="@android:drawable/ic_lock_silent_mode_off" app:tint="#FEFAE0" />
             <ImageButton android:id="@+id/btnStartTutorial" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_status_pill" android:backgroundTint="#606C38" android:src="@android:drawable/ic_menu_help" app:tint="#FEFAE0" />
 
             <ImageButton

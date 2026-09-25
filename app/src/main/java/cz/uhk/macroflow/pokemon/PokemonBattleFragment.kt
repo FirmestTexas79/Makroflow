@@ -134,6 +134,10 @@ class PokemonBattleFragment : Fragment() {
         }
         root.addView(introOverlay)
 
+        // Zvuk: hudba lokace se ztiší a zazní nástup souboje
+        cz.uhk.macroflow.pokemon.audio.GameAudio.duck(true)
+        cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(ctx, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.BATTLE_START)
+
         return root
     }
 
@@ -150,6 +154,7 @@ class PokemonBattleFragment : Fragment() {
     private fun <T : Animator> T.tracked(): T { introAnimators += this; return this }
 
     override fun onDestroyView() {
+        cz.uhk.macroflow.pokemon.audio.GameAudio.duck(false)       // hudba lokace zase naplno
         // Dřív zpožděná volání a animace dobíhaly i po zavření souboje
         introHandler.removeCallbacksAndMessages(null)
         introAnimators.toList().forEach { it.cancel() }

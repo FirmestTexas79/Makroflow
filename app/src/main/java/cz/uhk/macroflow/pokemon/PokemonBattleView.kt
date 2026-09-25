@@ -901,6 +901,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun enemyFainted() {
         busy = false
+        cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.VICTORY)
         // Poražený strážce jeskyně uvolní svůj krystal
         special?.crystal?.let { c ->
             gamePrefs().edit().putBoolean(cz.uhk.macroflow.pokemon.legend.LegendProgress.bossKey(c), true).apply()
@@ -1365,6 +1366,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun caught() {
         gs.phase = BattlePhase.CAUGHT
+        cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.CATCH)
         tween(650, { p -> clickStars = p }) { clickStars = -1f }
 
         val mId = BattleFactory.makrodexId(gs.enemy)

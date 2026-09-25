@@ -160,6 +160,20 @@ class MakromonMapActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnStartTutorial).setOnClickListener { questDialogManager.startTutorial() }
         findViewById<View>(R.id.btnExitMap).setOnClickListener { finish() }
 
+        // Hudba a zvuky: přepínač v HUD, zvuky se načtou předem
+        cz.uhk.macroflow.pokemon.audio.GameAudio.preload(this)
+        val btnSound = findViewById<ImageButton>(R.id.btnSound)
+        fun soundIcon() = btnSound.setImageResource(
+            if (cz.uhk.macroflow.pokemon.audio.GameAudio.isEnabled(this)) android.R.drawable.ic_lock_silent_mode_off
+            else android.R.drawable.ic_lock_silent_mode)
+        soundIcon()
+        btnSound.setOnClickListener {
+            val on = !cz.uhk.macroflow.pokemon.audio.GameAudio.isEnabled(this)
+            cz.uhk.macroflow.pokemon.audio.GameAudio.setEnabled(this, on)
+            soundIcon()
+            showMapToast(if (on) "🔊 Hudba a zvuky zapnuty" else "🔇 Ticho v Makrosvětě")
+        }
+
         onBackPressedDispatcher.addCallback(this) {
             when {
                 questDialogManager.isVisible() -> questDialogManager.hide()   // zpět zavře tutoriál/dialog
@@ -209,9 +223,16 @@ class MakromonMapActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (::companionManager.isInitialized) companionManager.refresh()
+        cz.uhk.macroflow.pokemon.audio.GameAudio.resume(this)
+    }
+
+    override fun onPause() {
+        cz.uhk.macroflow.pokemon.audio.GameAudio.pause()
+        super.onPause()
     }
 
     override fun onDestroy() {
+        cz.uhk.macroflow.pokemon.audio.GameAudio.release()
         gamePrefs.unregisterOnSharedPreferenceChangeListener(companionPrefsListener)
         super.onDestroy()
     }
@@ -493,6 +514,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
             val def = BiomeRegistry.definition(newBiome)
             def?.questId?.let { questManager.loadQuest(it) }
+            cz.uhk.macroflow.pokemon.audio.GameAudio.playFor(this, newBiome.name)
             gudwinNPC.visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
             starterBush.visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
             meadowBushNPC.visibility = if (newBiome == BiomeType.MEADOW) View.VISIBLE else View.GONE
