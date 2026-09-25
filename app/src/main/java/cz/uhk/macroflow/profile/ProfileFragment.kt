@@ -40,16 +40,15 @@ class ProfileFragment : Fragment() {
 
     private var selectedMultiplier: Float = 1.2f
     private var selectedGoal: String = "MAINTAIN" // ✅ Logika stavu cíle
-    private var isExpanded = false
 
-    private lateinit var circleContainer: FrameLayout
-    private lateinit var tvDesc: TextView
     private lateinit var etWeight: EditText
     private lateinit var etHeight: EditText
     private lateinit var etAge: EditText
     private lateinit var toggleGender: MaterialButtonToggleGroup
-    private lateinit var iconsCenter: List<ImageView>
-    private lateinit var partsCircle: List<ImageView>
+    /** Řádky životního stylu (sedavá / v pohybu / náročná) a jejich zaškrtnutí. */
+    private lateinit var lifestyleRows: List<View>
+    private lateinit var lifestyleChecks: List<ImageView>
+    private val lifestyleValues = listOf(1.2f, 1.4f, 1.6f)
 
     // 👣 Reference na UI prvky slideru
     private lateinit var sliderStepGoal: Slider
@@ -70,8 +69,6 @@ class ProfileFragment : Fragment() {
         etHeight = view.findViewById(R.id.etHeight)
         etAge    = view.findViewById(R.id.etAge)
         toggleGender = view.findViewById(R.id.toggleGender)
-        tvDesc = view.findViewById(R.id.tvLifestyleDesc)
-        circleContainer = view.findViewById(R.id.circleLifestyle)
 
         // 🎯 Cíle (Tlačítka)
         btnCut = view.findViewById(R.id.btnCut)
@@ -90,28 +87,13 @@ class ProfileFragment : Fragment() {
             tvStepGoalValue.text = "${value.toInt()} kroků"
         }
 
-        // Lifestyle vizuály
-        iconsCenter = listOf(
-            view.findViewById(R.id.iconCenterLow),
-            view.findViewById(R.id.iconCenterMed),
-            view.findViewById(R.id.iconCenterHigh)
-        )
-        partsCircle = listOf(
-            view.findViewById(R.id.partLezerni),
-            view.findViewById(R.id.partAktivni),
-            view.findViewById(R.id.partSportovec)
-        )
+        // Životní styl: tři srozumitelné volby (dřív kruh s ikonami bez popisu)
+        lifestyleRows = listOf(R.id.clickLezerni, R.id.clickAktivni, R.id.clickSportovec).map { view.findViewById(it) }
+        lifestyleChecks = listOf(R.id.checkLezerni, R.id.checkAktivni, R.id.checkSportovec).map { view.findViewById(it) }
+        lifestyleRows.forEachIndexed { i, row -> row.setOnClickListener { selectMode(lifestyleValues[i]) } }
 
         loadUserData()
 
-        tvDesc.visibility = View.INVISIBLE
-
-        // Lifestyle Click Listenery
-        view.findViewById<View>(R.id.clickLezerni).setOnClickListener { selectMode(1.2f, "Sedavá práce") }
-        view.findViewById<View>(R.id.clickAktivni).setOnClickListener { selectMode(1.4f, "Práce v pohybu") }
-        view.findViewById<View>(R.id.clickSportovec).setOnClickListener { selectMode(1.6f, "Fyzicky náročná práce") }
-
-        view.findViewById<View>(R.id.setupMainLayout).setOnClickListener { if (isExpanded) shrinkCircle() }
         view.findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveAllData() }
         view.findViewById<MaterialCardView>(R.id.cardOptionalMetrics).setOnClickListener { showMetricsBottomSheet() }
 
@@ -149,14 +131,15 @@ class ProfileFragment : Fragment() {
         val btnSignOut = view.findViewById<MaterialButton>(R.id.btnSignOut)
         val user = FirebaseRepository.currentUser
 
+        val tvSync = view.findViewById<TextView>(R.id.tvSyncStatus)
         if (user != null) {
             tvEmail?.text = user.email ?: user.displayName ?: "Přihlášený uživatel"
+            tvSync?.text = "☁ Data se zálohují do cloudu"
             btnSignOut?.text = "Odhlásit se"
-            btnSignOut?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#BC6C25"))
         } else {
-            tvEmail?.text = "Offline režim — data se neukládají do cloudu"
+            tvEmail?.text = "Offline režim"
+            tvSync?.text = "Data jsou jen v telefonu – přihlas se pro zálohu"
             btnSignOut?.text = "Přihlásit se"
-            btnSignOut?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#283618"))
         }
 
         btnSignOut?.setOnClickListener {
@@ -170,7 +153,7 @@ class ProfileFragment : Fragment() {
         btnDeleteAccount?.setOnClickListener {
             androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setTitle("Smazat účet")
-                .setMessage("Tato akce je nevratná. Všechna tvá data (profil, check-iny, Pokémoni) budou trvale smazána.")
+                .setMessage("Tato akce je nevratná. Všechna tvá data (profil, check-iny, Makromoni) budou trvale smazána.")
                 .setPositiveButton("Smazat účet") { _, _ -> deleteAccount() }
                 .setNegativeButton("Zrušit", null)
                 .show()
@@ -205,9 +188,36 @@ class ProfileFragment : Fragment() {
                 updateGoalVisuals()
             }
 
-            val colorDark = Color.parseColor("#283618")
-            listOf(etWeight, etHeight, etAge).forEach { it.setTextColor(colorDark) }
-            updateCircleVisuals(selectedMultiplier)
+            updateLifestyleVisuals(selectedMultiplier)
+            refreshHero()
+        }
+    }
+
+    /**
+     * Tmavá souhrnná karta nahoře: jméno, základní údaje, cíl a dnešní cíl příjmu
+     * (stejný výpočet jako Dashboard – MacroCalculator).
+     */
+    private fun refreshHero() {
+        val v = view ?: return
+        val appContext = requireContext().applicationContext
+        val user = FirebaseRepository.currentUser
+        val name = user?.displayName?.takeIf { it.isNotBlank() }
+            ?: user?.email?.substringBefore('@')?.replaceFirstChar { it.uppercase() }
+            ?: "Sportovec"
+        v.findViewById<TextView>(R.id.tvHeroName).text = name
+        v.findViewById<TextView>(R.id.tvHeroInitial).text = name.first().uppercase()
+        val w = etWeight.text.toString(); val h = etHeight.text.toString(); val a = etAge.text.toString()
+        v.findViewById<TextView>(R.id.tvHeroSub).text = "$w kg · $h cm · $a let"
+        v.findViewById<TextView>(R.id.tvHeroGoal).text = selectedGoal
+        lifecycleScope.launch {
+            val t = withContext(Dispatchers.IO) {
+                runCatching { cz.uhk.macroflow.dashboard.MacroCalculator.calculate(appContext) }.getOrNull()
+            } ?: return@launch
+            val root = view ?: return@launch
+            root.findViewById<TextView>(R.id.tvHeroKcal).text = "%,d kcal".format(Locale("cs", "CZ"), t.calories.toInt())
+            root.findViewById<TextView>(R.id.tvHeroProtein).text = "B ${t.protein.toInt()} g"
+            root.findViewById<TextView>(R.id.tvHeroCarbs).text = "S ${t.carbs.toInt()} g"
+            root.findViewById<TextView>(R.id.tvHeroFat).text = "T ${t.fat.toInt()} g"
         }
     }
 
@@ -265,7 +275,7 @@ class ProfileFragment : Fragment() {
                 }
 
                 Toast.makeText(appContext, if (FirebaseRepository.isLoggedIn) "Synchronizováno ☁️" else "Uloženo lokálně 💪", Toast.LENGTH_SHORT).show()
-                if (isExpanded) shrinkCircle()
+                refreshHero()
 
             } catch (e: Exception) {
                 Toast.makeText(appContext, "Chyba: ${e.message}", Toast.LENGTH_LONG).show()
@@ -338,29 +348,18 @@ class ProfileFragment : Fragment() {
         dialog.show()
     }
 
-    // --- ANIMACE A LIFESTYLE ---
-    private fun selectMode(multiplier: Float, description: String) {
+    // --- ŽIVOTNÍ STYL ---
+    private fun selectMode(multiplier: Float) {
         selectedMultiplier = multiplier
-        updateCircleVisuals(multiplier)
-        if (!isExpanded) {
-            isExpanded = true
-            circleContainer.animate().scaleX(1.15f).scaleY(1.15f).setDuration(450).start()
-            tvDesc.apply { text = description; visibility = View.VISIBLE; alpha = 0f; animate().alpha(1f).setDuration(450).start() }
-        } else tvDesc.text = description
+        updateLifestyleVisuals(multiplier)
     }
 
-    private fun updateCircleVisuals(m: Float) {
-        listOf(1.2f, 1.4f, 1.6f).forEachIndexed { index, value ->
-            val sel = (value == m)
-            partsCircle[index].animate().alpha(if (sel) 1.0f else 0.2f).setDuration(300).start()
-            iconsCenter[index].animate().alpha(if (sel) 1.0f else 0.0f).scaleX(if (sel) 1.1f else 0.8f).scaleY(if (sel) 1.1f else 0.8f).setDuration(300).start()
+    private fun updateLifestyleVisuals(m: Float) {
+        lifestyleValues.forEachIndexed { i, value ->
+            val sel = value == m
+            lifestyleRows[i].setBackgroundResource(if (sel) R.drawable.bg_option_selected else R.drawable.bg_option_idle)
+            lifestyleChecks[i].visibility = if (sel) View.VISIBLE else View.INVISIBLE
         }
-    }
-
-    private fun shrinkCircle() {
-        isExpanded = false
-        circleContainer.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).start()
-        tvDesc.animate().alpha(0f).setDuration(300).withEndAction { tvDesc.visibility = View.INVISIBLE }.start()
     }
 
     override fun onResume() {

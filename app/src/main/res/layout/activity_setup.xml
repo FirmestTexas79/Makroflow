@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Profil (záložka PROFIL). Přepracováno podle jazyka ostatních stránek (docs/adr/0018):
+    hlavička s odznakem, tmavá souhrnná karta, sekce s oddělovači a světlé karty s obrysem.
+-->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -12,9 +16,9 @@
         android:layout_gravity="top|end"
         android:layout_marginTop="-50dp"
         android:layout_marginEnd="-60dp"
-        android:src="@drawable/bg_monstera_leaf_1"
         android:alpha="0.07"
         android:rotation="-15"
+        android:src="@drawable/bg_monstera_leaf_1"
         app:tint="@color/brand_dark" />
 
     <ImageView
@@ -23,439 +27,458 @@
         android:layout_gravity="bottom|start"
         android:layout_marginStart="-25dp"
         android:layout_marginBottom="140dp"
-        android:src="@drawable/bg_monstera_leaf_2"
         android:alpha="0.06"
         android:rotation="55"
+        android:src="@drawable/bg_monstera_leaf_2"
         app:tint="@color/brand_primary" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingBottom="120dp"
-        android:overScrollMode="never">
+        android:overScrollMode="never"
+        android:paddingBottom="190dp">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <LinearLayout
             android:id="@+id/setupMainLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="56dp"
-            android:paddingBottom="40dp">
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="56dp">
 
+            <!-- ═══ HLAVIČKA (stejná jako na ostatních stránkách) ═══ -->
             <TextView
                 android:id="@+id/tvProfileBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
                 android:background="@drawable/bg_status_pill"
                 android:backgroundTint="@color/brand_primary"
+                android:letterSpacing="0.12"
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="6dp"
                 android:text="@string/setup_badge_profile"
                 android:textColor="@color/brand_cream"
                 android:textSize="11sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.12"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvProfileTitle"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
                 android:layout_marginTop="10dp"
                 android:fontFamily="sans-serif-black"
+                android:lineSpacingMultiplier="0.9"
                 android:text="@string/setup_title"
                 android:textColor="@color/brand_dark"
-                android:textSize="42sp"
-                android:lineSpacingMultiplier="0.9"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvProfileBadge" />
+                android:textSize="40sp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
                 android:layout_marginTop="4dp"
+                android:alpha="0.75"
                 android:text="@string/setup_subtitle"
                 android:textColor="@color/brand_primary"
-                android:textSize="13sp"
-                android:alpha="0.75"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tvProfileTitle" />
+                android:textSize="13sp" />
 
-            <LinearLayout
-                android:id="@+id/dividerBasic"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="28dp"
-                app:layout_constraintTop_toBottomOf="@id/tvProfileTitle"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-                <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="12dp" android:text="@string/setup_section_basic"
-                    android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold"
-                    android:letterSpacing="0.14" />
-                <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-            </LinearLayout>
-
-            <com.google.android.material.button.MaterialButtonToggleGroup
-                android:id="@+id/toggleGender"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:singleSelection="true"
-                app:selectionRequired="true"
-                app:layout_constraintTop_toBottomOf="@id/dividerBasic"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMale"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="140dp"
-                    android:layout_height="48dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="@string/man"
-                    android:textColor="@color/brand_dark"
-                    app:strokeColor="@color/brand_primary"
-                    app:cornerRadius="24dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnFemale"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="140dp"
-                    android:layout_height="48dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="@string/woman"
-                    android:textColor="@color/brand_dark"
-                    app:strokeColor="@color/brand_primary"
-                    app:cornerRadius="24dp" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
-
-            <LinearLayout
-                android:id="@+id/dividerGoal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="28dp"
-                app:layout_constraintTop_toBottomOf="@id/toggleGender"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-                <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="12dp" android:text="AKTUÁLNÍ CÍL"
-                    android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold"
-                    android:letterSpacing="0.14" />
-                <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-            </LinearLayout>
-
-            <com.google.android.material.button.MaterialButtonToggleGroup
-                android:id="@+id/toggleGoal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:singleSelection="true"
-                app:selectionRequired="true"
-                app:checkedButton="@+id/btnMaintain"
-                app:layout_constraintTop_toBottomOf="@id/dividerGoal"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnCut"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:text="CUT" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMaintain"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:text="MAINTAIN" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnBulk"
-                    style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:text="BULK" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
-
-            <LinearLayout
-                android:id="@+id/inputsLayout"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="16dp"
-                app:layout_constraintTop_toBottomOf="@id/toggleGoal"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilWeight"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/weight"
-                    app:suffixText="kg"
-                    app:boxStrokeColor="@color/brand_primary"
-                    app:boxCornerRadiusTopStart="14dp"
-                    app:boxCornerRadiusTopEnd="14dp"
-                    app:boxCornerRadiusBottomStart="14dp"
-                    app:boxCornerRadiusBottomEnd="14dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etWeight"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberDecimal"
-                        android:textColor="@color/brand_dark" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilHeight"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="@string/height"
-                    app:suffixText="cm"
-                    app:boxStrokeColor="@color/brand_primary"
-                    app:boxCornerRadiusTopStart="14dp"
-                    app:boxCornerRadiusTopEnd="14dp"
-                    app:boxCornerRadiusBottomStart="14dp"
-                    app:boxCornerRadiusBottomEnd="14dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etHeight"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="number"
-                        android:textColor="@color/brand_dark" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilAge"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="@string/age"
-                    app:suffixText="@string/unit_years"
-                    app:boxStrokeColor="@color/brand_primary"
-                    app:boxCornerRadiusTopStart="14dp"
-                    app:boxCornerRadiusTopEnd="14dp"
-                    app:boxCornerRadiusBottomStart="14dp"
-                    app:boxCornerRadiusBottomEnd="14dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etAge"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="number"
-                        android:textColor="@color/brand_dark" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-
-
-
-            <LinearLayout
-                android:id="@+id/dividerLifestyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="28dp"
-                app:layout_constraintTop_toBottomOf="@id/inputsLayout"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-                <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="12dp" android:text="@string/setup_section_lifestyle"
-                    android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold"
-                    android:letterSpacing="0.14" />
-                <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-            </LinearLayout>
-
-            <FrameLayout
-                android:id="@+id/circleLifestyle"
-                android:layout_width="160dp"
-                android:layout_height="160dp"
-                android:layout_marginTop="16dp"
-                app:layout_constraintTop_toBottomOf="@id/dividerLifestyle"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-
-                <ImageView android:id="@+id/partLezerni"
-                    android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:src="@drawable/ic_low" android:scaleType="fitCenter"
-                    android:alpha="0.3" app:tint="@color/brand_primary" />
-                <ImageView android:id="@+id/partAktivni"
-                    android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:src="@drawable/ic_med" android:scaleType="fitCenter"
-                    android:alpha="0.3" app:tint="@color/brand_accent_warm" />
-                <ImageView android:id="@+id/partSportovec"
-                    android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:src="@drawable/ic_high" android:scaleType="fitCenter"
-                    android:alpha="0.3" app:tint="@color/brand_accent_deep" />
-
-                <ImageView android:id="@+id/iconCenterLow"
-                    android:layout_width="52dp" android:layout_height="52dp"
-                    android:layout_gravity="center" android:src="@drawable/img_low"
-                    android:alpha="0" app:tint="@color/brand_dark" />
-                <ImageView android:id="@+id/iconCenterMed"
-                    android:layout_width="52dp" android:layout_height="52dp"
-                    android:layout_gravity="center" android:src="@drawable/img_med"
-                    android:alpha="0" app:tint="@color/brand_dark" />
-                <ImageView android:id="@+id/iconCenterHigh"
-                    android:layout_width="52dp" android:layout_height="52dp"
-                    android:layout_gravity="center" android:src="@drawable/img_high"
-                    android:alpha="0" app:tint="@color/brand_dark" />
-
-                <View android:id="@+id/clickLezerni"
-                    android:layout_width="80dp" android:layout_height="80dp"
-                    android:layout_gravity="top|start" />
-                <View android:id="@+id/clickAktivni"
-                    android:layout_width="80dp" android:layout_height="80dp"
-                    android:layout_gravity="top|end" />
-                <View android:id="@+id/clickSportovec"
-                    android:layout_width="160dp" android:layout_height="60dp"
-                    android:layout_gravity="bottom" />
-            </FrameLayout>
-
-            <TextView
-                android:id="@+id/tvLifestyleDesc"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textAlignment="center"
-                android:textSize="16sp"
-                android:textColor="@color/brand_dark"
-                android:textStyle="bold"
-                android:visibility="invisible"
-                app:layout_constraintTop_toBottomOf="@id/circleLifestyle"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
-
+            <!-- ═══ SOUHRN: kdo jsem a kolik mám dnes sníst ═══ -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardStepGoal"
-                android:layout_width="0dp"
+                android:id="@+id/cardProfileHero"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/brand_cream"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/brand_dark_alpha12"
-                app:layout_constraintTop_toBottomOf="@id/tvLifestyleDesc"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                android:layout_marginTop="22dp"
+                app:cardBackgroundColor="@color/brand_dark"
+                app:cardCornerRadius="26dp"
+                app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="20dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvHeroInitial"
+                            android:layout_width="54dp"
+                            android:layout_height="54dp"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="@color/brand_primary"
+                            android:fontFamily="sans-serif-black"
+                            android:gravity="center"
+                            android:text="M"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="22sp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvHeroName"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:fontFamily="sans-serif-black"
+                                android:maxLines="1"
+                                android:text="Makroflow"
+                                android:textColor="@color/brand_cream"
+                                android:textSize="18sp" />
+
+                            <TextView
+                                android:id="@+id/tvHeroSub"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:alpha="0.7"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="@color/brand_cream"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvHeroGoal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="@color/brand_accent_warm"
+                            android:letterSpacing="0.1"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="5dp"
+                            android:text="MAINTAIN"
+                            android:textColor="@color/brand_dark"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="16dp"
+                        android:background="@color/brand_cream_alpha15" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.14"
+                        android:text="@string/profile_hero_label"
+                        android:textColor="@color/brand_accent_warm"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvHeroKcal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="sans-serif-black"
+                        android:text="— kcal"
+                        android:textColor="@color/brand_cream"
+                        android:textSize="32sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvHeroProtein"
+                            style="@style/ProfileMacroChip"
+                            android:backgroundTint="@color/brand_primary"
+                            android:text="B —" />
+
+                        <TextView
+                            android:id="@+id/tvHeroCarbs"
+                            style="@style/ProfileMacroChip"
+                            android:layout_marginHorizontal="8dp"
+                            android:backgroundTint="@color/brand_accent_warm"
+                            android:text="S —"
+                            android:textColor="@color/brand_dark" />
+
+                        <TextView
+                            android:id="@+id/tvHeroFat"
+                            style="@style/ProfileMacroChip"
+                            android:backgroundTint="@color/brand_accent_deep"
+                            android:text="T —" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ ZÁKLADNÍ ÚDAJE ═══ -->
+            <TextView style="@style/ProfileSection" android:text="@string/setup_section_basic" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/toggleGender"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnMale"
+                            style="@style/ProfileToggleButton"
+                            android:text="@string/man" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFemale"
+                            style="@style/ProfileToggleButton"
+                            android:text="@string/woman" />
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/ProfileField"
+                            android:hint="Váha"
+                            app:suffixText="kg">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etWeight"
+                                style="@style/ProfileFieldInput"
+                                android:inputType="numberDecimal" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/ProfileField"
+                            android:layout_marginHorizontal="8dp"
+                            android:hint="Výška"
+                            app:suffixText="cm">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etHeight"
+                                style="@style/ProfileFieldInput"
+                                android:inputType="numberDecimal" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/ProfileField"
+                            android:hint="Věk"
+                            app:suffixText="let">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAge"
+                                style="@style/ProfileFieldInput"
+                                android:inputType="number" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ CÍL ═══ -->
+            <TextView style="@style/ProfileSection" android:text="@string/profile_section_goal" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCut"
+                        style="@style/ProfileGoalButton"
+                        android:text="@string/profile_goal_cut" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMaintain"
+                        style="@style/ProfileGoalButton"
+                        android:layout_marginHorizontal="8dp"
+                        android:text="@string/profile_goal_maintain" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnBulk"
+                        style="@style/ProfileGoalButton"
+                        android:text="@string/profile_goal_bulk" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ ŽIVOTNÍ STYL: tři srozumitelné volby místo kruhu ═══ -->
+            <TextView style="@style/ProfileSection" android:text="@string/setup_section_lifestyle" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+
+                    <LinearLayout
+                        android:id="@+id/clickLezerni"
+                        style="@style/ProfileOptionRow">
+                        <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_desk" />
+                        <LinearLayout style="@style/ProfileOptionTexts">
+                            <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_low" />
+                            <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_low_sub" />
+                        </LinearLayout>
+                        <ImageView android:id="@+id/checkLezerni" style="@style/ProfileOptionCheck" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/clickAktivni"
+                        style="@style/ProfileOptionRow">
+                        <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_walk" />
+                        <LinearLayout style="@style/ProfileOptionTexts">
+                            <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_mid" />
+                            <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_mid_sub" />
+                        </LinearLayout>
+                        <ImageView android:id="@+id/checkAktivni" style="@style/ProfileOptionCheck" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/clickSportovec"
+                        style="@style/ProfileOptionRow">
+                        <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_lift" />
+                        <LinearLayout style="@style/ProfileOptionTexts">
+                            <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_high" />
+                            <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_high_sub" />
+                        </LinearLayout>
+                        <ImageView android:id="@+id/checkSportovec" style="@style/ProfileOptionCheck" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ KROKY ═══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardStepGoal"
+                style="@style/ProfileCard"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="18dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:letterSpacing="0.1"
                             android:text="@string/setup_label_steps"
                             android:textColor="@color/brand_primary"
                             android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.1" />
+                            android:textStyle="bold" />
 
                         <TextView
                             android:id="@+id/tvStepGoalValue"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="@color/brand_primary_alpha10"
+                            android:fontFamily="sans-serif-black"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="4dp"
                             android:text="@string/setup_steps_default"
                             android:textColor="@color/brand_dark"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <com.google.android.material.slider.Slider
                         android:id="@+id/sliderStepGoal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:valueFrom="2000"
-                        android:valueTo="20000"
+                        android:layout_marginTop="4dp"
                         android:stepSize="500"
                         android:value="6000"
+                        android:valueFrom="2000"
+                        android:valueTo="20000"
+                        app:labelBehavior="gone"
                         app:thumbColor="@color/brand_primary"
-                        app:trackColorActive="@color/brand_dark"
-                        app:trackColorInactive="@color/brand_dark_alpha20" />
-
+                        app:tickVisible="false"
+                        app:trackColorActive="@color/brand_primary"
+                        app:trackColorInactive="@color/brand_dark_alpha12" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- ═══ OBVODY ═══ -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardOptionalMetrics"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="12dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardBackgroundColor="@color/brand_dark"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:layout_constraintTop_toBottomOf="@id/cardStepGoal"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:cardCornerRadius="22dp"
+                app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="18dp"
-                    android:gravity="center_vertical">
+                    android:padding="18dp">
+
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:orientation="vertical">
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/setup_label_measurements"
+                            android:letterSpacing="0.12"
+                            android:text="@string/profile_metrics_label"
                             android:textColor="@color/brand_accent_warm"
                             android:textSize="10sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.1" />
+                            android:textStyle="bold" />
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="@string/moje_obvody"
+                            android:fontFamily="sans-serif-black"
+                            android:text="@string/profile_metrics_title"
                             android:textColor="@color/brand_cream"
-                            android:textSize="15sp"
-                            android:fontFamily="sans-serif-black" />
+                            android:textSize="17sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:alpha="0.7"
+                            android:text="@string/profile_metrics_sub"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="12sp" />
                     </LinearLayout>
+
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
@@ -464,102 +487,97 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <LinearLayout
-                android:id="@+id/dividerAccount"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="28dp"
-                app:layout_constraintTop_toBottomOf="@id/cardOptionalMetrics"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-                <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="12dp" android:text="@string/setup_section_account"
-                    android:textColor="@color/brand_primary" android:textSize="10sp" android:textStyle="bold"
-                    android:letterSpacing="0.14" />
-                <View android:layout_width="0dp" android:layout_height="1dp"
-                    android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
-            </LinearLayout>
+            <!-- ═══ ÚČET ═══ -->
+            <TextView style="@style/ProfileSection" android:text="@string/setup_section_account" />
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardAccountInfo"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/brand_cream"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/brand_dark_alpha12"
-                app:layout_constraintTop_toBottomOf="@id/dividerAccount"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                style="@style/ProfileCard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="18dp"
-                    android:gravity="center_vertical">
-                    <ImageView
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:layout_marginEnd="14dp"
-                        android:src="@drawable/ic_drawer_user"
-                        app:tint="@color/brand_primary" />
-                    <TextView
-                        android:id="@+id/tvUserEmail"
-                        android:layout_width="0dp"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/setup_offline_mode"
-                        android:textSize="14sp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="@color/brand_primary_alpha10"
+                            android:padding="8dp"
+                            android:src="@drawable/ic_nav_profile"
+                            app:tint="@color/brand_primary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvUserEmail"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:text="@string/setup_offline_mode"
+                                android:textColor="@color/brand_dark"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvSyncStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="1dp"
+                                android:textColor="@color/brand_primary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSignOut"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginTop="14dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="@string/setup_btn_login"
                         android:textColor="@color/brand_dark"
-                        android:ellipsize="end"
-                        android:maxLines="1" />
+                        android:textStyle="bold"
+                        app:cornerRadius="16dp"
+                        app:icon="@drawable/ic_nav_logout"
+                        app:iconTint="@color/brand_dark"
+                        app:strokeColor="@color/brand_dark_alpha30" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDeleteAccount"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/profile_delete_account"
+                        android:textColor="?attr/colorError"
+                        android:textSize="13sp"
+                        app:icon="@drawable/ic_delete"
+                        app:iconSize="16dp"
+                        app:iconTint="?attr/colorError" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSignOut"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_marginTop="10dp"
-                android:text="@string/setup_btn_login"
-                android:textColor="@color/brand_cream"
-                android:textStyle="bold"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                app:backgroundTint="@color/brand_dark"
-                app:cornerRadius="16dp"
-                app:layout_constraintTop_toBottomOf="@id/cardAccountInfo"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDeleteAccount"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_marginTop="10dp"
-                android:text="Smazat účet"
-                android:textColor="@color/brand_cream"
-                android:textStyle="bold"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                app:backgroundTint="#B71C1C"
-                app:cornerRadius="16dp"
-                app:icon="@drawable/ic_delete"
-                app:iconTint="@color/brand_cream"
-                app:layout_constraintTop_toBottomOf="@id/btnSignOut"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Uložit – stejné tmavé tlačítko jako „Přidat“ ve Snacky -->
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/btnSave"
         android:layout_width="wrap_content"
@@ -567,18 +585,16 @@
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="20dp"
         android:layout_marginBottom="112dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
         android:text="@string/btn_save"
         android:textColor="@color/brand_cream"
         android:textSize="13sp"
         android:textStyle="bold"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        app:icon="@drawable/ic_save"
-        app:iconTint="@color/brand_cream"
-        app:iconSize="22dp"
-        app:backgroundTint="@color/brand_primary"
+        app:backgroundTint="@color/brand_dark"
         app:cornerRadius="28dp"
-        app:elevation="12dp"
-        app:fabSize="normal" />
-
+        app:elevation="10dp"
+        app:icon="@drawable/ic_save"
+        app:iconSize="22dp"
+        app:iconTint="@color/brand_cream" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

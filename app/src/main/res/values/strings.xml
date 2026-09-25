@@ -90,7 +90,7 @@
     <string name="shop_item_default_desc">Popis předmětu se zobrazí zde.</string>
 
     <string name="pokemon_lvl_format">Lvl %d</string>
-    <string name="pokemon_default_name">Pokémon</string>
+    <string name="pokemon_default_name">Makromon</string>
     <string name="pokemon_xp_label">XP</string>
 
     <string name="pokedex_number_format">#%03d</string>
@@ -105,25 +105,25 @@
     <string name="bally">Bally</string>
     <string name="lure">Návnady</string>
 
-    <string name="shop_badge_label">POKÉ OBCHOD</string>
+    <string name="shop_badge_label">MAKRO OBCHOD</string>
     <string name="shop_title_main">Obchod s\nItemy</string>
     <string name="shop_subtitle">Kup si bally za ušetřené mince.</string>
     <string name="coin_emoji">🪙</string>
 
-    <string name="pokedex_region_label">KANTO REGION</string>
-    <string name="pokedex_title">Pokédex</string>
-    <string name="pokedex_subtitle">Chyť je všechny — tréninkem a disciplínou.</string>
+    <string name="pokedex_region_label">MAKROSVĚT</string>
+    <string name="pokedex_title">Makrodex</string>
+    <string name="pokedex_subtitle">Každý poctivý den tě přiblíží dalšímu Makromonovi.</string>
     <string name="pokedex_number_placeholder">#001</string>
     <string name="pokedex_type_placeholder">TRÁVA / JED</string>
     <string name="pokedex_macro_desc_placeholder">Základní stavební kámen jídelníčku. Nezapomínej na listovou zeleninu.</string>
     <string name="pokedex_btn_evo_test">Test Evoluce</string>
-    <string name="pokedex_list_separator">KANTO DEX</string>
+    <string name="pokedex_list_separator">VŠICHNI MAKROMONI</string>
 
     <string name="inv_label">MŮJ INVENTÁŘ</string>
     <string name="inv_title">Kapsa a\nBatoh</string>
-    <string name="inv_subtitle">Chycení Pokémoni a herní předměty.</string>
-    <string name="inv_tab_pocket">Poké-kapsa</string>
-    <string name="inv_tab_backpack">Batoh (Itemy)</string>
+    <string name="inv_subtitle">Chycení Makromoni a herní předměty.</string>
+    <string name="inv_tab_pocket">Makromoni</string>
+    <string name="inv_tab_backpack">Batoh</string>
 
     <string name="checkin_label">RANNÍ RITUÁL</string>
     <string name="checkin_weight_hint">Dnešní váha</string>
@@ -134,7 +134,7 @@
     <string name="checkin_btn_save">ULOŽIT RITUÁL</string>
 
     <string name="ach_badge">TVOJE ÚSPĚCHY</string>
-    <string name="ach_title">Achievementy</string>
+    <string name="ach_title">Úspěchy</string>
     <string name="ach_subtitle">Odemčené milníky tvé cesty</string>
     <string name="ach_progress_format">%1$d / %2$d</string>
     <string name="ach_trophy_emoji">🏆</string>
@@ -179,7 +179,7 @@
     <string name="diglett_description">Tvůj osobní trenér Diglett</string>
     <string name="menu_open_desc">Otevřít navigaci</string>
 
-    <string name="nav_pokedex">Pokédex</string>
+    <string name="nav_pokedex">Makrodex</string>
     <string name="nav_inventory">Batoh</string>
     <string name="nav_achievements">Úspěchy</string>
     <string name="nav_settings">Nastavení</string>
@@ -223,8 +223,8 @@
     <string name="ritual_btn_save">ULOŽIT A ZAČÍT 🔥</string>
 
     <string name="setup_badge_profile">PROFIL</string>
-    <string name="setup_title">Nastavení</string>
-    <string name="setup_subtitle">Nastav svůj profil. Makra se přizpůsobí.</string>
+    <string name="setup_title">Můj profil</string>
+    <string name="setup_subtitle">Tvoje údaje, cíl a účet. Makra se přizpůsobí.</string>
     <string name="setup_section_basic">ZÁKLADNÍ ÚDAJE</string>
     <string name="setup_section_lifestyle">ŽIVOTNÍ STYL</string>
     <string name="unit_years">let</string>
@@ -276,29 +276,47 @@
     <string name="settings_subtitle">Cheaty a editace dat aplikace.</string>
     <string name="label_dev_cheats">🛠 DEV CHEATY</string>
 
-    <string name="btn_cheat_poke">+5 Poké</string>
+    <string name="btn_cheat_poke">+5 Makro</string>
     <string name="btn_cheat_great">+5 Great</string>
     <string name="btn_cheat_coins">+100 Coinů</string>
 
-    <string name="label_pokedex_editor">POKÉDEX</string>
+    <string name="label_pokedex_editor">Makrodex</string>
     <string name="label_edit_desc_caps">EDITOVAT POPIS</string>
-    <string name="settings_edit_pokedex_hint">Upravit typ a popis pokémona</string>
+    <string name="settings_edit_pokedex_hint">Upravit typ a popis Makromona</string>
     <string name="btn_edit">Editovat</string>
 
     <string name="label_testing">🧪 TESTOVÁNÍ</string>
-    <string name="label_add_to_pocket">PŘIDAT POKÉMONA DO KAPSY</string>
-    <string name="settings_id_hint_desc">Zadej ID z Pokédexu (např. 025)</string>
+    <string name="label_add_to_pocket">PŘIDAT MAKROMONA DO KAPSY</string>
+    <string name="settings_id_hint_desc">Zadej číslo z Makrodexu (např. 025)</string>
     <string name="hint_id_example">Např. 004</string>
     <string name="btn_get">Získat</string>
 
-    <string name="label_achievements">Achievements</string>
+    <string name="label_achievements">Úspěchy</string>
     <string name="label_my_collection">MOJE SBÍRKA</string>
     <string name="label_inventory">Kapsa a Batoh</string>
     <string name="label_disclaimer">Prohlášení</string>
-    <string name="label_delete_achievements">🗑️ Smazat achievementy</string>
+    <string name="label_delete_achievements">Smazat úspěchy (debug)</string>
     <string name="label_sign_out">Odhlásit se</string>
 
 
 
 
+    <!-- Profil (docs/adr/0018) -->
+    <string name="profile_hero_label">DENNÍ CÍL PŘÍJMU</string>
+    <string name="profile_section_goal">CÍL</string>
+    <string name="profile_goal_cut">CUT\nhubnutí</string>
+    <string name="profile_goal_maintain">MAINTAIN\nudržení</string>
+    <string name="profile_goal_bulk">BULK\nnabírání</string>
+    <string name="profile_ls_low">Sedavá práce</string>
+    <string name="profile_ls_low_sub">Kancelář, škola – většinu dne sedíš</string>
+    <string name="profile_ls_mid">Práce v pohybu</string>
+    <string name="profile_ls_mid_sub">Hodně chodíš – obchod, sklad, výuka</string>
+    <string name="profile_ls_high">Fyzicky náročná práce</string>
+    <string name="profile_ls_high_sub">Stavba, manuální práce, celý den v zátěži</string>
+    <string name="profile_metrics_label">TĚLESNÉ MÍRY</string>
+    <string name="profile_metrics_title">Moje obvody</string>
+    <string name="profile_metrics_sub">Krk, hrudník, biceps, pas, stehno…</string>
+    <string name="profile_delete_account">Smazat účet a všechna data</string>
+    <string name="label_generate_report">Generovat report</string>
+    <string name="label_dev_tools">Vývojářské nástroje</string>
 </resources>

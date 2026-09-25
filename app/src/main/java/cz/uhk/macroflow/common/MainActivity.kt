@@ -375,6 +375,8 @@ class MainActivity : AppCompatActivity() {
      */
     private fun setupDrawerNav(btnOpenDrawer: ImageButton) {
         btnOpenDrawer.setOnClickListener { openDrawer() }
+        // Vývojářské nástroje a mazání úspěchů jen v debug buildu
+        navigationView.menu.setGroupVisible(R.id.groupDebug, cz.uhk.macroflow.BuildConfig.DEBUG)
 
         navigationView.setNavigationItemSelectedListener { item ->
             drawerLayout.closeDrawer(GravityCompat.END)

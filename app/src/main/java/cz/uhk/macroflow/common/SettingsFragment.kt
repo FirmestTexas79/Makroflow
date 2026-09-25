@@ -83,12 +83,12 @@ class SettingsFragment : Fragment() {
                     db.capturedMakromonDao().insertMakromon(newCapture)
 
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "✅ $makromonName přidán do Poké-kapsy!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "✅ $makromonName přidán do kapsy!", Toast.LENGTH_SHORT).show()
                         etCheatId?.text?.clear()
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "❌ Pokémon s ID $typedId nebyl v DB ani v Poolu nalezen!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "❌ Makromon s číslem $typedId nebyl v DB ani v Poolu nalezen!", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -106,7 +106,7 @@ class SettingsFragment : Fragment() {
             lifecycleScope.launch(Dispatchers.IO) {
                 db.userItemDao().addItem("poke_ball", 5)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "🎁 Přidáno 5x Poké Ball!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "🎁 Přidáno 5× Makroball!", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -208,7 +208,7 @@ class SettingsFragment : Fragment() {
                 }
             } else {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "❌ Pokémon s ID $pokedexId nebyl v DB nalezen!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "❌ Makromon s číslem $pokedexId nebyl v DB nalezen!", Toast.LENGTH_SHORT).show()
                 }
             }
         }

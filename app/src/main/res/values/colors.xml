@@ -88,4 +88,6 @@
 
 
 
+    <!-- Světlá karta na krémovém pozadí (profil a další sekce) -->
+    <color name="profile_card">#FBF8E8</color>
 </resources>

@@ -1,43 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Boční menu (docs/adr/0018): vlastní ikony, české názvy, vývojářské položky jen v debug buildu
+     (skupinu groupDebug skrývá MainActivity podle BuildConfig.DEBUG). -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <group android:id="@+id/groupMain">
 
         <item
             android:id="@+id/drawerProfile"
-            android:icon="@drawable/ic_logo_black"
+            android:icon="@drawable/ic_nav_profile"
             android:title="@string/title_profile"
             android:checkable="true" />
 
         <item
             android:id="@+id/drawerAchievements"
-            android:icon="@drawable/ic_high"
+            android:icon="@drawable/ic_nav_trophy"
             android:title="@string/label_achievements"
-            android:checkable="true" />
-
-        <item android:title="@string/label_my_collection">
-            <menu>
-                <item
-                    android:id="@+id/nav_pokedex"
-                    android:icon="@drawable/ic_home"
-                    android:title="@string/label_pokedex_editor" />
-                <item
-                    android:id="@+id/nav_inventory"
-                    android:icon="@drawable/ic_home"
-                    android:title="@string/label_inventory" />
-            </menu>
-        </item>
-
-        <item
-            android:id="@+id/drawerSettings"
-            android:icon="@drawable/ic_save"
-            android:title="@string/settings_title"
             android:checkable="true" />
 
         <item
             android:id="@+id/nav_generate_report"
             android:icon="@drawable/ic_description"
-            android:title="Generovat Report" />
+            android:title="@string/label_generate_report" />
+
+        <item android:title="@string/label_my_collection">
+            <menu>
+                <item
+                    android:id="@+id/nav_pokedex"
+                    android:icon="@drawable/ic_nav_dex"
+                    android:title="@string/label_pokedex_editor" />
+                <item
+                    android:id="@+id/nav_inventory"
+                    android:icon="@drawable/ic_nav_bag"
+                    android:title="@string/label_inventory" />
+            </menu>
+        </item>
 
     </group>
 
@@ -45,13 +41,19 @@
 
         <item
             android:id="@+id/drawerDisclaimer"
-            android:icon="@drawable/ic_macro_fat"
+            android:icon="@drawable/ic_nav_info"
             android:title="@string/label_disclaimer"
             android:checkable="false" />
 
     </group>
 
     <group android:id="@+id/groupDebug">
+
+        <item
+            android:id="@+id/drawerSettings"
+            android:icon="@drawable/ic_nav_tools"
+            android:title="@string/label_dev_tools"
+            android:checkable="true" />
 
         <item
             android:id="@+id/drawerResetAchievements"
@@ -65,7 +67,7 @@
 
         <item
             android:id="@+id/drawerSignOut"
-            android:icon="@drawable/ic_back"
+            android:icon="@drawable/ic_nav_logout"
             android:title="@string/label_sign_out"
             android:checkable="false" />
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Linka vedle nadpisu sekce („── ZÁKLADNÍ ÚDAJE ──“) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <size android:width="72dp" android:height="1dp" />
+    <solid android:color="@color/brand_dark_alpha12" />
+</shape>

@@ -12,6 +12,28 @@
         <item name="colorOnSurface">@color/brand_dark</item>
         <item name="colorTertiary">@color/brand_accent_warm</item>
         <item name="colorOnTertiary">@color/brand_dark</item>
+        <!-- Úplná paleta rolí Material 3 v barvách aplikace. Dřív chyběly „container“,
+             „surface“ a „outline“ role → komponenty braly výchozí fialovou (výběr v draweru,
+             přepínač pohlaví, dialogy, oddělovače). -->
+        <item name="colorPrimaryContainer">#DDE5C0</item>
+        <item name="colorOnPrimaryContainer">@color/brand_dark</item>
+        <item name="colorSecondaryContainer">#E4E6C8</item>
+        <item name="colorOnSecondaryContainer">@color/brand_dark</item>
+        <item name="colorTertiaryContainer">#F6DDBF</item>
+        <item name="colorOnTertiaryContainer">@color/brand_dark</item>
+        <item name="colorSurfaceVariant">#EFEBD3</item>
+        <item name="colorOnSurfaceVariant">@color/brand_primary</item>
+        <item name="colorOutline">#B9B596</item>
+        <item name="colorOutlineVariant">#E2DDC4</item>
+        <item name="colorSurfaceContainerLowest">#FFFFFF</item>
+        <item name="colorSurfaceContainerLow">#FCF8E6</item>
+        <item name="colorSurfaceContainer">#F7F3DD</item>
+        <item name="colorSurfaceContainerHigh">#F2EED6</item>
+        <item name="colorSurfaceContainerHighest">#ECE8CF</item>
+        <item name="colorError">#A63D2A</item>
+        <item name="colorOnError">@color/white</item>
+        <item name="colorErrorContainer">#F6D9CF</item>
+        <item name="colorOnErrorContainer">#5A1A0E</item>
     </style>
 
     <style name="Theme.Makroflow" parent="Base.Theme.Makroflow">
