@@ -38,7 +38,7 @@ class EquipmentView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
         kg >= 10.0 -> cPrimary
         kg >= 5.0 -> cDeep
         kg >= 2.5 -> cWarm
-        else -> cSteel
+        else -> cSteelDark
     }
     /** Průměr a tloušťka kotouče vůči výšce obrázku. */
     private fun plateDiameter(kg: Double) = when {
@@ -193,7 +193,7 @@ class EquipmentView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet?
                 canvas.save()
                 canvas.rotate(-90f, left + t / 2, cy - d * 0.3f)
                 text.textSize = min(t * 0.62f, h * 0.06f)
-                text.color = if (col == cWarm || col == cSteel) cDark else cCream; text.alpha = a
+                text.color = if (col == cWarm) cDark else cCream; text.alpha = a
                 canvas.drawText(RigMath.kg(s.kg), left + t / 2, cy - d * 0.3f + text.textSize * 0.35f, text)
                 canvas.restore()
             }
