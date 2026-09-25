@@ -25,14 +25,16 @@ object WorkoutTemplates {
     }
     fun label(key: String) = parse(key)?.let { (k, v) -> "${k.label} $v" } ?: key
 
-    /** Výchozí cviky (id z ExerciseLibrary). PUSH A podle Samuelova tréninku, ostatní ve stejném stylu. */
+    // Výchozí cviky (id z ExerciseLibrary) podle Samuelova tréninku.
+    private val PUSH = listOf("machine_chest_press", "incline_machine_press", "skull_crusher", "lateral_raise", "triceps_kickback", "pec_deck")
+    private val PULL = listOf("lat_pulldown", "close_grip_pulldown", "wide_cable_row", "seated_cable_row", "single_arm_supported_curl", "hammer_curl", "ez_bar_curl", "reverse_pec_deck")
+    private val LEGS = listOf("seated_leg_curl", "rdl", "single_leg_press", "standing_calf_raise", "leg_extension")
+
+    /** Výchozí šablony = Samuelův trénink; A i B zatím stejné, liší se úpravou v editoru šablony. */
     val DEFAULTS: Map<String, List<String>> = mapOf(
-        "PUSH_A" to listOf("machine_chest_press", "incline_machine_press", "skull_crusher", "lateral_raise", "triceps_kickback", "pec_deck"),
-        "PUSH_B" to listOf("incline_db_press", "machine_shoulder_press", "cable_lateral_raise", "overhead_extension", "triceps_pushdown", "cable_fly"),
-        "PULL_A" to listOf("lat_pulldown", "machine_row", "straight_arm_pulldown", "face_pull", "barbell_curl", "hammer_curl"),
-        "PULL_B" to listOf("pull_up", "seated_cable_row", "db_row", "reverse_pec_deck", "incline_db_curl", "preacher_curl"),
-        "LEGS_A" to listOf("back_squat", "rdl", "leg_press", "lying_leg_curl", "standing_calf_raise", "hanging_leg_raise"),
-        "LEGS_B" to listOf("hack_squat", "bulgarian_split_squat", "leg_extension", "seated_leg_curl", "hip_thrust", "seated_calf_raise")
+        "PUSH_A" to PUSH, "PUSH_B" to PUSH,
+        "PULL_A" to PULL, "PULL_B" to PULL,
+        "LEGS_A" to LEGS, "LEGS_B" to LEGS
     )
 
     /**

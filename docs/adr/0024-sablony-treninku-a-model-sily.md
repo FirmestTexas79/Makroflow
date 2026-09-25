@@ -11,13 +11,15 @@ a jaký bude příště, (3) ukázat to trenérovi ve výpisu.
 
 ## Rozhodnutí
 ### Šablony
-* `WorkoutTemplates`: klíče `PUSH_A … LEGS_B`, výchozí cviky (PUSH A podle Samuelova tréninku),
+* `WorkoutTemplates`: klíče `PUSH_A … LEGS_B`, výchozí cviky podle Samuelova tréninku (A i B zatím
+  stejné: push 6, pull 8, legs 5 cviků),
   úpravy v tabulce `workout_templates` (DB v37) + Firestore `workout_templates/{klíč}`.
 * **Střídání A/B**: pro dnešní typ dne z Plánu se vezme opak varianty, se kterou se typ cvičil
   naposledy (série nesou `template`); když se dnes už podle šablony cvičilo, zůstává. Ručně jde přepnout.
 * Do knihovny přibylo 11 strojových/kladkových cviků (hrudní a šikmý tlak na stroji, peck deck,
   kickbacky, tlak na ramena na stroji, upažování na kladce, přítahy, Scottova lavice, hack dřep,
-  reverzní motýlek) – s technikou a latinskými názvy.
+  reverzní motýlek) a později dalších 5 pro Samuelův pull/legs den (stahování V-úchopem, přítah
+  širokým úchopem, jednoruční zdvih s oporou, EZ osa, jednonožný legpress) – s technikou a latinskými názvy.
 * Série nese příznak **pomalé spouštění** (`slowEccentric`).
 
 ### Model síly (`StrengthModel`, čistý Kotlin, testy)

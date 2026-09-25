@@ -94,6 +94,11 @@ class StrengthModelTest {
         WorkoutTemplates.DEFAULTS.values.flatten().forEach { assertTrue(it, ExerciseLibrary.byId(it) != null) }
         assertEquals(listOf("machine_chest_press", "incline_machine_press", "skull_crusher", "lateral_raise", "triceps_kickback", "pec_deck"),
             WorkoutTemplates.DEFAULTS["PUSH_A"])
+        assertEquals(listOf("lat_pulldown", "close_grip_pulldown", "wide_cable_row", "seated_cable_row",
+            "single_arm_supported_curl", "hammer_curl", "ez_bar_curl", "reverse_pec_deck"), WorkoutTemplates.DEFAULTS["PULL_A"])
+        assertEquals(listOf("seated_leg_curl", "rdl", "single_leg_press", "standing_calf_raise", "leg_extension"),
+            WorkoutTemplates.DEFAULTS["LEGS_A"])
+        for (k in listOf("PUSH", "PULL", "LEGS")) assertEquals(WorkoutTemplates.DEFAULTS["${k}_A"], WorkoutTemplates.DEFAULTS["${k}_B"])
     }
 
     @Test
