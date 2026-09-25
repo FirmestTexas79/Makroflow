@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget Makra 2×2 (docs/adr/0026): celý obsah je bitmapa z MacroWidgetRenderer.
+     Spodní pruh (kalorie) přepíná snědeno / zbývá, zbytek otevře aplikaci. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widgetMacroRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/imgWidgetMacro"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="Makroflow – dnešní makra"
+        android:scaleType="fitCenter"
+        android:src="@drawable/widget_macro_preview" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="72" />
+
+        <FrameLayout
+            android:id="@+id/areaWidgetKcal"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="28" />
+    </LinearLayout>
+</FrameLayout>

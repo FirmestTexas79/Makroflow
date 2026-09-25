@@ -43,6 +43,7 @@ object FoodLog {
     /** Uloží hotový záznam (např. složené jídlo) lokálně i do cloudu. */
     suspend fun insert(context: Context, entity: ConsumedSnackEntity) = withContext(Dispatchers.IO) {
         AppDatabase.getDatabase(context).consumedSnackDao().insertConsumed(entity)
+        cz.uhk.macroflow.widget.MacroWidget.refresh(context)
         if (FirebaseRepository.isLoggedIn) {
             try { FirebaseRepository.uploadConsumedSnack(entity) }
             catch (e: Exception) { Log.e("FoodLog", "Sync záznamu selhal: ${e.message}") }
@@ -52,6 +53,7 @@ object FoodLog {
     /** Vrátí zápis (tlačítko „Zpět“). Oblíbenost se nevrací – jde jen o řazení. */
     suspend fun remove(context: Context, timestamp: Long) = withContext(Dispatchers.IO) {
         AppDatabase.getDatabase(context).consumedSnackDao().deleteConsumedByTimestamp(timestamp)
+        cz.uhk.macroflow.widget.MacroWidget.refresh(context)
         if (FirebaseRepository.isLoggedIn) {
             try { FirebaseRepository.deleteConsumedSnack(timestamp) }
             catch (e: Exception) { Log.e("FoodLog", "Smazání v cloudu selhalo: ${e.message}") }

@@ -48,6 +48,19 @@
             </intent-filter>
         </activity>
 
+        <!-- Widget Makra 2×2 (docs/adr/0026) -->
+        <receiver
+            android:name=".widget.MacroWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_macro_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_macro_info" />
+        </receiver>
+
         <activity
             android:name=".common.MainActivity"
             android:exported="false"

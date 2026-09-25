@@ -161,6 +161,12 @@ class MainActivity : AppCompatActivity() {
         runItemSpawner()
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Widget Makra: po odchodu z aplikace ukáže aktuální stav (jídlo, cíle, check-in)
+        cz.uhk.macroflow.widget.MacroWidget.refresh(this)
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideStatusBar()

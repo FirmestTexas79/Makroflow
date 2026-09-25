@@ -320,4 +320,6 @@
     <string name="label_generate_report">Generovat report</string>
     <string name="label_dev_tools">Vývojářské nástroje</string>
     <string name="label_settings">Nastavení</string>
+    <string name="widget_macro_label">Makra dnes</string>
+    <string name="widget_macro_description">Bílkoviny, sacharidy, tuky a kalorie – snědeno nebo zbývá</string>
 </resources>
