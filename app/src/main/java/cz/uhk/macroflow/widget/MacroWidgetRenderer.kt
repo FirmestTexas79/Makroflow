@@ -23,14 +23,16 @@ object MacroWidgetRenderer {
 
     private class Palette(
         val background: Int, val text: Int, val muted: Int,
-        val protein: Int, val carbs: Int, val fat: Int, val track: Float
+        val protein: Int, val carbs: Int, val fat: Int, val track: Float,
+        /** Písmena B/S/T – ve světlém motivu tmavší, aby byla čitelná na krémovém podkladu. */
+        val letterCarbs: Int = carbs, val letterFat: Int = fat
     )
 
     private val LIGHT = Palette(
         background = Color.parseColor("#FEFAE0"), text = Color.parseColor("#283618"),
         muted = Color.parseColor("#99283618"),
         protein = Color.parseColor("#606C38"), carbs = Color.parseColor("#E9B072"), fat = Color.parseColor("#BC6C25"),
-        track = 0.20f
+        track = 0.26f, letterCarbs = Color.parseColor("#B87A35"), letterFat = Color.parseColor("#A65A1C")
     )
     private val DARK = Palette(
         background = Color.parseColor("#283618"), text = Color.parseColor("#FEFAE0"),
@@ -98,7 +100,7 @@ object MacroWidgetRenderer {
             val a = Math.toRadians(if (seg.macro == Macro.PROTEIN) 270.0 else seg.midDeg.toDouble() + if (seg.macro == Macro.CARBS) -12.0 else 12.0)
             val lx = cx + (labelR * cos(a)).toFloat()
             val ly = cy + (labelR * sin(a)).toFloat()
-            letter.color = colorOf(seg.macro)
+            letter.color = when (seg.macro) { Macro.CARBS -> p.letterCarbs; Macro.FAT -> p.letterFat; else -> p.protein }
             val label = MacroWidgetModel.segmentLabel(seg, mode, state.hasTargets)
             c.drawText(seg.macro.letter, lx, ly - s * 0.005f, letter)
             grams.color = if (seg.over && mode == MacroWidgetModel.Mode.REMAINING) p.fat else p.text

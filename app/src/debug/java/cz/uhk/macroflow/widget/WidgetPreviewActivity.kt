@@ -35,6 +35,12 @@ class WidgetPreviewActivity : Activity() {
                 layoutParams = GridLayout.LayoutParams().apply { width = size; height = size; setMargins(6, 6, 6, 6) }
             })
         }
+        // adb shell am start -n cz.uhk.macroflow/.widget.WidgetPreviewActivity --ez pin true
+        if (intent.getBooleanExtra("pin", false)) {
+            val mgr = android.appwidget.AppWidgetManager.getInstance(this)
+            if (mgr.isRequestPinAppWidgetSupported)
+                mgr.requestPinAppWidget(android.content.ComponentName(this, MacroWidgetProvider::class.java), null, null)
+        }
         setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#7A8A99")); addView(grid) })
     }
 }
