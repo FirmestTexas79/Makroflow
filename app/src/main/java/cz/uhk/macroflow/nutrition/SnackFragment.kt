@@ -415,6 +415,23 @@ class SnackFragment : Fragment() {
 
     // ── Nabídka Přidat ──────────────────────────────────────────────────────
 
+    // ── Zopakovat jídlo (docs/adr/0027) ─────────────────────────────────────
+
+    private fun showRepeat() {
+        MealRepeatSheet(this) { label, kcal, timestamps ->
+            if (!isAdded || timestamps.isEmpty()) return@MealRepeatSheet
+            val ctx = requireContext().applicationContext
+            root.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            Snackbar.make(root, "$label · $kcal kcal přidáno", Snackbar.LENGTH_LONG)
+                .setAnchorView(fab)
+                .setBackgroundTint(ContextCompat.getColor(ctx, R.color.brand_dark))
+                .setTextColor(ContextCompat.getColor(ctx, R.color.brand_cream))
+                .setActionTextColor(ContextCompat.getColor(ctx, R.color.brand_accent_warm))
+                .setAction("ZPĚT") { viewLifecycleOwner.lifecycleScope.launch { MealRepeatRepository.undo(ctx, timestamps) } }
+                .show()
+        }.show()
+    }
+
     private fun showAddMenu() {
         val dialog = BottomSheetDialog(requireContext())
         val v = layoutInflater.inflate(R.layout.sheet_snack_add, null)
