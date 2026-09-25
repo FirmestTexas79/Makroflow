@@ -13,6 +13,7 @@ object AppSettings {
     private const val K_MUSIC = "music_enabled"
     private const val K_SFX = "sfx_enabled"
     private const val K_COMPANION = "companion_on_screen"
+    private const val K_CAMERA_DIARY = "camera_sets_to_diary"
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -46,4 +47,10 @@ object AppSettings {
     /** Parťák (aktivní Makromon) procházející se po spodní liště. */
     fun companionOnScreen(ctx: Context) = prefs(ctx).getBoolean(K_COMPANION, true)
     fun setCompanionOnScreen(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(K_COMPANION, on).apply()
+
+    // ── Trénink ─────────────────────────────────────────────────────────────
+
+    /** Série naměřené kamerou se samy zapíšou do tréninkového deníku (docs/adr/0027). */
+    fun cameraToDiary(ctx: Context) = prefs(ctx).getBoolean(K_CAMERA_DIARY, true)
+    fun setCameraToDiary(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(K_CAMERA_DIARY, on).apply()
 }

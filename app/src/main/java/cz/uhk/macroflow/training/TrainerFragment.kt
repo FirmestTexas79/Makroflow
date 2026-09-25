@@ -40,7 +40,11 @@ import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.ObjectDetector
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.common.AppSettings
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.data.WorkoutSetEntity
+import cz.uhk.macroflow.training.log.CameraToDiary
+import cz.uhk.macroflow.training.log.WorkoutRepository
 import cz.uhk.macroflow.training.analysis.Autoregulation
 import cz.uhk.macroflow.training.analysis.Lift
 import cz.uhk.macroflow.training.analysis.PlateTracker
@@ -374,26 +378,116 @@ class TrainerFragment : Fragment() {
                 val from = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                     .format(Date(setStartedAt - 42L * 24 * 3600 * 1000))
                 val profile = BarbellMapper.profileFor(setLift, date, dao.getExerciseSetsSince(setLift.name, from))
-                Triple(no, sets, Autoregulation.advise(setGoal, profile, summary, load))
+                // Série do tréninkového deníku (docs/adr/0027) – createdAt = začátek série
+                val logged = if (AppSettings.cameraToDiary(ctx)) CameraToDiary.draft(summary, load)?.let { d ->
+                    WorkoutSetEntity(
+                        date = date, createdAt = setStartedAt, exerciseId = d.exerciseId,
+                        weightKg = d.weightKg, reps = d.reps, slowEccentric = d.slowEccentric, rir = d.rir
+                    ).also { WorkoutRepository.log(ctx, it) }
+                } else null
+                SetResult(no, sets, Autoregulation.advise(setGoal, profile, summary, load), logged)
             }
-            val (setNo, todays, advice) = result
-            if (isAdded) showSummary(summary, setNo, todays, load, advice)
+            if (isAdded) showSummary(summary, result.setNo, result.todays, load, result.advice, result.logged)
             resetLive()
         }
     }
 
-    private fun showSummary(s: SetSummary, setNo: Int, todays: List<SetSummary>, load: Double?, advice: VbtAdvice) {
+    private data class SetResult(val setNo: Int, val todays: List<SetSummary>, val advice: VbtAdvice, val logged: WorkoutSetEntity?)
+
+    private fun showSummary(s: SetSummary, setNo: Int, todays: List<SetSummary>, load: Double?, advice: VbtAdvice, logged: WorkoutSetEntity?) {
         val title = "Série $setNo · ${s.lift.label}" + (load?.let { String.format(Locale.US, " · %.1f kg", it) } ?: "")
         val sheet = BottomSheetDialog(requireContext())
-        sheet.setContentView(ScrollView(requireContext()).apply {
-            // Zátěž se nepřepisuje sama – uložila by se k sérii, i kdyby kotouče nikdo nepřeložil
-            addView(SetSummaryViews.build(requireContext(), title, s, todays, setNo, advice) { kg ->
-                etLoad.setText(String.format(Locale.US, "%.1f", kg))
-                prefs.edit().putString("tracker_load_kg", etLoad.text.toString()).apply()
-                sheet.dismiss()
-            })
-        })
+        // Zátěž se nepřepisuje sama – uložila by se k sérii, i kdyby kotouče nikdo nepřeložil
+        val content = SetSummaryViews.build(requireContext(), title, s, todays, setNo, advice) { kg ->
+            etLoad.setText(String.format(Locale.US, "%.1f", kg))
+            prefs.edit().putString("tracker_load_kg", etLoad.text.toString()).apply()
+            sheet.dismiss()
+        }
+        (content as? LinearLayout)?.addView(diaryBox(s, logged, load), 2)
+        sheet.setContentView(ScrollView(requireContext()).apply { addView(content) })
         sheet.show()
+    }
+
+    /**
+     * Stav zápisu do deníku pod souhrnem série: co se zapsalo, oprava RIR jedním klepnutím
+     * a zrušení zápisu. Bez zadané zátěže jen nápověda.
+     */
+    private fun diaryBox(set: SetSummary, logged: WorkoutSetEntity?, load: Double?): View {
+        val ctx = requireContext()
+        val dp = resources.displayMetrics.density
+        fun px(v: Int) = (v * dp).toInt()
+        val box = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(px(14), px(10), px(14), px(12))
+            background = GradientDrawable().apply { cornerRadius = 12 * dp; setColor(Color.parseColor("#E3E8D2")) }
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { bottomMargin = px(12) }
+        }
+        val dark = Color.parseColor("#283618")
+        fun label(t: String, size: Float, bold: Boolean = false) = TextView(ctx).apply {
+            text = t; textSize = size; setTextColor(dark); if (bold) setTypeface(typeface, android.graphics.Typeface.BOLD)
+        }
+        if (!AppSettings.cameraToDiary(ctx)) return box.apply { visibility = View.GONE }
+        if (logged == null) {
+            box.addView(label(if (load == null) "Zadej zátěž (kg) a série se sama zapíše do tréninkového deníku." else "Do deníku se nezapsalo.", 13f))
+            return box
+        }
+        var current: WorkoutSetEntity = logged
+        val status = label("", 13.5f, bold = true)
+        fun refreshStatus() {
+            status.text = "Zapsáno do deníku: ${cz.uhk.macroflow.training.log.LogSetSheet.kg(current.weightKg)} kg × ${current.reps}" +
+                (if (current.slowEccentric) " · pomalu" else "") + " · RIR ${current.rir}"
+        }
+        refreshStatus()
+        box.addView(status)
+        box.addView(label(
+            if (CameraToDiary.nearFailure(set)) "Poslední opakování bylo skoro na rychlosti maxima – RIR odhadnuto na 0. Kolik ti ještě zbývalo?"
+            else "Kolik opakování ti ještě zbývalo? (výchozí 2)", 12f).apply { alpha = 0.75f; setPadding(0, px(6), 0, px(4)) })
+        val chips = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        val buttons = (0..4).map { r ->
+            MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = if (r == 4) "4+" else r.toString()
+                minWidth = 0; minimumWidth = 0; insetTop = 0; insetBottom = 0
+                layoutParams = LinearLayout.LayoutParams(0, px(40), 1f).apply { marginEnd = px(6) }
+            }
+        }
+        fun paint() = buttons.forEachIndexed { r, b ->
+            val on = r == current.rir.coerceAtMost(4)
+            b.backgroundTintList = ColorStateList.valueOf(if (on) dark else Color.TRANSPARENT)
+            b.setTextColor(if (on) Color.parseColor("#FEFAE0") else dark)
+        }
+        buttons.forEachIndexed { r, b ->
+            b.setOnClickListener {
+                val updated = current.copy(rir = r)
+                val appCtx = ctx.applicationContext
+                viewLifecycleOwner.lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        val dao = AppDatabase.getDatabase(appCtx).workoutDao()
+                        dao.betweenSync(updated.date, updated.date).firstOrNull { it.createdAt == updated.createdAt }?.let { dao.delete(it) }
+                    }
+                    WorkoutRepository.log(appCtx, updated)
+                    current = updated; refreshStatus(); paint()
+                }
+            }
+            chips.addView(b)
+        }
+        paint()
+        box.addView(chips)
+        box.addView(MaterialButton(ctx, null, com.google.android.material.R.attr.borderlessButtonStyle).apply {
+            text = "Nezapisovat tuto sérii"; setTextColor(Color.parseColor("#BC6C25")); isAllCaps = false
+            setOnClickListener {
+                val appCtx = ctx.applicationContext
+                viewLifecycleOwner.lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        val dao = AppDatabase.getDatabase(appCtx).workoutDao()
+                        dao.betweenSync(current.date, current.date).firstOrNull { it.createdAt == current.createdAt }
+                    }?.let { WorkoutRepository.delete(appCtx, it) }
+                    box.removeAllViews()
+                    box.addView(label("Série se do deníku nezapsala.", 13f))
+                }
+            }
+        })
+        return box
     }
 
     override fun onDestroyView() {

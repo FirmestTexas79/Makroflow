@@ -175,6 +175,10 @@ class AppSettingsFragment : Fragment() {
                 (activity as? MainActivity)?.updateMakromonVisibility()
             }
         })
+        box.addView(divider())
+        box.addView(row(box, R.drawable.ic_ls_lift, "Série z kamery do deníku", "Po sérii naměřené kamerou se sama zapíše váha, opakování, tempo i RIR").also { r ->
+            switchOf(r, AppSettings.cameraToDiary(ctx)) { on -> AppSettings.setCameraToDiary(ctx, on) }
+        })
     }
 
     // ── Promo kódy ──────────────────────────────────────────────────────────

@@ -36,9 +36,10 @@ import kotlin.concurrent.thread
         BarbellSetEntity::class,
         BarbellRepEntity::class,
         WorkoutSetEntity::class,
-        WorkoutTemplateEntity::class
+        WorkoutTemplateEntity::class,
+        MealTemplateEntity::class
     ],
-    version = 37,
+    version = 38,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -63,6 +64,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun adaptiveTdeeDao(): AdaptiveTdeeDao
     abstract fun barbellDao(): BarbellDao
     abstract fun workoutDao(): WorkoutDao
+    abstract fun mealTemplateDao(): MealTemplateDao
 
     companion object {
         /** v34: log herních událostí + začátek fáze questu. */
@@ -146,6 +148,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v38: šablony jídel a celých dnů (docs/adr/0027). */
+        val MIGRATION_37_38 = object : Migration(37, 38) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `meal_templates` (" +
+                        "`createdAt` INTEGER NOT NULL, `name` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
+                        "`items` TEXT NOT NULL, `lastUsedAt` INTEGER NOT NULL, PRIMARY KEY(`createdAt`))"
+                )
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -156,7 +169,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37)
+                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38)
                     // Destruktivní fallback jen pro verze PŘED zavedením migrací.
                     // Od v33 se lokální data uživatelů už nikdy nesmažou potichu:
                     // chybějící migrace = pád při vývoji, ne ztráta dat v produkci.

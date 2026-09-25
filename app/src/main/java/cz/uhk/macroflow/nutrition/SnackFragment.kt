@@ -427,6 +427,7 @@ class SnackFragment : Fragment() {
             dialog.dismiss(); MealBuilderSheet(timing == Timing.PRE).show(parentFragmentManager, "MealBuilder")
         }
         v.findViewById<View>(R.id.addSwipe).setOnClickListener { dialog.dismiss(); FoodSwipeDialog().show(parentFragmentManager, "FoodSwipe") }
+        v.findViewById<View>(R.id.addRepeat).setOnClickListener { dialog.dismiss(); showRepeat() }
         dialog.show()
     }
 

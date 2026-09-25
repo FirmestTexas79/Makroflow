@@ -278,6 +278,32 @@ object FirebaseRepository {
         }
     }
 
+    // ========== ŠABLONY JÍDEL (docs/adr/0027) ==========
+
+    suspend fun uploadMealTemplate(t: MealTemplateEntity) {
+        if (!isLoggedIn) return
+        val data = mapOf("name" to t.name, "kind" to t.kind, "items" to t.items, "lastUsedAt" to t.lastUsedAt)
+        userDoc().collection("meal_templates").document(t.createdAt.toString()).set(data, SetOptions.merge()).await()
+    }
+
+    suspend fun deleteMealTemplate(createdAt: Long) {
+        if (!isLoggedIn) return
+        userDoc().collection("meal_templates").document(createdAt.toString()).delete().await()
+    }
+
+    suspend fun downloadAllMealTemplates(): List<MealTemplateEntity> {
+        if (!isLoggedIn) return emptyList()
+        return userDoc().collection("meal_templates").get().await().documents.mapNotNull { doc ->
+            MealTemplateEntity(
+                createdAt = doc.id.toLongOrNull() ?: return@mapNotNull null,
+                name = doc.getString("name") ?: return@mapNotNull null,
+                kind = doc.getString("kind") ?: "MEAL",
+                items = doc.getString("items") ?: return@mapNotNull null,
+                lastUsedAt = doc.getLong("lastUsedAt") ?: 0L
+            )
+        }
+    }
+
     // ========== KONZUMACE ==========
 
     suspend fun uploadConsumedSnack(consumed: ConsumedSnackEntity) {
@@ -563,6 +589,7 @@ object FirebaseRepository {
         localDb.workoutDao().allTemplatesSync().groupBy { it.templateKey }.forEach { (key, rows) ->
             uploadWorkoutTemplate(key, rows.sortedBy { it.position }.map { it.exerciseId })
         }
+        localDb.mealTemplateDao().allSync().forEach { uploadMealTemplate(it) }
 
         Log.d("FB_SYNC", "Upload dokončen")
     }
@@ -594,6 +621,7 @@ object FirebaseRepository {
             val questProgress = downloadAllQuestProgress()
             val workoutSets   = downloadAllWorkoutSets()
             val workoutTemplates = downloadAllWorkoutTemplates()
+            val mealTemplates = downloadAllMealTemplates()
 
             profile?.let { localDb.userProfileDao().saveProfile(it) }
             if (plan.isNotEmpty()) {
@@ -643,6 +671,7 @@ object FirebaseRepository {
                 workoutSets.forEach { localDb.workoutDao().insert(it) }
             }
             workoutTemplates.forEach { (key, ids) -> localDb.workoutDao().replaceTemplate(key, ids) }
+            mealTemplates.forEach { localDb.mealTemplateDao().upsert(it) }
 
             if (analytics.isNotEmpty()) {
                 localDb.analyticsDao().deleteAllLocally()
@@ -663,7 +692,8 @@ object FirebaseRepository {
     val USER_COLLECTIONS = listOf(
         "data", "checkins", "body_metrics", "analytics", "custom_snacks", "consumed_history",
         "water", "wallet", "user_items", "captured_makromons", "makrodex_status", "makromon_xp",
-        "unlocked_achievements", "steps", "quest_progress", "workout_sets", "workout_templates"
+        "unlocked_achievements", "steps", "quest_progress", "workout_sets", "workout_templates",
+        "meal_templates"
     )
 
     suspend fun deleteAllUserData() {
