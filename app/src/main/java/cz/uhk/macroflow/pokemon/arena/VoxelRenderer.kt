@@ -64,9 +64,9 @@ class Camera(val pos: V3, yawDeg: Float, pitchDeg: Float, fovDeg: Float) {
         return if (t <= 0f) null else pos + dir * t
     }
 
-    fun ray(sx: Float, sy: Float, w: Int, h: Int): V3 {
+    fun ray(sx: Float, sy: Float, w: Int, h: Int, cy: Float = h / 2f): V3 {
         val f = (w / 2f) / fovTan
-        return (fwd + right * ((sx - w / 2f) / f) + up * ((h / 2f - sy) / f)).norm()
+        return (fwd + right * ((sx - w / 2f) / f) + up * ((cy - sy) / f)).norm()
     }
 }
 
@@ -178,8 +178,11 @@ object VoxelRenderer {
         }
     }
 
-    /** Vykreslí scénu do pole ARGB (w × h). */
-    fun render(scene: Scene, cam: Camera, w: Int, h: Int): IntArray {
+    /**
+     * Vykreslí scénu do pole ARGB (w × h). [cy] = řádek středu pohledu – když je obraz nahoře
+     * prodloužený (aréna až k hornímu okraji displeje), střed zůstává na stejném místě scény.
+     */
+    fun render(scene: Scene, cam: Camera, w: Int, h: Int, cy: Float = h / 2f): IntArray {
         val atm = scene.atmosphere
         val sun = atm.sun.norm()
         val shadow = ShadowMap(sun, scene.boxes)
@@ -213,7 +216,7 @@ object VoxelRenderer {
             for (i in out.indices) {
                 val (p, zv) = out[i]; val d = p - cam.pos
                 sx[i] = w / 2f + d.dot(cam.right) / zv * f
-                sy[i] = h / 2f - d.dot(cam.up) / zv * f
+                sy[i] = cy - d.dot(cam.up) / zv * f
                 q[i] = 1f / zv
                 attr[i][0] = p.x * q[i]; attr[i][1] = p.y * q[i]; attr[i][2] = p.z * q[i]; attr[i][3] = 1f
             }
@@ -228,7 +231,7 @@ object VoxelRenderer {
         for (py in 0 until h) for (pxi in 0 until w) {
             val idx = py * w + pxi
             val fi = faceAt[idx]
-            if (fi < 0) { out[idx] = sky(atm, cam.ray(pxi + 0.5f, py + 0.5f, w, h), pxi, py, scene.seed); continue }
+            if (fi < 0) { out[idx] = sky(atm, cam.ray(pxi + 0.5f, py + 0.5f, w, h, cy), pxi, py, scene.seed); continue }
             val face = allFaces[fi]
             val p = V3(wx[idx], wy[idx], wz[idx])
             out[idx] = shade(scene, face, p, sqrt(depth[idx]), sun, shadow)

@@ -78,10 +78,8 @@ class PokemonBattleFragment : Fragment() {
 
         // V onCreateView fragmentu uprav onCaught takto:
         val battleView = PokemonBattleView(ctx, null, isShiny, special).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            // 3D aréna vyplní celou výšku nad herním plátnem (docs/adr/0038)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
             // V onCreateView fragmentu uprav onCaught:
             onCaught = {
                 val prefs = ctx.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
@@ -114,12 +112,22 @@ class PokemonBattleFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = (8 * dp).toInt() }
+            ).also { it.topMargin = (8 * dp).toInt(); it.bottomMargin = (28 * dp).toInt() }
             setOnClickListener { safeClose() }
         }
 
-        battleContent.addView(titleTv)
-        battleContent.addView(battleView)
+        // Nadpis leží na obloze arény (pod stavovým řádkem), aréna sahá až nahoru
+        val arenaFrame = FrameLayout(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+        }
+        battleView.layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        titleTv.layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP)
+            .also { it.topMargin = (44 * dp).toInt() }
+        titleTv.textSize = 12f
+        titleTv.setShadowLayer(4f, 0f, 1.5f, Color.parseColor("#CC000000"))
+        arenaFrame.addView(battleView)
+        arenaFrame.addView(titleTv)
+        battleContent.addView(arenaFrame)
         battleContent.addView(closeBtn)
         root.addView(battleContent)
 

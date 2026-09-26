@@ -243,13 +243,27 @@ class PokemonBattleView @JvmOverloads constructor(
 
     /** Vykreslí 3D arénu lokace na pozadí (trvá desítky až stovky ms – běží během intra). */
     private fun startArena(biome: BiomeType) {
-        val theme = cz.uhk.macroflow.pokemon.arena.ArenaTheme.fromBiome(biome.name)
-        arenaTheme = theme
-        val seed = Random.nextInt(1_000_000)
+        arenaTheme = cz.uhk.macroflow.pokemon.arena.ArenaTheme.fromBiome(biome.name)
+        arenaSeed = Random.nextInt(1_000_000)
+        maybeRenderArena()
+    }
+
+    private var arenaSeed = 0
+    private var arenaExtra = -1
+
+    /** Aréna se kreslí, až je známá lokace i velikost pohledu (kolik se má prodloužit nahoru). */
+    private fun maybeRenderArena() {
+        if (dstR.width() <= 0f) return
+        val A = cz.uhk.macroflow.pokemon.arena.Arenas
+        // kolik řádků arény (3 na herní pixel) zabere místo nad herním plátnem
+        val extra = kotlin.math.ceil(dstR.top * 3f / scale).toInt().coerceIn(0, 2000)
+        if (extra == arenaExtra) return
+        arenaExtra = extra
+        val theme = arenaTheme; val seed = arenaSeed
         Thread {
-            val px = runCatching { cz.uhk.macroflow.pokemon.arena.Arenas.render(theme, seed) }.getOrNull() ?: return@Thread
-            val bmp = Bitmap.createBitmap(px, cz.uhk.macroflow.pokemon.arena.Arenas.W, cz.uhk.macroflow.pokemon.arena.Arenas.H, Bitmap.Config.ARGB_8888)
-            handler.post { arenaBmp = bmp; invalidate() }
+            val px = runCatching { A.render(theme, seed, extra) }.getOrNull() ?: return@Thread
+            val bmp = Bitmap.createBitmap(px, A.W, A.H + extra, Bitmap.Config.ARGB_8888)
+            handler.post { if (extra == arenaExtra) { arenaBmp = bmp; invalidate() } }
         }.start()
     }
 
@@ -275,14 +289,18 @@ class PokemonBattleView @JvmOverloads constructor(
 
     override fun onMeasure(wms: Int, hms: Int) {
         val w  = MeasureSpec.getSize(wms)
-        val sc = maxOf(1, w / GBW)
-        setMeasuredDimension(GBW * sc, GBH * sc)
+        val gbH = w * GBH / GBW
+        // Na výšku zabere, co dostane: nad herním plátnem pokračuje 3D aréna (docs/adr/0038)
+        val h = if (MeasureSpec.getMode(hms) == MeasureSpec.UNSPECIFIED) gbH else maxOf(gbH, MeasureSpec.getSize(hms))
+        setMeasuredDimension(w, h)
     }
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
         val sc = minOf(w.toFloat() / GBW, h.toFloat() / GBH)
         val sw = GBW * sc; val sh = GBH * sc
-        dstR = RectF((w - sw) / 2f, (h - sh) / 2f, (w + sw) / 2f, (h + sh) / 2f)
+        // herní plátno dole, nad ním aréna až k hornímu okraji
+        dstR = RectF((w - sw) / 2f, h - sh, (w + sw) / 2f, h.toFloat())
+        maybeRenderArena()
     }
 
     private val scale get() = if (dstR.width() > 0) dstR.width() / GBW.toFloat() else 1f
@@ -293,12 +311,13 @@ class PokemonBattleView @JvmOverloads constructor(
         if (!::gs.isInitialized) { canvas.drawColor(C_BG); return }
         renderFrame()
         // aréna pod herním plátnem (horních 96 řádků), plátno má nahoře průhledno
-        arenaDst.set(dstR.left, dstR.top, dstR.right, gbY(96f))
+        arenaDst.set(dstR.left, 0f, dstR.right, gbY(96f))
         val arena = arenaBmp
         if (arena != null) canvas.drawBitmap(arena, null, arenaDst, sp)
         else {
             val (sky, ground) = arenaFallback()
             fp.color = sky; canvas.drawRect(arenaDst.left, arenaDst.top, arenaDst.right, gbY(40f), fp)
+            // (dopočítává se na pozadí během intra)
             fp.color = ground; canvas.drawRect(arenaDst.left, gbY(40f), arenaDst.right, arenaDst.bottom, fp)
         }
         canvas.save()

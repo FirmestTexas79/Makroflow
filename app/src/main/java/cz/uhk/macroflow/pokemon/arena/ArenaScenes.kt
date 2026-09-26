@@ -88,7 +88,9 @@ object Arenas {
     val enemyFoot: V3 = camera.unproject(ENEMY_X, ENEMY_Y, W, H, PEDESTAL)!!
     val playerFoot: V3 = camera.unproject(PLAYER_X, PLAYER_Y, W, H, 0f)!!
 
-    fun render(theme: ArenaTheme, seed: Int = 0): IntArray = VoxelRenderer.render(scene(theme, seed), camera, W, H)
+    /** Aréna W × (H + [extraTop]); obraz se prodlouží nahoru (víc oblohy a korun), scéna se neposune. */
+    fun render(theme: ArenaTheme, seed: Int = 0, extraTop: Int = 0): IntArray =
+        VoxelRenderer.render(scene(theme, seed), camera, W, H + extraTop, extraTop + H / 2f)
 
     fun scene(theme: ArenaTheme, seed: Int = 0): Scene = when (theme) {
         ArenaTheme.MEADOW -> Builder(seed).meadow()
