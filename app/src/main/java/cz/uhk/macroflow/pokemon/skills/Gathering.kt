@@ -50,7 +50,11 @@ enum class Gear(
     /** Bonus k šanci na dvojitý kus (multiore / multilog), 0,1 = +10 %. */
     val multiBonus: Map<Skill, Double> = emptyMap(),
     /** Legendární artefakt – v UI zlatý nápis. */
-    val legendary: Boolean = false
+    val legendary: Boolean = false,
+    /** O kolik častěji padá kořist z Makromonů (0,1 = ×1,1). */
+    val dropRate: Double = 0.0,
+    /** Snížení šance na útěk z ballu (0,2 = −20 %, počítá se jako pasivní bonus Chytání). */
+    val catchBonus: Double = 0.0
 ) {
     OLD_AXE("tool_axe_old", 1, GearSlot.AXE, "Stará sekera", "Otupená, ale pořád seká. Síla 10.", 10),
     OLD_PICKAXE("tool_pickaxe_old", 2, GearSlot.PICKAXE, "Starý krumpáč", "Rezavý, ale kámen rozbije. Síla 10.", 10),
@@ -73,7 +77,18 @@ enum class Gear(
         xpBonus = mapOf(Skill.LOGGING to 0.5), multiBonus = mapOf(Skill.LOGGING to 0.10), legendary = true),
     MAKRO_PICKAXE("tool_pickaxe_makro", 8, GearSlot.PICKAXE, "Makromonův krumpáč",
         "Artefakt z dob, kdy svět patřil jen Makromonům. Síla 500, +50 % XP za těžbu, +10 % šance na dvojitou rudu.", 500,
-        xpBonus = mapOf(Skill.MINING to 0.5), multiBonus = mapOf(Skill.MINING to 0.10), legendary = true);
+        xpBonus = mapOf(Skill.MINING to 0.5), multiBonus = mapOf(Skill.MINING to 0.10), legendary = true),
+
+    // ── Doplňky (docs/adr/0041) ──
+    GRASS_RING("acc_ring_grass", 9, GearSlot.RING_1, "Travní prsten",
+        "Prsten z živé révy se smaragdovým lístkem. +15 % XP za chytání.", 0, xpBonus = mapOf(Skill.CATCHING to 0.15)),
+    FIRE_RING("acc_ring_fire", 10, GearSlot.RING_1, "Ohnivý prsten",
+        "Zlatý prsten s jiskrou uvnitř kamene. +5 % XP za výrobu, pěstování, těžbu a kácení.", 0,
+        xpBonus = mapOf(Skill.CRAFTING to 0.05, Skill.HARVESTING to 0.05, Skill.MINING to 0.05, Skill.LOGGING to 0.05)),
+    ADV_NECKLACE("acc_necklace_adv", 11, GearSlot.PENDANT, "Dobrodruhův náhrdelník",
+        "Perla, dušička a pixie prach na jednom řetízku. Kořist z Makromonů padá o 10 % častěji.", 0, dropRate = 0.10),
+    FIRE_SOUL("acc_trinket_fire_soul", 12, GearSlot.TRINKET, "Duše ohně",
+        "Uvnitř pořád žhne kousek magmatu. O 20 % menší šance, že Makromon uteče z ballu.", 0, catchBonus = 0.20);
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null
@@ -211,18 +226,25 @@ object Gathering {
 /** Recepty na vybavení u pracovního stolu (docs/adr/0039). */
 object GearCrafting {
     val SET = listOf(Gear.ADV_CAP, Gear.ADV_TUNIC, Gear.ADV_PANTS, Gear.ADV_SLIPPERS)
+    val ACCESSORIES = listOf(Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL)
 
     fun recipe(g: Gear): Map<String, Int>? = when (g) {
         Gear.ADV_CAP -> linkedMapOf(Resource.ENERGY.itemId to 5, Resource.BERRY_BLUE.itemId to 3)
         Gear.ADV_TUNIC -> linkedMapOf(Resource.LOG_OAK.itemId to 15, Resource.BERRY_GREEN.itemId to 10)
         Gear.ADV_PANTS -> linkedMapOf(Resource.ORE_COPPER.itemId to 15, Resource.BERRY_BLACK.itemId to 1)
         Gear.ADV_SLIPPERS -> linkedMapOf(Resource.ORE_SILVER.itemId to 5, Resource.LOG_BIRCH.itemId to 5)
+        Gear.GRASS_RING -> linkedMapOf(Resource.LEAF_DRY.itemId to 3, Resource.LEAF_LIVING.itemId to 1, Resource.ENERGY.itemId to 5)
+        Gear.FIRE_RING -> linkedMapOf(Resource.EMBER.itemId to 3, Resource.FIRE_STONE.itemId to 1, Resource.ENERGY.itemId to 5)
+        Gear.ADV_NECKLACE -> linkedMapOf(Resource.WATER_PEARL.itemId to 3, Resource.SOUL_WISP.itemId to 3, Resource.PIXIE_DUST.itemId to 3)
+        Gear.FIRE_SOUL -> linkedMapOf(Resource.BERRY_BLACK.itemId to 3, Resource.MAGMA_ORB.itemId to 2, Resource.ENERGY.itemId to 20)
         else -> null
     }
 
     /** XP Výroby za kus – těžší recept, víc XP. */
     fun xp(g: Gear): Int = when (g) {
-        Gear.ADV_CAP -> 60; Gear.ADV_TUNIC -> 90; Gear.ADV_PANTS -> 110; Gear.ADV_SLIPPERS -> 150; else -> 0
+        Gear.ADV_CAP -> 60; Gear.ADV_TUNIC -> 90; Gear.ADV_PANTS -> 110; Gear.ADV_SLIPPERS -> 150
+        Gear.GRASS_RING -> 120; Gear.FIRE_RING -> 150; Gear.ADV_NECKLACE -> 180; Gear.FIRE_SOUL -> 250
+        else -> 0
     }
 
     fun canCraft(g: Gear, owned: Map<String, Int>): Boolean =

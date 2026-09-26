@@ -133,7 +133,7 @@ class PokemonBattleView @JvmOverloads constructor(
                 db.capturedMakromonDao().getMakromonById(activeCapturedId)
             } else null
             catchingPassive = runCatching {
-                cz.uhk.macroflow.pokemon.skills.SkillStore.state(context).passive(cz.uhk.macroflow.pokemon.skills.Skill.CATCHING)
+                cz.uhk.macroflow.pokemon.skills.SkillStore.state(context).catchReduction
             }.getOrDefault(0.0)
             // Ostatní členové týmu (první = aktivní parťák, ten je už načtený výš)
             val teamRest = runCatching { cz.uhk.macroflow.pokemon.skills.SkillStore.team(context) }.getOrDefault(emptyList())
@@ -1526,7 +1526,8 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun grantDrops(caught: Boolean): List<cz.uhk.macroflow.pokemon.skills.Drops.Drop> {
         val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
-        val drops = cz.uhk.macroflow.pokemon.skills.Drops.roll(gs.enemy.name, gs.enemy.level, caught)
+        val dropRate = runCatching { SS.state(context).dropRate }.getOrDefault(1.0)
+        val drops = cz.uhk.macroflow.pokemon.skills.Drops.roll(gs.enemy.name, gs.enemy.level, caught, dropRate = dropRate)
             // artefakty z Gudwina jen jednou
             .filter { d -> cz.uhk.macroflow.pokemon.skills.Gear.from(d.itemId) == null || runCatching { SS.count(context, d.itemId) == 0 }.getOrDefault(false) }
         drops.forEach { runCatching { SS.add(context, it.itemId, it.amount) } }

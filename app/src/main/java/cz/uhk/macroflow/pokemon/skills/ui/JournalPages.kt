@@ -194,7 +194,7 @@ object JournalPages {
         fun pct(v: Double) = String.format(Locale.US, "%.0f %%", v * 100)
         when (s) {
             Skill.CATCHING -> {
-                stat("Šance na útěk z ballu", "−${pct(passive)}")
+                stat("Šance na útěk z ballu", "−${pct(state.catchReduction)}")
                 stat("Míst v týmu", "${state.teamSlots} / ${Team.MAX}")
             }
             Skill.CRAFTING -> stat("Šance na dvojitou výrobu", pct(passive))

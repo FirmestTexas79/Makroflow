@@ -195,6 +195,12 @@ data class SkillState(
             .filterIsInstance<SkillTree.Effect.XpBonus>().map { it.add } +
             gear.mapNotNull { it.xpBonus[skill] }
 
+    /** Násobitel šance na kořist z Makromonů (Dobrodruhův náhrdelník ×1,1). */
+    val dropRate: Double get() = 1.0 + gear.sumOf { it.dropRate }
+
+    /** Snížení šance na útěk z ballu: pasivní bonus Chytání + vybavení (Duše ohně). */
+    val catchReduction: Double get() = (passive(Skill.CATCHING) + gear.sumOf { it.catchBonus }).coerceAtMost(0.9)
+
     /** Bonus vybavení k šanci na dvojitý kus (Makromonova sekera / krumpáč). */
     fun gearMulti(skill: Skill): Double = gear.sumOf { it.multiBonus[skill] ?: 0.0 }
 

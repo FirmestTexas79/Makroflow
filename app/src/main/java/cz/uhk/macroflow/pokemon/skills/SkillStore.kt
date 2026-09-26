@@ -138,7 +138,9 @@ object SkillStore {
         if (!GearCrafting.canCraft(g, owned)) return null
         recipe.forEach { (id, n) -> consume(ctx, id, n) }
         add(ctx, g.id, 1)
-        if (equipped(ctx, g.slot) == null) set(ctx, g.slot.itemId, g.code)
+        // do prázdného slotu rovnou nasadit (prsten do prvního volného)
+        val slot = if (g.slot == GearSlot.RING_1) listOf(GearSlot.RING_1, GearSlot.RING_2).firstOrNull { equipped(ctx, it) == null } else g.slot.takeIf { equipped(ctx, it) == null }
+        slot?.let { set(ctx, it.itemId, g.code) }
         return addXp(ctx, Skill.CRAFTING, st.gain(Skill.CRAFTING, GearCrafting.xp(g).toDouble()))
     }
 

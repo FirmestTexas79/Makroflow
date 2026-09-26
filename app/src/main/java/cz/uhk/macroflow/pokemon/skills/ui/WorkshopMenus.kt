@@ -130,8 +130,7 @@ object WorkshopMenus {
                 c.addView(buttons)
                 body.addView(c)
             }
-            // Dobrodruhův set – odemyká strom Výroby (docs/adr/0039)
-            body.addView(ui.text("Dobrodruhův set", 21f, ui.rust).apply { setPadding(ui.px(2f), ui.px(10f), 0, ui.px(4f)) })
+            // Dobrodruhův set a doplňky – odemyká strom Výroby (docs/adr/0039, 0041)
             if (!state.basicEquipment) {
                 val lock = card(ui).apply { alpha = 0.75f }
                 lock.addView(ui.icon(SkillArt.skillIcon(Skill.CRAFTING), SkillArt.ICON, SkillArt.ICON, 40f))
@@ -139,7 +138,11 @@ object WorkshopMenus {
                     .apply { setPadding(ui.px(10f), 0, 0, 0) }, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 body.addView(lock)
             }
-            cz.uhk.macroflow.pokemon.skills.GearCrafting.SET.forEach { g ->
+            val sections = listOf("Dobrodruhův set" to cz.uhk.macroflow.pokemon.skills.GearCrafting.SET,
+                "Doplňky" to cz.uhk.macroflow.pokemon.skills.GearCrafting.ACCESSORIES)
+            for ((title, items) in sections) {
+            body.addView(ui.text(title, 21f, ui.rust).apply { setPadding(ui.px(2f), ui.px(10f), 0, ui.px(4f)) })
+            items.forEach { g ->
                 val recipe = cz.uhk.macroflow.pokemon.skills.GearCrafting.recipe(g) ?: return@forEach
                 val have = (owned[g.id] ?: 0) > 0
                 val can = state.basicEquipment && !have && cz.uhk.macroflow.pokemon.skills.GearCrafting.canCraft(g, owned)
@@ -160,6 +163,7 @@ object WorkshopMenus {
                 c.addView(info, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 c.addView(ui.button(if (have) "Máš ✓" else "Vyrobit", can) { close(); onCraftGear(g) })
                 body.addView(c)
+            }
             }
             body.addView(ui.text("Fragmenty energie padají z Makromonů, bobule sklidíš na záhonech vpravo pod mostem.", 15f, ui.inkSoft))
         }
@@ -261,8 +265,11 @@ object WorkshopMenus {
         val eff = g.efficiencyBonus
         if (eff.isNotEmpty()) parts += "+${eff.values.first()} efektivita " + eff.keys.joinToString(" a ") { it.label.lowercase() }
         g.xpBonus.entries.groupBy({ it.value }, { it.key }).forEach { (v, skills) ->
-            parts += "+${(v * 100).toInt()} % XP " + skills.joinToString(" a ") { it.label.lowercase() }
+            parts += "+${Math.round(v * 100)} % XP " + skills.joinToString(", ") { it.label.lowercase() }
         }
+        g.multiBonus.forEach { (sk, v) -> parts += "+${Math.round(v * 100)} % dvojitý kus (${sk.label.lowercase()})" }
+        if (g.dropRate > 0) parts += "kořist z Makromonů +${Math.round(g.dropRate * 100)} %"
+        if (g.catchBonus > 0) parts += "útěk z ballu −${Math.round(g.catchBonus * 100)} %"
         return parts.joinToString(", ")
     }
 }

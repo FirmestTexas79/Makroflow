@@ -133,4 +133,91 @@ object MaterialArt {
         for ((x, y) in glint) p[x, y] = ART_COLORS.getValue('w')
         return p.data
     }
+
+    // ── Doplňky 16 × 16 (docs/adr/0041) ──
+
+    private val ACC_COLORS = mapOf(
+        'a' to c(0xFF2E6B2A), 'A' to c(0xFF5AA64A), 'l' to c(0xFF8FD06A),                 // réva
+        'e' to c(0xFF1E8A3A), 'E' to c(0xFF62D06A), 'z' to c(0xFFE8FFE0),                 // smaragd
+        'y' to c(0xFF8A5A10), 'Y' to c(0xFFE0A91E), 'W' to c(0xFFFFE9A0),                 // zlato
+        'o' to c(0xFFD8541E), 'O' to c(0xFFF2921E), 'f' to c(0xFFFFD54F), 'F' to c(0xFFFFF6C8), // oheň
+        'm' to c(0xFF2A0E0A), 'M' to c(0xFF6A2016), 'R' to c(0xFFF26A1E),                 // magma
+        'c' to c(0xFF9AA8B8), 'C' to c(0xFF5E6A78),                                        // řetízek
+        'u' to c(0xFF8A7AC8), 'U' to c(0xFFC8BEF0), 'i' to c(0xFFD86A9A), 'I' to c(0xFFF4A6C8),
+        'p' to c(0xFF5E8AB8), 'P' to c(0xFF9EC4E6), 'w' to c(0xFFFFFFFF)
+    )
+
+    private val GRASS_RING = listOf(
+        "................",
+        "......eEe.......",
+        ".....eEzEe......",
+        "......eEe.......",
+        ".....aAAAa..l...",
+        "....aA...Aall...",
+        "...aA.....Aa....",
+        "...A.......A....",
+        "...A.......a....",
+        "...aA.....aa....",
+        "....aa...aa.....",
+        ".....aaaaa......",
+        "................")
+
+    private val FIRE_RING = listOf(
+        ".......o........",
+        "......oOo.......",
+        ".....oOfOo......",
+        ".....oOFfo......",
+        ".....yYYYy......",
+        "....yY...Yy.....",
+        "...yW.....Yy....",
+        "...Y.......Y....",
+        "...Y.......y....",
+        "...yY.....yy....",
+        "....yy...yy.....",
+        ".....yyyyy......",
+        "................")
+
+    private val NECKLACE = listOf(
+        ".c............c.",
+        ".C............C.",
+        "..c..........c..",
+        "...C........C...",
+        "....cC....Cc....",
+        "...uU.cCCc.iI...",
+        "...UU..pp..II...",
+        "....u.pPPp..i...",
+        "......pwPp......",
+        "......pPPp......",
+        ".......pp.......")
+
+    private val FIRE_SOUL = listOf(
+        ".......YY.......",
+        "......Y..Y......",
+        ".......YY.......",
+        ".......oo.......",
+        "......oOOo......",
+        ".....oOffOo.....",
+        "....oOfFFfOo....",
+        "...mMRffffRMm...",
+        "...mMRRffRRMm...",
+        "...mMMRRRRMMm...",
+        "....mMMRRMMm....",
+        ".....mMMMMm.....",
+        "......mmmm......")
+
+    fun accessory(g: Gear): IntArray? {
+        val rows = when (g) {
+            Gear.GRASS_RING -> GRASS_RING
+            Gear.FIRE_RING -> FIRE_RING
+            Gear.ADV_NECKLACE -> NECKLACE
+            Gear.FIRE_SOUL -> FIRE_SOUL
+            else -> return null
+        }
+        val p = SkillArt.Px(16, 16)
+        val off = (16 - rows.size) / 2
+        rows.forEachIndexed { y, r -> r.forEachIndexed { x, ch -> if (ch != 'l') ACC_COLORS[ch]?.let { p[x, y + off] = it } } }
+        p.outline(K)
+        rows.forEachIndexed { y, r -> r.forEachIndexed { x, ch -> if (ch == 'l') p[x, y + off] = ACC_COLORS.getValue('l') } }
+        return p.data
+    }
 }

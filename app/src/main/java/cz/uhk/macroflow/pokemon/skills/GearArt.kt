@@ -83,6 +83,7 @@ object GearArt {
         Gear.ADV_PANTS -> fromRows(PANTS)
         Gear.ADV_SLIPPERS -> fromRows(SLIPPERS)
         Gear.MAKRO_AXE, Gear.MAKRO_PICKAXE -> MaterialArt.artifact(g)!!
+        Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL -> MaterialArt.accessory(g)!!
     }
 
     // ── Dobrodruhův set 16 × 16 (docs/adr/0039) ─────────────────────────────

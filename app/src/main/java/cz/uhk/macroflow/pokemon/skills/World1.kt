@@ -146,21 +146,23 @@ object Drops {
         else -> Berry.GREEN
     }
 
-    fun roll(species: String, level: Int, caught: Boolean, rng: Random = Random.Default): List<Drop> {
+    /** [dropRate] = násobitel šancí z vybavení (náhrdelník 1,1). */
+    fun roll(species: String, level: Int, caught: Boolean, rng: Random = Random.Default, dropRate: Double = 1.0): List<Drop> {
         val fam = family(species)
         val out = mutableListOf<Drop>()
-        if (rng.nextDouble() < fragmentChance(level, caught, fam)) {
+        fun hit(p: Double) = rng.nextDouble() < (p * dropRate).coerceAtMost(1.0)
+        if (hit(fragmentChance(level, caught, fam))) {
             val two = level >= 8 && rng.nextDouble() < 0.2
             out += Drop(Resource.ENERGY.itemId, if (two) 2 else 1)
         }
         fam.material?.let { m ->
-            if (rng.nextDouble() < materialChance(level, caught)) out += Drop(m.itemId, if (level >= 10 && rng.nextDouble() < 0.25) 2 else 1)
+            if (hit(materialChance(level, caught))) out += Drop(m.itemId, if (level >= 10 && rng.nextDouble() < 0.25) 2 else 1)
         }
-        UPGRADE[species.uppercase()]?.let { u -> if (rng.nextDouble() < upgradeChance(caught)) out += Drop(u.itemId, 1) }
-        if (fam == DropFamily.GRASS && rng.nextDouble() < SEED_CHANCE) out += Drop(seedTier(rng.nextDouble()).seedItemId, 1)
+        UPGRADE[species.uppercase()]?.let { u -> if (hit(upgradeChance(caught))) out += Drop(u.itemId, 1) }
+        if (fam == DropFamily.GRASS && hit(SEED_CHANCE)) out += Drop(seedTier(rng.nextDouble()).seedItemId, 1)
         if (species.uppercase() == "GUDWIN" && !caught) {
-            if (rng.nextDouble() < ARTIFACT_CHANCE) out += Drop(Gear.MAKRO_AXE.id, 1)
-            if (rng.nextDouble() < ARTIFACT_CHANCE) out += Drop(Gear.MAKRO_PICKAXE.id, 1)
+            if (hit(ARTIFACT_CHANCE)) out += Drop(Gear.MAKRO_AXE.id, 1)
+            if (hit(ARTIFACT_CHANCE)) out += Drop(Gear.MAKRO_PICKAXE.id, 1)
         }
         return out
     }

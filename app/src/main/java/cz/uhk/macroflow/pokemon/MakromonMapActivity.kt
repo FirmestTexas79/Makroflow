@@ -153,7 +153,7 @@ class MakromonMapActivity : AppCompatActivity() {
             val ctx = applicationContext
             lifecycleScope.launch(Dispatchers.IO) {
                 val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
-                cz.uhk.macroflow.pokemon.skills.GearCrafting.SET.forEach { g ->
+                (cz.uhk.macroflow.pokemon.skills.GearCrafting.SET + cz.uhk.macroflow.pokemon.skills.GearCrafting.ACCESSORIES).forEach { g ->
                     cz.uhk.macroflow.pokemon.skills.GearCrafting.recipe(g)?.forEach { (id, n) -> SS.add(ctx, id, n) }
                 }
                 cz.uhk.macroflow.pokemon.skills.SkillTree.node("basic_gear")?.let { SS.add(ctx, it.itemId, 1) }
