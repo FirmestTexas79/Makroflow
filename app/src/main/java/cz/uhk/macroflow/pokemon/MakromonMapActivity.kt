@@ -94,6 +94,8 @@ class MakromonMapActivity : AppCompatActivity() {
 
     companion object {
         private const val DOUBLE_CLICK_TIME = 300L
+        /** Lokace s vlastní scénou přechodu (docs/adr/0042). */
+        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS")
         /** Dosah klepnutí na uzel v podílu obrazovky. */
         private const val TAP_RADIUS = 0.1f
         /** V jeskyních a lese jsou body husté a mezi nimi se chodí volně – menší dosah. */
@@ -792,10 +794,12 @@ class MakromonMapActivity : AppCompatActivity() {
 
         when (transition) {
             MapTransition.NONE -> transitionAction()
-            MapTransition.FADE -> container.animate().alpha(0f).setDuration(400).withEndAction {
-                transitionAction()
-                container.animate().alpha(1f).setDuration(400).start()
-            }.start()
+            // Město, louka, Hvozd a hory mají vlastní scénu přechodu (docs/adr/0042), jinak prolnutí
+            MapTransition.FADE -> if (newBiome.name in LOCATION_SCENES) playLocationTransition(newBiome, transitionAction)
+                else container.animate().alpha(0f).setDuration(400).withEndAction {
+                    transitionAction()
+                    container.animate().alpha(1f).setDuration(400).start()
+                }.start()
             MapTransition.CAVE_IN, MapTransition.CAVE_OUT ->
                 playCaveTransition(exiting = transition == MapTransition.CAVE_OUT, onCovered = transitionAction)
         }
@@ -841,6 +845,24 @@ class MakromonMapActivity : AppCompatActivity() {
         val viewport = findViewById<View>(R.id.mapMainContent)
         mapWorld.translationX = MapCamera.offset(ashView.x + ashView.width / 2f, viewport.width, mapWorld.width)
         mapWorld.translationY = MapCamera.offset(ashView.y + ashView.height / 2f, viewport.height, mapWorld.height)
+    }
+
+    /** Přechod do lokace: scéna zakryje obrazovku, vymění se mapa a scéna se sama otevře. */
+    private fun playLocationTransition(target: BiomeType, onCovered: () -> Unit) {
+        val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+        movementEngine.cancel()
+        transitionRunning = true
+        val overlay = cz.uhk.macroflow.pokemon.transition.LocationTransitionView(this, target.name).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            elevation = 200f
+        }
+        overlay.onCovered = onCovered
+        overlay.onFinished = {
+            root.removeView(overlay)
+            transitionRunning = false
+        }
+        root.addView(overlay)
+        overlay.post { overlay.start() }
     }
 
     /** Tmavě modrý mechový přechod: pod plně zakrytou obrazovkou se vymění mapa, pak se překryv rozplyne. */
