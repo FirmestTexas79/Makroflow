@@ -219,6 +219,7 @@ class MakromonMapActivity : AppCompatActivity() {
         // Obnoví se při změně aktivního Makromona i po návratu z Domova / souboje (level, evoluce).
         gamePrefs.registerOnSharedPreferenceChangeListener(companionPrefsListener)
         supportFragmentManager.addOnBackStackChangedListener {
+            refreshStepBar()            // nad deníkem / soubojem ukazatel kroků nemá co dělat (a bral dotyky)
             if (supportFragmentManager.backStackEntryCount == 0) {
                 companionManager.refresh()
                 refreshStoryDecor()     // po souboji se strážcem / legendou
@@ -386,7 +387,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     private fun refreshStepBar() {
         val gatedBiome = BiomeRegistry.definition(currentBiome)?.stepGoalFor
-        if (gatedBiome == null) {
+        if (gatedBiome == null || supportFragmentManager.backStackEntryCount > 0) {
             stepProgressBar.visibility = View.GONE
             return
         }
