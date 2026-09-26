@@ -240,6 +240,13 @@ class MakromonMapActivity : AppCompatActivity() {
                 else -> changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), MapTransition.NONE)
             }
             intent.getStringExtra("TARGET_LOCATION")?.let { triggerHotspotAction(it.lowercase()) }
+            // Debug: rovnou souboj v aréně dané lokace (adb … --es debug_battle WATER)
+            if (BuildConfig.DEBUG) intent.getStringExtra("debug_battle")?.let { b ->
+                if (runCatching { BiomeType.valueOf(b) }.isSuccess) {
+                    gamePrefs.edit().putString("LAST_BIOME", b).apply()
+                    replaceMapContent(PokemonBattleFragment())
+                }
+            }
         }
 
         findViewById<ImageButton>(R.id.btnOpenJournal).setOnClickListener {
