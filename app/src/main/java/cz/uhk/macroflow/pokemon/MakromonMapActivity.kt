@@ -164,6 +164,17 @@ class MakromonMapActivity : AppCompatActivity() {
             }
         }
 
+        // Debug: přidá jeden předmět podle ID (adb … --es give_item tool_axe_makro)
+        if (BuildConfig.DEBUG) intent.getStringExtra("give_item")?.let { id ->
+            val ctx = applicationContext
+            lifecycleScope.launch(Dispatchers.IO) {
+                val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+                val gear = cz.uhk.macroflow.pokemon.skills.Gear.from(id)
+                if (gear == null || SS.count(ctx, id) == 0) SS.add(ctx, id, 1)
+                kotlinx.coroutines.withContext(Dispatchers.Main) { showMapToast("🎁 Přidáno: ${gear?.label ?: id}") }
+            }
+        }
+
         movementEngine = MovementEngine(this, ashView, mapBackground)
         movementEngine.onMoved = { updateCamera() }
 
