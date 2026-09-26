@@ -225,6 +225,7 @@ class MakromonMapActivity : AppCompatActivity() {
             if (supportFragmentManager.backStackEntryCount == 0) {
                 companionManager.refresh()
                 refreshStoryDecor()     // po souboji se strážcem / legendou
+                checkAwards()           // chycení, denní úkoly… (docs/adr/0037)
             }
         }
 
@@ -317,6 +318,7 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             afkChecking = false
             refreshGatherPlaque()
+            checkAwards()
             if (res == null || away < 60 || res.claim.units == 0) return@launch
             if (supportFragmentManager.backStackEntryCount > 0) return@launch
             cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.afkReport(findViewById(R.id.mapRootContainer), away, res)
@@ -654,6 +656,24 @@ class MakromonMapActivity : AppCompatActivity() {
         changeBiome(target, PointF(pos.x, pos.y), transition)
     }
 
+    private var awardsChecking = false
+
+    /** Zapíše nově splněná ocenění a oznámí je (docs/adr/0037). */
+    private fun checkAwards() {
+        if (awardsChecking || isFinishing) return
+        awardsChecking = true
+        val ctx = applicationContext
+        lifecycleScope.launch {
+            val fresh = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.AwardStore.check(ctx) }
+            }.getOrDefault(emptyList())
+            awardsChecking = false
+            if (fresh.isEmpty()) return@launch
+            val text = fresh.joinToString("\n") { "🏅 Nové ocenění: ${it.title}" } + "\nNajdeš ho v deníku pod záložkou Ocenění."
+            mapWorld.postDelayed({ if (!isFinishing) showMapToast(text) }, 1200)
+        }
+    }
+
     private fun showStepWarningToast(missingSteps: Int) =
         showMapToast("Tohle bys na jeden zátah neušel! Dnes se ještě projdi – chybí ti $missingSteps kroků.")
 
@@ -684,6 +704,15 @@ class MakromonMapActivity : AppCompatActivity() {
         val container = findViewById<ViewGroup>(R.id.mapMainContent)
         val transitionAction: () -> Unit = {
             currentBiome = newBiome
+            if (newBiome == BiomeType.FOREST) {
+                val ctx = applicationContext
+                lifecycleScope.launch {
+                    kotlinx.coroutines.withContext(Dispatchers.IO) {
+                        cz.uhk.macroflow.pokemon.skills.AwardStore.recordOnce(ctx, cz.uhk.macroflow.pokemon.skills.AwardStore.VISIT_FOREST)
+                    }
+                    checkAwards()
+                }
+            }
             refreshStepBar()
             // Úvodní tutoriál (otazník) patří zatím jen k městu
             findViewById<View>(R.id.btnStartTutorial).visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
@@ -1015,6 +1044,7 @@ class MakromonMapActivity : AppCompatActivity() {
                             "\n+${xp.gained} XP Pěstování" + skillLevelText(xp))
                     }
                     refreshGarden()
+                    checkAwards()
                 }
                 else -> showMapToast("⏳ Roste ${plot.berry!!.label} – zbývá ${G.clock(G.remaining(plot, now, state.growthSpeedup))}.")
             }
@@ -1033,6 +1063,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     val (made, xp) = res
                     showMapToast("🔨 Vyrobeno: ${made}× ${ball.label}" + (if (made > times) " (dvojitá výroba!)" else "") +
                         "\n+${xp.gained} XP Výroba" + skillLevelText(xp))
+                    checkAwards()
                 }
             }
         }
@@ -1144,6 +1175,7 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             showMapToast((msg ?: "Zatím nic hotového.") + if (stop) "\nPřestal jsi." else "")
             refreshGatherPlaque()
+            checkAwards()
         }
     }
 

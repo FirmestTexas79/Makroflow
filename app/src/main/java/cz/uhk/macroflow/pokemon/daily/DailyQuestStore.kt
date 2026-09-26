@@ -76,6 +76,7 @@ object DailyQuestStore {
             p.edit().putBoolean(key, true).commit()
         }
         AppDatabase.getDatabase(ctx).coinDao().addCoins(q.reward)
+        runCatching { cz.uhk.macroflow.pokemon.skills.SkillStore.add(ctx, cz.uhk.macroflow.pokemon.skills.AwardStore.DAILY, 1) }
         return q.reward
     }
 

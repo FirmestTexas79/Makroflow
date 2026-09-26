@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 object SkillStore {
 
     /** ID předmětů, které nejsou vidět v inventáři (interní stav). */
-    fun isInternal(itemId: String) = listOf("skill_", "garden_", "equip_", "gather_", "starter_").any { itemId.startsWith(it) }
+    fun isInternal(itemId: String) = listOf("skill_", "garden_", "equip_", "gather_", "starter_", "stat_", "award_").any { itemId.startsWith(it) }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -103,6 +103,8 @@ object SkillStore {
         set(ctx, Garden.itemId(index), 0)
         val n = SkillMath.rollDouble(st.passive(Skill.HARVESTING))
         add(ctx, berry.berryItemId, n)
+        add(ctx, AwardStore.HARVESTED, n)
+        if (berry == Berry.BLACK) add(ctx, AwardStore.HARVESTED_BLACK, n)
         val xp = addXp(ctx, Skill.HARVESTING, st.gain(Skill.HARVESTING, berry.harvestXp.toDouble()))
         return n to xp
     }
@@ -118,6 +120,7 @@ object SkillStore {
         Crafting.recipe(ball).forEach { (id, per) -> consume(ctx, id, per * n) }
         val made = (1..n).sumOf { Crafting.roll(st.passive(Skill.CRAFTING)) }
         add(ctx, ball.id, made)
+        add(ctx, AwardStore.CRAFTED, made)
         val xp = addXp(ctx, Skill.CRAFTING, st.gain(Skill.CRAFTING, Crafting.baseXp(ball).toDouble() * n))
         return made to xp
     }
@@ -181,6 +184,7 @@ object SkillStore {
         set(ctx, Gathering.SINCE_ITEM, Gathering.encodeSince(c.newSince))
         if (c.units == 0) return GatherResult(a.spot, c, null)
         add(ctx, a.spot.resource.itemId, c.amount)
+        add(ctx, AwardStore.gatheredId(a.spot.resource.itemId), c.amount)
         val xp = addXp(ctx, a.spot.skill, st.gain(a.spot.skill, a.spot.xp.toDouble() * c.units))
         return GatherResult(a.spot, c, xp)
     }

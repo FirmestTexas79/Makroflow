@@ -1502,6 +1502,7 @@ class PokemonBattleView @JvmOverloads constructor(
         Thread {
             db.capturedMakromonDao().insertMakromon(entity)
             cz.uhk.macroflow.pokemon.daily.DailyQuestStore.recordCatch(context)
+            runCatching { cz.uhk.macroflow.pokemon.skills.AwardStore.recordCatch(context, mId, gs.isEnemyShiny) }
 
             if (FirebaseRepository.isLoggedIn) {
                 kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {

@@ -93,6 +93,7 @@ class QuestJournalFragment : Fragment() {
         rootView.findViewById<View>(R.id.tabStory).setOnClickListener { showTab(Tab.STORY) }
         rootView.findViewById<View>(R.id.tabDaily).setOnClickListener { showTab(Tab.DAILY) }
         rootView.findViewById<View>(R.id.tabResources).setOnClickListener { showTab(Tab.RESOURCES) }
+        rootView.findViewById<View>(R.id.tabAwards).setOnClickListener { showTab(Tab.AWARDS) }
         showTab(if (showDailyFirst) Tab.DAILY else Tab.CHARACTER)
         return rootView
     }
@@ -104,13 +105,14 @@ class QuestJournalFragment : Fragment() {
             Tab.DAILY -> renderDaily()
             Tab.CHARACTER -> renderCharacter()
             Tab.RESOURCES -> renderResources()
+            Tab.AWARDS -> renderAwards()
             Tab.STORY -> {}
         }
     }
 
     // ── Denní úkoly ─────────────────────────────────────────────────────────
 
-    private enum class Tab { CHARACTER, STORY, DAILY, RESOURCES }
+    private enum class Tab { CHARACTER, STORY, DAILY, RESOURCES, AWARDS }
     private var tab = Tab.CHARACTER
     /** Nastaví se před zobrazením, když má deník otevřít rovnou denní úkoly. */
     var showDailyFirst = false
@@ -123,12 +125,15 @@ class QuestJournalFragment : Fragment() {
         rootView.findViewById<View>(R.id.dailyPage).visibility = if (t == Tab.DAILY) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.characterPage).visibility = if (t == Tab.CHARACTER) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.resourcesPage).visibility = if (t == Tab.RESOURCES) View.VISIBLE else View.GONE
-        mapOf(Tab.CHARACTER to R.id.tabCharacter, Tab.STORY to R.id.tabStory, Tab.DAILY to R.id.tabDaily, Tab.RESOURCES to R.id.tabResources)
+        rootView.findViewById<View>(R.id.awardsPage).visibility = if (t == Tab.AWARDS) View.VISIBLE else View.GONE
+        mapOf(Tab.CHARACTER to R.id.tabCharacter, Tab.STORY to R.id.tabStory, Tab.DAILY to R.id.tabDaily, Tab.RESOURCES to R.id.tabResources,
+            Tab.AWARDS to R.id.tabAwards)
             .forEach { (k, id) -> rootView.findViewById<View>(id).alpha = if (k == t) 1f else 0.55f }
         when (t) {
             Tab.DAILY -> renderDaily()
             Tab.CHARACTER -> renderCharacter()
             Tab.RESOURCES -> renderResources()
+            Tab.AWARDS -> renderAwards()
             Tab.STORY -> {}
         }
     }
@@ -207,6 +212,20 @@ class QuestJournalFragment : Fragment() {
             val counts = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.counts(ctx) }
             if (!isAdded) return@launch
             cz.uhk.macroflow.pokemon.skills.ui.JournalPages.resources(rootView.findViewById(R.id.llResources), counts, rootView as FrameLayout)
+        }
+    }
+
+    private fun renderAwards() {
+        val ctx = context?.applicationContext ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (facts, unlocked) = withContext(Dispatchers.IO) {
+                val S = cz.uhk.macroflow.pokemon.skills.AwardStore
+                val f = S.facts(ctx)
+                S.check(ctx, f)
+                f to S.unlockedDays(ctx)
+            }
+            if (!isAdded) return@launch
+            cz.uhk.macroflow.pokemon.skills.ui.JournalPages.awards(rootView.findViewById(R.id.llAwards), facts, unlocked, rootView as FrameLayout)
         }
     }
 

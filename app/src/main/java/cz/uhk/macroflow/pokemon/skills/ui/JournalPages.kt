@@ -14,6 +14,11 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.pokemon.balls.Makroball
+import cz.uhk.macroflow.pokemon.skills.Award
+import cz.uhk.macroflow.pokemon.skills.AwardArt
+import cz.uhk.macroflow.pokemon.skills.AwardCategory
+import cz.uhk.macroflow.pokemon.skills.AwardFacts
+import cz.uhk.macroflow.pokemon.skills.Awards
 import cz.uhk.macroflow.pokemon.skills.Gear
 import cz.uhk.macroflow.pokemon.skills.GearArt
 import cz.uhk.macroflow.pokemon.skills.GearSlot
@@ -334,4 +339,74 @@ object JournalPages {
         f.layoutParams = LinearLayout.LayoutParams(ui.px(62f), ui.px(62f)).apply { marginEnd = ui.px(8f); bottomMargin = ui.px(8f) }
         return f
     }
+
+    // ── Ocenění (docs/adr/0037) ──
+
+    /** Stránka Ocenění: medaile po kategoriích v polovičních políčkách, klepnutí = dřevěná cedule. */
+    fun awards(container: LinearLayout, facts: AwardFacts, unlocked: Map<String, Int>, menuRoot: FrameLayout) {
+        container.removeAllViews()
+        val ui = WoodUi(container.context)
+        container.addView(ui.text("Ocenění", 27f, container.context.getColor(R.color.journal_chapter_title_ink), Gravity.CENTER).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        })
+        container.addView(ui.text("Získáno ${unlocked.size} z ${Awards.ALL.size}. Klepni na medaili.", 15f, ui.inkSoft, Gravity.CENTER).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { bottomMargin = ui.px(8f) }
+        })
+        AwardCategory.entries.forEach { cat ->
+            val list = Awards.byCategory(cat)
+            val got = list.count { it.id in unlocked }
+            val head = ui.row().apply { setPadding(ui.px(2f), ui.px(6f), 0, ui.px(4f)) }
+            head.addView(ui.text(cat.label, 20f, ui.rust), ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            head.addView(ui.text("$got / ${list.size}", 16f, ui.inkSoft))
+            container.addView(head)
+            list.chunked(6).forEach { chunk ->
+                val row = ui.row().apply { gravity = Gravity.TOP }
+                chunk.forEach { a -> row.addView(awardSlot(ui, a, a.id in unlocked) { showAward(menuRoot, a, facts, unlocked[a.id]) }) }
+                container.addView(row)
+            }
+        }
+    }
+
+    private fun awardSlot(ui: WoodUi, a: Award, done: Boolean, onClick: () -> Unit): View {
+        val f = FrameLayout(ui.ctx).apply {
+            background = BevelDrawable.slot(1.5f * ui.dp)
+            alpha = if (done) 1f else 0.6f
+            contentDescription = a.title + if (done) " (získáno)" else ""
+            setOnClickListener { onClick() }
+        }
+        f.addView(ui.icon(AwardArt.icon(a, done), AwardArt.SIZE, AwardArt.SIZE, 32f), FrameLayout.LayoutParams(ui.px(32f), ui.px(32f), Gravity.CENTER))
+        f.layoutParams = LinearLayout.LayoutParams(ui.px(42f), ui.px(42f)).apply { marginEnd = ui.px(6f); bottomMargin = ui.px(6f) }
+        return f
+    }
+
+    /** Dřevěná cedule ocenění: medaile v dřevěném rámečku, popis, postup a den získání. */
+    private fun showAward(root: FrameLayout, a: Award, f: AwardFacts, day: Int?) {
+        val done = day != null
+        WorkshopMenus.show(root, a.title, "${a.tier.label} · ${a.category.label}") { ui, body, _ ->
+            val top = ui.row().apply { gravity = Gravity.CENTER_VERTICAL }
+            top.addView(ui.icon(AwardArt.framed(AwardArt.icon(a, done)), AwardArt.FRAME, AwardArt.FRAME, 72f), LinearLayout.LayoutParams(ui.px(72f), ui.px(72f)))
+            top.addView(ui.text(a.description, 17f, ui.ink).apply { setPadding(ui.px(14f), 0, 0, 0) },
+                ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            body.addView(top)
+
+            val target = Awards.target(a, f)
+            val value = if (done) target else minOf(Awards.value(a, f), target)
+            val frac = if (done) 1f else Awards.fraction(a, f)
+            val bar = FrameLayout(ui.ctx).apply { background = BevelDrawable(1.5f * ui.dp, Color.parseColor("#2A1C11"), Color.parseColor("#1A110A"), Color.parseColor("#4F3016")) }
+            val fill = View(ui.ctx).apply { setBackgroundColor(Color.parseColor(if (done) "#D9A62A" else "#7F9148")) }
+            bar.addView(fill, FrameLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(ui.px(3f), ui.px(3f), ui.px(3f), ui.px(3f)) })
+            bar.addView(outlined(ui.text("$value / $target", 15f, WHITE, Gravity.CENTER)),
+                FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            body.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ui.px(24f)).apply { topMargin = ui.px(14f) })
+            bar.post { fill.layoutParams = (fill.layoutParams as FrameLayout.LayoutParams).apply { width = ((bar.width - ui.px(6f)) * frac).toInt() } }
+
+            val status = if (day != null) {
+                val d = java.time.LocalDate.ofEpochDay(day.toLong())
+                "🏅 Získáno ${d.dayOfMonth}. ${d.monthValue}. ${d.year}"
+            } else "Zatím nezískáno"
+            body.addView(ui.text(status, 17f, if (done) ui.olive else ui.inkSoft).apply { setPadding(0, ui.px(10f), 0, 0) })
+        }
+    }
+
 }

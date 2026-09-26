@@ -25,7 +25,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
-        android:layout_marginStart="18dp"
+        android:layout_marginStart="14dp"
         android:orientation="horizontal">
 
         <TextView
@@ -37,53 +37,67 @@
             android:backgroundTint="#2E4677"
             android:fontFamily="@font/jersey_15"
             android:gravity="center"
-            android:paddingHorizontal="11dp"
+            android:paddingHorizontal="8dp"
             android:paddingBottom="6dp"
             android:text="Postava"
             android:textColor="#FEFAE0"
-            android:textSize="18sp" />
+            android:textSize="17sp" />
         <TextView
             android:id="@+id/tabStory"
             android:layout_width="wrap_content"
             android:layout_height="38dp"
-            android:layout_marginStart="5dp"
+            android:layout_marginStart="4dp"
             android:background="@drawable/bg_journal_tab"
             android:backgroundTint="#BC6C25"
             android:fontFamily="@font/jersey_15"
             android:gravity="center"
-            android:paddingHorizontal="11dp"
+            android:paddingHorizontal="8dp"
             android:paddingBottom="6dp"
             android:text="Příběh"
             android:textColor="#FEFAE0"
-            android:textSize="18sp" />
+            android:textSize="17sp" />
         <TextView
             android:id="@+id/tabDaily"
             android:layout_width="wrap_content"
             android:layout_height="38dp"
-            android:layout_marginStart="5dp"
+            android:layout_marginStart="4dp"
             android:background="@drawable/bg_journal_tab"
             android:backgroundTint="#606C38"
             android:fontFamily="@font/jersey_15"
             android:gravity="center"
-            android:paddingHorizontal="11dp"
+            android:paddingHorizontal="8dp"
             android:paddingBottom="6dp"
             android:text="Denní"
             android:textColor="#FEFAE0"
-            android:textSize="18sp" />
+            android:textSize="17sp" />
         <TextView
             android:id="@+id/tabResources"
             android:layout_width="wrap_content"
             android:layout_height="38dp"
-            android:layout_marginStart="5dp"
+            android:layout_marginStart="4dp"
             android:background="@drawable/bg_journal_tab"
             android:backgroundTint="#9A5518"
             android:fontFamily="@font/jersey_15"
             android:gravity="center"
-            android:paddingHorizontal="11dp"
+            android:paddingHorizontal="8dp"
             android:paddingBottom="6dp"
             android:text="Suroviny"
             android:textColor="#FEFAE0"
-            android:textSize="18sp" />
+            android:textSize="17sp" />
+        <TextView
+            android:id="@+id/tabAwards"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/bg_journal_tab"
+            android:backgroundTint="#8C6D1F"
+            android:fontFamily="@font/jersey_15"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="6dp"
+            android:text="Ocenění"
+            android:textColor="#FEFAE0"
+            android:textSize="17sp" />
     </LinearLayout>
 
     <FrameLayout
@@ -343,6 +357,30 @@
 
                 <LinearLayout
                     android:id="@+id/llResources"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="20dp"
+                    android:paddingTop="18dp"
+                    android:paddingBottom="24dp" />
+            </ScrollView>
+
+            <!-- OCENĚNÍ (docs/adr/0037) -->
+            <ScrollView
+                android:id="@+id/awardsPage"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:fadingEdgeLength="16dp"
+                android:requiresFadingEdge="vertical"
+                android:scrollbars="none"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <LinearLayout
+                    android:id="@+id/llAwards"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
