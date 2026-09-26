@@ -31,8 +31,17 @@ data class CaveMap(
     /** Název BiomeType, do kterého vede východ (bez závislosti na Androidu). */
     val parentBiome: String = "MOUNTAINS",
     /** Jeskyně = tmavý mechový přechod a jeskynní intro; les = běžné prolnutí a křoví. */
-    val isCave: Boolean = true
+    val isCave: Boolean = true,
+    /**
+     * Kam se dá klepnout, aby se spustilo místo (docs/adr/0037): uzel → kruh (x, y, poloměr)
+     * v art px kolem objektu (jezírko, keř, balvan). Dřív se muselo trefit těsně k uzlu pod ním.
+     */
+    val tapAreas: Map<String, Triple<Int, Int, Int>> = emptyMap()
 ) {
+    /** Uzel, jehož oblast klepnutí obsahuje bod (art px), nejbližší střed vyhrává. */
+    fun tapAreaAt(x: Float, y: Float): String? = tapAreas.entries
+        .map { (id, a) -> id to kotlin.math.hypot(x - a.first, y - a.second) / a.third }
+        .filter { it.second <= 1f }.minByOrNull { it.second }?.first
     private val byId = nodes.associateBy { it.id }
 
     fun node(id: String): CaveNode? = byId[id]
@@ -92,7 +101,8 @@ object CaveMaps {
         mountainNode = "cave",
         crystalNode = "krystal_modry",
         crystal = CrystalColor.BLUE,
-        encounterNodes = setOf("jezirko", "balvany_j", "houby", "krystaly_j")
+        encounterNodes = setOf("jezirko", "balvany_j", "houby", "krystaly_j"),
+        tapAreas = mapOf("zila_zlato" to Triple(118, 254, 13))
     )
 
     /** Starý důl – uzavřené bludiště štol se žebříky, červený krystal. Vchod: „mine“ v Horách. */
@@ -131,7 +141,8 @@ object CaveMaps {
         mountainNode = "mine",
         crystalNode = "krystal_cerveny",
         crystal = CrystalColor.RED,
-        encounterNodes = setOf("vozik", "netopyri", "slepa_chodba", "hlubina")
+        encounterNodes = setOf("vozik", "netopyri", "slepa_chodba", "hlubina"),
+        tapAreas = mapOf("zila_stribro" to Triple(100, 332, 13))
     )
 
     val ALL = listOf(OPEN, MAZE)

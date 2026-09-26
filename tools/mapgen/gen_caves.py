@@ -72,6 +72,7 @@ class Cave:
         self.img = np.zeros((ah, aw, 3), dtype=float)
         self.lights = []            # (x, y, poloměr, síla, barva)
         self.props = []             # funkce kreslící rekvizity až po osvětlení (svítí samy)
+        self.blocks = []            # obdélníky rekvizit, přes které se nechodí (mapa chůze)
         self.ys, self.xs = np.mgrid[0:ah, 0:aw]
 
     # ── tvary ──
@@ -253,6 +254,7 @@ class Cave:
 
     # ── rekvizity ──
     def boulder(self, cx, cy, r):
+        self.blocks.append((cx - r - 1, cy - r - 1, cx + r + 2, cy + r + 2))
         for y in range(cy - r - 1, cy + r + 2):
             for x in range(cx - r - 1, cx + r + 2):
                 d = math.hypot((x - cx) / 1.15, y - cy)
@@ -263,6 +265,7 @@ class Cave:
         for k in range(-r + 1, r): self.px(cx + k, cy + r + 1, OUT)
 
     def stalagmite(self, cx, cy, h):
+        self.blocks.append((cx - 2, cy - h, cx + 3, cy + 2))
         for k in range(h):
             w = max(0, (k * 2) // h)
             for dx in range(-w, w + 1):
@@ -288,6 +291,7 @@ class Cave:
                 elif k > h // 2: self.px(x, y, pal[2])
 
     def altar(self, cx, cy, pal):
+        self.blocks.append((cx - 13, cy - 7, cx + 14, cy + 3))
         # kamenný oltář: kruhová deska s runami, krystal kreslí aplikace (dá se sebrat)
         for y in range(cy - 7, cy + 5):
             for x in range(cx - 13, cx + 14):
@@ -362,6 +366,12 @@ class Cave:
             d.ellipse([x * 4 - 7, y * 4 - 7, x * 4 + 7, y * 4 + 7], outline=(255, 40, 40), width=3)
             d.text((x * 4 + 10, y * 4 - 6), n, fill=(255, 255, 255))
         dbg.save(os.path.join(HERE, self.name + "_debug.png"))
+        # mapa chůze (docs/adr/0037): jen skutečná podlaha – ne čela stěn a teras, voda ani rekvizity.
+        # Dřív se hádalo z barev a světlé čelo stěny se trámy vypadalo jako podlaha.
+        walk = self.is_floor() & ~self.water
+        for (x0, y0, x1, y1) in self.blocks:
+            walk[max(0, y0):max(0, y1), max(0, x0):max(0, x1)] = False
+        Image.fromarray((walk * 255).astype(np.uint8), "L").save(os.path.join(HERE, self.name + "_walk.png"))
         print(self.name, im.size)
         for n, (x, y) in self.nodes.items():
             print(f'  "{n}": ({x / self.AW:.4f}, {y / self.AH:.4f})  lvl {self.lvl[n]}')

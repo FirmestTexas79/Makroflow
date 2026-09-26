@@ -79,7 +79,14 @@ object ForestMap {
         encounterNodes = setOf("trava_1", "jezirko_1", "trava_2", "houstina", "jezirko_2", "trava_3", "stary_dub"),
         artPixelsAcross = 150,
         parentBiome = "MEADOW",
-        isCave = false
+        isCave = false,
+        // objekty z gen_forest.py – klepnutí kamkoli na ně spustí místo
+        tapAreas = mapOf(
+            "jezirko_1" to Triple(40, 366, 24), "jezirko_2" to Triple(262, 230, 22),
+            "trava_1" to Triple(62, 492, 15), "trava_2" to Triple(212, 324, 14), "houstina" to Triple(66, 242, 17),
+            "trava_3" to Triple(60, 136, 14), "stary_dub" to Triple(92, 62, 20), "mytina" to Triple(150, 45, 13),
+            "strom_briza" to Triple(238, 455, 13), "strom_javor" to Triple(232, 85, 13)
+        )
     )
 
     /**

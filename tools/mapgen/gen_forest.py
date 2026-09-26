@@ -150,6 +150,18 @@ def dilate(m, r):
 # uzavření: úzké proužky lesa mezi stezkami se zaplní paloukem (dřív z nich zbyly „vrstevnice“)
 walk = ~dilate(~dilate(walk, 5), 5)
 
+# ── 2. jezírka ─────────────────────────────────────────────────────────────
+water = np.zeros((AH, AW), bool)
+PONDS = {"jezirko_1": (40, 366, 20, 14), "jezirko_2": (262, 230, 18, 15)}
+for (cx, cy, rx, ry) in PONDS.values():
+    ang = np.arctan2(ys - cy, xs - cx)
+    rr = 1 + 0.12 * np.sin(3 * ang + cx) + 0.08 * np.sin(5 * ang + cy)
+    water |= ((xs - cx) / rx) ** 2 + ((ys - cy) / ry) ** 2 < rr * rr
+    bank = ((xs - cx) / (rx + 7)) ** 2 + ((ys - cy) / (ry + 6)) ** 2 < rr * rr
+    walk |= bank & dilate(walk, 6)          # břeh jen tam, kde navazuje na palouk (ne do lesa)
+walk &= ~water
+
+# vzdálenost k okraji palouku se počítá až po jezírkách (břehy jsou taky palouk)
 # vzdálenost k okraji palouku (pro stín a podrost)
 edge_dist = np.zeros((AH, AW))
 inside = walk.copy()
@@ -159,16 +171,6 @@ for k in range(1, 7):
     edge_dist[inside & ~er] = k
     inside = er
 edge_dist[inside] = 7
-
-# ── 2. jezírka ─────────────────────────────────────────────────────────────
-water = np.zeros((AH, AW), bool)
-PONDS = {"jezirko_1": (40, 366, 20, 14), "jezirko_2": (262, 230, 18, 15)}
-for (cx, cy, rx, ry) in PONDS.values():
-    ang = np.arctan2(ys - cy, xs - cx)
-    rr = 1 + 0.12 * np.sin(3 * ang + cx) + 0.08 * np.sin(5 * ang + cy)
-    water |= ((xs - cx) / rx) ** 2 + ((ys - cy) / ry) ** 2 < rr * rr
-    walk |= ((xs - cx) / (rx + 7)) ** 2 + ((ys - cy) / (ry + 6)) ** 2 < rr * rr        # břeh je palouk
-walk &= ~water
 
 # ── 3. tráva ───────────────────────────────────────────────────────────────
 img = np.zeros((AH, AW, 3))
@@ -405,6 +407,7 @@ def shadow(cx, cy, rx, ry):
         for xx in range(int(cx - rx), int(cx + rx) + 1):
             if 0 <= xx < AW and 0 <= yy < AH and ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2 < 1:
                 img[yy, xx] = img[yy, xx] * 0.72
+                pre[yy, xx] = pre[yy, xx] * 0.72          # stín není překážka
 
 
 # kvítí na paloucích (pod stromy se kreslí dřív)
@@ -436,6 +439,8 @@ for _ in range(26):
         for dx in range(-5, 6): px(x + dx, y + dx // 3, TRUNK[1])
         px(x + 2, y - 1, TRUNK[0]); px(x + 3, y - 2, TRUNK[0])
 
+# snímek před stromy: co se pak změní (koruny, kmeny, keře), je překážka (docs/adr/0037)
+pre = img.copy()
 # stromy: pata kmene mimo palouk, koruna smí přesahovat okraj (měkčí hrana lesa)
 trees = []
 for gy in range(-8, AH + 14, 9):
@@ -510,6 +515,7 @@ for _ in range(420):
                 if d < 1: px(xx, yy, pal[3] if yy < y - 1 and xx < x else pal[2] if d < 0.7 else pal[1])
                 elif d < 1.25: px(xx, yy, pal[5])
 
+covered = np.any(np.abs(img - pre) > 0.5, axis=2)
 # objekty setkání
 fern_thicket(62, 500)
 mushroom_ring(212, 324)
@@ -545,7 +551,7 @@ os.makedirs(RES, exist_ok=True)
 im = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB")
 im.save(os.path.join(RES, "forest.png"), optimize=True)
 
-walk_out = walk & ~water
+walk_out = walk & ~water & ~covered
 for (x0, y0, x1, y1) in objects:
     walk_out[max(0, y0):max(0, y1), max(0, x0):max(0, x1)] = False
 for n, (gx, gy) in GATHER.items():                   # kmen stromu ke kácení

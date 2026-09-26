@@ -180,8 +180,11 @@ def main():
     build("mountains", os.path.join(RES, "drawable/mountains.png"), mountain, 12, n, e, corridor_r=16, **MOUNTAIN_FIX)
     for var, img, fname in (("OPEN", "cave_open", "cave_open"), ("MAZE", "cave_maze", "cave_maze")):
         n, e = cave_graph(caves, var)
-        build(fname, os.path.join(RES, f"drawable-nodpi/{img}.png"), cave, 3, {k: (x, y) for k, (x, y) in n.items()}, e, corridor_r=4,
-              **CAVE_FIX.get(fname, {}))
+        # jeskyně (docs/adr/0037): podlahu kreslí generátor (…_walk.png); koridory jen po svislých
+        # hranách = žebříky a schody mezi patry (vodorovné by vedly po čele stěny)
+        vert = [(p, q) for p, q in e if abs(n[p][1] - n[q][1]) > abs(n[p][0] - n[q][0])]
+        build(fname, os.path.join(ROOT, f"tools/mapgen/{img}_walk.png"), lambda c: c[0] > 128, 3,
+              {k: (x, y) for k, (x, y) in n.items()}, vert, corridor_r=4, thresh=0.5, **CAVE_FIX.get(fname, {}))
     # Hvozd (docs/adr/0036): průchozí plochu kreslí rovnou generátor mapy (forest_walk.png);
     # rovné koridory mezi uzly se nepřidávají – stezky jsou zakřivené a šly by přes stromy
     n, e = cave_graph(forest, "MAP")

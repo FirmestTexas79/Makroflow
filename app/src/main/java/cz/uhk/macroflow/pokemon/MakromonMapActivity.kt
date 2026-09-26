@@ -450,6 +450,10 @@ class MakromonMapActivity : AppCompatActivity() {
         val hotspots = if (cave == null) clickableNodes.toSet()
             else cave.encounterNodes + CAVE_ACTION_NODES + listOfNotNull(cave.exitNode, cave.crystalNode)
         val radius = if (cave == null) TAP_RADIUS else CAVE_TAP_RADIUS
+        // Klepnutí přímo na objekt (jezírko, keř, balvan) – docs/adr/0037
+        cave?.tapAreaAt(relX * cave.artW, relY * cave.artH)?.takeIf { it in hotspots }?.let {
+            triggerHotspotAction(it); return true
+        }
         // Nejbližší aktivní uzel v dosahu (ne první nalezený)
         val clickedWaypoint = movementEngine.navigationGraph
             .filter { it.id in hotspots }
