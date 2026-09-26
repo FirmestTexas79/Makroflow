@@ -64,6 +64,7 @@ object SkillArt {
         Skill.CATCHING -> catchingIcon()
         Skill.CRAFTING -> craftingIcon()
         Skill.HARVESTING -> harvestingIcon()
+        Skill.MINING, Skill.LOGGING -> GearArt.skillIcon(skill)!!
     }
 
     /** Makroball v letu: čáry pohybu a jiskra. */
@@ -128,7 +129,7 @@ object SkillArt {
 
     fun resourceIcon(r: Resource): IntArray = when (r) {
         Resource.ENERGY -> energyFragment()
-        else -> if (r.isSeed) seed(r.berry!!) else berry(r.berry!!)
+        else -> GearArt.resourceIcon(r) ?: if (r.isSeed) seed(r.berry!!) else berry(r.berry!!)
     }
 
     /** Zářící úlomek energie. */

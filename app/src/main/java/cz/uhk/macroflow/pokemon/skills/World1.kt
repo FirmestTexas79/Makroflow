@@ -44,13 +44,20 @@ enum class Resource(val itemId: String, val label: String, val description: Stri
     BERRY_BLACK(Berry.BLACK.berryItemId, Berry.BLACK.label, "Z ní se vyrábí Kreatinball."),
     SEED_GREEN(Berry.GREEN.seedItemId, Berry.GREEN.seedLabel, "Zasaď na záhon na louce – roste 15 minut."),
     SEED_BLUE(Berry.BLUE.seedItemId, Berry.BLUE.seedLabel, "Zasaď na záhon na louce – roste 1 hodinu."),
-    SEED_BLACK(Berry.BLACK.seedItemId, Berry.BLACK.seedLabel, "Zasaď na záhon na louce – roste 4 hodiny.");
+    SEED_BLACK(Berry.BLACK.seedItemId, Berry.BLACK.seedLabel, "Zasaď na záhon na louce – roste 4 hodiny."),
+    // Těžba a kácení (docs/adr/0035)
+    ORE_COPPER("ore_copper", "Měděná ruda", "Vytěžíš ji krumpáčem z měděné žíly v horách."),
+    ORE_SILVER("ore_silver", "Stříbrná ruda", "Stříbrná žíla v horách chce lepší efektivitu krumpáče."),
+    ORE_GOLD("ore_gold", "Zlatá ruda", "Nejvzácnější ruda hor – jen pro zkušené horníky."),
+    LOG_OAK("log_oak", "Dubové poleno", "Pokácíš ho sekerou z dubu na louce."),
+    LOG_BIRCH("log_birch", "Březové poleno", "Bříza na louce chce ostřejší sekeru."),
+    LOG_MAPLE("log_maple", "Javorové poleno", "Tvrdé dřevo javoru – jen pro zkušené dřevorubce.");
 
     val berry: Berry? get() = when (this) {
         BERRY_GREEN, SEED_GREEN -> Berry.GREEN
         BERRY_BLUE, SEED_BLUE -> Berry.BLUE
         BERRY_BLACK, SEED_BLACK -> Berry.BLACK
-        ENERGY -> null
+        else -> null
     }
     val isSeed: Boolean get() = itemId.startsWith("seed_")
 

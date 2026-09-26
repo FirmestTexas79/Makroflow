@@ -263,6 +263,13 @@ class MovementEngine(
         handler.post(runnable)
     }
 
+    /** Otočí stojící postavu (např. čelem ke stromu při kácení). */
+    fun face(direction: Int) {
+        if (isWalking) return
+        currentDirection = direction
+        updateSprite(1, direction)
+    }
+
     fun resetToPosition(relPos: PointF) {
         currentPosition = relPos
         mapBackground.post {

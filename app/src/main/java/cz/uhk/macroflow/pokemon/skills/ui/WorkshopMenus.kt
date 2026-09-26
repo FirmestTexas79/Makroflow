@@ -26,7 +26,7 @@ object WorkshopMenus {
     fun close(root: ViewGroup) { root.findViewWithTag<View>(TAG)?.let { root.removeView(it) } }
 
     /** Ztmavené pozadí + dřevěný panel uprostřed; klepnutí mimo panel menu zavře. */
-    private fun show(root: FrameLayout, title: String, subtitle: String?, build: (WoodUi, LinearLayout, () -> Unit) -> Unit) {
+    fun show(root: FrameLayout, title: String, subtitle: String?, build: (WoodUi, LinearLayout, () -> Unit) -> Unit) {
         close(root)
         val ui = WoodUi(root.context)
         val dim = FrameLayout(root.context).apply {
@@ -63,7 +63,7 @@ object WorkshopMenus {
         panel.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(160).start()
     }
 
-    private fun card(ui: WoodUi): LinearLayout = ui.row().apply {
+    fun card(ui: WoodUi): LinearLayout = ui.row().apply {
         setPadding(ui.px(10f), ui.px(8f), ui.px(10f), ui.px(8f))
         background = android.graphics.drawable.GradientDrawable().apply {
             cornerRadius = 4 * ui.dp; setColor(Color.parseColor("#26BC6C25"))
@@ -138,6 +138,96 @@ object WorkshopMenus {
                 16f, ui.inkSoft).apply { setPadding(ui.px(10f), 0, 0, 0) }, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             body.addView(gear)
             body.addView(ui.text("Fragmenty energie padají z Makromonů, bobule sklidíš na záhonech vpravo pod mostem.", 15f, ui.inkSoft))
+        }
+    }
+
+    // ── Těžba a kácení (docs/adr/0035) ──────────────────────────────────────
+
+    /** Údaje pro dřevěnou ceduli u stromu / žíly. */
+    data class GatherInfo(
+        val spot: cz.uhk.macroflow.pokemon.skills.GatherSpot,
+        val tool: cz.uhk.macroflow.pokemon.skills.Gear?,
+        val efficiency: Int,
+        val secPerUnit: Long?,
+        val xpPerUnit: Int,
+        val multi: Double,
+        val capHours: Int,
+        /** Probíhající činnost (kdekoli), null = nic. */
+        val active: cz.uhk.macroflow.pokemon.skills.Gathering.Activity?,
+        val pendingHere: Int
+    )
+
+    fun gatherMenu(root: FrameLayout, info: GatherInfo, onStart: () -> Unit, onCollect: () -> Unit, onStop: () -> Unit) {
+        val spot = info.spot
+        val activeHere = info.active?.spot == spot
+        val (px, w, h) = cz.uhk.macroflow.pokemon.skills.GearArt.spot(spot)
+        show(root, spot.label, if (activeHere) "Právě tu ${if (spot.skill == Skill.MINING) "těžíš" else "kácíš"} – pokračuje i když odejdeš z Makrosvěta." else null) { ui, body, close ->
+            val top = ui.row()
+            top.addView(ui.icon(px, w, h, 56f))
+            val col = ui.column().apply { setPadding(ui.px(12f), 0, 0, 0) }
+            col.addView(ui.row().apply {
+                addView(ui.icon(cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(spot.resource), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM, cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM, 22f))
+                addView(ui.text("  ${spot.resource.label}", 19f))
+            })
+            fun line(label: String, value: String, color: Int = ui.ink) {
+                val r = ui.row().apply { setPadding(0, ui.px(2f), 0, 0) }
+                r.addView(ui.text(label, 16f, ui.inkSoft).apply { layoutParams = ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
+                r.addView(ui.text(value, 17f, color))
+                col.addView(r)
+            }
+            line("Potřebná efektivita", "${spot.required}")
+            line("Tvoje efektivita", if (info.tool == null) "–" else "${info.efficiency}",
+                if (info.tool != null && info.efficiency >= spot.required) ui.olive else ui.rust)
+            line("1 kus za", info.secPerUnit?.let { Garden.clock(it) } ?: "–")
+            line("XP za kus", "+${info.xpPerUnit} ${spot.skill.label}")
+            line("Dvojitý kus", "${(info.multi * 100).toInt()} %")
+            line("AFK nejvýš", "${info.capHours} h")
+            top.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            body.addView(top)
+            body.addView(ui.spacer(10f))
+            when {
+                info.tool == null -> body.addView(ui.text("🔒 Potřebuješ ${spot.toolSlot.label.lowercase()} – nasaď ji v deníku (Postava → TOOLS).", 16f, ui.rust))
+                info.secPerUnit == null -> body.addView(ui.text("Na tohle je tvoje efektivita malá. Zvyš level ${spot.skill.label}, odemkni bonus ve stromu nebo sežeň lepší nástroj.", 16f, ui.rust))
+                activeHere -> {
+                    body.addView(ui.text("Hotovo k vybrání: ${info.pendingHere} ks", 18f))
+                    val r = ui.row().apply { setPadding(0, ui.px(8f), 0, 0) }
+                    r.addView(ui.button("Vybrat", info.pendingHere > 0) { close(); onCollect() })
+                    r.addView(ui.spacer(1f).apply { layoutParams = LinearLayout.LayoutParams(ui.px(10f), 1) })
+                    r.addView(ui.button("Přestat") { close(); onStop() })
+                    body.addView(r)
+                }
+                else -> {
+                    info.active?.let { a ->
+                        body.addView(ui.text("Teď ${if (a.spot.skill == Skill.MINING) "těžíš" else "kácíš"}: ${a.spot.label}. Začátkem tady to ukončíš a hotové kusy se vyberou.", 15f, ui.inkSoft))
+                        body.addView(ui.spacer(6f))
+                    }
+                    body.addView(ui.button("${spot.verb} (1 kus za ${Garden.clock(info.secPerUnit)})") { close(); onStart() })
+                }
+            }
+        }
+    }
+
+    /** Návrat do Makrosvěta: jak dlouho jsi byl pryč a co se za tu dobu vytěžilo. */
+    fun afkReport(root: FrameLayout, awaySec: Long, res: cz.uhk.macroflow.pokemon.skills.SkillStore.GatherResult, onClose: () -> Unit = {}) {
+        val spot = res.spot
+        show(root, "Vítej zpět!", "Byl jsi pryč ${cz.uhk.macroflow.pokemon.skills.Gathering.awayText(awaySec)}.") { ui, body, close ->
+            val c = card(ui)
+            c.addView(ui.icon(cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(spot.resource), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM, cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM, 44f))
+            val col = ui.column().apply { setPadding(ui.px(12f), 0, 0, 0) }
+            col.addView(ui.text("${spot.label}: ${res.claim.amount}× ${spot.resource.label}", 20f))
+            if (res.claim.amount > res.claim.units) col.addView(ui.text("z toho ${res.claim.amount - res.claim.units}× navíc (dvojitý kus)", 15f, ui.olive))
+            res.xp?.let { x ->
+                col.addView(ui.text("+${x.gained} XP ${spot.skill.label}", 17f, ui.inkSoft))
+                if (x.leveledUp) col.addView(ui.text("⭐ ${spot.skill.label} Lv ${x.newLevel}!" + (if (x.newPoints > 0) " Nový dovednostní bod." else ""), 16f, ui.rust))
+            }
+            if (res.claim.units == 0) col.addView(ui.text("Zatím nic hotového – další kus už se dělá.", 15f, ui.inkSoft))
+            c.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            body.addView(c)
+            if (res.claim.capped) body.addView(ui.text("Počítá se nejvýš ${res.claim.countedSeconds / 3600} h AFK – delší směnu odemkneš ve stromu.", 15f, ui.inkSoft))
+            body.addView(ui.text("${if (spot.skill == Skill.MINING) "Těžba" else "Kácení"} pokračuje dál.", 15f, ui.inkSoft))
+            body.addView(ui.button("Pokračovat") { close(); onClose() }.apply {
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) }
+            })
         }
     }
 }

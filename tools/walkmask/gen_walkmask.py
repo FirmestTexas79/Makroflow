@@ -190,8 +190,12 @@ TOWN_FIX = dict(extra_walk=[], extra_block=[])
 # Louka (docs/adr/0034): záhony – 4 v rozích, cesta plus mezi nimi – a pracovní stůl; sedí s MeadowLayout.kt
 MEADOW_FIX = dict(extra_walk=[(345, 824, 520, 846), (426, 745, 448, 925)],
                   extra_block=[(360, 769, 426, 824), (448, 769, 514, 824), (360, 846, 426, 901), (448, 846, 514, 901),
-                               (93, 790, 161, 830)])
-MOUNTAIN_FIX = dict(extra_walk=[], extra_block=[(304, 700, 384, 812)])   # socha krále na podstavci
+                               (93, 790, 161, 830),
+                               # stromy ke kácení (kmen a spodek koruny), docs/adr/0035
+                               (175, 580, 235, 630), (460, 470, 520, 520), (39, 626, 99, 676)])
+MOUNTAIN_FIX = dict(extra_walk=[], extra_block=[(304, 700, 384, 812),   # socha krále na podstavci
+                                               # rudné žíly (docs/adr/0035)
+                                               (193, 1021, 261, 1075), (416, 1159, 484, 1213), (406, 591, 474, 645)])
 
 if __name__ == "__main__":
     main()

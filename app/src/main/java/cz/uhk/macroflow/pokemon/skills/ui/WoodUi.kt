@@ -82,10 +82,14 @@ class WoodUi(val ctx: Context) {
 
     /** Pixelová ikona zvětšená bez vyhlazení. */
     fun icon(pixels: IntArray, w: Int, h: Int, sizeDp: Float): ImageView = ImageView(ctx).apply {
-        val bmp = Bitmap.createBitmap(pixels, w, h, Bitmap.Config.ARGB_8888)
-        setImageDrawable(BitmapDrawable(ctx.resources, bmp).apply { isFilterBitmap = false })
-        scaleType = ImageView.ScaleType.FIT_CENTER
-        layoutParams = LinearLayout.LayoutParams(px(sizeDp), px(sizeDp * h / w.coerceAtLeast(h)))
+        // Předem zvětšeno celočíselným násobkem: dřív se při necelém měřítku bez vyhlazení
+        // ztrácela horní řada pixelů (obrys ikon ve skladu)
+        val box = px(sizeDp)
+        val k = maxOf(1, box / maxOf(w, h))
+        val src = Bitmap.createBitmap(pixels, w, h, Bitmap.Config.ARGB_8888)
+        setImageBitmap(Bitmap.createScaledBitmap(src, w * k, h * k, false))
+        scaleType = ImageView.ScaleType.CENTER
+        layoutParams = LinearLayout.LayoutParams(box, px(sizeDp * h / maxOf(w, h)).coerceAtLeast(h * k))
     }
 
     /** Dřevěné tlačítko (malý dřevěný rámeček bez pergamenu). */

@@ -79,7 +79,9 @@ class MakromonMapActivity : AppCompatActivity() {
         "meadow_npc", "les_sever",
         "vstup_z_meadow", "rozcesti_hory", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2",
         // Dílna na louce (docs/adr/0034)
-        "vyrobna", "zahon_1", "zahon_2", "zahon_3", "zahon_4"
+        "vyrobna", "zahon_1", "zahon_2", "zahon_3", "zahon_4",
+        // Těžba a kácení (docs/adr/0035)
+        "strom_dub", "strom_briza", "strom_javor", "zila_med", "zila_stribro", "zila_zlato"
     )
 
     /** Uzly, kde může vyskočit divoký Makromon (90 % šance). Jeskyně mají vlastní (CaveMap.encounterNodes). */
@@ -123,6 +125,14 @@ class MakromonMapActivity : AppCompatActivity() {
         val imageLoader = ImageLoader.Builder(this).components {
             if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory()) else add(GifDecoder.Factory())
         }.build()
+
+        // Startovní sekera a krumpáč (později odměna za úkol) – docs/adr/0035
+        lifecycleScope.launch {
+            val given = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.skills.SkillStore.ensureStarterTools(applicationContext)
+            }
+            if (given) showMapToast("🎁 Dostal jsi Starou sekeru a Starý krumpáč – už je máš nasazené (deník → Postava → TOOLS).")
+        }
 
         // Debug: suroviny a XP pro vyzkoušení dílny (adb … --ez seed_skills true)
         if (BuildConfig.DEBUG && intent.getBooleanExtra("seed_skills", false)) {
@@ -218,8 +228,13 @@ class MakromonMapActivity : AppCompatActivity() {
         mapBackground.post {
             // Debug: rovnou do jiné lokace (adb … --es debug_biome MEADOW)
             val debugBiome = if (BuildConfig.DEBUG) intent.getStringExtra("debug_biome")?.let { runCatching { BiomeType.valueOf(it) }.getOrNull() } else null
-            if (debugBiome != null) enterBiomeAtNode(debugBiome, BiomeRegistry.definition(debugBiome)?.graph?.first()?.id ?: "", MapTransition.NONE)
-            else changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), MapTransition.NONE)
+            val last = if (intent.getStringExtra("TARGET_LOCATION") == null) lastLocation() else null
+            when {
+                debugBiome != null -> enterBiomeAtNode(debugBiome, BiomeRegistry.definition(debugBiome)?.graph?.first()?.id ?: "", MapTransition.NONE)
+                // Makrosvět si pamatuje, kde jsi byl naposledy (AFK těžba tam pokračuje)
+                last != null -> changeBiome(last.first, last.second, MapTransition.NONE)
+                else -> changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), MapTransition.NONE)
+            }
             intent.getStringExtra("TARGET_LOCATION")?.let { triggerHotspotAction(it.lowercase()) }
         }
 
@@ -250,11 +265,59 @@ class MakromonMapActivity : AppCompatActivity() {
         super.onResume()
         if (::companionManager.isInitialized) companionManager.refresh()
         cz.uhk.macroflow.pokemon.audio.GameAudio.resume(this)
+        // AFK těžba / kácení: po návratu ukázat, co se za tu dobu udělalo (docs/adr/0035)
+        mapWorld.postDelayed({ reportAfk() }, 700)
     }
 
     override fun onPause() {
         cz.uhk.macroflow.pokemon.audio.GameAudio.pause()
+        saveLastLocation()
         super.onPause()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // POSLEDNÍ MÍSTO A AFK (docs/adr/0035)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun saveLastLocation() {
+        if (!::movementEngine.isInitialized) return
+        val p = movementEngine.getCurrentPosition()
+        gamePrefs.edit()
+            .putString("map_last_biome", currentBiome.name)
+            .putFloat("map_last_x", p.x).putFloat("map_last_y", p.y)
+            .putLong("map_last_seen", System.currentTimeMillis() / 1000)
+            .apply()
+    }
+
+    /** Uložené poslední místo na mapě (lokace + pozice), nebo null. */
+    private fun lastLocation(): Pair<BiomeType, PointF>? {
+        val b = gamePrefs.getString("map_last_biome", null)?.let { runCatching { BiomeType.valueOf(it) }.getOrNull() } ?: return null
+        if (BiomeRegistry.definition(b) == null) return null
+        val x = gamePrefs.getFloat("map_last_x", -1f); val y = gamePrefs.getFloat("map_last_y", -1f)
+        if (x !in 0f..1f || y !in 0f..1f) return null
+        return b to PointF(x, y)
+    }
+
+    private var afkChecking = false
+
+    /** Vybere AFK kusy a ukáže dřevěnou ceduli „Vítej zpět“ (jen po delší nepřítomnosti). */
+    private fun reportAfk() {
+        if (afkChecking || isFinishing) return
+        val lastSeen = gamePrefs.getLong("map_last_seen", 0L)
+        val now = System.currentTimeMillis() / 1000
+        val away = if (lastSeen > 0) now - lastSeen else 0L
+        afkChecking = true
+        val ctx = applicationContext
+        lifecycleScope.launch {
+            val res = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.skills.SkillStore.claimActivity(ctx, now)
+            }
+            afkChecking = false
+            refreshGatherPlaque()
+            if (res == null || away < 60 || res.claim.units == 0) return@launch
+            if (supportFragmentManager.backStackEntryCount > 0) return@launch
+            cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.afkReport(findViewById(R.id.mapRootContainer), away, res)
+        }
     }
 
     override fun onDestroy() {
@@ -411,6 +474,7 @@ class MakromonMapActivity : AppCompatActivity() {
         lastFreeTapTime = now
         lastClickedNode = ""
         movementEngine.currentSpeed = if (isDoubleTap) MovementEngine.FAST_SPEED else MovementEngine.NORMAL_SPEED
+        leaveGatherSpot(null)
         movementEngine.walkToPoint(worldX, worldY)
         return true
     }
@@ -427,6 +491,7 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     private fun triggerHotspotAction(nodeName: String) {
+        leaveGatherSpot(nodeName)
         val now = System.currentTimeMillis()
         val isDoubleClick = (nodeName == lastClickedNode && now - lastClickTime < DOUBLE_CLICK_TIME)
         lastClickTime = now
@@ -447,6 +512,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 "tezba" -> scanInMine()
                 cz.uhk.macroflow.pokemon.skills.MeadowLayout.TABLE_NODE -> openCraftingTable()
+                "strom_dub", "strom_briza", "strom_javor", "zila_med", "zila_stribro", "zila_zlato" ->
+                    cz.uhk.macroflow.pokemon.skills.GatherSpot.fromNode(nodeName)?.let { openGatherSpot(it) }
                 "zahon_1", "zahon_2", "zahon_3", "zahon_4" ->
                     cz.uhk.macroflow.pokemon.skills.MeadowLayout.plotIndex(nodeName)?.let { onPlot(it) }
                 "les_sever" -> tryEnterForest()
@@ -740,8 +807,8 @@ class MakromonMapActivity : AppCompatActivity() {
             val cave = BiomeRegistry.definition(currentBiome)?.cave
             when {
                 cave != null -> { placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave) }
-                currentBiome == BiomeType.MOUNTAINS -> placeShrineDecor(progress)
-                currentBiome == BiomeType.MEADOW -> placeMeadowWorkshop()
+                currentBiome == BiomeType.MOUNTAINS -> { placeShrineDecor(progress); placeGatherSpots() }
+                currentBiome == BiomeType.MEADOW -> { placeMeadowWorkshop(); placeGatherSpots() }
                 else -> {}
             }
         }
@@ -959,7 +1026,137 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // TĚŽBA A KÁCENÍ (docs/adr/0035): stromy, žíly, cedulka a dřevěná tabule
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private val gatherPlaques = HashMap<cz.uhk.macroflow.pokemon.skills.GatherSpot, cz.uhk.macroflow.pokemon.skills.ui.GatherPlaqueView>()
+
+    private fun placeGatherSpots() {
+        if (mapWorld.width == 0) return
+        val geo = cz.uhk.macroflow.pokemon.walk.MapGeometry(688, 1536, mapWorld.width, mapWorld.height)
+        cz.uhk.macroflow.pokemon.skills.GatherSpot.entries.filter { it.biome == currentBiome.name }.forEach { spot ->
+            val place = cz.uhk.macroflow.pokemon.skills.GatherLayout.PLACES[spot] ?: return@forEach
+            val (px, w, h) = cz.uhk.macroflow.pokemon.skills.GearArt.spot(spot)
+            val vw = (w * place.artScale * geo.scale).toInt(); val vh = (h * place.artScale * geo.scale).toInt()
+            val base = geo.toWorld(cz.uhk.macroflow.pokemon.walk.Pt(place.baseX.toFloat(), place.baseY.toFloat()))
+            addGroundDecor(pixelView(px, w, h, vw, vh).apply { x = base.x - vw / 2f; y = base.y - vh })
+            // cedulka nad místem (vidět jen když se tu zrovna těží)
+            val plaque = cz.uhk.macroflow.pokemon.skills.ui.GatherPlaqueView(this, place.artScale * geo.scale * 0.55f).apply {
+                layoutParams = FrameLayout.LayoutParams(wantedWidth, wantedHeight)
+                x = base.x - wantedWidth / 2f; y = base.y - vh - wantedHeight - 6
+                visibility = View.GONE
+                elevation = 6f
+                icon = cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(spot.resource)
+            }
+            addDecor(plaque)
+            gatherPlaques[spot] = plaque
+        }
+        refreshGatherPlaque()
+    }
+
+    private fun refreshGatherPlaque() {
+        val ctx = applicationContext
+        lifecycleScope.launch {
+            val info = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+                val a = SS.activity(ctx) ?: return@withContext null
+                val st = SS.state(ctx)
+                Triple(a, cz.uhk.macroflow.pokemon.skills.Gathering.secondsPerUnit(a.spot, SS.efficiency(ctx, a.spot, st)), st.afkCapHours(a.spot.skill))
+            }
+            gatherPlaques.forEach { (spot, v) ->
+                val on = info != null && info.first.spot == spot && info.second != null
+                v.visibility = if (on) View.VISIBLE else View.GONE
+                if (on) { v.secPerUnit = info!!.second!!; v.capHours = info.third; v.activity = info.first }
+            }
+            // stojí u místa, kde těží → čelem k němu
+            if (info != null && info.first.spot.biome == currentBiome.name) {
+                val node = BiomeRegistry.definition(currentBiome)?.graph?.find { it.id == info.first.spot.node }
+                val pos = movementEngine.getCurrentPosition()
+                if (node != null && kotlin.math.hypot(node.pos.x - pos.x, node.pos.y - pos.y) < 0.05f) movementEngine.face(1)
+            }
+        }
+    }
+
+    private fun openGatherSpot(spot: cz.uhk.macroflow.pokemon.skills.GatherSpot) {
+        val ctx = applicationContext
+        val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+        lifecycleScope.launch {
+            val info = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                val st = SS.state(ctx)
+                val eff = SS.efficiency(ctx, spot, st)
+                val sec = cz.uhk.macroflow.pokemon.skills.Gathering.secondsPerUnit(spot, eff)
+                val active = SS.activity(ctx)
+                val pending = if (active?.spot == spot && sec != null)
+                    cz.uhk.macroflow.pokemon.skills.Gathering.pending(active, System.currentTimeMillis() / 1000, sec, st.afkCapHours(spot.skill)) else 0
+                cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.GatherInfo(
+                    spot, SS.equipped(ctx, spot.toolSlot), eff, sec, st.gain(spot.skill, spot.xp.toDouble()),
+                    st.passive(spot.skill), st.afkCapHours(spot.skill), active, pending)
+            }
+            movementEngine.face(1)
+            cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.gatherMenu(findViewById(R.id.mapRootContainer), info,
+                onStart = {
+                    lifecycleScope.launch {
+                        val prev = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                            val now = System.currentTimeMillis() / 1000
+                            val r = SS.claimActivity(ctx, now)
+                            SS.startActivity(ctx, spot, now)
+                            r
+                        }
+                        val got = prev?.takeIf { it.claim.amount > 0 }?.let { "\nZ ${it.spot.label}: ${it.claim.amount}× ${it.spot.resource.label}." } ?: ""
+                        showMapToast("${if (spot.skill == cz.uhk.macroflow.pokemon.skills.Skill.MINING) "⛏️ Těžíš" else "🪓 Kácíš"}: ${spot.label}. Běží dál, i když Makrosvět zavřeš.$got")
+                        refreshGatherPlaque()
+                    }
+                },
+                onCollect = { collectGathering(stop = false) },
+                onStop = { collectGathering(stop = true) })
+        }
+    }
+
+    private fun collectGathering(stop: Boolean) {
+        val ctx = applicationContext
+        val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+        lifecycleScope.launch {
+            val r = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                val res = SS.claimActivity(ctx, System.currentTimeMillis() / 1000)
+                if (stop) SS.stopActivity(ctx)
+                res
+            }
+            val msg = when {
+                r == null -> null
+                r.claim.amount > 0 -> "Vybráno: ${r.claim.amount}× ${r.spot.resource.label}" +
+                    (if (r.claim.amount > r.claim.units) " (dvojité kusy!)" else "") +
+                    (r.xp?.let { "\n+${it.gained} XP ${it.skill.label}" + skillLevelText(it) } ?: "")
+                else -> null
+            }
+            showMapToast((msg ?: "Zatím nic hotového.") + if (stop) "\nPřestal jsi." else "")
+            refreshGatherPlaque()
+        }
+    }
+
+    /**
+     * Odchod od stromu / žíly ukončí těžbu (postava tam musí stát, jako v IdleOn) –
+     * hotové kusy se vyberou. Zavření Makrosvěta ji NEukončí, to je AFK.
+     */
+    private fun leaveGatherSpot(targetNode: String?) {
+        val ctx = applicationContext
+        lifecycleScope.launch {
+            val r = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+                val a = SS.activity(ctx) ?: return@withContext null
+                if (a.spot.node == targetNode) return@withContext null
+                val res = SS.claimActivity(ctx, System.currentTimeMillis() / 1000)
+                SS.stopActivity(ctx)
+                res
+            } ?: return@launch
+            showMapToast("Odešel jsi od: ${r.spot.label}." + if (r.claim.amount > 0) "\nVybráno ${r.claim.amount}× ${r.spot.resource.label}" +
+                (r.xp?.let { ", +${it.gained} XP ${it.skill.label}" } ?: "") else "")
+            refreshGatherPlaque()
+        }
+    }
+
     private fun clearDecor() {
+        gatherPlaques.clear()
         gardenView = null
         crystalAnimators.forEach { it.cancel() }
         crystalAnimators.clear()

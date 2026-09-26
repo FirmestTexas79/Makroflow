@@ -14,6 +14,10 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.pokemon.balls.Makroball
+import cz.uhk.macroflow.pokemon.skills.Gear
+import cz.uhk.macroflow.pokemon.skills.GearArt
+import cz.uhk.macroflow.pokemon.skills.GearSlot
+import cz.uhk.macroflow.pokemon.skills.GearTab
 import cz.uhk.macroflow.pokemon.skills.Resource
 import cz.uhk.macroflow.pokemon.skills.Skill
 import cz.uhk.macroflow.pokemon.skills.SkillArt
@@ -40,13 +44,19 @@ object JournalPages {
         state: SkillState,
         teamSize: Int,
         selected: Skill,
+        equipped: Map<GearSlot, Gear>,
+        gearTab: GearTab,
         onSelect: (Skill) -> Unit,
-        onUnlock: (SkillTree.Node) -> Unit
+        onUnlock: (SkillTree.Node) -> Unit,
+        onGearTab: (GearTab) -> Unit,
+        onSlot: (GearSlot) -> Unit
     ) {
+        // posun stránky zůstane i po překreslení (odemknutí uzlu, výběr dovednosti)
+        val oldScroll = (container.getChildAt(0) as? ScrollView)?.scrollY ?: 0
         container.removeAllViews()
         val ui = WoodUi(container.context)
         val u = 2f * ui.dp
-        val root = ui.column().apply { setPadding(ui.px(14f), ui.px(14f), ui.px(14f), ui.px(10f)) }
+        val root = ui.column().apply { setPadding(ui.px(14f), ui.px(14f), ui.px(14f), ui.px(18f)) }
 
         // Hlavička: portrét, jméno, celkový level
         val head = ui.row().apply {
@@ -69,8 +79,12 @@ object JournalPages {
         root.addView(head, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             .apply { marginEnd = ui.px(40f) })
 
+        // Vybavení (docs/adr/0035): záložky EQUIPS / ACCESS / TOOLS a jeden sloupec čtyř slotů
+        root.addView(equipment(ui, u, equipped, gearTab, onGearTab, onSlot),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) })
+
         val body = ui.row().apply { gravity = Gravity.TOP }
-        // Levý sloupec: tři dovednosti pod sebou
+        // Levý sloupec: dovednosti pod sebou
         val tiles = ui.column().apply { setPadding(0, ui.px(10f), ui.px(10f), 0) }
         Skill.entries.forEach { s ->
             val tile = FrameLayout(container.context).apply {
@@ -79,28 +93,71 @@ object JournalPages {
                 contentDescription = "${s.label}, level ${state.level(s)}"
             }
             val col = ui.column().apply { gravity = Gravity.CENTER_HORIZONTAL; setPadding(0, ui.px(6f), 0, ui.px(4f)) }
-            col.addView(ui.icon(SkillArt.skillIcon(s), SkillArt.ICON, SkillArt.ICON, 40f))
-            col.addView(outlined(ui.text("LV ${state.level(s)}", 17f, WHITE, Gravity.CENTER)))
+            col.addView(ui.icon(SkillArt.skillIcon(s), SkillArt.ICON, SkillArt.ICON, 34f))
+            col.addView(outlined(ui.text("LV ${state.level(s)}", 16f, WHITE, Gravity.CENTER)))
             tile.addView(col, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             if (state.availablePoints(s) > 0) {
                 tile.addView(outlined(ui.text("+${state.availablePoints(s)}", 15f, GOLD)).apply {
                     setPadding(0, ui.px(3f), ui.px(6f), 0)
                 }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.END or Gravity.TOP))
             }
-            tiles.addView(tile, LinearLayout.LayoutParams(ui.px(76f), ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = ui.px(8f) })
+            tiles.addView(tile, LinearLayout.LayoutParams(ui.px(70f), ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = ui.px(8f) })
         }
         body.addView(tiles)
 
         // Pravý sloupec: rozpis vybrané dovednosti
-        val detail = ui.column().apply { setPadding(0, ui.px(10f), 0, ui.px(16f)) }
+        val detail = ui.column().apply { setPadding(0, ui.px(10f), 0, ui.px(6f)) }
         skillDetail(ui, detail, state, selected, onUnlock)
+        body.addView(detail, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        root.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
         val scroll = ScrollView(container.context).apply {
             isVerticalScrollBarEnabled = false; isVerticalFadingEdgeEnabled = true; setFadingEdgeLength(ui.px(14f))
-            addView(detail)
+            addView(root)
         }
-        body.addView(scroll, ui.lp(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
-        root.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        container.addView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        container.addView(scroll, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        if (oldScroll > 0) scroll.post { scroll.scrollTo(0, oldScroll) }
+    }
+
+    /** Panel vybavení ve stylu IdleOn: hnědý rám, tři záložky, čtyři sloty. */
+    private fun equipment(ui: WoodUi, u: Float, equipped: Map<GearSlot, Gear>, tab: GearTab,
+                          onTab: (GearTab) -> Unit, onSlot: (GearSlot) -> Unit): View {
+        val panel = ui.column().apply {
+            background = BevelDrawable(u, Color.parseColor("#5A3E32"), Color.parseColor("#7A5646"), Color.parseColor("#3B281F"), Color.parseColor("#1E140C"))
+            setPadding(ui.px(8f), ui.px(8f), ui.px(8f), ui.px(8f))
+        }
+        val tabs = ui.row().apply { gravity = Gravity.CENTER }
+        GearTab.entries.forEach { t ->
+            tabs.addView(outlined(ui.text(t.label, 16f, if (t == tab) WHITE else Color.parseColor("#C9B8A8"), Gravity.CENTER)).apply {
+                background = BevelDrawable(1.5f * ui.dp,
+                    if (t == tab) Color.parseColor("#8A6450") else Color.parseColor("#4A3328"),
+                    if (t == tab) Color.parseColor("#B08A74") else Color.parseColor("#5E4236"),
+                    Color.parseColor("#2E1E16"), Color.parseColor("#1E140C"), selected = t == tab)
+                setPadding(ui.px(8f), ui.px(5f), ui.px(8f), ui.px(6f))
+                setOnClickListener { if (t != tab) onTab(t) }
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = ui.px(3f); marginEnd = ui.px(3f) })
+        }
+        panel.addView(tabs)
+        val slots = ui.row().apply { gravity = Gravity.CENTER; setPadding(0, ui.px(8f), 0, 0) }
+        GearSlot.of(tab).forEach { slot ->
+            val g = equipped[slot]
+            val f = FrameLayout(ui.ctx).apply {
+                background = BevelDrawable(2f * ui.dp, Color.parseColor("#B39384"), Color.parseColor("#CDB2A4"), Color.parseColor("#8A6F62"), Color.parseColor("#2E1E16"))
+                contentDescription = "${slot.label}: ${g?.label ?: "prázdné"}"
+                alpha = if (slot.locked) 0.6f else 1f
+                setOnClickListener { onSlot(slot) }
+            }
+            val pix = g?.let { GearArt.gearIcon(it) } ?: GearArt.ghost(slot)
+            f.addView(ui.icon(pix, GearArt.ICON, GearArt.ICON, 44f), FrameLayout.LayoutParams(ui.px(44f), ui.px(44f), Gravity.CENTER))
+            slots.addView(f, LinearLayout.LayoutParams(ui.px(62f), ui.px(62f)).apply { marginStart = ui.px(4f); marginEnd = ui.px(4f) })
+        }
+        panel.addView(slots)
+        val names = GearSlot.of(tab).joinToString("  ·  ") { sl -> equipped[sl]?.label ?: sl.label }
+        panel.addView(ui.text(names, 14f, Color.parseColor("#E8D8C8"), Gravity.CENTER).apply {
+            setPadding(0, ui.px(6f), 0, 0)
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        })
+        return panel
     }
 
     private fun skillDetail(ui: WoodUi, box: LinearLayout, state: SkillState, s: Skill, onUnlock: (SkillTree.Node) -> Unit) {
@@ -135,6 +192,16 @@ object JournalPages {
                 stat("Míst v týmu", "${state.teamSlots} / ${Team.MAX}")
             }
             Skill.CRAFTING -> stat("Šance na dvojitou výrobu", pct(passive))
+            Skill.MINING -> {
+                stat("Šance na dvojitou rudu (multiore)", pct(passive))
+                if (state.efficiencyBonus(s) > 0) stat("Efektivita krumpáče", "+" + pct(state.efficiencyBonus(s)))
+                stat("AFK nejvýš", "${state.afkCapHours(s)} h")
+            }
+            Skill.LOGGING -> {
+                stat("Šance na dvojité poleno (multilog)", pct(passive))
+                if (state.efficiencyBonus(s) > 0) stat("Efektivita sekery", "+" + pct(state.efficiencyBonus(s)))
+                stat("AFK nejvýš", "${state.afkCapHours(s)} h")
+            }
             Skill.HARVESTING -> {
                 stat("Šance na dvojitou sklizeň", pct(passive))
                 stat("Otevřené záhony", "${state.plotsOpen} / 4")
@@ -217,6 +284,8 @@ object JournalPages {
             "Z Makromonů" to listOf(res(Resource.ENERGY)),
             "Ze záhonů" to listOf(res(Resource.BERRY_GREEN), res(Resource.BERRY_BLUE), res(Resource.BERRY_BLACK)),
             "Semínka" to listOf(res(Resource.SEED_GREEN), res(Resource.SEED_BLUE), res(Resource.SEED_BLACK)),
+            "Z dolů" to listOf(res(Resource.ORE_COPPER), res(Resource.ORE_SILVER), res(Resource.ORE_GOLD)),
+            "Ze stromů" to listOf(res(Resource.LOG_OAK), res(Resource.LOG_BIRCH), res(Resource.LOG_MAPLE)),
             "Vyrobené" to Makroball.entries.map { Entry(it.id, it.label, it.description, it.pixels, Makroball.SIZE) }
         )
         sections.forEach { (title, entries) ->

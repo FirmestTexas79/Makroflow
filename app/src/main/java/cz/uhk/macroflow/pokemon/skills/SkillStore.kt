@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 object SkillStore {
 
     /** ID předmětů, které nejsou vidět v inventáři (interní stav). */
-    fun isInternal(itemId: String) = itemId.startsWith("skill_") || itemId.startsWith("garden_")
+    fun isInternal(itemId: String) = listOf("skill_", "garden_", "equip_", "gather_", "starter_").any { itemId.startsWith(it) }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -120,6 +120,69 @@ object SkillStore {
         add(ctx, ball.id, made)
         val xp = addXp(ctx, Skill.CRAFTING, st.gain(Skill.CRAFTING, Crafting.baseXp(ball).toDouble() * n))
         return made to xp
+    }
+
+    // ── Vybavení (docs/adr/0035) ──
+
+    fun equipped(ctx: Context, slot: GearSlot): Gear? = Gear.fromCode(count(ctx, slot.itemId))
+
+    fun equippedAll(ctx: Context): Map<GearSlot, Gear> {
+        val all = counts(ctx)
+        return GearSlot.entries.mapNotNull { sl -> Gear.fromCode(all[sl.itemId] ?: 0)?.let { sl to it } }.toMap()
+    }
+
+    /** Nasadí předmět (musí ho mít), null = sundat. */
+    fun equip(ctx: Context, slot: GearSlot, gear: Gear?): Boolean {
+        if (gear != null && count(ctx, gear.id) <= 0) return false
+        set(ctx, slot.itemId, gear?.code ?: 0)
+        return true
+    }
+
+    /** Startovní sekera a krumpáč (později odměna za úkol) – dají se jen jednou a hned nasadí. */
+    fun ensureStarterTools(ctx: Context): Boolean {
+        if (count(ctx, "starter_tools") > 0) return false
+        add(ctx, Gear.OLD_AXE.id, 1); add(ctx, Gear.OLD_PICKAXE.id, 1)
+        if (equipped(ctx, GearSlot.AXE) == null) set(ctx, GearSlot.AXE.itemId, Gear.OLD_AXE.code)
+        if (equipped(ctx, GearSlot.PICKAXE) == null) set(ctx, GearSlot.PICKAXE.itemId, Gear.OLD_PICKAXE.code)
+        set(ctx, "starter_tools", 1)
+        return true
+    }
+
+    // ── Těžba a kácení (AFK) ──
+
+    /** Efektivita pro místo: nasazený nástroj + level + strom. 0 = chybí nástroj. */
+    fun efficiency(ctx: Context, spot: GatherSpot, st: SkillState = state(ctx)): Int =
+        Gathering.efficiency(equipped(ctx, spot.toolSlot)?.power ?: 0, st.level(spot.skill), st.efficiencyBonus(spot.skill))
+
+    fun activity(ctx: Context): Gathering.Activity? =
+        Gathering.decode(count(ctx, Gathering.SPOT_ITEM), count(ctx, Gathering.SINCE_ITEM))
+
+    fun startActivity(ctx: Context, spot: GatherSpot, nowSec: Long) {
+        set(ctx, Gathering.SPOT_ITEM, spot.code)
+        set(ctx, Gathering.SINCE_ITEM, Gathering.encodeSince(nowSec))
+    }
+
+    fun stopActivity(ctx: Context) { set(ctx, Gathering.SPOT_ITEM, 0) }
+
+    data class GatherResult(val spot: GatherSpot, val claim: Gathering.Claim, val xp: XpResult?)
+
+    /**
+     * Vybere hotové kusy probíhající činnosti (suroviny + XP) a posune začátek počítání.
+     * Null = žádná činnost; bez nástroje nebo pod potřebnou efektivitou se nic nepřičte.
+     */
+    fun claimActivity(ctx: Context, nowSec: Long): GatherResult? {
+        val a = activity(ctx) ?: return null
+        val st = state(ctx)
+        val sec = Gathering.secondsPerUnit(a.spot, efficiency(ctx, a.spot, st))
+            ?: return GatherResult(a.spot, Gathering.Claim(0, 0, nowSec, 0, false), null).also {
+                set(ctx, Gathering.SINCE_ITEM, Gathering.encodeSince(nowSec))
+            }
+        val c = Gathering.claim(a, nowSec, sec, st.passive(a.spot.skill), st.afkCapHours(a.spot.skill))
+        set(ctx, Gathering.SINCE_ITEM, Gathering.encodeSince(c.newSince))
+        if (c.units == 0) return GatherResult(a.spot, c, null)
+        add(ctx, a.spot.resource.itemId, c.amount)
+        val xp = addXp(ctx, a.spot.skill, st.gain(a.spot.skill, a.spot.xp.toDouble() * c.units))
+        return GatherResult(a.spot, c, xp)
     }
 
     // ── Tým ──

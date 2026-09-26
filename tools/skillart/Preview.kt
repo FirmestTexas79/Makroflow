@@ -12,11 +12,15 @@ fun main(args: Array<String>) {
     items += Triple(SkillArt.plot(true), SkillArt.PLOT_W, SkillArt.PLOT_H)
     Berry.entries.forEach { b -> (0..2).forEach { s -> items += Triple(SkillArt.plant(b, s), SkillArt.PLANT, SkillArt.PLANT) } }
     items += Triple(SkillArt.craftingTable(), SkillArt.TABLE_W, SkillArt.TABLE_H)
+    Gear.entries.forEach { items += Triple(GearArt.gearIcon(it), 16, 16) }
+    items += Triple(GearArt.net(), 16, 16)
+    GearSlot.entries.forEach { items += Triple(GearArt.ghost(it), 16, 16) }
+    GatherSpot.entries.forEach { val (px, w, h) = GearArt.spot(it); items += Triple(px, w, h) }
     listOf(0f, 0.5f, 0.9f).forEach { items += Triple(SkillArt.hourglass(it), SkillArt.GLASS_W, SkillArt.GLASS_H) }
-    val s = 8; val cell = 26 * s; val cols = 6
+    val s = 7; val cell = 30 * s; val cols = 7
     val rows = (items.size + cols - 1) / cols
     val img = BufferedImage(cols * cell, rows * cell, BufferedImage.TYPE_INT_ARGB)
-    val g = img.createGraphics(); g.color = java.awt.Color(0x8FB84A); g.fillRect(0, 0, img.width, img.height)
+    val g = img.createGraphics(); g.color = java.awt.Color(0x7A5A40); g.fillRect(0, 0, img.width, img.height)
     items.forEachIndexed { i, (px, w, h) ->
         val ox = (i % cols) * cell + 8; val oy = (i / cols) * cell + 8
         for (y in 0 until h) for (x in 0 until w) { val c = px[y * w + x]; if (c != 0) for (dy in 0 until s) for (dx in 0 until s) img.setRGB(ox + x * s + dx, oy + y * s + dy, c) }

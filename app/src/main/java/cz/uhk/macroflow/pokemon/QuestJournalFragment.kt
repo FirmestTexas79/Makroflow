@@ -137,27 +137,67 @@ class QuestJournalFragment : Fragment() {
 
     private var selectedSkill = cz.uhk.macroflow.pokemon.skills.Skill.CATCHING
 
+    private var gearTab = cz.uhk.macroflow.pokemon.skills.GearTab.EQUIPS
+
     private fun renderCharacter() {
         val ctx = context?.applicationContext ?: return
+        val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
         viewLifecycleOwner.lifecycleScope.launch {
-            val (state, team) = withContext(Dispatchers.IO) {
-                cz.uhk.macroflow.pokemon.skills.SkillStore.state(ctx) to cz.uhk.macroflow.pokemon.skills.SkillStore.team(ctx)
+            val (state, team, equipped) = withContext(Dispatchers.IO) {
+                Triple(SS.state(ctx), SS.team(ctx), SS.equippedAll(ctx))
             }
             if (!isAdded) return@launch
             cz.uhk.macroflow.pokemon.skills.ui.JournalPages.character(
-                rootView.findViewById(R.id.characterPage), state, team.size, selectedSkill,
+                rootView.findViewById(R.id.characterPage), state, team.size, selectedSkill, equipped, gearTab,
                 onSelect = { selectedSkill = it; renderCharacter() },
                 onUnlock = { node ->
                     viewLifecycleOwner.lifecycleScope.launch {
-                        val ok = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.unlock(ctx, node.id) }
+                        val ok = withContext(Dispatchers.IO) { SS.unlock(ctx, node.id) }
                         if (ok) {
                             rootView.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
                             android.widget.Toast.makeText(ctx, "✨ Odemčeno: ${node.title}", android.widget.Toast.LENGTH_SHORT).show()
                         }
                         renderCharacter()
                     }
-                }
+                },
+                onGearTab = { gearTab = it; renderCharacter() },
+                onSlot = { slot -> openSlot(slot) }
             )
+        }
+    }
+
+    /** Výběr vybavení do slotu (dřevěné menu). */
+    private fun openSlot(slot: cz.uhk.macroflow.pokemon.skills.GearSlot) {
+        val ctx = context?.applicationContext ?: return
+        val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+        if (slot.locked) {
+            android.widget.Toast.makeText(ctx, "❔ Tenhle nástroj přijde do hry později.", android.widget.Toast.LENGTH_SHORT).show(); return
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (current, owned) = withContext(Dispatchers.IO) {
+                SS.equipped(ctx, slot) to cz.uhk.macroflow.pokemon.skills.Gear.fitting(slot).filter { SS.count(ctx, it.id) > 0 }
+            }
+            if (!isAdded) return@launch
+            val root = rootView as FrameLayout
+            cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, slot.label, current?.let { "Nasazeno: ${it.label}" } ?: "Slot je prázdný.") { ui, body, close ->
+                if (owned.isEmpty()) body.addView(ui.text("Zatím nemáš nic, co sem patří. Vybavení přinese výroba a úkoly.", 16f, ui.inkSoft))
+                owned.forEach { g ->
+                    val c = cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.card(ui)
+                    c.addView(ui.icon(cz.uhk.macroflow.pokemon.skills.GearArt.gearIcon(g), 16, 16, 40f))
+                    val col = ui.column().apply { setPadding(ui.px(10f), 0, ui.px(6f), 0) }
+                    col.addView(ui.text(g.label, 19f)); col.addView(ui.text(g.description, 15f, ui.inkSoft))
+                    c.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    val on = current == g
+                    c.addView(ui.button(if (on) "Sundat" else "Nasadit") {
+                        close()
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            withContext(Dispatchers.IO) { SS.equip(ctx, slot, if (on) null else g) }
+                            renderCharacter()
+                        }
+                    })
+                    body.addView(c)
+                }
+            }
         }
     }
 

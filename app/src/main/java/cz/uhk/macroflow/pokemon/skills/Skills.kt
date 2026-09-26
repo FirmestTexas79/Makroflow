@@ -12,7 +12,10 @@ import kotlin.random.Random
 enum class Skill(val id: String, val label: String, val verb: String) {
     CATCHING("catching", "Chytání", "chytáním Makromonů"),
     CRAFTING("crafting", "Výroba", "výrobou u pracovního stolu"),
-    HARVESTING("harvesting", "Pěstování", "sklizní bobulí ze záhonů");
+    HARVESTING("harvesting", "Pěstování", "sklizní bobulí ze záhonů"),
+    /** docs/adr/0035 – těží se krumpáčem v horách, i když jsi pryč (AFK). */
+    MINING("mining", "Těžba", "těžbou rud krumpáčem"),
+    LOGGING("logging", "Kácení", "kácením stromů sekerou");
 
     /** Předmět v user_items, jehož množství = celkové nasbírané XP (synchronizuje se s Firebase). */
     val xpItemId: String get() = "skill_xp_$id"
@@ -103,6 +106,10 @@ object SkillTree {
         object BasicEquipment : Effect()
         /** Kratší růst bobulí (0,15 = o 15 % rychleji). */
         data class FasterGrowth(val by: Double) : Effect()
+        /** Efektivita nástroje dané dovednosti (0,2 = +20 %). */
+        data class Efficiency(val add: Double) : Effect()
+        /** Delší AFK – kolik hodin navíc se počítá, když jsi pryč. */
+        data class AfkHours(val hours: Int) : Effect()
     }
 
     data class Node(
@@ -130,7 +137,15 @@ object SkillTree {
 
         Node("more_plots", Skill.HARVESTING, "Nové záhony", "Zpřístupnilo se ti více záhonů (opravíš dva zničené).", 1, effect = Effect.MorePlots),
         Node("harvest_xp", Skill.HARVESTING, "Zelená ruka", "+15 % XP za sklizeň.", 1, "more_plots", Effect.XpBonus(0.15)),
-        Node("fast_growth", Skill.HARVESTING, "Hnojivo", "Bobule rostou o 15 % rychleji.", 2, "more_plots", Effect.FasterGrowth(0.15))
+        Node("fast_growth", Skill.HARVESTING, "Hnojivo", "Bobule rostou o 15 % rychleji.", 2, "more_plots", Effect.FasterGrowth(0.15)),
+
+        Node("mine_eff", Skill.MINING, "Pevný úchop", "+20 % efektivita krumpáče.", 1, effect = Effect.Efficiency(0.20)),
+        Node("mine_xp", Skill.MINING, "Horník", "+15 % XP za těžbu.", 1, "mine_eff", Effect.XpBonus(0.15)),
+        Node("mine_afk", Skill.MINING, "Dlouhá směna", "Když jsi pryč, těží se o 12 h déle.", 2, "mine_eff", Effect.AfkHours(12)),
+
+        Node("log_eff", Skill.LOGGING, "Nabroušené ostří", "+20 % efektivita sekery.", 1, effect = Effect.Efficiency(0.20)),
+        Node("log_xp", Skill.LOGGING, "Dřevorubec", "+15 % XP za kácení.", 1, "log_eff", Effect.XpBonus(0.15)),
+        Node("log_afk", Skill.LOGGING, "Celodenní šichta", "Když jsi pryč, kácí se o 12 h déle.", 2, "log_eff", Effect.AfkHours(12))
     )
 
     fun node(id: String): Node? = NODES.firstOrNull { it.id == id }
@@ -175,6 +190,14 @@ data class SkillState(
     fun xpAdditive(skill: Skill): List<Double> =
         SkillTree.NODES.filter { it.id in unlocked && it.skill == skill }.map { it.effect }
             .filterIsInstance<SkillTree.Effect.XpBonus>().map { it.add }
+
+    private fun effectsOf(skill: Skill) = SkillTree.NODES.filter { it.id in unlocked && it.skill == skill }.map { it.effect }
+
+    /** Bonus efektivity nástroje ze stromu (0,2 = +20 %). */
+    fun efficiencyBonus(skill: Skill): Double = effectsOf(skill).filterIsInstance<SkillTree.Effect.Efficiency>().sumOf { it.add }
+
+    /** Kolik hodin AFK se nejvýš započítá (základ 12 h + strom). */
+    fun afkCapHours(skill: Skill): Int = 12 + effectsOf(skill).filterIsInstance<SkillTree.Effect.AfkHours>().sumOf { it.hours }
 
     fun xpMultiplier(skill: Skill): Double = SkillMath.xpMultiplier(xpAdditive(skill))
 

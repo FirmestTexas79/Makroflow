@@ -294,7 +294,8 @@ class InventoryFragment : Fragment() {
             val med = cz.uhk.macroflow.pokemon.status.MedItem.from(item.itemId)
             val crystal = cz.uhk.macroflow.pokemon.cave.CrystalColor.fromItem(item.itemId)
             val resource = cz.uhk.macroflow.pokemon.skills.Resource.from(item.itemId)
-            holder.tvName.text = ball?.label ?: med?.label ?: crystal?.label ?: resource?.label ?: when (item.itemId) {
+            val gear = cz.uhk.macroflow.pokemon.skills.Gear.from(item.itemId)
+            holder.tvName.text = ball?.label ?: med?.label ?: crystal?.label ?: resource?.label ?: gear?.label ?: when (item.itemId) {
                 "lure_lamp"  -> "Spooky Plate"
                 else         -> item.itemId
             }
@@ -308,7 +309,10 @@ class InventoryFragment : Fragment() {
                 else         -> ""
             }
 
-            if (resource != null) {
+            if (gear != null) {
+                holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(gear,
+                    cz.uhk.macroflow.pokemon.skills.GearArt.gearIcon(gear), 16, (64 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (resource != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(resource,
                     cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(resource), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM,
                     (64 * holder.itemView.resources.displayMetrics.density).toInt()))
@@ -330,6 +334,10 @@ class InventoryFragment : Fragment() {
             }
 
             holder.itemView.setOnClickListener {
+                if (gear != null) {
+                    Toast.makeText(requireContext(), "${gear.label}: ${gear.description} Nasadíš v deníku (Postava → TOOLS).", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
                 if (resource != null) {
                     Toast.makeText(requireContext(), "${resource.label}: ${resource.description}", Toast.LENGTH_LONG).show()
                     return@setOnClickListener
