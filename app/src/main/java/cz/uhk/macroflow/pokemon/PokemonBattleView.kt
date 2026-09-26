@@ -29,10 +29,21 @@ class PokemonBattleView @JvmOverloads constructor(
     private val GBH = 144
 
     private val C_BG     = 0xFFF8F8F8.toInt()
-    private val C_STRIPE = 0xFFE0E0E0.toInt()
-    private val C_PLAT_L = 0xFFB8B8B8.toInt()
-    private val C_PLAT_D = 0xFF787878.toInt()
-    private val C_PLAT_E = 0xFF383838.toInt()
+    // HUD nad 3D arénou: průsvitný tmavý panel, bílé písmo se stínem (docs/adr/0038)
+    private val C_HUD_BG   = 0x9E0C1420.toInt()
+    private val C_HUD_LINE = 0xFFF0F0F0.toInt()
+    private val C_HUD_TEXT = 0xFFF8F8F8.toInt()
+    private val C_HUD_SHADOW = 0xFF101418.toInt()
+
+    /** Hráčův Makromon: stojí blíž kameře, nohy má pod dolním okrajem scény. */
+    private val PLAYER_FOOT_Y = cz.uhk.macroflow.pokemon.arena.Arenas.PLAYER_Y / 3f
+    private val PLAYER_H = 46f
+
+    // ── Voxelová aréna podle lokace ──
+    private var arenaBmp: Bitmap? = null
+    private var arenaTheme = cz.uhk.macroflow.pokemon.arena.ArenaTheme.MEADOW
+    private val arenaDst = RectF()
+    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x5A000000 }
     private val C_UI_BG  = 0xFFF8F8F8.toInt()
     private val C_BORDER = 0xFF181818.toInt()
     private val C_TEXT   = 0xFF181818.toInt()
@@ -113,6 +124,7 @@ class PokemonBattleView @JvmOverloads constructor(
         // --- 🌍 NAČTENÍ AKTUÁLNÍHO BIOMU ---
         val biomeStr = prefs.getString("LAST_BIOME", BiomeType.TOWN.name)
         val currentBiome = BiomeType.valueOf(biomeStr!!)
+        startArena(currentBiome)
 
         Thread {
             val db = AppDatabase.getDatabase(context)
@@ -229,6 +241,28 @@ class PokemonBattleView @JvmOverloads constructor(
         maybeStartIntro()
     }
 
+    /** Vykreslí 3D arénu lokace na pozadí (trvá desítky až stovky ms – běží během intra). */
+    private fun startArena(biome: BiomeType) {
+        val theme = cz.uhk.macroflow.pokemon.arena.ArenaTheme.fromBiome(biome.name)
+        arenaTheme = theme
+        val seed = Random.nextInt(1_000_000)
+        Thread {
+            val px = runCatching { cz.uhk.macroflow.pokemon.arena.Arenas.render(theme, seed) }.getOrNull() ?: return@Thread
+            val bmp = Bitmap.createBitmap(px, cz.uhk.macroflow.pokemon.arena.Arenas.W, cz.uhk.macroflow.pokemon.arena.Arenas.H, Bitmap.Config.ARGB_8888)
+            handler.post { arenaBmp = bmp; invalidate() }
+        }.start()
+    }
+
+    /** Barva pozadí, než se aréna dopočítá. */
+    private fun arenaFallback(): Pair<Int, Int> = when (arenaTheme) {
+        cz.uhk.macroflow.pokemon.arena.ArenaTheme.TOWN -> 0xFFB8DCF0.toInt() to 0xFFC9CDD2.toInt()
+        cz.uhk.macroflow.pokemon.arena.ArenaTheme.FOREST -> 0xFF7E9E78.toInt() to 0xFF3B6E2C.toInt()
+        cz.uhk.macroflow.pokemon.arena.ArenaTheme.MOUNTAINS -> 0xFFC4D6E6.toInt() to 0xFF858075.toInt()
+        cz.uhk.macroflow.pokemon.arena.ArenaTheme.CAVE_OPEN, cz.uhk.macroflow.pokemon.arena.ArenaTheme.CAVE_MAZE -> 0xFF0A080C.toInt() to 0xFF2E2B2C.toInt()
+        cz.uhk.macroflow.pokemon.arena.ArenaTheme.WATER -> 0xFFB8DCF0.toInt() to 0xFF2A74AA.toInt()
+        cz.uhk.macroflow.pokemon.arena.ArenaTheme.MEADOW -> 0xFFB8DCF0.toInt() to 0xFF58A03A.toInt()
+    }
+
     private fun maybeStartIntro() {
         handler.post {
             if (!introStarted) {
@@ -258,8 +292,20 @@ class PokemonBattleView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         if (!::gs.isInitialized) { canvas.drawColor(C_BG); return }
         renderFrame()
-        canvas.drawBitmap(gbBmp, srcR, dstR, sp)
+        // aréna pod herním plátnem (horních 96 řádků), plátno má nahoře průhledno
+        arenaDst.set(dstR.left, dstR.top, dstR.right, gbY(96f))
+        val arena = arenaBmp
+        if (arena != null) canvas.drawBitmap(arena, null, arenaDst, sp)
+        else {
+            val (sky, ground) = arenaFallback()
+            fp.color = sky; canvas.drawRect(arenaDst.left, arenaDst.top, arenaDst.right, gbY(40f), fp)
+            fp.color = ground; canvas.drawRect(arenaDst.left, gbY(40f), arenaDst.right, arenaDst.bottom, fp)
+        }
+        canvas.save()
+        canvas.clipRect(arenaDst)
         drawSpritesOverlay(canvas)
+        canvas.restore()
+        canvas.drawBitmap(gbBmp, srcR, dstR, sp)
     }
 
     private fun drawSpritesOverlay(canvas: Canvas) {
@@ -273,6 +319,10 @@ class PokemonBattleView @JvmOverloads constructor(
                 val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
                 val sx = gbX(112f) - targetW / 2f + animOffset
                 val sy = gbY(54f) - targetH
+                if (enemyAbsorb <= 0f) {
+                    val sw = targetW * 0.42f
+                    canvas.drawOval(sx + targetW / 2f - sw, gbY(52.6f), sx + targetW / 2f + sw, gbY(55.4f), shadowPaint)
+                }
                 if (gs.isEnemyShiny && enemyAbsorb == 0f) drawShinyGlow(canvas, sx + targetW / 2f, sy + targetH / 2f, targetH)
                 if (enemyAbsorb <= 0f) {
                     canvas.drawBitmap(bmp, null, RectF(sx, sy, sx + targetW, sy + targetH), spSmooth)
@@ -298,10 +348,10 @@ class PokemonBattleView @JvmOverloads constructor(
         drawStatusFx(canvas)
 
         playerBitmap?.let { bmp ->
-            val targetH = 36f * sc
+            val targetH = PLAYER_H * sc
             val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
             val cx = gbX(48f) - animOffset
-            val sy = gbY(82f) - targetH
+            val sy = gbY(PLAYER_FOOT_Y) - targetH
             canvas.save()
             canvas.scale(-1f, 1f, cx, 0f)
             canvas.drawBitmap(bmp, null, RectF(cx - targetW / 2f, sy, cx + targetW / 2f, sy + targetH), spSmooth)
@@ -327,34 +377,23 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun renderFrame() {
         val c = gbCvs
-        fp.color = C_BG; c.drawRect(0f, 0f, 160f, 96f, fp)
-        fp.color = C_STRIPE
-        for (y in 0 until 56 step 6)
-            c.drawRect(0f, (y + 4).toFloat(), 160f, (y + 6).toFloat(), fp)
-        drawPlatform(c, 80, 44, 64, 10)
-        drawPlatform(c, 16, 72, 64, 10)
+        c.drawColor(0, PorterDuff.Mode.CLEAR)
         drawEnemyHUD(c)
         drawPlayerHUD(c)
         drawBottomUI(c)
         if (flashOn) { fp.color = 0xBBFFFFFF.toInt(); c.drawRect(0f, 0f, 160f, 144f, fp) }
     }
 
-    private fun drawPlatform(c: Canvas, x: Int, y: Int, w: Int, h: Int) {
-        fp.color = C_PLAT_L; c.drawRect(x.toFloat(), y.toFloat(), (x+w).toFloat(), (y+3).toFloat(), fp)
-        fp.color = C_PLAT_D; c.drawRect(x.toFloat(), (y+3).toFloat(), (x+w).toFloat(), (y+h-2).toFloat(), fp)
-        fp.color = C_PLAT_E; c.drawRect(x.toFloat(), (y+h-2).toFloat(), (x+w).toFloat(), (y+h).toFloat(), fp)
-    }
-
     private fun drawEnemyHUD(c: Canvas) {
-        val x = 1; val y = 1; val w = 76; val h = 28; drawUIBox(c, x, y, w, h)
-        PokemonSprites.drawText(c, gs.enemy.name.take(7), x+3, y+3, C_TEXT, fp)
-        PokemonSprites.drawText(c, ":L${gs.enemy.level}", x+48, y+3, C_TEXT, fp)
-        PokemonSprites.drawText(c, "HP", x+3, y+13, C_TEXT, fp)
+        val x = 1; val y = 1; val w = 76; val h = 28; drawHudBox(c, x, y, w, h, rightBracket = true)
+        hudText(c, gs.enemy.name.take(7), x+3, y+3)
+        hudText(c, ":L${gs.enemy.level}", x+48, y+3)
+        hudText(c, "HP", x+3, y+13)
         drawHPBar(c, x+16, y+13, 54, 5, gs.enemy.currentHp, gs.enemy.maxHp)
         // Třetí řádek: stupně statistik (A = útok, D = obrana), jinak štítek shiny
         val stages = enemyCond.stagesLabel
-        if (stages != null) PokemonSprites.drawText(c, stages, x+3, y+20, 0xFF3A5AA8.toInt(), fp)
-        else if (gs.isEnemyShiny) PokemonSprites.drawText(c, "*SHINY", x+3, y+20, 0xFFC08A00.toInt(), fp)
+        if (stages != null) hudText(c, stages, x+3, y+20, 0xFF9EC0FF.toInt())
+        else if (gs.isEnemyShiny) hudText(c, "*SHINY", x+3, y+20, 0xFFFFD54F.toInt())
         enemyCond.tag?.let { drawStatusTag(c, it, x + 51, y + 19) }
     }
 
@@ -369,15 +408,35 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private fun drawPlayerHUD(c: Canvas) {
-        val x = 84; val y = 58; val w = 75; val h = 37; drawUIBox(c, x, y, w, h)
-        PokemonSprites.drawText(c, gs.player.name.take(7), x+3, y+3, C_TEXT, fp)
-        PokemonSprites.drawText(c, ":L${gs.player.level}", x+42, y+3, C_TEXT, fp)
-        PokemonSprites.drawText(c, "HP", x+3, y+13, C_TEXT, fp)
+        val x = 84; val y = 58; val w = 75; val h = 37; drawHudBox(c, x, y, w, h, rightBracket = false)
+        hudText(c, gs.player.name.take(7), x+3, y+3)
+        hudText(c, ":L${gs.player.level}", x+42, y+3)
+        hudText(c, "HP", x+3, y+13)
         drawHPBar(c, x+16, y+13, 54, 5, gs.player.currentHp, gs.player.maxHp)
         val hp = "${gs.player.currentHp}/${gs.player.maxHp}"
-        PokemonSprites.drawText(c, hp, x+w-3-hp.length*6, y+22, C_TEXT, fp)
+        hudText(c, hp, x+w-3-hp.length*6, y+22)
         playerCond.tag?.let { drawStatusTag(c, it, x + 3, y + 21) }
-        playerCond.stagesLabel?.let { PokemonSprites.drawText(c, it, x + 3, y + 29, 0xFF3A5AA8.toInt(), fp) }
+        playerCond.stagesLabel?.let { hudText(c, it, x + 3, y + 29, 0xFF9EC0FF.toInt()) }
+    }
+
+    /** Text HUDu nad arénou: bílý s tmavým stínem, aby byl čitelný na každém pozadí. */
+    private fun hudText(c: Canvas, s: String, x: Int, y: Int, color: Int = C_HUD_TEXT) {
+        PokemonSprites.drawText(c, s, x + 1, y + 1, C_HUD_SHADOW, fp)
+        PokemonSprites.drawText(c, s, x, y, color, fp)
+    }
+
+    /** Průsvitný panel HUDu s „hranatou závorkou“ ve stylu Game Boye (spodní hrana + jedna svislá). */
+    private fun drawHudBox(c: Canvas, x: Int, y: Int, w: Int, h: Int, rightBracket: Boolean) {
+        fp.color = C_HUD_BG; c.drawRect(x.toFloat(), y.toFloat(), (x + w).toFloat(), (y + h).toFloat(), fp)
+        fp.color = C_HUD_LINE
+        c.drawRect((x + 2).toFloat(), (y + h - 2).toFloat(), (x + w - 2).toFloat(), (y + h - 1).toFloat(), fp)
+        val vx = if (rightBracket) x + w - 3 else x + 2
+        c.drawRect(vx.toFloat(), (y + h / 2).toFloat(), (vx + 1).toFloat(), (y + h - 1).toFloat(), fp)
+        // šipka na konci závorky
+        val tip = if (rightBracket) x + 2 else x + w - 3
+        val dir = if (rightBracket) 1 else -1
+        c.drawRect(tip.toFloat(), (y + h - 3).toFloat(), (tip + 1).toFloat(), (y + h - 2).toFloat(), fp)
+        c.drawRect((tip + dir).toFloat(), (y + h - 4).toFloat(), (tip + dir + 1).toFloat(), (y + h - 3).toFloat(), fp)
     }
 
     private fun drawHPBar(c: Canvas, x: Int, y: Int, w: Int, h: Int, cur: Int, max: Int) {
@@ -1150,7 +1209,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
     /** Střed Makromona v herních souřadnicích (hráč vlevo dole, soupeř vpravo nahoře). */
     private fun centerGb(onPlayer: Boolean): PointF =
-        if (onPlayer) PointF(48f - gs.introOffset * 100f, 82f - 18f)
+        if (onPlayer) PointF(48f - gs.introOffset * 100f, PLAYER_FOOT_Y - PLAYER_H * 0.5f)
         else PointF(112f + gs.introOffset * 100f, 54f - enemySpriteHeight() / 2f)
 
     private fun drawStatusFx(canvas: Canvas) {
