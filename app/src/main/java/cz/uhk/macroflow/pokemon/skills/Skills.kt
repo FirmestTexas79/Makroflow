@@ -73,7 +73,8 @@ object SkillMath {
      * [multipliers] = samostatné násobitele (2 = ×2) – násobí celý výsledek.
      */
     fun gain(base: Double, additive: List<Double> = emptyList(), multipliers: List<Double> = emptyList(), time: Double = 1.0): Int =
-        floor(base * (1 + additive.sum()) * multipliers.fold(1.0) { a, m -> a * m } * time).toInt().coerceAtLeast(0)
+        // +1e-9: 100 × 1,15 = 114,999… by se jinak zaokrouhlilo na 114
+        floor(base * (1 + additive.sum()) * multipliers.fold(1.0) { a, m -> a * m } * time + 1e-9).toInt().coerceAtLeast(0)
 
     /** Celkový násobitel XP (pro zobrazení): (1 + ΣA) × ΠM. */
     fun xpMultiplier(additive: List<Double>, multipliers: List<Double> = emptyList()): Double =
@@ -132,7 +133,7 @@ object SkillTree {
         Node("team_5", Skill.CATCHING, "Pětice", "Můžeš mít v týmu až PĚT Makromonů.", 2, "team_4", Effect.TeamSlot),
         Node("team_6", Skill.CATCHING, "Plný tým", "Můžeš mít v týmu až ŠEST Makromonů.", 3, "team_5", Effect.TeamSlot),
 
-        Node("basic_gear", Skill.CRAFTING, "Základní vybavení", "Můžeš vyrábět základní vybavení (recepty přibudou brzy).", 1, effect = Effect.BasicEquipment),
+        Node("basic_gear", Skill.CRAFTING, "Základní vybavení", "Můžeš vyrábět dobrodruhův set u pracovního stolu na louce.", 1, effect = Effect.BasicEquipment),
         Node("craft_xp", Skill.CRAFTING, "Zručné ruce", "+15 % XP za výrobu.", 1, "basic_gear", Effect.XpBonus(0.15)),
 
         Node("more_plots", Skill.HARVESTING, "Nové záhony", "Zpřístupnilo se ti více záhonů (opravíš dva zničené).", 1, effect = Effect.MorePlots),
@@ -155,7 +156,9 @@ object SkillTree {
 /** Stav dovedností hráče (XP a odemčené uzly) + všechno, co se z něj počítá. */
 data class SkillState(
     val xp: Map<Skill, Long> = emptyMap(),
-    val unlocked: Set<String> = emptySet()
+    val unlocked: Set<String> = emptySet(),
+    /** Nasazené vybavení – jeho bonusy se přičítají (docs/adr/0039). */
+    val gear: Set<Gear> = emptySet()
 ) {
     fun totalXp(skill: Skill): Long = xp[skill] ?: 0L
     fun level(skill: Skill): Int = SkillMath.levelOf(totalXp(skill))
@@ -186,10 +189,14 @@ data class SkillState(
 
     val growthSpeedup: Double get() = effects().filterIsInstance<SkillTree.Effect.FasterGrowth>().sumOf { it.by }
 
-    /** Aditivní XP bonusy dané dovednosti (ze stromu). */
+    /** Aditivní XP bonusy dané dovednosti (ze stromu a z nasazeného vybavení). */
     fun xpAdditive(skill: Skill): List<Double> =
         SkillTree.NODES.filter { it.id in unlocked && it.skill == skill }.map { it.effect }
-            .filterIsInstance<SkillTree.Effect.XpBonus>().map { it.add }
+            .filterIsInstance<SkillTree.Effect.XpBonus>().map { it.add } +
+            gear.mapNotNull { it.xpBonus[skill] }
+
+    /** Plochý bonus k efektivitě z vybavení (pantofle +50). */
+    fun gearEfficiency(skill: Skill): Int = gear.sumOf { it.efficiencyBonus[skill] ?: 0 }
 
     private fun effectsOf(skill: Skill) = SkillTree.NODES.filter { it.id in unlocked && it.skill == skill }.map { it.effect }
 

@@ -42,10 +42,29 @@ enum class Gear(
     val label: String,
     val description: String,
     /** Síla nástroje = základ efektivity těžby / kácení. */
-    val power: Int
+    val power: Int,
+    /** Bonus k XP dovedností (0,1 = +10 %), sčítá se s bonusy ze stromu. */
+    val xpBonus: Map<Skill, Double> = emptyMap(),
+    /** Plochý bonus k efektivitě těžby / kácení (jen s nástrojem v ruce). */
+    val efficiencyBonus: Map<Skill, Int> = emptyMap()
 ) {
     OLD_AXE("tool_axe_old", 1, GearSlot.AXE, "Stará sekera", "Otupená, ale pořád seká. Síla 10.", 10),
-    OLD_PICKAXE("tool_pickaxe_old", 2, GearSlot.PICKAXE, "Starý krumpáč", "Rezavý, ale kámen rozbije. Síla 10.", 10);
+    OLD_PICKAXE("tool_pickaxe_old", 2, GearSlot.PICKAXE, "Starý krumpáč", "Rezavý, ale kámen rozbije. Síla 10.", 10),
+
+    // ── Dobrodruhův set (docs/adr/0039) ──
+    ADV_CAP("gear_adv_cap", 3, GearSlot.HELMET, "Dobrodruhova čepice",
+        "Zelená čepice s pérem. +10 % XP za chytání.", 0, xpBonus = mapOf(Skill.CATCHING to 0.10)),
+    ADV_TUNIC("gear_adv_tunic", 4, GearSlot.CHEST, "Dobrodruhova tunika",
+        "Pevná tunika s opaskem. +10 % XP za výrobu.", 0, xpBonus = mapOf(Skill.CRAFTING to 0.10)),
+    ADV_PANTS("gear_adv_pants", 5, GearSlot.LEGS, "Dobrodruhovy tepláky",
+        "Pohodlné tepláky s pruhem. +10 % XP za pěstování.", 0, xpBonus = mapOf(Skill.HARVESTING to 0.10)),
+    ADV_SLIPPERS("gear_adv_slippers", 6, GearSlot.BOOTS, "Dobrodruhovy pantofle",
+        "Huňaté pantofle – kdo by řekl, že se v nich tak dobře těží. +50 k efektivitě těžby a kácení, +15 % XP za těžbu a kácení.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.15, Skill.LOGGING to 0.15),
+        efficiencyBonus = mapOf(Skill.MINING to 50, Skill.LOGGING to 50));
+
+    /** Dá se vyrobit u pracovního stolu. */
+    val craftable: Boolean get() = GearCrafting.recipe(this) != null
 
     companion object {
         fun from(id: String?) = entries.firstOrNull { it.id == id }
@@ -102,8 +121,8 @@ object Gathering {
     const val EPOCH = Garden.EPOCH
 
     /** Efektivita = (síla nástroje + 2 za každý level nad první) × (1 + bonus ze stromu). */
-    fun efficiency(toolPower: Int, level: Int, treeBonus: Double): Int =
-        if (toolPower <= 0) 0 else floor((toolPower + 2 * (level - 1)) * (1 + treeBonus)).toInt()
+    fun efficiency(toolPower: Int, level: Int, treeBonus: Double, gearFlat: Int = 0): Int =
+        if (toolPower <= 0) 0 else floor((toolPower + 2 * (level - 1)) * (1 + treeBonus)).toInt() + gearFlat
 
     /**
      * Sekundy na jeden kus: základ × potřebná / tvoje efektivita, nejvýš 10× rychleji.
@@ -175,4 +194,25 @@ object Gathering {
             else -> "${sec.coerceAtLeast(0)} s"
         }
     }
+}
+
+/** Recepty na vybavení u pracovního stolu (docs/adr/0039). */
+object GearCrafting {
+    val SET = listOf(Gear.ADV_CAP, Gear.ADV_TUNIC, Gear.ADV_PANTS, Gear.ADV_SLIPPERS)
+
+    fun recipe(g: Gear): Map<String, Int>? = when (g) {
+        Gear.ADV_CAP -> linkedMapOf(Resource.ENERGY.itemId to 5, Resource.BERRY_BLUE.itemId to 3)
+        Gear.ADV_TUNIC -> linkedMapOf(Resource.LOG_OAK.itemId to 15, Resource.BERRY_GREEN.itemId to 10)
+        Gear.ADV_PANTS -> linkedMapOf(Resource.ORE_COPPER.itemId to 15, Resource.BERRY_BLACK.itemId to 1)
+        Gear.ADV_SLIPPERS -> linkedMapOf(Resource.ORE_SILVER.itemId to 5, Resource.LOG_BIRCH.itemId to 5)
+        else -> null
+    }
+
+    /** XP Výroby za kus – těžší recept, víc XP. */
+    fun xp(g: Gear): Int = when (g) {
+        Gear.ADV_CAP -> 60; Gear.ADV_TUNIC -> 90; Gear.ADV_PANTS -> 110; Gear.ADV_SLIPPERS -> 150; else -> 0
+    }
+
+    fun canCraft(g: Gear, owned: Map<String, Int>): Boolean =
+        recipe(g)?.all { (id, n) -> (owned[id] ?: 0) >= n } ?: false
 }

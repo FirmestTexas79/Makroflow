@@ -78,6 +78,89 @@ object GearArt {
     fun gearIcon(g: Gear): IntArray = when (g) {
         Gear.OLD_AXE -> axe()
         Gear.OLD_PICKAXE -> pickaxe()
+        Gear.ADV_CAP -> fromRows(CAP)
+        Gear.ADV_TUNIC -> fromRows(TUNIC)
+        Gear.ADV_PANTS -> fromRows(PANTS)
+        Gear.ADV_SLIPPERS -> fromRows(SLIPPERS)
+    }
+
+    // ── Dobrodruhův set 16 × 16 (docs/adr/0039) ─────────────────────────────
+
+    private val SET_COLORS = mapOf(
+        // čepice
+        'G' to c(0xFF4E8A3A), 'L' to c(0xFF7CB85A), 'g' to c(0xFF2E5A24), 'R' to c(0xFFD84838), 'r' to c(0xFF8E2A20), 'B' to c(0xFF6B4423), 'D' to c(0xFF3E6B2E),
+        // tunika
+        'T' to c(0xFF8E6038), 'U' to c(0xFFB8864E), 't' to c(0xFF5E3E22), 'k' to c(0xFF3A2A18), 'Y' to c(0xFFE8C04A),
+        // tepláky
+        'P' to c(0xFF8A8F98), 'Q' to c(0xFFA8ADB6), 'S' to c(0xFFF0F0F0), 'b' to c(0xFF5A5E66), 'w' to c(0xFFE8E4DA),
+        // pantofle
+        'H' to c(0xFFC08A5A), 'h' to c(0xFFE0B080), 'F' to c(0xFFF4ECDC), 'f' to c(0xFFD8CCB8), 'O' to c(0xFF5A3A22), 'p' to c(0xFFE87A9A)
+    )
+
+    private val CAP = listOf(
+        "................",
+        "...........RR...",
+        "..........RRr...",
+        ".........RRr....",
+        ".....GGGGRr.....",
+        "....GGLLGGGG....",
+        "...GGLLGGGGGg...",
+        "...GLLGGGGGGg...",
+        "..GGGGGGGGGGGg..",
+        "..BBBBBBBBBBBB..",
+        "..DDDDDDDDDDDDDD",
+        "...gggggggggggg.")
+
+    private val TUNIC = listOf(
+        "................",
+        "....TT....TT....",
+        "...TUTT..TTUT...",
+        "..TUTTTTTTTTUT..",
+        ".TUTTTUTTTTTTTT.",
+        ".TTT.TUTTTTT.TTT",
+        ".TTT.TUTTTTT.TTt",
+        ".ttt.TTTTTTT.ttt",
+        ".....kkkYYkkk...",
+        ".....TUTTTTT....",
+        "....TUTTTTTTT...",
+        "....TTTtTTtTT...",
+        "...TTTTTTTTTTT..",
+        "...tttttttttttt.")
+
+    private val PANTS = listOf(
+        "................",
+        "....bbbbbbbb....",
+        "....bwbbbbwb....",
+        "...SQPPPPPPPS...",
+        "...SQPPPPPPPS...",
+        "...SQPP..PPPS...",
+        "...SQPP..PPPS...",
+        "...SQPP..PPPS...",
+        "...SQPP..PPPS...",
+        "...SQPP..PPPS...",
+        "...SQPP..PPPS...",
+        "...bbbb..bbbb...",
+        "...bbbb..bbbb...")
+
+    private val SLIPPERS = listOf(
+        "................",
+        "..........pp....",
+        ".........fFFf...",
+        "........FFfFFF..",
+        ".......HHHHHHHH.",
+        "......HHhHHHHHH.",
+        "..FfF.HhHHHHHHHH",
+        ".FhhhhhHHHHHHHHH",
+        ".HhhhhhHHHHHHHHH",
+        ".HHHHHHHHHHHHHHH",
+        ".OOOOOOOOOOOOOO.")
+
+    private fun fromRows(rows: List<String>): IntArray {
+        val p = px(ICON, ICON)
+        val off = (ICON - rows.size) / 2 + 1
+        rows.forEachIndexed { y, r -> r.forEachIndexed { x, ch -> SET_COLORS[ch]?.let { p[x, y + off] = it } } }
+        p.outline(K)
+        return p.data
     }
 
     fun skillIcon(s: Skill): IntArray? = when (s) {

@@ -101,7 +101,8 @@ object WorkshopMenus {
     }
 
     /** Pracovní stůl: výroba Makroballů z fragmentu energie a bobule. */
-    fun craftMenu(root: FrameLayout, owned: Map<String, Int>, state: SkillState, onCraft: (Makroball, Int) -> Unit) {
+    fun craftMenu(root: FrameLayout, owned: Map<String, Int>, state: SkillState, onCraft: (Makroball, Int) -> Unit,
+                  onCraftGear: (cz.uhk.macroflow.pokemon.skills.Gear) -> Unit = {}) {
         val frags = owned[Resource.ENERGY.itemId] ?: 0
         val multi = (state.passive(Skill.CRAFTING) * 100).toInt()
         show(root, "Pracovní stůl", "Fragmenty energie: $frags · šance na dvojitou výrobu $multi %") { ui, body, close ->
@@ -129,14 +130,37 @@ object WorkshopMenus {
                 c.addView(buttons)
                 body.addView(c)
             }
-            // Vybavení – odemyká strom Výroby, recepty přibudou
-            val gear = card(ui).apply { alpha = 0.75f }
-            gear.addView(ui.icon(SkillArt.skillIcon(Skill.CRAFTING), SkillArt.ICON, SkillArt.ICON, 40f))
-            gear.addView(ui.text(
-                if (state.basicEquipment) "Základní vybavení – recepty už brzy!"
-                else "🔒 Základní vybavení – odemkni ve stromu Výroby (deník → Postava)",
-                16f, ui.inkSoft).apply { setPadding(ui.px(10f), 0, 0, 0) }, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            body.addView(gear)
+            // Dobrodruhův set – odemyká strom Výroby (docs/adr/0039)
+            body.addView(ui.text("Dobrodruhův set", 21f, ui.rust).apply { setPadding(ui.px(2f), ui.px(10f), 0, ui.px(4f)) })
+            if (!state.basicEquipment) {
+                val lock = card(ui).apply { alpha = 0.75f }
+                lock.addView(ui.icon(SkillArt.skillIcon(Skill.CRAFTING), SkillArt.ICON, SkillArt.ICON, 40f))
+                lock.addView(ui.text("🔒 Odemkni uzel „Základní vybavení“ ve stromu Výroby (deník → Postava).", 16f, ui.inkSoft)
+                    .apply { setPadding(ui.px(10f), 0, 0, 0) }, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                body.addView(lock)
+            }
+            cz.uhk.macroflow.pokemon.skills.GearCrafting.SET.forEach { g ->
+                val recipe = cz.uhk.macroflow.pokemon.skills.GearCrafting.recipe(g) ?: return@forEach
+                val have = (owned[g.id] ?: 0) > 0
+                val can = state.basicEquipment && !have && cz.uhk.macroflow.pokemon.skills.GearCrafting.canCraft(g, owned)
+                val c = card(ui).apply { if (!state.basicEquipment) alpha = 0.6f }
+                c.addView(ui.icon(cz.uhk.macroflow.pokemon.skills.GearArt.gearIcon(g), 16, 16, 40f))
+                val info = ui.column().apply { setPadding(ui.px(10f), 0, ui.px(6f), 0) }
+                info.addView(ui.text(g.label, 19f))
+                info.addView(ui.text(bonusText(g), 14f, ui.olive))
+                val row = ui.row()
+                recipe.forEach { (id, n) ->
+                    val r = Resource.from(id) ?: return@forEach
+                    val got = owned[id] ?: 0
+                    row.addView(ui.icon(SkillArt.resourceIcon(r), SkillArt.ITEM, SkillArt.ITEM, 18f))
+                    row.addView(ui.text(" $got/$n  ", 15f, if (got >= n) ui.inkSoft else 0xFFB03A2E.toInt()))
+                }
+                info.addView(row)
+                if (!have) info.addView(ui.text("+${state.gain(Skill.CRAFTING, cz.uhk.macroflow.pokemon.skills.GearCrafting.xp(g).toDouble())} XP Výroba", 14f, ui.inkSoft))
+                c.addView(info, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                c.addView(ui.button(if (have) "Máš ✓" else "Vyrobit", can) { close(); onCraftGear(g) })
+                body.addView(c)
+            }
             body.addView(ui.text("Fragmenty energie padají z Makromonů, bobule sklidíš na záhonech vpravo pod mostem.", 15f, ui.inkSoft))
         }
     }
@@ -229,5 +253,16 @@ object WorkshopMenus {
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) }
             })
         }
+    }
+
+    /** Bonusy kusu vybavení jedním řádkem. */
+    fun bonusText(g: cz.uhk.macroflow.pokemon.skills.Gear): String {
+        val parts = mutableListOf<String>()
+        val eff = g.efficiencyBonus
+        if (eff.isNotEmpty()) parts += "+${eff.values.first()} efektivita " + eff.keys.joinToString(" a ") { it.label.lowercase() }
+        g.xpBonus.entries.groupBy({ it.value }, { it.key }).forEach { (v, skills) ->
+            parts += "+${(v * 100).toInt()} % XP " + skills.joinToString(" a ") { it.label.lowercase() }
+        }
+        return parts.joinToString(", ")
     }
 }

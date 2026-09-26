@@ -57,7 +57,8 @@ object SkillStore {
         val all = counts(ctx)
         return SkillState(
             xp = Skill.entries.associateWith { (all[it.xpItemId] ?: 0).toLong() },
-            unlocked = SkillTree.NODES.filter { (all[it.itemId] ?: 0) > 0 }.map { it.id }.toSet()
+            unlocked = SkillTree.NODES.filter { (all[it.itemId] ?: 0) > 0 }.map { it.id }.toSet(),
+            gear = GearSlot.entries.mapNotNull { Gear.fromCode(all[it.itemId] ?: 0) }.toSet()
         )
     }
 
@@ -125,6 +126,22 @@ object SkillStore {
         return made to xp
     }
 
+    /**
+     * Vyrobí kus vybavení (docs/adr/0039): jen s uzlem „Základní vybavení“, jen když ho ještě
+     * nemáš a stačí suroviny. Do prázdného slotu se rovnou nasadí. Null = nejde.
+     */
+    fun craftGear(ctx: Context, g: Gear): XpResult? {
+        val recipe = GearCrafting.recipe(g) ?: return null
+        val st = state(ctx)
+        if (!st.basicEquipment || count(ctx, g.id) > 0) return null
+        val owned = counts(ctx)
+        if (!GearCrafting.canCraft(g, owned)) return null
+        recipe.forEach { (id, n) -> consume(ctx, id, n) }
+        add(ctx, g.id, 1)
+        if (equipped(ctx, g.slot) == null) set(ctx, g.slot.itemId, g.code)
+        return addXp(ctx, Skill.CRAFTING, st.gain(Skill.CRAFTING, GearCrafting.xp(g).toDouble()))
+    }
+
     // ── Vybavení (docs/adr/0035) ──
 
     fun equipped(ctx: Context, slot: GearSlot): Gear? = Gear.fromCode(count(ctx, slot.itemId))
@@ -155,7 +172,7 @@ object SkillStore {
 
     /** Efektivita pro místo: nasazený nástroj + level + strom. 0 = chybí nástroj. */
     fun efficiency(ctx: Context, spot: GatherSpot, st: SkillState = state(ctx)): Int =
-        Gathering.efficiency(equipped(ctx, spot.toolSlot)?.power ?: 0, st.level(spot.skill), st.efficiencyBonus(spot.skill))
+        Gathering.efficiency(equipped(ctx, spot.toolSlot)?.power ?: 0, st.level(spot.skill), st.efficiencyBonus(spot.skill), st.gearEfficiency(spot.skill))
 
     fun activity(ctx: Context): Gathering.Activity? =
         Gathering.decode(count(ctx, Gathering.SPOT_ITEM), count(ctx, Gathering.SINCE_ITEM))

@@ -148,6 +148,18 @@ class MakromonMapActivity : AppCompatActivity() {
             }
         }
 
+        // Debug: suroviny na dobrodruhův set + odemčené recepty (adb … --ez seed_gear true)
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("seed_gear", false)) {
+            val ctx = applicationContext
+            lifecycleScope.launch(Dispatchers.IO) {
+                val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+                cz.uhk.macroflow.pokemon.skills.GearCrafting.SET.forEach { g ->
+                    cz.uhk.macroflow.pokemon.skills.GearCrafting.recipe(g)?.forEach { (id, n) -> SS.add(ctx, id, n) }
+                }
+                cz.uhk.macroflow.pokemon.skills.SkillTree.node("basic_gear")?.let { SS.add(ctx, it.itemId, 1) }
+            }
+        }
+
         movementEngine = MovementEngine(this, ashView, mapBackground)
         movementEngine.onMoved = { updateCamera() }
 
@@ -1063,16 +1075,30 @@ class MakromonMapActivity : AppCompatActivity() {
         val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
         lifecycleScope.launch {
             val (owned, state) = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.counts(ctx) to SS.state(ctx) }
-            cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.craftMenu(findViewById(R.id.mapRootContainer), owned, state) { ball, times ->
-                lifecycleScope.launch {
-                    val res = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.craft(ctx, ball, times) }
-                    if (res == null) { showMapToast("Chybí suroviny."); return@launch }
-                    val (made, xp) = res
-                    showMapToast("🔨 Vyrobeno: ${made}× ${ball.label}" + (if (made > times) " (dvojitá výroba!)" else "") +
-                        "\n+${xp.gained} XP Výroba" + skillLevelText(xp))
-                    checkAwards()
-                }
-            }
+            cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.craftMenu(findViewById(R.id.mapRootContainer), owned, state,
+                onCraft = { ball, times ->
+                    lifecycleScope.launch {
+                        val res = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.craft(ctx, ball, times) }
+                        if (res == null) { showMapToast("Chybí suroviny."); return@launch }
+                        val (made, xp) = res
+                        showMapToast("🔨 Vyrobeno: ${made}× ${ball.label}" + (if (made > times) " (dvojitá výroba!)" else "") +
+                            "\n+${xp.gained} XP Výroba" + skillLevelText(xp))
+                        checkAwards()
+                    }
+                },
+                onCraftGear = { g -> craftGear(g) })
+        }
+    }
+
+    /** Výroba kusu dobrodruhova setu (docs/adr/0039). */
+    private fun craftGear(g: cz.uhk.macroflow.pokemon.skills.Gear) {
+        val ctx = applicationContext
+        val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+        lifecycleScope.launch {
+            val xp = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.craftGear(ctx, g) }
+            if (xp == null) { showMapToast("Tohle teď vyrobit nejde – chybí suroviny."); return@launch }
+            showMapToast("🧵 Vyrobeno: ${g.label}! Nasadíš ho v deníku → Postava (do prázdného slotu už je nasazený).\n+${xp.gained} XP Výroba" + skillLevelText(xp))
+            checkAwards()
         }
     }
 

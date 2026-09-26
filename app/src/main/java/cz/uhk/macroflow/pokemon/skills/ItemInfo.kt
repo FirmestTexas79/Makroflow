@@ -56,6 +56,11 @@ object ItemInfo {
                 Source("Obchod ve městě", "${ball.price} makro penízků za ${ball.packSize} ks")
             )
         }
+        Gear.from(itemId)?.let { g ->
+            val recipe = GearCrafting.recipe(g) ?: return listOf(Source("Startovní vybavení", "dostaneš na začátku"))
+            val parts = recipe.entries.joinToString(" + ") { (id, n) -> "$n× ${Resource.from(id)?.label ?: id}" }
+            return listOf(Source("Pracovní stůl na louce – Dobrodruhův set (uzel „Základní vybavení“ ve stromu Výroby)", parts))
+        }
         return emptyList()
     }
 
