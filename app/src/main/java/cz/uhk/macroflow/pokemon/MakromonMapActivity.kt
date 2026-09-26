@@ -580,7 +580,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     private fun changeBiome(newBiome: BiomeType, startPos: PointF, transition: MapTransition = MapTransition.FADE) {
         val container = findViewById<ViewGroup>(R.id.mapMainContent)
-        val transitionAction = {
+        val transitionAction: () -> Unit = {
             currentBiome = newBiome
             refreshStepBar()
             // Úvodní tutoriál (otazník) patří zatím jen k městu
