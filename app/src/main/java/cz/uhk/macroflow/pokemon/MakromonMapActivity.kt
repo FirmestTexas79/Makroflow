@@ -92,6 +92,13 @@ class MakromonMapActivity : AppCompatActivity() {
         private const val DOUBLE_CLICK_TIME = 300L
         /** Dosah klepnutí na uzel v podílu obrazovky. */
         private const val TAP_RADIUS = 0.1f
+        /** V jeskyních a lese jsou body husté a mezi nimi se chodí volně – menší dosah. */
+        private const val CAVE_TAP_RADIUS = 0.06f
+        /** Uzly jeskyní a lesa, které něco dělají (ostatní jsou jen cesta). */
+        private val CAVE_ACTION_NODES = setOf(
+            "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "tezba", "les_sever", "mytina",
+            "krystal_modry", "krystal_cerveny"
+        )
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
     }
@@ -305,31 +312,98 @@ class MakromonMapActivity : AppCompatActivity() {
         stepProgressBar.setProgress(currentDailySteps, BiomeAccess.requiredSteps(gatedBiome))
     }
 
+    private var touchDownX = 0f
+    private var touchDownY = 0f
+    private var touchDownOnUi = false
+    private var lastFreeTapTime = 0L
+
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (transitionRunning) return true
-        if (event.action == MotionEvent.ACTION_UP) {
-            // Souřadnice ve světě mapy (getLocationOnScreen zahrnuje i posun kamery)
-            val viewport = findViewById<View>(R.id.mapMainContent)
-            val location = IntArray(2)
-            mapWorld.getLocationOnScreen(location)
-            val relX = (event.rawX - location[0]) / mapWorld.width
-            val relY = (event.rawY - location[1]) / mapWorld.height
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                touchDownX = event.rawX; touchDownY = event.rawY
+                touchDownOnUi = isOverUi(event.rawX, event.rawY)
+            }
+            MotionEvent.ACTION_UP -> if (!touchDownOnUi && handleMapTap(event)) return true
+        }
+        return super.dispatchTouchEvent(event)
+    }
 
-            val cave = BiomeRegistry.definition(currentBiome)?.cave
-            // Nejbližší uzel v dosahu (dřív první nalezený – v hustém bludišti by se trefil vedlejší)
-            val clickedWaypoint = movementEngine.navigationGraph
-                .filter { cave != null || clickableNodes.contains(it.id) }
+    /** Tlačítka, parťák, ukazatel kroků – klepnutí na ně nesmí poslat postavu na procházku. */
+    private fun isOverUi(rawX: Float, rawY: Float): Boolean {
+        val ui = listOf(
+            findViewById<View>(R.id.btnExitMap)?.parent as? View,
+            findViewById<View>(R.id.btnOpenJournal),
+            findViewById<View>(R.id.tvCompanionLabel)?.parent as? View,
+            stepProgressBar
+        )
+        val r = android.graphics.Rect()
+        return ui.any { v -> v != null && v.isShown && v.getGlobalVisibleRect(r) && r.contains(rawX.toInt(), rawY.toInt()) }
+    }
+
+    /**
+     * Klepnutí do mapy (docs/adr/0033): blízko aktivního místa → dojít k němu a spustit akci;
+     * jinak volná chůze na místo klepnutí po průchozí ploše. Tažení prstem se nepočítá.
+     */
+    private fun handleMapTap(event: MotionEvent): Boolean {
+        if (questDialogManager.isVisible() || supportFragmentManager.backStackEntryCount != 0) return false
+        val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
+        if (kotlin.math.hypot(event.rawX - touchDownX, event.rawY - touchDownY) > slop * 2) return false
+
+        // Souřadnice ve světě mapy (getLocationOnScreen zahrnuje i posun kamery)
+        val viewport = findViewById<View>(R.id.mapMainContent)
+        val location = IntArray(2)
+        mapWorld.getLocationOnScreen(location)
+        val worldX = event.rawX - location[0]
+        val worldY = event.rawY - location[1]
+        if (mapWorld.width <= 0 || mapWorld.height <= 0) return false
+        val relX = worldX / mapWorld.width
+        val relY = worldY / mapWorld.height
+
+        val cave = BiomeRegistry.definition(currentBiome)?.cave
+        val hotspots = if (cave == null) clickableNodes.toSet()
+            else cave.encounterNodes + CAVE_ACTION_NODES + listOfNotNull(cave.exitNode, cave.crystalNode)
+        val radius = if (cave == null) TAP_RADIUS else CAVE_TAP_RADIUS
+        // Nejbližší aktivní uzel v dosahu (ne první nalezený)
+        val clickedWaypoint = movementEngine.navigationGraph
+            .filter { it.id in hotspots }
+            .map { it to MapCamera.tapDistance(it.pos.x, it.pos.y, relX, relY,
+                mapWorld.width, mapWorld.height, viewport.width, viewport.height) }
+            .filter { it.second < radius }
+            .minByOrNull { it.second }?.first
+
+        if (clickedWaypoint != null) {
+            triggerHotspotAction(clickedWaypoint.id)
+            return true
+        }
+        if (movementEngine.walkGrid == null) {
+            // Bez mapy chůze postaru: v jeskyni k nejbližšímu uzlu cesty
+            val nearest = if (cave == null) null else movementEngine.navigationGraph
                 .map { it to MapCamera.tapDistance(it.pos.x, it.pos.y, relX, relY,
                     mapWorld.width, mapWorld.height, viewport.width, viewport.height) }
                 .filter { it.second < TAP_RADIUS }
                 .minByOrNull { it.second }?.first
-
-            if (clickedWaypoint != null && !questDialogManager.isVisible() && supportFragmentManager.backStackEntryCount == 0) {
-                triggerHotspotAction(clickedWaypoint.id)
-                return true
-            }
+            if (nearest != null) { triggerHotspotAction(nearest.id); return true }
+            return false
         }
-        return super.dispatchTouchEvent(event)
+        val now = System.currentTimeMillis()
+        val isDoubleTap = now - lastFreeTapTime < DOUBLE_CLICK_TIME
+        lastFreeTapTime = now
+        lastClickedNode = ""
+        movementEngine.currentSpeed = if (isDoubleTap) MovementEngine.FAST_SPEED else MovementEngine.NORMAL_SPEED
+        movementEngine.walkToPoint(worldX, worldY)
+        return true
+    }
+
+    /** Mapa chůze biomu z assets/walk (načte se jednou; chybí-li, chodí se po grafu). */
+    private val walkGrids = HashMap<BiomeType, cz.uhk.macroflow.pokemon.walk.WalkGrid?>()
+
+    private fun walkGridFor(biome: BiomeType): cz.uhk.macroflow.pokemon.walk.WalkGrid? = walkGrids.getOrPut(biome) {
+        runCatching {
+            assets.open("walk/${biome.name.lowercase(Locale.ROOT)}.txt").bufferedReader().use {
+                cz.uhk.macroflow.pokemon.walk.WalkGrid.parse(it.readText())
+            }
+        }.getOrNull()
     }
 
     private fun triggerHotspotAction(nodeName: String) {
@@ -523,7 +597,7 @@ class MakromonMapActivity : AppCompatActivity() {
             if (def != null) {
                 mapBackground.setImageResource(def.backgroundRes)
                 layoutWorld(def.cave)
-                movementEngine.updateBiome(def.graph, startPos)
+                movementEngine.updateBiome(def.graph, startPos, walkGridFor(newBiome))
             }
 
             when (newBiome) {
@@ -549,8 +623,6 @@ class MakromonMapActivity : AppCompatActivity() {
                 else -> {}
             }
             mapWorld.post { refreshStoryDecor() }
-            // Ladicí body grafu jen v debug buildu – dřív byly vidět i v produkční verzi.
-            if (BuildConfig.DEBUG) mapWorld.post { drawDebugNodes(mapWorld) }
         }
 
         when (transition) {
@@ -1060,24 +1132,6 @@ class MakromonMapActivity : AppCompatActivity() {
                 root.removeView(flash); transitionRunning = false
             }.start()
         }.start()
-    }
-
-    private fun drawDebugNodes(container: FrameLayout) {
-        container.findViewWithTag<View>("debug_layer")?.let { container.removeView(it) }
-        val debugLayer = FrameLayout(this).apply {
-            tag = "debug_layer"
-            layoutParams = FrameLayout.LayoutParams(container.width, container.height)
-        }
-        movementEngine.navigationGraph.forEach { waypoint ->
-            debugLayer.addView(View(this).apply {
-                background = ColorDrawable(if (clickableNodes.contains(waypoint.id)) Color.GREEN else Color.RED)
-                alpha = 0.4f
-                layoutParams = FrameLayout.LayoutParams(40, 40)
-                x = waypoint.pos.x * container.width - 20
-                y = waypoint.pos.y * container.height - 20
-            })
-        }
-        container.addView(debugLayer)
     }
 
     private fun replaceMapContent(fragment: Fragment, tag: String? = null) {

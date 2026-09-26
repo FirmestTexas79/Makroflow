@@ -10,6 +10,10 @@ import android.os.Looper
 import android.view.animation.LinearInterpolator
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
+import cz.uhk.macroflow.pokemon.walk.MapGeometry
+import cz.uhk.macroflow.pokemon.walk.Pt
+import cz.uhk.macroflow.pokemon.walk.WalkDirection
+import cz.uhk.macroflow.pokemon.walk.WalkGrid
 import java.util.*
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -40,9 +44,17 @@ class MovementEngine(
     /** Volá se při každém posunu postavy (snímek chůze, reset) – kamera v jeskyních. */
     var onMoved: (() -> Unit)? = null
 
-    fun updateBiome(newGraph: List<Waypoint>, startPos: PointF) {
+    /**
+     * Mapa chůze aktuálního biomu (docs/adr/0033). S ní se chodí volně po průchozí ploše
+     * (A* po buňkách); bez ní postaru po hranách grafu.
+     */
+    var walkGrid: WalkGrid? = null
+        private set
+
+    fun updateBiome(newGraph: List<Waypoint>, startPos: PointF, grid: WalkGrid? = null) {
         cancel()
         this.navigationGraph = newGraph
+        this.walkGrid = grid
         resetToPosition(startPos)
     }
 
@@ -60,10 +72,73 @@ class MovementEngine(
     private var segment = 0
 
     fun walkToNode(targetId: String, onFinished: () -> Unit = {}) {
-        pendingFinish = onFinished
+        val grid = walkGrid
+        val wp = navigationGraph.find { it.id == targetId }
+        if (grid != null && wp != null && mapBackground.width > 0) {
+            val target = PointF(wp.pos.x * mapBackground.width, wp.pos.y * mapBackground.height)
+            if (!walkToWorld(grid, target, "node:$targetId", exact = true, onFinished)) walkAlongGraph(targetId, onFinished)
+            return
+        }
+        walkAlongGraph(targetId, onFinished)
+    }
 
+    /**
+     * Volná chůze na místo ťuknutí (souřadnice světa mapy). Místo ve zdi se přichytí na nejbližší
+     * průchozí. Vrací false, když mapa chůze chybí nebo se tam nedá dojít.
+     */
+    fun walkToPoint(worldX: Float, worldY: Float, onFinished: () -> Unit = {}): Boolean {
+        val grid = walkGrid ?: return false
+        if (mapBackground.width <= 0) return false
+        val geo = geometry(grid)
+        val (cx, cy) = grid.cellOf(geo.toImage(Pt(worldX, worldY)))
+        return walkToWorld(grid, PointF(worldX, worldY), "cell:$cx,$cy", exact = false, onFinished)
+    }
+
+    private fun geometry(grid: WalkGrid) = MapGeometry(grid.imgW, grid.imgH, mapBackground.width, mapBackground.height)
+
+    /** Místo, kde postava stojí (střed chodidel) ve světě mapy. */
+    private fun feet() = PointF(ashView.x + ashView.width / 2f, ashView.y + ashView.height.toFloat())
+
+    private fun walkToWorld(grid: WalkGrid, target: PointF, key: String, exact: Boolean, onFinished: () -> Unit): Boolean {
         // Dvojklik na stejný cíl = jen zrychlit; úsek pokračuje z místa, kde postava je
-        if (isWalking && targetId == currentTarget) {
+        if (isWalking && key == currentTarget) {
+            pendingFinish = onFinished
+            startSegment(++walkToken)
+            return true
+        }
+        val geo = geometry(grid)
+        val from = feet()
+        val path = grid.findPath(geo.toImage(Pt(from.x, from.y)), geo.toImage(Pt(target.x, target.y))) ?: return false
+        val points = path.map { geo.toWorld(it).let { w -> PointF(w.x, w.y) } }.toMutableList()
+        // K uzlu (dveře, NPC) dojít až na jeho přesné místo, pokud je těsně u průchozí plochy
+        if (exact) {
+            val last = points.lastOrNull() ?: from
+            val d = getDistance(last, target)
+            if (d > 0.5f && d <= grid.cell * geo.scale * 2.5f) points += target
+        }
+        pendingFinish = onFinished
+        if (points.isEmpty()) { cancelAnimationOnly(); finishWalk(); return true }
+        routeIds = emptyList()
+        routePoints = points
+        segment = 0
+        currentTarget = key
+        isWalking = true
+        startAnimationLoop()
+        startSegment(++walkToken)
+        return true
+    }
+
+    private fun cancelAnimationOnly() {
+        walkToken++
+        ashView.animate().cancel()
+    }
+
+    /** Původní chůze po hranách grafu (když biom nemá mapu chůze). */
+    private fun walkAlongGraph(targetId: String, onFinished: () -> Unit) {
+        pendingFinish = onFinished
+        val key = "node:$targetId"
+
+        if (isWalking && key == currentTarget) {
             startSegment(++walkToken)
             return
         }
@@ -84,7 +159,7 @@ class MovementEngine(
             PointF(wp.pos.x * mapBackground.width, wp.pos.y * mapBackground.height)
         }
         segment = 0
-        currentTarget = targetId
+        currentTarget = key
         isWalking = true
         startAnimationLoop()
         startSegment(++walkToken)
@@ -99,9 +174,7 @@ class MovementEngine(
         val targetY = routePoints[segment].y - ashView.height.toFloat()
         val dx = targetX - ashView.x
         val dy = targetY - ashView.y
-        if (abs(dx) > 0.5f || abs(dy) > 0.5f) {
-            currentDirection = if (abs(dx) > abs(dy)) (if (dx > 0) 3 else 2) else (if (dy > 0) 0 else 1)
-        }
+        currentDirection = WalkDirection.of(dx, dy, currentDirection)
         val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
 
         ashView.animate().cancel()
@@ -115,20 +188,28 @@ class MovementEngine(
                 override fun onAnimationCancel(a: Animator) { cancelled = true }
                 override fun onAnimationEnd(a: Animator) {
                     if (cancelled || token != walkToken) return
-                    navigationGraph.find { it.id == routeIds[segment] }?.let { currentPosition = it.pos }
+                    rememberPosition(routePoints[segment])
                     segment++
                     startSegment(token)
                 }
             }).start()
     }
 
+    private fun rememberPosition(world: PointF) {
+        if (mapBackground.width > 0 && mapBackground.height > 0) {
+            currentPosition = PointF(world.x / mapBackground.width, world.y / mapBackground.height)
+        }
+    }
+
     private fun finishWalk() {
-        currentTarget?.let { id -> navigationGraph.find { it.id == id }?.let { currentPosition = it.pos } }
+        if (ashView.width > 0) rememberPosition(feet())
         isWalking = false
         currentTarget = null
         ashView.animate().setListener(null)
         handler.removeCallbacksAndMessages(null)
-        updateSprite(1, currentDirection)
+        // Na konci se postava otočí k hráči (dolů)
+        currentDirection = WalkDirection.DOWN
+        updateSprite(1, WalkDirection.DOWN)
         val done = pendingFinish
         pendingFinish = null
         done?.invoke()
