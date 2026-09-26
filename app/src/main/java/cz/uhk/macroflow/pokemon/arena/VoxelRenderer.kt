@@ -246,7 +246,7 @@ object VoxelRenderer {
         var r = ((base shr 16) and 0xFF) / 255f; var g = ((base shr 8) and 0xFF) / 255f; var b = (base and 0xFF) / 255f
         if (!mat.emissive) {
             val n = NORMALS[face.n]
-            val faceShade = when (face.n) { 0 -> 1f; 5 -> 0.84f; 4 -> 0.62f; 1 -> 0.5f; else -> 0.72f }
+            val faceShade = when (face.n) { 0 -> 1f; 5 -> 0.84f; 4 -> 0.62f; 1 -> 0.62f; else -> 0.72f }
             val sunDot = n.dot(sun)
             val lit = sunDot > 0f && shadow.lit(p + n * 0.02f)
             val sunAmt = if (lit) 1f else atm.ambient
@@ -274,10 +274,20 @@ object VoxelRenderer {
         var c = mix(atm.skyHorizon, atm.skyTop, t)
         if (atm.clouds && dir.y > 0.02f) {
             // pixelové obláčky: šum na mřížce nad obzorem
-            val u = dir.x / dir.y * 1.1f; val v = dir.z / dir.y * 0.9f
-            val a = Textures.hash(floor(u).toInt(), floor(v).toInt(), 77, seed)
-            val b = Textures.hash(floor(u * 2f).toInt(), floor(v * 2f).toInt(), 78, seed)
-            if (a > 0.72f && b > 0.3f) c = mix(c, 0xFFFFFFFF.toInt(), 0.6f * (1f - t * 0.5f))
+            // hranaté obláčky: mřížka v úhlech (azimut × výška), bez perspektivního zkosení
+            val az = Math.toDegrees(kotlin.math.atan2(dir.x, dir.z).toDouble()).toFloat()
+            val el = Math.toDegrees(kotlin.math.asin(dir.y.coerceIn(-1f, 1f)).toDouble()).toFloat()
+            if (el in 3f..24f) {
+                val cw = 3.2f; val ch = 1.6f
+                val gx = floor(az / cw).toInt(); val gy = floor(el / ch).toInt()
+                val band = Textures.hash(gy / 3, 0, 79, seed) > 0.45f
+                val a = Textures.hash(gx / 4, gy / 2, 77, seed)
+                val b = Textures.hash(gx, gy, 78, seed)
+                if (band && a > 0.55f && b > 0.25f) {
+                    val under = Textures.hash(gx, gy - 1, 78, seed) <= 0.25f || Textures.hash(gx / 4, (gy - 1) / 2, 77, seed) <= 0.55f
+                    c = if (under) mix(c, 0xFFDDE6F0.toInt(), 0.85f) else mix(c, 0xFFFFFFFF.toInt(), 0.9f)
+                }
+            }
         }
         if (atm.stars && Textures.hash(x, y, 5, seed) > 0.996f) c = 0xFFE8E8FF.toInt()
         return c

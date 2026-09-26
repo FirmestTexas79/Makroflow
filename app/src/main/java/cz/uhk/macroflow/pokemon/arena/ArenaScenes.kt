@@ -170,6 +170,39 @@ object Arenas {
 
         fun scene(atm: Atmosphere) = Scene(boxes, atm, seed)
 
+        /** Vzdálené pohoří (stupňovité, v mlze) – vyplní oblohu nad obzorem. */
+        fun range(z0: Float, hMin: Float, hMax: Float, rock: Mat, snow: Mat?) {
+            var x = -120f
+            while (x < 140f) {
+                val w = r(10f, 22f); val hh = r(hMin, hMax); val z = z0 + r(0f, 20f)
+                var y = 0f; var inset = 0f
+                while (y < hh) {
+                    val step = r(2f, 4f)
+                    val top = minOf(hh, y + step)
+                    box(x + inset, y, z + inset * 0.5f, x + w - inset, top, z + 30f, if (snow != null && top > hh * 0.78f) snow else rock, shadow = false)
+                    y = top; inset += r(1f, 2.4f)
+                    if (inset * 2 > w - 2f) break
+                }
+                x += w * r(0.55f, 0.9f)
+            }
+        }
+
+        /** Klenba korun nad hlavou (Hvozd) – s průhledy na oblohu. */
+        fun canopy(m: Mat, m2: Mat) {
+            var z = -4f
+            while (z < 30f) {
+                var x = -16f
+                while (x < 28f) {
+                    if (rnd.nextFloat() > 0.28f) {
+                        val y = r(7f, 9.5f)
+                        box(x, y, z, x + r(2f, 4f), y + r(1f, 2.2f), z + r(2f, 3.5f), if (rnd.nextFloat() > 0.3f) m else m2)
+                    }
+                    x += r(2.2f, 3.6f)
+                }
+                z += r(2.2f, 3.2f)
+            }
+        }
+
         // ── Louka ──
         fun meadow(): Scene {
             ground(M.FLOWERS)
@@ -199,8 +232,9 @@ object Arenas {
             // druhá řada stromů v dálce
             var bx = -30f
             while (bx < 45f) { tree(bx + r(-1f, 1f), r(30f, 36f), r(3f, 5f), if (rnd.nextFloat() > 0.6f) M.LEAF_LIGHT else M.LEAF); bx += r(4f, 6f) }
+            range(80f, 14f, 30f, Mat(Pattern.STONE, c(0xFF6F8AA0), c(0xFF7C98AE), c(0xFF86A2B8), c(0xFF92ACC0)), M.SNOW)
             tufts(90, M.LEAF_LIGHT)
-            return scene(Atmosphere(c(0xFF5BA8E8), c(0xFFCDE8F5), c(0xFFCDE8F5), 16f, 70f, 0.8f,
+            return scene(Atmosphere(c(0xFF5BA8E8), c(0xFFCDE8F5), c(0xFFCDE8F5), 16f, 170f, 0.8f,
                 light = c(0xFFFFF6E4), ambient = 0.64f, sun = V3(-1f, 1.1f, 0.1f)))
         }
 
@@ -237,7 +271,16 @@ object Arenas {
                 box(px - 0.8f, 0.5f, pz - 0.5f, px + 0.8f, 1.2f, pz + 0.5f, M.LEAF_LIGHT)
             }
             for ((tx, tz) in listOf(-11f to 12f, 18f to 12f, -13f to 19f, 24f to 18f)) tree(tx, tz, 3f, M.LEAF)
-            return scene(Atmosphere(c(0xFF5FA6E6), c(0xFFD6ECF6), c(0xFFD6ECF6), 18f, 75f, 0.8f,
+            // kostel s věží za domy
+            box(1f, 0f, 31f, 9f, 7f, 40f, M.PLASTER)
+            for (i in 0 until 5) box(0.6f, 7f + i * 0.6f, 30.6f + i * 0.9f, 9.4f, 7.6f + i * 0.6f, 40.4f - i * 0.9f, M.ROOF_RED)
+            box(3f, 0f, 28.5f, 7f, 16f, 32.5f, M.PLASTER)
+            box(4.2f, 12.2f, 28.4f, 5.8f, 13.8f, 28.5f, M.WINDOW_LIT)
+            box(2.7f, 16f, 28.2f, 7.3f, 16.6f, 32.8f, M.COBBLE)
+            for (i in 0 until 5) { val k = i * 0.45f; box(3f + k, 16.6f + i * 1.2f, 28.5f + k, 7f - k, 17.8f + i * 1.2f, 32.5f - k, M.ROOF_BLUE) }
+            box(4.85f, 22.6f, 30.35f, 5.15f, 24.2f, 30.65f, M.GOLD)
+            range(90f, 14f, 26f, Mat(Pattern.STONE, c(0xFF7890A6), c(0xFF849CB2), c(0xFF8EA6BA), c(0xFF9AB0C4)), M.SNOW)
+            return scene(Atmosphere(c(0xFF5FA6E6), c(0xFFD6ECF6), c(0xFFD6ECF6), 18f, 170f, 0.8f,
                 light = c(0xFFFFF4E2), ambient = 0.66f, sun = V3(-1f, 1.1f, 0.15f), lights = lights))
         }
 
@@ -290,6 +333,7 @@ object Arenas {
                 box(mx - 0.28f, 0.28f, mz - 0.28f, mx + 0.28f, 0.46f, mz + 0.28f, M.MUSHROOM)
             }
             for ((bx, bz) in listOf(-3.5f to 2f, 9.5f to 3f, -4f to 13f, 13f to 4.5f, 16f to 10f, 3f to 16f)) if (free(bx, bz, 0.4f)) bush(bx, bz, r(0.5f, 0.8f), M.LEAF)
+            canopy(M.LEAF_DARK, M.LEAF)
             tufts(200, M.LEAF)
             // světlušky
             repeat(10) {
@@ -335,22 +379,23 @@ object Arenas {
                 box(bx - s, 0f, bz - s, bx + s, s * 1.3f, bz + s, M.BOULDER)
             }
             // vzdálené štíty
+            range(45f, 18f, 40f, M.STONE, M.SNOW)
             for ((px, pz, ph) in listOf(Triple(-20f, 60f, 24f), Triple(5f, 72f, 34f), Triple(30f, 62f, 26f), Triple(-45f, 70f, 28f), Triple(55f, 75f, 30f))) {
                 box(px - 14f, 0f, pz - 6f, px + 14f, ph * 0.6f, pz + 6f, M.STONE, shadow = false)
                 box(px - 9f, ph * 0.6f, pz - 4f, px + 9f, ph * 0.85f, pz + 4f, M.STONE, shadow = false)
                 box(px - 4.5f, ph * 0.85f, pz - 2f, px + 4.5f, ph, pz + 2f, M.SNOW, shadow = false)
             }
             tufts(50, M.REED)
-            return scene(Atmosphere(c(0xFF6A9ED8), c(0xFFDCE8F2), c(0xFFC4D6E6), 16f, 70f, 0.85f,
+            return scene(Atmosphere(c(0xFF6A9ED8), c(0xFFDCE8F2), c(0xFFC4D6E6), 16f, 150f, 0.85f,
                 light = c(0xFFFFFFFF), ambient = 0.6f, sun = V3(-0.5f, 1f, -0.5f)))
         }
 
-        private fun caveShell(floor: Mat, wall: Mat) {
+        private fun caveShell(floor: Mat, wall: Mat, silver: Boolean = false) {
             ground(floor)
             box(-40f, 0f, -12f, -7f, 14f, 80f, wall)
             box(15f, 0f, -12f, 50f, 14f, 80f, wall)
             box(-40f, 0f, 20f, 50f, 14f, 80f, wall)
-            box(-40f, 9f, -12f, 50f, 12f, 80f, wall)
+            box(-40f, 7f, -12f, 50f, 12f, 80f, wall)
             // nerovné stěny
             repeat(26) {
                 val side = rnd.nextInt(3)
@@ -361,16 +406,25 @@ object Arenas {
                     else -> { val x = r(-7f, 15f); box(x, y, 20f - r(0.6f, 2f), x + r(1f, 3f), y + hh, 20f, wall) }
                 }
             }
+            // svítící krystalky a kořeny ve stropě
+            repeat(16) {
+                val x = r(-7f, 15f); val z = r(-4f, 20f)
+                val cyan = rnd.nextBoolean()
+                val mat = if (silver) M.SILVER else if (cyan) M.CRYSTAL_CYAN else M.CRYSTAL_VIOLET
+                val col = if (silver) c(0xFFB8C8E0) else if (cyan) c(0xFF6FE0FF) else c(0xFFB480FF)
+                box(x, 6.3f, z, x + 0.4f, 7f, z + 0.4f, mat, shadow = false)
+                lights.add(PointLight(V3(x + 0.2f, 6.4f, z + 0.2f), col, 3.2f, 0.7f))
+            }
             // krápníky ze stropu
             repeat(18) {
                 val x = r(-7f, 15f); val z = r(4f, 20f)
-                if (free(x, z, 0f)) box(x, r(5.5f, 7.5f), z, x + 0.5f, 9f, z + 0.5f, wall, shadow = false)
+                if (free(x, z, 0f)) box(x, r(4.6f, 6f), z, x + 0.5f, 7f, z + 0.5f, wall, shadow = false)
             }
         }
 
         // ── Starý důl (stříbro) ──
         fun caveMaze(): Scene {
-            caveShell(M.CAVE_GRAVEL, M.CAVE_WALL)
+            caveShell(M.CAVE_GRAVEL, M.CAVE_WALL, silver = true)
             box(E.x - 1.8f, 0f, E.z - 1.2f, E.x + 1.8f, PEDESTAL, E.z + 1.8f, M.DARK_STONE)
             // koleje s pražci
             var z = -4f
@@ -378,9 +432,9 @@ object Arenas {
             box(9.8f, 0.08f, -4f, 9.95f, 0.2f, 20f, M.RAIL); box(11.05f, 0.08f, -4f, 11.2f, 0.2f, 20f, M.RAIL)
             // důlní výdřeva
             for (fz in listOf(9f, 16f)) {
-                box(-6.4f, 0f, fz, -5.8f, 6f, fz + 0.6f, M.PLANK)
-                box(13.8f, 0f, fz, 14.4f, 6f, fz + 0.6f, M.PLANK)
-                box(-6.6f, 6f, fz - 0.1f, 14.6f, 6.6f, fz + 0.7f, M.PLANK)
+                box(-6.4f, 0f, fz, -5.8f, 5.6f, fz + 0.6f, M.PLANK)
+                box(13.8f, 0f, fz, 14.4f, 5.6f, fz + 0.6f, M.PLANK)
+                box(-6.6f, 5.6f, fz - 0.1f, 14.6f, 6.2f, fz + 0.7f, M.PLANK)
                 box(-5.5f, 3.2f, fz - 0.25f, -5.1f, 3.7f, fz + 0.1f, M.LAMP, shadow = false)
                 lights.add(PointLight(V3(-5f, 3.3f, fz - 0.6f), c(0xFFFFB060), 7f, 0.9f))
                 box(13.1f, 3.2f, fz - 0.25f, 13.5f, 3.7f, fz + 0.1f, M.LAMP, shadow = false)
@@ -431,7 +485,7 @@ object Arenas {
             box(11.5f, 0.5f, 16.4f, 12f, 0.9f, 16.6f, M.GOLD, shadow = false)
             lights.add(PointLight(V3(11f, 1f, 16f), c(0xFFFFD060), 3f, 0.6f))
             // světlo ze stropní pukliny nad arénou
-            lights.add(PointLight(V3(E.x - 1f, 6f, E.z - 1f), c(0xFFCFF4E0), 10f, 0.75f))
+            lights.add(PointLight(V3(E.x - 1f, 5.5f, E.z - 1f), c(0xFFCFF4E0), 10f, 0.75f))
             lights.add(PointLight(V3(P.x, 3f, P.z + 1f), c(0xFFA8E8D0), 6f, 0.45f))
             tufts(120, M.LEAF_LIGHT)
             return scene(Atmosphere(c(0xFF000000), c(0xFF06100E), c(0xFF06100E), 12f, 34f, 0.95f,
@@ -470,8 +524,8 @@ object Arenas {
             // levý břeh
             box(-40f, -3f, 0f, -9f, 0.1f, 21f, M.GRASS)
             tree(-11f, 6f, 3.5f, M.LEAF); tree(-12f, 13f, 4f, M.LEAF_LIGHT)
-            box(-40f, 0f, 45f, 60f, 8f, 60f, M.LEAF_LIGHT, shadow = false)
-            return scene(Atmosphere(c(0xFF5AA6E6), c(0xFFD2ECF8), c(0xFFD2ECF8), 16f, 70f, 0.8f,
+            range(70f, 12f, 26f, Mat(Pattern.STONE, c(0xFF6F8AA0), c(0xFF7C98AE), c(0xFF86A2B8), c(0xFF92ACC0)), M.SNOW)
+            return scene(Atmosphere(c(0xFF5AA6E6), c(0xFFD2ECF8), c(0xFFD2ECF8), 16f, 160f, 0.8f,
                 light = c(0xFFFFF8E8), ambient = 0.66f, sun = V3(-0.5f, 1f, -0.45f)))
         }
     }
