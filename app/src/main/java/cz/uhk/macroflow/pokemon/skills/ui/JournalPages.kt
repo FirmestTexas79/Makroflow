@@ -18,6 +18,7 @@ import cz.uhk.macroflow.pokemon.skills.Gear
 import cz.uhk.macroflow.pokemon.skills.GearArt
 import cz.uhk.macroflow.pokemon.skills.GearSlot
 import cz.uhk.macroflow.pokemon.skills.GearTab
+import cz.uhk.macroflow.pokemon.skills.ItemInfo
 import cz.uhk.macroflow.pokemon.skills.Resource
 import cz.uhk.macroflow.pokemon.skills.Skill
 import cz.uhk.macroflow.pokemon.skills.SkillArt
@@ -263,21 +264,16 @@ object JournalPages {
 
     private data class Entry(val id: String, val label: String, val description: String, val pixels: IntArray, val size: Int)
 
-    fun resources(container: LinearLayout, counts: Map<String, Int>) {
+    fun resources(container: LinearLayout, counts: Map<String, Int>, menuRoot: FrameLayout) {
         container.removeAllViews()
         val ui = WoodUi(container.context)
         container.addView(ui.text("Suroviny", 27f, container.context.getColor(R.color.journal_chapter_title_ink), Gravity.CENTER).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         })
-        container.addView(ui.text("Klepni na políčko pro popis.", 15f, ui.inkSoft, Gravity.CENTER).apply {
+        container.addView(ui.text("Klepni na políčko – kde to získat a jak často to padá.", 15f, ui.inkSoft, Gravity.CENTER).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 .apply { bottomMargin = ui.px(8f) }
         })
-        val info = ui.text("", 16f, ui.ink).apply {
-            setPadding(ui.px(10f), ui.px(8f), ui.px(10f), ui.px(8f))
-            background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 4 * ui.dp; setColor(Color.parseColor("#26BC6C25")) }
-            visibility = View.GONE
-        }
 
         fun res(r: Resource) = Entry(r.itemId, r.label, r.description, SkillArt.resourceIcon(r), SkillArt.ITEM)
         val sections = listOf(
@@ -291,23 +287,46 @@ object JournalPages {
         sections.forEach { (title, entries) ->
             container.addView(ui.text(title, 20f, ui.rust).apply { setPadding(ui.px(2f), ui.px(6f), 0, ui.px(4f)) })
             entries.chunked(4).forEach { chunk ->
-                val row = ui.row()
-                chunk.forEach { e -> row.addView(slot(ui, e, counts[e.id] ?: 0, info)) }
+                // Gravity.TOP: se svislým centrováním a spodním okrajem vyjel čtverec o 4 dp nahoru
+                // a řádek mu ořízl horní obrys (hnědé políčko bez horní hrany)
+                val row = ui.row().apply { gravity = Gravity.TOP }
+                chunk.forEach { e -> row.addView(slot(ui, e, counts[e.id] ?: 0) { showInfo(menuRoot, e, counts[e.id] ?: 0) }) }
                 container.addView(row)
             }
         }
-        container.addView(info, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) })
     }
 
-    private fun slot(ui: WoodUi, e: Entry, n: Int, info: TextView): View {
+    /** Dřevěná cedule: jméno, kolik máš, popis a kde se to dá získat (s šancí). */
+    private fun showInfo(root: FrameLayout, e: Entry, n: Int) {
+        WorkshopMenus.show(root, e.label, "Máš: $n ks") { ui, body, _ ->
+            val top = ui.row().apply { gravity = Gravity.TOP }
+            val frame = FrameLayout(ui.ctx).apply { background = BevelDrawable.slot(2f * ui.dp) }
+            frame.addView(ui.icon(e.pixels, e.size, e.size, 48f), FrameLayout.LayoutParams(ui.px(48f), ui.px(48f), Gravity.CENTER))
+            top.addView(frame, LinearLayout.LayoutParams(ui.px(66f), ui.px(66f)))
+            top.addView(ui.text(e.description, 16f, ui.ink).apply { setPadding(ui.px(12f), ui.px(2f), 0, 0) },
+                ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            body.addView(top)
+            val sources = ItemInfo.sources(e.id)
+            if (sources.isNotEmpty()) {
+                body.addView(ui.text("Kde získat", 21f, ui.rust).apply { setPadding(0, ui.px(12f), 0, ui.px(6f)) })
+                sources.forEach { src ->
+                    val c = WorkshopMenus.card(ui)
+                    val col = ui.column()
+                    col.addView(ui.text(src.where, 17f))
+                    col.addView(ui.text(src.rate, 15f, ui.olive))
+                    c.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    body.addView(c)
+                }
+            }
+        }
+    }
+
+    private fun slot(ui: WoodUi, e: Entry, n: Int, onClick: () -> Unit): View {
         val f = FrameLayout(ui.ctx).apply {
             background = BevelDrawable.slot(2f * ui.dp)
             alpha = if (n > 0) 1f else 0.45f
             contentDescription = "${e.label}: $n"
-            setOnClickListener {
-                info.visibility = View.VISIBLE
-                info.text = "${e.label} – máš $n\n${e.description}"
-            }
+            setOnClickListener { onClick() }
         }
         f.addView(ui.icon(e.pixels, e.size, e.size, 40f), FrameLayout.LayoutParams(ui.px(40f), ui.px(40f), Gravity.CENTER))
         f.addView(outlined(ui.text(if (n > 999) "999+" else "$n", 16f, WHITE)).apply { setPadding(0, 0, ui.px(5f), ui.px(2f)) },

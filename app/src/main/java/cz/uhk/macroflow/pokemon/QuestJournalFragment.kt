@@ -206,7 +206,7 @@ class QuestJournalFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val counts = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.counts(ctx) }
             if (!isAdded) return@launch
-            cz.uhk.macroflow.pokemon.skills.ui.JournalPages.resources(rootView.findViewById(R.id.llResources), counts)
+            cz.uhk.macroflow.pokemon.skills.ui.JournalPages.resources(rootView.findViewById(R.id.llResources), counts, rootView as FrameLayout)
         }
     }
 
