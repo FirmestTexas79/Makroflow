@@ -213,7 +213,8 @@ data class SkillState(
     fun efficiencyBonus(skill: Skill): Double = effectsOf(skill).filterIsInstance<SkillTree.Effect.Efficiency>().sumOf { it.add }
 
     /** Kolik hodin AFK se nejvýš započítá (základ 12 h + strom). */
-    fun afkCapHours(skill: Skill): Int = 12 + effectsOf(skill).filterIsInstance<SkillTree.Effect.AfkHours>().sumOf { it.hours }
+    fun afkCapHours(skill: Skill): Int = 12 + effectsOf(skill).filterIsInstance<SkillTree.Effect.AfkHours>().sumOf { it.hours } +
+        gear.sumOf { it.afkHours[skill] ?: 0 }
 
     fun xpMultiplier(skill: Skill): Double = SkillMath.xpMultiplier(xpAdditive(skill))
 

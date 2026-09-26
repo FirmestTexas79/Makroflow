@@ -32,9 +32,17 @@ object GearArt {
 
     // ── Nástroje 16 × 16 ────────────────────────────────────────────────────
 
-    fun axe(rusty: Boolean = true): IntArray {
+    /** Kov nástroje: (světlo, základ, stín) a dřevo násady (světlo, stín). */
+    class Metal(val l: Int, val m: Int, val d: Int, val woodL: Int, val woodD: Int)
+
+    val COPPER = Metal(c(0xFFF2B07A), c(0xFFC8743C), c(0xFF7E4220), c(0xFFC48A4A), c(0xFF6C4420))
+    val SILVER = Metal(c(0xFFF8FBFF), c(0xFFC4CCD8), c(0xFF78828E), c(0xFFE4DECE), c(0xFF8E8676))
+    val GOLD = Metal(c(0xFFFFF2A8), c(0xFFE8B42E), c(0xFF9A6A10), c(0xFFC0643A), c(0xFF6E2E18))
+
+    fun axe(rusty: Boolean = true, metal: Metal? = null): IntArray {
+        val STEEL_L = metal?.l ?: this.STEEL_L; val STEEL = metal?.m ?: this.STEEL; val STEEL_D = metal?.d ?: this.STEEL_D
         val p = px(ICON, ICON)
-        line(p, 2, 14, 10, 3, WOOD_L, WOOD_D)
+        line(p, 2, 14, 10, 3, metal?.woodL ?: WOOD_L, metal?.woodD ?: WOOD_D)
         // hlava: rovná strana u násady, zaoblené ostří vpravo, malý týl vlevo
         val rows = mapOf(1 to 11..13, 2 to 11..14, 3 to 10..15, 4 to 10..15, 5 to 10..15, 6 to 11..14, 7 to 12..13)
         for ((y, xs) in rows) for (x in xs) p[x, y] = when {
@@ -48,9 +56,10 @@ object GearArt {
         return p.data
     }
 
-    fun pickaxe(rusty: Boolean = true): IntArray {
+    fun pickaxe(rusty: Boolean = true, metal: Metal? = null): IntArray {
+        val STEEL_L = metal?.l ?: this.STEEL_L; val STEEL = metal?.m ?: this.STEEL; val STEEL_D = metal?.d ?: this.STEEL_D
         val p = px(ICON, ICON)
-        line(p, 3, 14, 10, 5, WOOD_L, WOOD_D)
+        line(p, 3, 14, 10, 5, metal?.woodL ?: WOOD_L, metal?.woodD ?: WOOD_D)
         // zahnutá hlava kolmo na násadu
         val pts = listOf(2 to 5, 3 to 4, 4 to 3, 5 to 2, 6 to 2, 7 to 2, 8 to 2, 9 to 3, 10 to 3, 11 to 4, 12 to 5, 13 to 6, 14 to 8)
         pts.forEachIndexed { i, (x, y) ->
@@ -83,6 +92,9 @@ object GearArt {
         Gear.ADV_PANTS -> fromRows(PANTS)
         Gear.ADV_SLIPPERS -> fromRows(SLIPPERS)
         Gear.MAKRO_AXE, Gear.MAKRO_PICKAXE -> MaterialArt.artifact(g)!!
+        Gear.COPPER_AXE -> axe(false, COPPER); Gear.COPPER_PICKAXE -> pickaxe(false, COPPER)
+        Gear.SILVER_AXE -> axe(false, SILVER); Gear.SILVER_PICKAXE -> pickaxe(false, SILVER)
+        Gear.GOLD_AXE -> axe(false, GOLD); Gear.GOLD_PICKAXE -> pickaxe(false, GOLD)
         Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL -> MaterialArt.accessory(g)!!
     }
 

@@ -139,7 +139,8 @@ object WorkshopMenus {
                 body.addView(lock)
             }
             val sections = listOf("Dobrodruhův set" to cz.uhk.macroflow.pokemon.skills.GearCrafting.SET,
-                "Doplňky" to cz.uhk.macroflow.pokemon.skills.GearCrafting.ACCESSORIES)
+                "Doplňky" to cz.uhk.macroflow.pokemon.skills.GearCrafting.ACCESSORIES,
+                "Nástroje" to cz.uhk.macroflow.pokemon.skills.GearCrafting.TOOLS)
             for ((title, items) in sections) {
             body.addView(ui.text(title, 21f, ui.rust).apply { setPadding(ui.px(2f), ui.px(10f), 0, ui.px(4f)) })
             items.forEach { g ->
@@ -262,6 +263,7 @@ object WorkshopMenus {
     /** Bonusy kusu vybavení jedním řádkem. */
     fun bonusText(g: cz.uhk.macroflow.pokemon.skills.Gear): String {
         val parts = mutableListOf<String>()
+        if (g.power > 0) parts += "síla ${g.power}"
         val eff = g.efficiencyBonus
         if (eff.isNotEmpty()) parts += "+${eff.values.first()} efektivita " + eff.keys.joinToString(" a ") { it.label.lowercase() }
         g.xpBonus.entries.groupBy({ it.value }, { it.key }).forEach { (v, skills) ->
@@ -270,6 +272,7 @@ object WorkshopMenus {
         g.multiBonus.forEach { (sk, v) -> parts += "+${Math.round(v * 100)} % dvojitý kus (${sk.label.lowercase()})" }
         if (g.dropRate > 0) parts += "kořist z Makromonů +${Math.round(g.dropRate * 100)} %"
         if (g.catchBonus > 0) parts += "útěk z ballu −${Math.round(g.catchBonus * 100)} %"
+        g.afkHours.forEach { (_, h) -> parts += "AFK +$h h" }
         return parts.joinToString(", ")
     }
 }

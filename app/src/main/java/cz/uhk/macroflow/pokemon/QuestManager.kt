@@ -7,6 +7,7 @@ import cz.uhk.macroflow.energy.Adherence
 import cz.uhk.macroflow.pokemon.quests.QuestDefinition
 import cz.uhk.macroflow.pokemon.quests.QuestProgression
 import cz.uhk.macroflow.pokemon.quests.QuestRegistry
+import cz.uhk.macroflow.pokemon.quests.QuestRewards
 import cz.uhk.macroflow.pokemon.quests.QuestStage
 import cz.uhk.macroflow.pokemon.quests.RequirementType
 import kotlinx.coroutines.CoroutineScope
@@ -51,6 +52,13 @@ class QuestManager(
     private var currentProgress: QuestProgressEntity? = null
 
     var onProgressChanged: ((QuestProgressEntity) -> Unit)? = null
+
+    /**
+     * Odměna za splněnou fázi (docs/adr/0043): připíše předmět a vrátí true, když ho hráč
+     * ještě neměl. Hláška NPC se pak přehraje před úvodem další fáze.
+     */
+    var onStageReward: ((QuestRewards.Reward) -> Boolean)? = null
+    private var pendingRewardLine: String? = null
     private val progressMutex = Mutex()
 
     fun getCurrentProgress(): QuestProgressEntity? = currentProgress
@@ -216,6 +224,13 @@ class QuestManager(
         withContext(Dispatchers.IO) { db.questDao().saveQuestProgress(result.progress) }
         onProgressChanged?.invoke(result.progress)
 
+        if (result.stageCompleted) {
+            QuestRewards.forStage(quest.id, progress.currentStageIndex)?.let { r ->
+                val granted = withContext(Dispatchers.IO) { onStageReward?.invoke(r) == true }
+                if (granted) pendingRewardLine = "${r.line}\n\n🎁 Dostal jsi: ${r.label}!"
+            }
+        }
+
         // Po splnění fáze NPC sám představí další úkol (nebo se rozloučí)
         if (result.stageCompleted && !silent) checkNpcInteraction(playerInitiated = false)
     }
@@ -243,8 +258,10 @@ class QuestManager(
 
         val stage = quest.stages.getOrNull(progress.currentStageIndex) ?: return
         val introSeen = introSeenIndex(quest.id) >= progress.currentStageIndex
-        val text = if (!playerInitiated || !introSeen) stage.text
+        var text = if (!playerInitiated || !introSeen) stage.text
             else QuestProgression.reminder(stage, progress.metadata)
+        // odměna za předchozí fázi zazní jako první
+        pendingRewardLine?.let { text = it + "\n\n" + stage.text; pendingRewardLine = null }
         markIntroSeen(quest.id, progress.currentStageIndex)
         showLine(quest, stage, stage.title, text, progress.currentStageIndex)
     }

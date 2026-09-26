@@ -54,7 +54,9 @@ enum class Gear(
     /** O kolik častěji padá kořist z Makromonů (0,1 = ×1,1). */
     val dropRate: Double = 0.0,
     /** Snížení šance na útěk z ballu (0,2 = −20 %, počítá se jako pasivní bonus Chytání). */
-    val catchBonus: Double = 0.0
+    val catchBonus: Double = 0.0,
+    /** Hodiny AFK navíc (zlaté nástroje). */
+    val afkHours: Map<Skill, Int> = emptyMap()
 ) {
     OLD_AXE("tool_axe_old", 1, GearSlot.AXE, "Stará sekera", "Otupená, ale pořád seká. Síla 10.", 10),
     OLD_PICKAXE("tool_pickaxe_old", 2, GearSlot.PICKAXE, "Starý krumpáč", "Rezavý, ale kámen rozbije. Síla 10.", 10),
@@ -88,7 +90,25 @@ enum class Gear(
     ADV_NECKLACE("acc_necklace_adv", 11, GearSlot.PENDANT, "Dobrodruhův náhrdelník",
         "Perla, dušička a pixie prach na jednom řetízku. Kořist z Makromonů padá o 10 % častěji.", 0, dropRate = 0.10),
     FIRE_SOUL("acc_trinket_fire_soul", 12, GearSlot.TRINKET, "Duše ohně",
-        "Uvnitř pořád žhne kousek magmatu. O 20 % menší šance, že Makromon uteče z ballu.", 0, catchBonus = 0.20);
+        "Uvnitř pořád žhne kousek magmatu. O 20 % menší šance, že Makromon uteče z ballu.", 0, catchBonus = 0.20),
+
+    // ── Kovové nástroje (docs/adr/0043): každý stupeň silnější a s lepším pasivním bonusem ──
+    COPPER_AXE("tool_axe_copper", 13, GearSlot.AXE, "Měděná sekera",
+        "Poctivá měď na dubovém topůrku. Síla 25, +5 % XP za kácení.", 25, xpBonus = mapOf(Skill.LOGGING to 0.05)),
+    COPPER_PICKAXE("tool_pickaxe_copper", 14, GearSlot.PICKAXE, "Měděný krumpáč",
+        "Poctivá měď na dubovém topůrku. Síla 25, +5 % XP za těžbu.", 25, xpBonus = mapOf(Skill.MINING to 0.05)),
+    SILVER_AXE("tool_axe_silver", 15, GearSlot.AXE, "Stříbrná sekera",
+        "Lesklé ostří na březovém topůrku. Síla 60, +10 % XP za kácení, +5 % šance na dvojité poleno.", 60,
+        xpBonus = mapOf(Skill.LOGGING to 0.10), multiBonus = mapOf(Skill.LOGGING to 0.05)),
+    SILVER_PICKAXE("tool_pickaxe_silver", 16, GearSlot.PICKAXE, "Stříbrný krumpáč",
+        "Lesklý hrot na březovém topůrku. Síla 60, +10 % XP za těžbu, +5 % šance na dvojitou rudu.", 60,
+        xpBonus = mapOf(Skill.MINING to 0.10), multiBonus = mapOf(Skill.MINING to 0.05)),
+    GOLD_AXE("tool_axe_gold", 17, GearSlot.AXE, "Zlatá sekera",
+        "Zlaté ostří na javorovém topůrku. Síla 150, +20 % XP a +8 % dvojitá polena, kácí o 4 h déle bez tebe.", 150,
+        xpBonus = mapOf(Skill.LOGGING to 0.20), multiBonus = mapOf(Skill.LOGGING to 0.08), afkHours = mapOf(Skill.LOGGING to 4)),
+    GOLD_PICKAXE("tool_pickaxe_gold", 18, GearSlot.PICKAXE, "Zlatý krumpáč",
+        "Zlatý hrot na javorovém topůrku. Síla 150, +20 % XP a +8 % dvojitá ruda, těží o 4 h déle bez tebe.", 150,
+        xpBonus = mapOf(Skill.MINING to 0.20), multiBonus = mapOf(Skill.MINING to 0.08), afkHours = mapOf(Skill.MINING to 4));
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null
@@ -227,6 +247,7 @@ object Gathering {
 object GearCrafting {
     val SET = listOf(Gear.ADV_CAP, Gear.ADV_TUNIC, Gear.ADV_PANTS, Gear.ADV_SLIPPERS)
     val ACCESSORIES = listOf(Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL)
+    val TOOLS = listOf(Gear.COPPER_AXE, Gear.COPPER_PICKAXE, Gear.SILVER_AXE, Gear.SILVER_PICKAXE, Gear.GOLD_AXE, Gear.GOLD_PICKAXE)
 
     fun recipe(g: Gear): Map<String, Int>? = when (g) {
         Gear.ADV_CAP -> linkedMapOf(Resource.ENERGY.itemId to 5, Resource.BERRY_BLUE.itemId to 3)
@@ -237,6 +258,14 @@ object GearCrafting {
         Gear.FIRE_RING -> linkedMapOf(Resource.EMBER.itemId to 3, Resource.FIRE_STONE.itemId to 1, Resource.ENERGY.itemId to 5)
         Gear.ADV_NECKLACE -> linkedMapOf(Resource.WATER_PEARL.itemId to 3, Resource.SOUL_WISP.itemId to 3, Resource.PIXIE_DUST.itemId to 3)
         Gear.FIRE_SOUL -> linkedMapOf(Resource.BERRY_BLACK.itemId to 3, Resource.MAGMA_ORB.itemId to 2, Resource.ENERGY.itemId to 20)
+        // Nástroje: ruda na hlavu, dřevo na topůrko, bobule na olej / svačinu pro kováře.
+        // Sekera chce víc dřeva, krumpáč víc rudy; každý stupeň stojí na dřevu a rudě předchozího.
+        Gear.COPPER_AXE -> linkedMapOf(Resource.ORE_COPPER.itemId to 12, Resource.LOG_OAK.itemId to 20, Resource.BERRY_GREEN.itemId to 5)
+        Gear.COPPER_PICKAXE -> linkedMapOf(Resource.ORE_COPPER.itemId to 20, Resource.LOG_OAK.itemId to 12, Resource.BERRY_GREEN.itemId to 5)
+        Gear.SILVER_AXE -> linkedMapOf(Resource.ORE_SILVER.itemId to 15, Resource.LOG_BIRCH.itemId to 25, Resource.ORE_COPPER.itemId to 10, Resource.BERRY_BLUE.itemId to 5)
+        Gear.SILVER_PICKAXE -> linkedMapOf(Resource.ORE_SILVER.itemId to 25, Resource.LOG_BIRCH.itemId to 15, Resource.LOG_OAK.itemId to 10, Resource.BERRY_BLUE.itemId to 5)
+        Gear.GOLD_AXE -> linkedMapOf(Resource.ORE_GOLD.itemId to 20, Resource.LOG_MAPLE.itemId to 30, Resource.ORE_SILVER.itemId to 10, Resource.BERRY_BLACK.itemId to 3)
+        Gear.GOLD_PICKAXE -> linkedMapOf(Resource.ORE_GOLD.itemId to 30, Resource.LOG_MAPLE.itemId to 20, Resource.LOG_BIRCH.itemId to 10, Resource.BERRY_BLACK.itemId to 3)
         else -> null
     }
 
@@ -244,6 +273,9 @@ object GearCrafting {
     fun xp(g: Gear): Int = when (g) {
         Gear.ADV_CAP -> 60; Gear.ADV_TUNIC -> 90; Gear.ADV_PANTS -> 110; Gear.ADV_SLIPPERS -> 150
         Gear.GRASS_RING -> 120; Gear.FIRE_RING -> 150; Gear.ADV_NECKLACE -> 180; Gear.FIRE_SOUL -> 250
+        Gear.COPPER_AXE, Gear.COPPER_PICKAXE -> 80
+        Gear.SILVER_AXE, Gear.SILVER_PICKAXE -> 180
+        Gear.GOLD_AXE, Gear.GOLD_PICKAXE -> 360
         else -> 0
     }
 

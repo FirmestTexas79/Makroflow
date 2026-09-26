@@ -138,8 +138,12 @@ object SkillStore {
         if (!GearCrafting.canCraft(g, owned)) return null
         recipe.forEach { (id, n) -> consume(ctx, id, n) }
         add(ctx, g.id, 1)
-        // do prázdného slotu rovnou nasadit (prsten do prvního volného)
-        val slot = if (g.slot == GearSlot.RING_1) listOf(GearSlot.RING_1, GearSlot.RING_2).firstOrNull { equipped(ctx, it) == null } else g.slot.takeIf { equipped(ctx, it) == null }
+        // do prázdného slotu rovnou nasadit (prsten do prvního volného); silnější nástroj vymění slabší
+        val slot = when {
+            g.slot == GearSlot.RING_1 -> listOf(GearSlot.RING_1, GearSlot.RING_2).firstOrNull { equipped(ctx, it) == null }
+            g.power > 0 -> g.slot.takeIf { (equipped(ctx, it)?.power ?: 0) < g.power }
+            else -> g.slot.takeIf { equipped(ctx, it) == null }
+        }
         slot?.let { set(ctx, it.itemId, g.code) }
         return addXp(ctx, Skill.CRAFTING, st.gain(Skill.CRAFTING, GearCrafting.xp(g).toDouble()))
     }
@@ -160,7 +164,18 @@ object SkillStore {
         return true
     }
 
-    /** Startovní sekera a krumpáč (později odměna za úkol) – dají se jen jednou a hned nasadí. */
+    /**
+     * Připíše předmět, jen když ho hráč ještě nemá (odměny za questy, docs/adr/0043).
+     * Vybavení se nasadí do prázdného slotu. True = přibyl.
+     */
+    fun grantItemOnce(ctx: Context, itemId: String): Boolean {
+        if (count(ctx, itemId) > 0) return false
+        add(ctx, itemId, 1)
+        Gear.from(itemId)?.let { g -> if (equipped(ctx, g.slot) == null) set(ctx, g.slot.itemId, g.code) }
+        return true
+    }
+
+    /** Startovní sekera a krumpáč (dřív automaticky, teď odměna za quest) – dají se jen jednou a hned nasadí. */
     fun ensureStarterTools(ctx: Context): Boolean {
         if (count(ctx, "starter_tools") > 0) return false
         add(ctx, Gear.OLD_AXE.id, 1); add(ctx, Gear.OLD_PICKAXE.id, 1)

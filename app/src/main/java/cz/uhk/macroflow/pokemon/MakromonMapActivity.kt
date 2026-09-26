@@ -130,13 +130,8 @@ class MakromonMapActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory()) else add(GifDecoder.Factory())
         }.build()
 
-        // Startovní sekera a krumpáč (později odměna za úkol) – docs/adr/0035
-        lifecycleScope.launch {
-            val given = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                cz.uhk.macroflow.pokemon.skills.SkillStore.ensureStarterTools(applicationContext)
-            }
-            if (given) showMapToast("🎁 Dostal jsi Starou sekeru a Starý krumpáč – už je máš nasazené (deník → Postava → TOOLS).")
-        }
+        // Stará sekera a Starý krumpáč jsou odměnou za první fáze questů u Křoví a krále Mlsáka
+        // (docs/adr/0043) – kdo je dostal dřív automaticky, o nic nepřijde.
 
         // Debug: suroviny a XP pro vyzkoušení dílny (adb … --ez seed_skills true)
         if (BuildConfig.DEBUG && intent.getBooleanExtra("seed_skills", false)) {
@@ -155,7 +150,7 @@ class MakromonMapActivity : AppCompatActivity() {
             val ctx = applicationContext
             lifecycleScope.launch(Dispatchers.IO) {
                 val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
-                (cz.uhk.macroflow.pokemon.skills.GearCrafting.SET + cz.uhk.macroflow.pokemon.skills.GearCrafting.ACCESSORIES).forEach { g ->
+                (cz.uhk.macroflow.pokemon.skills.GearCrafting.SET + cz.uhk.macroflow.pokemon.skills.GearCrafting.ACCESSORIES + cz.uhk.macroflow.pokemon.skills.GearCrafting.TOOLS).forEach { g ->
                     cz.uhk.macroflow.pokemon.skills.GearCrafting.recipe(g)?.forEach { (id, n) -> SS.add(ctx, id, n) }
                 }
                 cz.uhk.macroflow.pokemon.skills.SkillTree.node("basic_gear")?.let { SS.add(ctx, it.itemId, 1) }
@@ -202,6 +197,7 @@ class MakromonMapActivity : AppCompatActivity() {
         )
 
         // PROPOJENÍ: Když se v manageru změní progres (např. onMealLogged), refreshneme UI
+        questManager.onStageReward = { r -> cz.uhk.macroflow.pokemon.skills.SkillStore.grantItemOnce(applicationContext, r.itemId) }
         questManager.onProgressChanged = { progress ->
             // lifecycleScope zajistí, že nebudeme sahat do UI, pokud aktivita umírá
             lifecycleScope.launch(Dispatchers.Main) {
