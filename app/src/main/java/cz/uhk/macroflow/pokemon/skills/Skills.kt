@@ -195,6 +195,9 @@ data class SkillState(
             .filterIsInstance<SkillTree.Effect.XpBonus>().map { it.add } +
             gear.mapNotNull { it.xpBonus[skill] }
 
+    /** Bonus vybavení k šanci na dvojitý kus (Makromonova sekera / krumpáč). */
+    fun gearMulti(skill: Skill): Double = gear.sumOf { it.multiBonus[skill] ?: 0.0 }
+
     /** Plochý bonus k efektivitě z vybavení (pantofle +50). */
     fun gearEfficiency(skill: Skill): Int = gear.sumOf { it.efficiencyBonus[skill] ?: 0 }
 

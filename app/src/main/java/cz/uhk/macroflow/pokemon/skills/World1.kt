@@ -47,11 +47,22 @@ enum class Resource(val itemId: String, val label: String, val description: Stri
     SEED_BLACK(Berry.BLACK.seedItemId, Berry.BLACK.seedLabel, "Zasaď na záhon na louce – roste 4 hodiny."),
     // Těžba a kácení (docs/adr/0035)
     ORE_COPPER("ore_copper", "Měděná ruda", "Vytěžíš ji krumpáčem z měděné žíly v horách."),
-    ORE_SILVER("ore_silver", "Stříbrná ruda", "Stříbrná žíla v horách chce lepší efektivitu krumpáče."),
-    ORE_GOLD("ore_gold", "Zlatá ruda", "Nejvzácnější ruda hor – jen pro zkušené horníky."),
+    ORE_SILVER("ore_silver", "Stříbrná ruda", "Stříbrná žíla ve Starém dole chce lepší efektivitu krumpáče."),
+    ORE_GOLD("ore_gold", "Zlatá ruda", "Nejvzácnější ruda – v Mechové jeskyni, jen pro zkušené horníky."),
     LOG_OAK("log_oak", "Dubové poleno", "Pokácíš ho sekerou z dubu na louce."),
-    LOG_BIRCH("log_birch", "Březové poleno", "Bříza na louce chce ostřejší sekeru."),
-    LOG_MAPLE("log_maple", "Javorové poleno", "Tvrdé dřevo javoru – jen pro zkušené dřevorubce.");
+    LOG_BIRCH("log_birch", "Březové poleno", "Bříza v Hvozdu chce ostřejší sekeru."),
+    LOG_MAPLE("log_maple", "Javorové poleno", "Tvrdé dřevo javoru – jen pro zkušené dřevorubce."),
+
+    // Materiály z Makromonů (docs/adr/0040)
+    LEAF_DRY("mat_leaf_dry", "Suchý list", "Šustivý list z listových Makromonů (Flori, Verdirra)."),
+    LEAF_LIVING("mat_leaf_living", "Živý list", "Pořád zelený a teplý na dotek – vylepšený suchý list z Florinda a Florindry."),
+    EMBER("mat_ember", "Chudý plamínek", "Poslední jiskřička ohnivého Makromona (Ignar, Flamirra)."),
+    FIRE_STONE("mat_fire_stone", "Žhnoucí kámen", "Kámen, ze kterého tu a tam vyšlehne plamínek. Padá z Ignaroca."),
+    MAGMA_ORB("mat_magma_orb", "Koule magmatu", "Celá koule rozžhaveného magmatu. Padá z Ignarotha."),
+    WATER_PEARL("mat_water_pearl", "Vodní perla", "Hladká perla z vodních Makromonů."),
+    SOUL_WISP("mat_soul_wisp", "Malá dušička", "Tichý chladný obláček z duchů."),
+    DRAGON_SCALE("mat_dragon_scale", "Dračí šupina", "Tvrdá lesklá šupina dračích Makromonů."),
+    PIXIE_DUST("mat_pixie_dust", "Pixie prach", "Třpytivý prach vílích Makromonů.");
 
     val berry: Berry? get() = when (this) {
         BERRY_GREEN, SEED_GREEN -> Berry.GREEN
@@ -60,6 +71,8 @@ enum class Resource(val itemId: String, val label: String, val description: Stri
         else -> null
     }
     val isSeed: Boolean get() = itemId.startsWith("seed_")
+    /** Materiál z Makromonů. */
+    val isMonsterMaterial: Boolean get() = itemId.startsWith("mat_")
 
     companion object {
         fun from(itemId: String?): Resource? = entries.firstOrNull { it.itemId == itemId }
@@ -81,16 +94,50 @@ object Crafting {
     fun roll(multicraft: Double, rng: Random = Random.Default): Int = SkillMath.rollDouble(multicraft, rng)
 }
 
-/** Kořist ze soubojů s divokými Makromony. */
+/** Rodina Makromona pro kořist (typ se v bitvě bere z prvního útoku, proto podle druhu). */
+enum class DropFamily(val material: Resource?) {
+    NORMAL(null), FIRE(Resource.EMBER), WATER(Resource.WATER_PEARL), GRASS(Resource.LEAF_DRY),
+    GHOST(Resource.SOUL_WISP), DRAGON(Resource.DRAGON_SCALE), FAIRY(Resource.PIXIE_DUST)
+}
+
+/** Kořist ze soubojů s divokými Makromony (docs/adr/0034, 0040). */
 object Drops {
     data class Drop(val itemId: String, val amount: Int)
 
-    /** Šance na fragment energie: po výhře 35 % (+1 % za level, max 60 %), po chycení 25 %. */
-    fun fragmentChance(level: Int, caught: Boolean): Double =
-        if (caught) 0.25 else (0.35 + 0.01 * level).coerceAtMost(0.6)
+    private val FAMILY: Map<String, DropFamily> = buildMap {
+        listOf("IGNAR", "IGNAROC", "IGNAROTH", "FLAMIRRA").forEach { put(it, DropFamily.FIRE) }
+        listOf("AQULIN", "AQULIND", "AQULINOX", "AQUIRRA", "FINLET", "SERPFIN", "GLACIRRA").forEach { put(it, DropFamily.WATER) }
+        listOf("FLORI", "FLORIND", "FLORINDRA", "VERDIRRA").forEach { put(it, DropFamily.GRASS) }
+        listOf("UMBEX", "LUMEX", "SOULU", "SOULEX", "SOULORD", "PHANTIL", "PHANTIUS", "PHANTIAX", "SHADIRRA").forEach { put(it, DropFamily.GHOST) }
+        put("DRAKIRRA", DropFamily.DRAGON)
+        put("CHARMIRRA", DropFamily.FAIRY)
+    }
 
-    /** Semínko padá jen z travních Makromonů. */
+    /** Vylepšené materiály z evolucí. */
+    val UPGRADE: Map<String, Resource> = mapOf(
+        "IGNAROC" to Resource.FIRE_STONE, "IGNAROTH" to Resource.MAGMA_ORB,
+        "FLORIND" to Resource.LEAF_LIVING, "FLORINDRA" to Resource.LEAF_LIVING
+    )
+
+    fun family(species: String): DropFamily = FAMILY[species.uppercase()] ?: DropFamily.NORMAL
+
+    /** Šance na fragment energie: po výhře 35 % (+1 % za level, max 60 %), po chycení 25 %. Normální Makromoni +20 % (max 80 %). */
+    fun fragmentChance(level: Int, caught: Boolean, family: DropFamily = DropFamily.WATER): Double {
+        val base = if (caught) 0.25 else (0.35 + 0.01 * level).coerceAtMost(0.6)
+        return if (family == DropFamily.NORMAL) (base + 0.2).coerceAtMost(0.8) else base
+    }
+
+    /** Šance na materiál rodiny: po výhře 40 % (+1 % za level, max 65 %), po chycení 25 %. */
+    fun materialChance(level: Int, caught: Boolean): Double = if (caught) 0.25 else (0.4 + 0.01 * level).coerceAtMost(0.65)
+
+    /** Šance na vylepšený materiál z evoluce: po výhře 35 %, po chycení 20 %. */
+    fun upgradeChance(caught: Boolean): Double = if (caught) 0.2 else 0.35
+
+    /** Semínko padá jen z listových Makromonů. */
     const val SEED_CHANCE = 0.25
+
+    /** Makromonova sekera / krumpáč z poraženého Gudwina – každý zvlášť. */
+    const val ARTIFACT_CHANCE = 0.05
 
     /** Vzácnost semínka: černozlaté 5 %, modré 20 %, jinak olivové. */
     fun seedTier(r: Double): Berry = when {
@@ -99,15 +146,28 @@ object Drops {
         else -> Berry.GREEN
     }
 
-    fun roll(level: Int, isGrass: Boolean, caught: Boolean, rng: Random = Random.Default): List<Drop> {
+    fun roll(species: String, level: Int, caught: Boolean, rng: Random = Random.Default): List<Drop> {
+        val fam = family(species)
         val out = mutableListOf<Drop>()
-        if (rng.nextDouble() < fragmentChance(level, caught)) {
+        if (rng.nextDouble() < fragmentChance(level, caught, fam)) {
             val two = level >= 8 && rng.nextDouble() < 0.2
             out += Drop(Resource.ENERGY.itemId, if (two) 2 else 1)
         }
-        if (isGrass && rng.nextDouble() < SEED_CHANCE) out += Drop(seedTier(rng.nextDouble()).seedItemId, 1)
+        fam.material?.let { m ->
+            if (rng.nextDouble() < materialChance(level, caught)) out += Drop(m.itemId, if (level >= 10 && rng.nextDouble() < 0.25) 2 else 1)
+        }
+        UPGRADE[species.uppercase()]?.let { u -> if (rng.nextDouble() < upgradeChance(caught)) out += Drop(u.itemId, 1) }
+        if (fam == DropFamily.GRASS && rng.nextDouble() < SEED_CHANCE) out += Drop(seedTier(rng.nextDouble()).seedItemId, 1)
+        if (species.uppercase() == "GUDWIN" && !caught) {
+            if (rng.nextDouble() < ARTIFACT_CHANCE) out += Drop(Gear.MAKRO_AXE.id, 1)
+            if (rng.nextDouble() < ARTIFACT_CHANCE) out += Drop(Gear.MAKRO_PICKAXE.id, 1)
+        }
         return out
     }
+
+    /** Kteří Makromoni dávají daný materiál (pro ceduli v deníku). */
+    fun speciesFor(r: Resource): List<String> =
+        FAMILY.filter { it.value.material == r }.keys.toList() + UPGRADE.filter { it.value == r }.keys
 }
 
 /** Chytání: XP a šance na útěk po vyskočení z ballu. */

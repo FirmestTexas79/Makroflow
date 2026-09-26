@@ -1525,21 +1525,26 @@ class PokemonBattleView @JvmOverloads constructor(
     // ── Dovednosti a kořist (docs/adr/0034) ──
 
     private fun grantDrops(caught: Boolean): List<cz.uhk.macroflow.pokemon.skills.Drops.Drop> {
-        val drops = cz.uhk.macroflow.pokemon.skills.Drops.roll(gs.enemy.level, gs.enemy.speciesType == MakromonType.GRASS, caught)
-        drops.forEach { runCatching { cz.uhk.macroflow.pokemon.skills.SkillStore.add(context, it.itemId, it.amount) } }
+        val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+        val drops = cz.uhk.macroflow.pokemon.skills.Drops.roll(gs.enemy.name, gs.enemy.level, caught)
+            // artefakty z Gudwina jen jednou
+            .filter { d -> cz.uhk.macroflow.pokemon.skills.Gear.from(d.itemId) == null || runCatching { SS.count(context, d.itemId) == 0 }.getOrDefault(false) }
+        drops.forEach { runCatching { SS.add(context, it.itemId, it.amount) } }
         return drops
     }
 
-    private fun dropLabel(id: String) = when (id) {
-        "energy_fragment" -> "ENERGY FRAGMENT"
-        "seed_green" -> "OLIVE SEED"
-        "seed_blue" -> "BLUE SEED"
-        "seed_black" -> "BLACKGOLD SEED"
-        else -> id.uppercase().replace('_', ' ')
+    /** Název kořisti pro pixelové písmo (bez diakritiky, velkými). */
+    private fun dropLabel(id: String): String {
+        val label = cz.uhk.macroflow.pokemon.skills.Resource.from(id)?.label
+            ?: cz.uhk.macroflow.pokemon.skills.Gear.from(id)?.label ?: id.replace('_', ' ')
+        return java.text.Normalizer.normalize(label, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").uppercase()
     }
 
     private fun dropLines(drops: List<cz.uhk.macroflow.pokemon.skills.Drops.Drop>) =
-        drops.map { d -> "FOUND" to ((if (d.amount > 1) "${d.amount}X " else "") + dropLabel(d.itemId) + "!") }
+        drops.map { d ->
+            val legendary = cz.uhk.macroflow.pokemon.skills.Gear.from(d.itemId)?.legendary == true
+            (if (legendary) "* LEGENDARY *" else "FOUND") to ((if (d.amount > 1) "${d.amount}X " else "") + dropLabel(d.itemId) + "!")
+        }
 
     private fun skillLines(r: cz.uhk.macroflow.pokemon.skills.SkillStore.XpResult?): List<Pair<String, String>> {
         if (r == null || r.gained <= 0) return emptyList()

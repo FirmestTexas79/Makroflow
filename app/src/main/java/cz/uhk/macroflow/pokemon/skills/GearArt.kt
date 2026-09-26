@@ -82,6 +82,7 @@ object GearArt {
         Gear.ADV_TUNIC -> fromRows(TUNIC)
         Gear.ADV_PANTS -> fromRows(PANTS)
         Gear.ADV_SLIPPERS -> fromRows(SLIPPERS)
+        Gear.MAKRO_AXE, Gear.MAKRO_PICKAXE -> MaterialArt.artifact(g)!!
     }
 
     // ── Dobrodruhův set 16 × 16 (docs/adr/0039) ─────────────────────────────
@@ -264,7 +265,7 @@ object GearArt {
     fun resourceIcon(r: Resource): IntArray? = when (r) {
         Resource.ORE_COPPER, Resource.ORE_SILVER, Resource.ORE_GOLD -> ore(r)
         Resource.LOG_OAK, Resource.LOG_BIRCH, Resource.LOG_MAPLE -> log(r)
-        else -> null
+        else -> MaterialArt.icon(r)
     }
 
     // ── Místa na mapě ─────────────────────────────────────────────────────────

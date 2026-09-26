@@ -157,6 +157,10 @@ class MakromonMapActivity : AppCompatActivity() {
                     cz.uhk.macroflow.pokemon.skills.GearCrafting.recipe(g)?.forEach { (id, n) -> SS.add(ctx, id, n) }
                 }
                 cz.uhk.macroflow.pokemon.skills.SkillTree.node("basic_gear")?.let { SS.add(ctx, it.itemId, 1) }
+                // artefakty z Gudwina + materiály z Makromonů na ukázku
+                listOf(cz.uhk.macroflow.pokemon.skills.Gear.MAKRO_AXE, cz.uhk.macroflow.pokemon.skills.Gear.MAKRO_PICKAXE)
+                    .forEach { if (SS.count(ctx, it.id) == 0) SS.add(ctx, it.id, 1) }
+                cz.uhk.macroflow.pokemon.skills.Resource.entries.filter { it.isMonsterMaterial }.forEach { SS.add(ctx, it.itemId, 3) }
             }
         }
 
@@ -1168,7 +1172,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     cz.uhk.macroflow.pokemon.skills.Gathering.pending(active, System.currentTimeMillis() / 1000, sec, st.afkCapHours(spot.skill)) else 0
                 cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.GatherInfo(
                     spot, SS.equipped(ctx, spot.toolSlot), eff, sec, st.gain(spot.skill, spot.xp.toDouble()),
-                    st.passive(spot.skill), st.afkCapHours(spot.skill), active, pending)
+                    st.passive(spot.skill) + st.gearMulti(spot.skill), st.afkCapHours(spot.skill), active, pending)
             }
             movementEngine.face(1)
             cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.gatherMenu(findViewById(R.id.mapRootContainer), info,

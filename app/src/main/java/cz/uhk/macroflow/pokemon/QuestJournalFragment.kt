@@ -190,7 +190,8 @@ class QuestJournalFragment : Fragment() {
                     val c = cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.card(ui)
                     c.addView(ui.icon(cz.uhk.macroflow.pokemon.skills.GearArt.gearIcon(g), 16, 16, 40f))
                     val col = ui.column().apply { setPadding(ui.px(10f), 0, ui.px(6f), 0) }
-                    col.addView(ui.text(g.label, 19f)); col.addView(ui.text(g.description, 15f, ui.inkSoft))
+                    col.addView(ui.text(if (g.legendary) "✦ ${g.label}" else g.label, 19f, if (g.legendary) 0xFFB8860B.toInt() else ui.ink))
+                    col.addView(ui.text(g.description, 15f, ui.inkSoft))
                     c.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                     val on = current == g
                     c.addView(ui.button(if (on) "Sundat" else "Nasadit") {

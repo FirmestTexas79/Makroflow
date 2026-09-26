@@ -124,8 +124,8 @@ class SkillsTest {
 
     @Test fun dropsOnlySeedsFromGrass() {
         val rng = Random(7)
-        repeat(500) { assertTrue(Drops.roll(5, isGrass = false, caught = false, rng = rng).none { it.itemId.startsWith("seed_") }) }
-        val seeds = (1..4000).flatMap { Drops.roll(5, isGrass = true, caught = false, rng = rng) }.filter { it.itemId.startsWith("seed_") }
+        repeat(500) { assertTrue(Drops.roll("IGNAR", 5, caught = false, rng = rng).none { it.itemId.startsWith("seed_") }) }
+        val seeds = (1..4000).flatMap { Drops.roll("FLORI", 5, caught = false, rng = rng) }.filter { it.itemId.startsWith("seed_") }
         assertTrue(seeds.size in 850..1150)
         val black = seeds.count { it.itemId == "seed_black" }
         val green = seeds.count { it.itemId == "seed_green" }

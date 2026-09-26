@@ -282,7 +282,7 @@ object JournalPages {
 
         fun res(r: Resource) = Entry(r.itemId, r.label, r.description, SkillArt.resourceIcon(r), SkillArt.ITEM)
         val sections = listOf(
-            "Z Makromonů" to listOf(res(Resource.ENERGY)),
+            "Z Makromonů" to (listOf(res(Resource.ENERGY)) + Resource.entries.filter { it.isMonsterMaterial }.map { res(it) }),
             "Ze záhonů" to listOf(res(Resource.BERRY_GREEN), res(Resource.BERRY_BLUE), res(Resource.BERRY_BLACK)),
             "Semínka" to listOf(res(Resource.SEED_GREEN), res(Resource.SEED_BLUE), res(Resource.SEED_BLACK)),
             "Z dolů" to listOf(res(Resource.ORE_COPPER), res(Resource.ORE_SILVER), res(Resource.ORE_GOLD)),

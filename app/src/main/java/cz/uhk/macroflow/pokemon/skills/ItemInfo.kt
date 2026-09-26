@@ -25,13 +25,23 @@ object ItemInfo {
                 r == Resource.ENERGY -> listOf(
                     Source("Poražený divoký Makromon ($WILD)",
                         "${pct(Drops.fragmentChance(0, false))} + 1 % za level (max ${pct(Drops.fragmentChance(99, false))}); od Lv 8 občas 2 ks"),
-                    Source("Chycený Makromon", pct(Drops.fragmentChance(0, true)))
+                    Source("Chycený Makromon", pct(Drops.fragmentChance(0, true))),
+                    Source("Normální Makromoni (Spirra, Mycit, Axlu, Gudwin…)", "o 20 % vyšší šance (max ${pct(Drops.fragmentChance(99, false, DropFamily.NORMAL))})")
                 )
+                r.isMonsterMaterial -> {
+                    val names = Drops.speciesFor(r).map { it.lowercase().replaceFirstChar { c -> c.uppercase() } }
+                    if (Drops.UPGRADE.containsValue(r)) listOf(
+                        Source("Evoluce: ${Drops.UPGRADE.filterValues { it == r }.keys.joinToString { it.lowercase().replaceFirstChar { c -> c.uppercase() } }}",
+                            "po výhře ${pct(Drops.upgradeChance(false))}, po chycení ${pct(Drops.upgradeChance(true))}")
+                    ) else listOf(
+                        Source(names.joinToString(), "po výhře ${pct(Drops.materialChance(0, false))} + 1 % za level (max ${pct(Drops.materialChance(99, false))}), po chycení ${pct(Drops.materialChance(0, true))}; od Lv 10 občas 2 ks")
+                    )
+                }
                 r.isSeed -> {
                     val b = r.berry!!
                     val tier = when (b) { Berry.BLACK -> 0.05; Berry.BLUE -> 0.20; Berry.GREEN -> 0.75 }
                     listOf(
-                        Source("Travní Makromoni – po výhře i chycení", pct(Drops.SEED_CHANCE * tier)),
+                        Source("Listoví Makromoni (Flori, Verdirra…) – po výhře i chycení", pct(Drops.SEED_CHANCE * tier)),
                         Source("Obchod ve městě (záložka Semínka)", "${b.seedPrice} makro penízků")
                     )
                 }
@@ -57,6 +67,7 @@ object ItemInfo {
             )
         }
         Gear.from(itemId)?.let { g ->
+            if (g.legendary) return listOf(Source("Poražený Gudwin – legendární artefakt, padá jen jednou", pct(Drops.ARTIFACT_CHANCE)))
             val recipe = GearCrafting.recipe(g) ?: return listOf(Source("Startovní vybavení", "dostaneš na začátku"))
             val parts = recipe.entries.joinToString(" + ") { (id, n) -> "$n× ${Resource.from(id)?.label ?: id}" }
             return listOf(Source("Pracovní stůl na louce – Dobrodruhův set (uzel „Základní vybavení“ ve stromu Výroby)", parts))

@@ -197,7 +197,7 @@ object SkillStore {
             ?: return GatherResult(a.spot, Gathering.Claim(0, 0, nowSec, 0, false), null).also {
                 set(ctx, Gathering.SINCE_ITEM, Gathering.encodeSince(nowSec))
             }
-        val c = Gathering.claim(a, nowSec, sec, st.passive(a.spot.skill), st.afkCapHours(a.spot.skill))
+        val c = Gathering.claim(a, nowSec, sec, st.passive(a.spot.skill) + st.gearMulti(a.spot.skill), st.afkCapHours(a.spot.skill))
         set(ctx, Gathering.SINCE_ITEM, Gathering.encodeSince(c.newSince))
         if (c.units == 0) return GatherResult(a.spot, c, null)
         add(ctx, a.spot.resource.itemId, c.amount)

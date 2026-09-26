@@ -46,7 +46,11 @@ enum class Gear(
     /** Bonus k XP dovedností (0,1 = +10 %), sčítá se s bonusy ze stromu. */
     val xpBonus: Map<Skill, Double> = emptyMap(),
     /** Plochý bonus k efektivitě těžby / kácení (jen s nástrojem v ruce). */
-    val efficiencyBonus: Map<Skill, Int> = emptyMap()
+    val efficiencyBonus: Map<Skill, Int> = emptyMap(),
+    /** Bonus k šanci na dvojitý kus (multiore / multilog), 0,1 = +10 %. */
+    val multiBonus: Map<Skill, Double> = emptyMap(),
+    /** Legendární artefakt – v UI zlatý nápis. */
+    val legendary: Boolean = false
 ) {
     OLD_AXE("tool_axe_old", 1, GearSlot.AXE, "Stará sekera", "Otupená, ale pořád seká. Síla 10.", 10),
     OLD_PICKAXE("tool_pickaxe_old", 2, GearSlot.PICKAXE, "Starý krumpáč", "Rezavý, ale kámen rozbije. Síla 10.", 10),
@@ -61,7 +65,15 @@ enum class Gear(
     ADV_SLIPPERS("gear_adv_slippers", 6, GearSlot.BOOTS, "Dobrodruhovy pantofle",
         "Huňaté pantofle – kdo by řekl, že se v nich tak dobře těží. +50 k efektivitě těžby a kácení, +15 % XP za těžbu a kácení.", 0,
         xpBonus = mapOf(Skill.MINING to 0.15, Skill.LOGGING to 0.15),
-        efficiencyBonus = mapOf(Skill.MINING to 50, Skill.LOGGING to 50));
+        efficiencyBonus = mapOf(Skill.MINING to 50, Skill.LOGGING to 50)),
+
+    // ── Artefakty z Gudwina (docs/adr/0040) ──
+    MAKRO_AXE("tool_axe_makro", 7, GearSlot.AXE, "Makromonova sekera",
+        "Artefakt z dob, kdy svět patřil jen Makromonům. Síla 500, +50 % XP za kácení, +10 % šance na dvojité poleno.", 500,
+        xpBonus = mapOf(Skill.LOGGING to 0.5), multiBonus = mapOf(Skill.LOGGING to 0.10), legendary = true),
+    MAKRO_PICKAXE("tool_pickaxe_makro", 8, GearSlot.PICKAXE, "Makromonův krumpáč",
+        "Artefakt z dob, kdy svět patřil jen Makromonům. Síla 500, +50 % XP za těžbu, +10 % šance na dvojitou rudu.", 500,
+        xpBonus = mapOf(Skill.MINING to 0.5), multiBonus = mapOf(Skill.MINING to 0.10), legendary = true);
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null
