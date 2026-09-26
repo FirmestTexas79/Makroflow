@@ -110,8 +110,9 @@ class MovementEngine(
         val from = feet()
         val path = grid.findPath(geo.toImage(Pt(from.x, from.y)), geo.toImage(Pt(target.x, target.y))) ?: return false
         val points = path.map { geo.toWorld(it).let { w -> PointF(w.x, w.y) } }.toMutableList()
-        // K uzlu (dveře, NPC) dojít až na jeho přesné místo, pokud je těsně u průchozí plochy
-        if (exact) {
+        // K uzlu (dveře, NPC) dojít až na jeho přesné místo – jen když na něm jde stát
+        // (záhon nebo stůl jsou zeď: postava zastaví u kraje, ne na hlíně)
+        if (exact && grid.isWalkable(geo.toImage(Pt(target.x, target.y)))) {
             val last = points.lastOrNull() ?: from
             val d = getDistance(last, target)
             if (d > 0.5f && d <= grid.cell * geo.scale * 2.5f) points += target
