@@ -856,7 +856,11 @@ class MakromonMapActivity : AppCompatActivity() {
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             elevation = 200f
         }
-        overlay.onCovered = onCovered
+        overlay.onCovered = {
+            onCovered()
+            // otevřít až po vykreslení nové mapy (velký obrázek se dekóduje a nahrává do GPU)
+            mapWorld.post { mapWorld.postOnAnimation { mapWorld.postDelayed({ overlay.release() }, 180) } }
+        }
         overlay.onFinished = {
             root.removeView(overlay)
             transitionRunning = false

@@ -27,6 +27,18 @@ class LocationTransitionView(context: Context, private val biome: String) : View
     private var startAt = -1L
     private var covered = false
     private var finished = false
+    /** Dokud se nová mapa nevykreslí, scéna zůstane zakrytá ([release]). */
+    private var released = false
+    private var heldSince = -1L
+
+    /** Nová mapa je vykreslená – scéna se může otevřít. */
+    fun release() {
+        if (released) return
+        released = true
+        // čas, který scéna čekala zavřená, se odečte – otevírání začne od začátku
+        if (heldSince >= 0) startAt += SystemClock.uptimeMillis() - heldSince
+        postInvalidateOnAnimation()
+    }
 
     fun start() {
         startAt = SystemClock.uptimeMillis()
@@ -52,14 +64,20 @@ class LocationTransitionView(context: Context, private val biome: String) : View
             if (s == null && startAt >= 0 && !finished) { finished = true; covered = true; post { onCovered?.invoke(); onFinished?.invoke() } }
             return
         }
-        val t = (SystemClock.uptimeMillis() - startAt).coerceAtMost(s.end)
+        var t = (SystemClock.uptimeMillis() - startAt).coerceAtMost(s.end)
+        if (!released && t >= s.openAt) {
+            if (heldSince < 0) heldSince = SystemClock.uptimeMillis() - (t - s.openAt)
+            t = s.openAt
+            // pojistka: nejdéle 2,5 s čekání
+            if (SystemClock.uptimeMillis() - heldSince > 2500) release()
+        }
         s.render(t, pixels)
         b.setPixels(pixels, 0, s.w, 0, 0, s.w, s.h)
         canvas.drawBitmap(b, null, dst, blit)
 
         if (!covered && t >= s.coveredAt) { covered = true; post { onCovered?.invoke() } }
         if (!finished && t >= s.end) { finished = true; post { onFinished?.invoke() } }
-        if (t < s.end && isAttachedToWindow) postInvalidateOnAnimation()
+        if ((t < s.end || !released) && isAttachedToWindow) postInvalidateOnAnimation()
     }
 
     override fun onDetachedFromWindow() {

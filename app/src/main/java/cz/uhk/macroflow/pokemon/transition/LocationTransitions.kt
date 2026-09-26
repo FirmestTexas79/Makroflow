@@ -15,6 +15,8 @@ interface TransitionScene {
     val w: Int
     val h: Int
     val coveredAt: Long
+    /** Od kdy se scéna otevírá – do té doby může počkat, než se nová mapa vykreslí. */
+    val openAt: Long
     val end: Long
     /** Vykreslí snímek do [out] (ARGB, 0 = průhledné). */
     fun render(t: Long, out: IntArray)
@@ -83,6 +85,7 @@ class GateScene(override val w: Int, override val h: Int) : TransitionScene {
     override val end = 1700L
     private val closeEnd = 700L
     private val openStart = 980L
+    override val openAt = openStart
 
     private val WOOD = intArrayOf(0xFF3A2212.toInt(), 0xFF5A3620.toInt(), 0xFF7A4A2A.toInt(), 0xFF96603A.toInt(), 0xFFB07848.toInt())
     private val IRON = intArrayOf(0xFF1C1C22.toInt(), 0xFF34343E.toInt(), 0xFF5A5A68.toInt(), 0xFF8A8A9A.toInt())
@@ -168,6 +171,7 @@ class GrassScene(override val w: Int, override val h: Int) : TransitionScene {
     override val end = 1720L
     private val growEnd = 740L
     private val partStart = 960L
+    override val openAt = partStart
 
     private val GRASS = intArrayOf(0xFF1E4A1C.toInt(), 0xFF2E6A26.toInt(), 0xFF428A30.toInt(), 0xFF5EA83E.toInt(), 0xFF86C656.toInt())
     private val FLOWERS = intArrayOf(0xFFF4E04A.toInt(), 0xFFF28AB6.toInt(), 0xFFFFFFFF.toInt(), 0xFFB48CF0.toInt())
@@ -254,6 +258,7 @@ class LeafScene(override val w: Int, override val h: Int) : TransitionScene {
     override val end = 1760L
     private val inEnd = 740L
     private val outStart = 1000L
+    override val openAt = outStart
 
     private val LEAF = intArrayOf(0xFF0E2410.toInt(), 0xFF173816.toInt(), 0xFF1F4A1C.toInt(), 0xFF2A5E25.toInt(), 0xFF3C7A34.toInt(), 0xFF5A9A40.toInt())
     private val AUTUMN = intArrayOf(0xFF7A3A12.toInt(), 0xFFB0601E.toInt(), 0xFFD08A2E.toInt())
@@ -345,6 +350,7 @@ class MistScene(override val w: Int, override val h: Int) : TransitionScene {
     override val end = 1800L
     private val inEnd = 760L
     private val outStart = 1040L
+    override val openAt = outStart
 
     private val CLOUD = intArrayOf(0xFF8A9CB8.toInt(), 0xFFA8B8D0.toInt(), 0xFFC8D4E4.toInt(), 0xFFE4ECF4.toInt(), 0xFFFFFFFF.toInt())
     private val PEAK = intArrayOf(0xFF5E6E8A.toInt(), 0xFF7A8AA6.toInt(), 0xFFEEF4FA.toInt())
