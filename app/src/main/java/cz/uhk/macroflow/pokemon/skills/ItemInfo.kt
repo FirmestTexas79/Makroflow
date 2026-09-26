@@ -44,7 +44,7 @@ object ItemInfo {
                     )
                 }
                 else -> GatherSpot.entries.filter { it.resource == r }.map { s ->
-                    Source("${if (s.biome == "MOUNTAINS") "Hory" else "Louka"} – ${s.label} (${if (s.skill == Skill.MINING) "krumpáč" else "sekera"})",
+                    Source("${s.placeLabel} – ${s.label} (${if (s.skill == Skill.MINING) "krumpáč" else "sekera"})",
                         "efektivita ${s.required}+, 1 ks za ${growText(s.baseSeconds)} (rychleji s vyšší efektivitou)")
                 }
             }

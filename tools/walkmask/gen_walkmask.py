@@ -73,7 +73,8 @@ def cave_graph(path, var):
     import re
     src = open(path, encoding="utf-8").read()
     start = src.index(f"val {var}")
-    body = src[start:start + 6000]
+    nxt = src.find("\n    val ", start + 10)
+    body = src[start:nxt if nxt > 0 else len(src)]         # jen tahle mapa (dřív 6000 znaků přes sousední)
     consts = dict((k, int(v)) for k, v in re.findall(r'\b(?:private )?(?:const )?val ([A-Z]\w*)\s*=\s*(\d+)', src))
     nodes = {}
     for m in re.finditer(r'CaveNode\("([^"]+)",\s*(\w+),\s*(\w+)\)', body):
@@ -179,9 +180,13 @@ def main():
     build("mountains", os.path.join(RES, "drawable/mountains.png"), mountain, 12, n, e, corridor_r=16, **MOUNTAIN_FIX)
     for var, img, fname in (("OPEN", "cave_open", "cave_open"), ("MAZE", "cave_maze", "cave_maze")):
         n, e = cave_graph(caves, var)
-        build(fname, os.path.join(RES, f"drawable-nodpi/{img}.png"), cave, 3, {k: (x, y) for k, (x, y) in n.items()}, e, corridor_r=4)
+        build(fname, os.path.join(RES, f"drawable-nodpi/{img}.png"), cave, 3, {k: (x, y) for k, (x, y) in n.items()}, e, corridor_r=4,
+              **CAVE_FIX.get(fname, {}))
+    # Hvozd (docs/adr/0036): průchozí plochu kreslí rovnou generátor mapy (forest_walk.png);
+    # rovné koridory mezi uzly se nepřidávají – stezky jsou zakřivené a šly by přes stromy
     n, e = cave_graph(forest, "MAP")
-    build("forest", os.path.join(RES, "drawable-nodpi/forest.png"), forest_c, 3, {k: (x, y) for k, (x, y) in n.items()}, e, corridor_r=4)
+    build("forest", os.path.join(ROOT, "tools/mapgen/forest_walk.png"), lambda c: c[0] > 128, 3,
+          {k: (x, y) for k, (x, y) in n.items()}, e, corridor_r=-1)
 
 
 forest_c = forest
@@ -191,11 +196,14 @@ TOWN_FIX = dict(extra_walk=[], extra_block=[])
 MEADOW_FIX = dict(extra_walk=[(345, 824, 520, 846), (426, 745, 448, 925)],
                   extra_block=[(360, 769, 426, 824), (448, 769, 514, 824), (360, 846, 426, 901), (448, 846, 514, 901),
                                (93, 790, 161, 830),
-                               # stromy ke kácení (kmen a spodek koruny), docs/adr/0035
-                               (175, 580, 235, 630), (460, 470, 520, 520), (39, 626, 99, 676)])
+                               # dub ke kácení nad pracovním stolem (docs/adr/0035)
+                               (97, 695, 157, 745)])
 MOUNTAIN_FIX = dict(extra_walk=[], extra_block=[(304, 700, 384, 812),   # socha krále na podstavci
-                                               # rudné žíly (docs/adr/0035)
-                                               (193, 1021, 261, 1075), (416, 1159, 484, 1213), (406, 591, 474, 645)])
+                                               # měděná žíla (docs/adr/0035)
+                                               (193, 1021, 261, 1075)])
+
+# zlatá žíla v Mechové jeskyni (balvan v síni, docs/adr/0035)
+CAVE_FIX = {"cave_open": dict(extra_block=[(108, 247, 128, 263)])}
 
 if __name__ == "__main__":
     main()

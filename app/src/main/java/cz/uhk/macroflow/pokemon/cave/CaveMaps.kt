@@ -79,12 +79,14 @@ object CaveMaps {
             CaveNode("houby", 34, 230),
             CaveNode("krystaly_j", 116, 214),
             CaveNode("pata_schodu2", 82, 170),
-            CaveNode("krystal_modry", 75, 86)
+            CaveNode("krystal_modry", 75, 86),
+            // Zlatá žíla (docs/adr/0035) – balvan vpravo v prostřední síni, stojí se pod ním
+            CaveNode("zila_zlato", 118, 272)
         ),
         edges = listOf(
             "vychod_jeskyne" to "sal", "sal" to "jezirko", "sal" to "balvany_j", "sal" to "pata_schodu",
             "pata_schodu" to "terasa", "terasa" to "houby", "terasa" to "krystaly_j",
-            "terasa" to "pata_schodu2", "pata_schodu2" to "krystal_modry"
+            "terasa" to "pata_schodu2", "pata_schodu2" to "krystal_modry", "terasa" to "zila_zlato"
         ),
         exitNode = "vychod_jeskyne",
         mountainNode = "cave",
@@ -112,7 +114,9 @@ object CaveMaps {
             CaveNode("horni_stola", 124, 208),
             CaveNode("hlubina", 124, 140),
             CaveNode("sin_krystalu", 75, 140),
-            CaveNode("krystal_cerveny", 75, 76)
+            CaveNode("krystal_cerveny", 75, 76),
+            // Stříbrná žíla (docs/adr/0035) – ve stěně nad štolou mezi žebříkem a těžbou
+            CaveNode("zila_stribro", 100, 346)
         ),
         edges = listOf(
             "vychod_dolu" to "stola_vstup", "stola_vstup" to "stola_kriz", "stola_kriz" to "vozik",
@@ -121,7 +125,7 @@ object CaveMaps {
             "chodba_sever" to "rozcesti_dul", "rozcesti_dul" to "netopyri",
             "rozcesti_dul" to "zebrik2",
             "zebrik2" to "slepa_chodba", "zebrik2" to "horni_stola", "horni_stola" to "hlubina",
-            "hlubina" to "sin_krystalu", "sin_krystalu" to "krystal_cerveny"
+            "hlubina" to "sin_krystalu", "sin_krystalu" to "krystal_cerveny", "zebrik1" to "zila_stribro"
         ),
         exitNode = "vychod_dolu",
         mountainNode = "mine",

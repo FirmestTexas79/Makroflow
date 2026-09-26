@@ -19,6 +19,12 @@ import kotlin.random.Random
 // ROZHRANÍ
 // ─────────────────────────────────────────────
 
+/**
+ * Hodnoty třesení vůči AKTUÁLNÍ poloze: dřív animace šly z translationX = 0, takže
+ * Makromon uprostřed procházky po klepnutí (nebo při idle) skočil zpátky na výchozí místo.
+ */
+internal fun relTx(v: android.view.View, vararg d: Float): FloatArray { val base = v.translationX; return FloatArray(d.size) { base + d[it] } }
+
 interface PokemonBehavior {
     fun start()
     fun stop()
@@ -53,7 +59,7 @@ class HeavyTransitionEffect : TransitionEffect {
             .setInterpolator(OvershootInterpolator(1.4f))
             .withEndAction {
                 parent?.let {
-                    ObjectAnimator.ofFloat(it, "translationX", 0f, -12f * dp, 12f * dp, -6f * dp, 6f * dp, 0f)
+                    ObjectAnimator.ofFloat(it, "translationX", *relTx(it, 0f, -12f * dp, 12f * dp, -6f * dp, 6f * dp, 0f))
                         .apply { duration = 450; start() }
                 }
                 onDone()
@@ -239,6 +245,7 @@ class StandardWanderer(
             applyFacing(facingRight)
             effect.playAppear(pokemonView, baseScale, targetTranslationY) {
                 if (!running) return@playAppear
+                applyFacing(facingRight)    // efekty příchodu nastavují scaleX bez ohledu na směr
                 startIdleAnimation()
                 if (!isFlying && !isSleeping) startWobble()
                 scheduleStep(Random.nextLong(idleWaitRange.first, idleWaitRange.second))
@@ -345,6 +352,8 @@ class StandardWanderer(
                 val edge = if (onLeft) here.endInclusive else here.start
                 val target = if (onLeft) sideRange(false, o, parentW).start else sideRange(true, o, parentW).endInclusive
                 val cross: () -> Unit = {
+                    // idle (dýchání) si drží původní směr – nejdřív ho zastavit, jinak se otočí zpátky
+                    cancelIdle(); stopWobble()
                     facingRight = onLeft; applyFacing(facingRight)
                     handler.postDelayed({
                         if (running && !isCrossing) {
@@ -362,6 +371,8 @@ class StandardWanderer(
                     // Už je na místě – rozhlédne se a počká
                     facingRight = !facingRight
                     applyFacing(facingRight)
+                    startIdleAnimation()        // nové idle už s novým směrem (staré by ho otočilo zpět)
+                    if (!isFlying && !isSleeping) startWobble()
                     scheduleStep(randomIdle())
                 } else walkTo(fx, target)
             }
@@ -837,7 +848,7 @@ class StandardWanderer(
         }) {
             if (heavy) {
                 (pokemonView.parent as? ViewGroup)?.let {
-                    ObjectAnimator.ofFloat(it, "translationX", 0f, -8f * dp, 8f * dp, -4f * dp, 4f * dp, 0f).apply { duration = 350; start() }
+                    ObjectAnimator.ofFloat(it, "translationX", *relTx(it, 0f, -8f * dp, 8f * dp, -4f * dp, 4f * dp, 0f)).apply { duration = 350; start() }
                 }
             } else leafSwayReaction()
             onCrossingDone()
@@ -1074,7 +1085,7 @@ class StandardWanderer(
     }
 
     private fun startIgnarIdle(): Animator {
-        val shakeX = ObjectAnimator.ofFloat(pokemonView, "translationX", 0f, 3f * dp, -3f * dp, 2f * dp, -2f * dp, 0f).apply { duration = 800; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        val shakeX = ObjectAnimator.ofFloat(pokemonView, "translationX", *relTx(pokemonView, 0f, 3f * dp, -3f * dp, 2f * dp, -2f * dp, 0f)).apply { duration = 800; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         val breatheY = ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.04f, baseScale).apply { duration = 1200; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         return AnimatorSet().apply { playTogether(shakeX, breatheY); start() }
     }
@@ -1113,7 +1124,7 @@ class StandardWanderer(
     }
 
     private fun startFlamirraIdle(): Animator {
-        val shake = ObjectAnimator.ofFloat(pokemonView, "translationX", 0f, 2f * dp, -2f * dp, 1f * dp, -1f * dp, 0f).apply { duration = 600; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        val shake = ObjectAnimator.ofFloat(pokemonView, "translationX", *relTx(pokemonView, 0f, 2f * dp, -2f * dp, 1f * dp, -1f * dp, 0f)).apply { duration = 600; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         scheduleFireParticles()
         return shake.also { it.start() }
     }
@@ -1142,7 +1153,7 @@ class StandardWanderer(
     }
 
     private fun startGlacirraIdle(): Animator {
-        val shiver = ObjectAnimator.ofFloat(pokemonView, "translationX", 0f, 1.5f * dp, -1.5f * dp, 1f * dp, -1f * dp, 0f).apply { duration = 400; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        val shiver = ObjectAnimator.ofFloat(pokemonView, "translationX", *relTx(pokemonView, 0f, 1.5f * dp, -1.5f * dp, 1f * dp, -1f * dp, 0f)).apply { duration = 400; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         shiver.start(); return shiver
     }
 
@@ -1484,7 +1495,7 @@ class StandardWanderer(
     }
 
     private fun shakeView(target: View) {
-        ObjectAnimator.ofFloat(target, "translationX", 0f, -15f * dp, 15f * dp, -10f * dp, 10f * dp, -5f * dp, 5f * dp, 0f)
+        ObjectAnimator.ofFloat(target, "translationX", *relTx(target, 0f, -15f * dp, 15f * dp, -10f * dp, 10f * dp, -5f * dp, 5f * dp, 0f))
             .apply { duration = 500; start() }
     }
 

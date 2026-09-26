@@ -51,9 +51,7 @@ object BiomeRegistry {
         MovementEngine.Waypoint("zahon_3",       PointF(0.586f, 0.563f), emptyList()),
         MovementEngine.Waypoint("zahon_4",       PointF(0.685f, 0.563f), emptyList()),
         // Kácení (docs/adr/0035): stojí se těsně pod kmenem (GatherLayout)
-        MovementEngine.Waypoint("strom_dub",     PointF(0.298f, 0.419f), emptyList()),
-        MovementEngine.Waypoint("strom_briza",   PointF(0.712f, 0.348f), emptyList()),
-        MovementEngine.Waypoint("strom_javor",   PointF(0.100f, 0.449f), emptyList()),
+        MovementEngine.Waypoint("strom_dub",     PointF(0.185f, 0.495f), emptyList()),
         // Cesta nahoru do Hvozdu (zamčeno: 5 splněných fází úkolů)
         MovementEngine.Waypoint("cesta_sever",   PointF(0.500f, 0.280f), listOf("rozcesti", "les_sever")),
         MovementEngine.Waypoint("les_sever",     PointF(0.470f, 0.090f), listOf("cesta_sever")),
@@ -84,9 +82,7 @@ object BiomeRegistry {
         MovementEngine.Waypoint("cave",           PointF(0.790f, 0.345f), listOf("horni_stezka")),
         MovementEngine.Waypoint("peak",           PointF(0.500f, 0.150f), listOf("horni_stezka")),
         // Těžba (docs/adr/0035): rudné žíly v údolí, stojí se pod balvanem (GatherLayout)
-        MovementEngine.Waypoint("zila_med",       PointF(0.330f, 0.709f), emptyList()),
-        MovementEngine.Waypoint("zila_stribro",   PointF(0.654f, 0.799f), emptyList()),
-        MovementEngine.Waypoint("zila_zlato",     PointF(0.640f, 0.429f), emptyList())
+        MovementEngine.Waypoint("zila_med",       PointF(0.330f, 0.709f), emptyList())
     )
 
     /** Vše, co mapa potřebuje o biomu vědět, na jednom místě. */

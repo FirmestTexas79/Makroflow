@@ -28,12 +28,12 @@ class ForestMapTest {
     }
 
     @Test
-    fun edgesAreStraightCorridors() {
-        // palouky vedou jen vodorovně nebo svisle (generátor kreslí rovné kapsle)
-        forest.edges.forEach { (a, b) ->
-            val na = forest.node(a)!!; val nb = forest.node(b)!!
-            assertTrue("$a-$b", na.x == nb.x || na.y == nb.y)
-        }
+    fun forestIsWiderThanTheScreenAndHasGatherSpots() {
+        // 300 art px na šířku, na obrazovce 150 → kamera jezdí i do stran (docs/adr/0036)
+        assertTrue(forest.artW > forest.artPixelsAcross)
+        assertTrue(forest.node("strom_briza")!!.y > forest.artH / 2)      // bříza v první (spodní) půlce
+        assertTrue(forest.node("strom_javor")!!.y < forest.artH / 4)      // javor na konci lesa
+        forest.nodes.forEach { assertTrue(it.id, it.x in 0 until forest.artW && it.y in 0 until forest.artH) }
     }
 
     @Test

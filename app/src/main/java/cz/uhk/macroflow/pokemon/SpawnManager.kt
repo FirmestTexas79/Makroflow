@@ -75,7 +75,7 @@ object SpawnManager {
     private val POOL: List<SpawnPool> = listOf(
 
         // ── TOWN (Město) ──────────────────────────────────────────────
-        // Zde zůstávají jen ti, kteří mají BiomeType.TOWN explicitně
+        // Ve městě jen startéři: Ignar, Aqulin, Flori (Ignaroth patří do hor)
         SpawnPool("012", "SPIRRA",   Rarity.COMMON, listOf(BiomeType.MEADOW), listOf(Conditions.ALWAYS))      { BattleFactory.createSpirra() },
         SpawnPool("001", "IGNAR",    Rarity.COMMON, listOf(BiomeType.TOWN), listOf(Conditions.ALWAYS))      { BattleFactory.createIgnar() },
         SpawnPool("013", "FLAMIRRA",  Rarity.RARE,   listOf(BiomeType.MEADOW), listOf(Conditions.ALWAYS))       { BattleFactory.createFlamirra() },
@@ -111,7 +111,7 @@ object SpawnManager {
 
         // ── LEGENDARY & MYTHIC (Všude kromě TOWN) ──────────────────────
         SpawnPool("018", "GLACIRRA",  Rarity.EPIC,   ALL_WILD_BIOMES, listOf(Conditions.ALWAYS))       { BattleFactory.createGlacirra() },
-        SpawnPool("003", "IGNAROTH",  Rarity.EPIC,   listOf(BiomeType.TOWN), listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createIgnaroth() },
+        SpawnPool("003", "IGNAROTH",  Rarity.EPIC,   listOf(BiomeType.MOUNTAINS), listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createIgnaroth() },
         SpawnPool("019", "DRAKIRRA",  Rarity.LEGENDARY, ALL_WILD_BIOMES, listOf(Conditions.MinCheckInCount(30)))     { BattleFactory.createDrakirra() },
         SpawnPool("029", "PHANTIAX",  Rarity.LEGENDARY, ALL_WILD_BIOMES, listOf(Conditions.MinCheckInCount(20)))     { BattleFactory.createPhantiax() },
         SpawnPool("031", "AXLU",      Rarity.MYTHIC, ALL_WILD_BIOMES, listOf(Conditions.MinCheckInCount(50)))        { BattleFactory.createAxlu() }

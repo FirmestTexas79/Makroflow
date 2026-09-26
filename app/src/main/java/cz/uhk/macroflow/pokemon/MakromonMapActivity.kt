@@ -81,7 +81,7 @@ class MakromonMapActivity : AppCompatActivity() {
         // Dílna na louce (docs/adr/0034)
         "vyrobna", "zahon_1", "zahon_2", "zahon_3", "zahon_4",
         // Těžba a kácení (docs/adr/0035)
-        "strom_dub", "strom_briza", "strom_javor", "zila_med", "zila_stribro", "zila_zlato"
+        "strom_dub", "zila_med"
     )
 
     /** Uzly, kde může vyskočit divoký Makromon (90 % šance). Jeskyně mají vlastní (CaveMap.encounterNodes). */
@@ -101,7 +101,9 @@ class MakromonMapActivity : AppCompatActivity() {
         /** Uzly jeskyní a lesa, které něco dělají (ostatní jsou jen cesta). */
         private val CAVE_ACTION_NODES = setOf(
             "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "tezba", "les_sever", "mytina",
-            "krystal_modry", "krystal_cerveny"
+            "krystal_modry", "krystal_cerveny",
+            // těžba a kácení v jeskyních a Hvozdu (docs/adr/0035)
+            "zila_stribro", "zila_zlato", "strom_briza", "strom_javor"
         )
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
@@ -524,9 +526,13 @@ class MakromonMapActivity : AppCompatActivity() {
                 "camp" -> restAtCamp()
                 "rozcesti_hory" -> showMapToast("🪧 ↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku")
                 "starter_bush" -> {
+                    // Úvodní keřík je „vynucené“ setkání jen do konce úvodního úkolu; potom je to
+                    // obyčejné městské křoví (se shiny šancí) – dřív zůstal vynucený navždy a shiny
+                    // ve městě nikdy nepadl
+                    val intro = !questManager.isIntroQuestFinished()
                     getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                         .putString("LAST_BIOME", currentBiome.name)
-                        .putString("FORCE_ENCOUNTER_ID", "starter_bush")
+                        .apply { if (intro) putString("FORCE_ENCOUNTER_ID", "starter_bush") else remove("FORCE_ENCOUNTER_ID") }
                         .apply()
                     replaceMapContent(PokemonBattleFragment())
                 }
@@ -651,7 +657,8 @@ class MakromonMapActivity : AppCompatActivity() {
         val layout = layoutInflater.inflate(R.layout.layout_custom_toast, null)
         layout.findViewById<TextView>(R.id.toastText).text = message
         with (Toast(applicationContext)) {
-            setGravity(Gravity.CENTER, 0, 0)
+            // dole na obrazovce – uprostřed zakrývala mapu
+            setGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, (96 * resources.displayMetrics.density).toInt())
             duration = Toast.LENGTH_LONG
             view = layout
             show()
@@ -807,7 +814,7 @@ class MakromonMapActivity : AppCompatActivity() {
             clearDecor()
             val cave = BiomeRegistry.definition(currentBiome)?.cave
             when {
-                cave != null -> { placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave) }
+                cave != null -> { placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots() }
                 currentBiome == BiomeType.MOUNTAINS -> { placeShrineDecor(progress); placeGatherSpots() }
                 currentBiome == BiomeType.MEADOW -> { placeMeadowWorkshop(); placeGatherSpots() }
                 else -> {}
@@ -1035,7 +1042,8 @@ class MakromonMapActivity : AppCompatActivity() {
 
     private fun placeGatherSpots() {
         if (mapWorld.width == 0) return
-        val geo = cz.uhk.macroflow.pokemon.walk.MapGeometry(688, 1536, mapWorld.width, mapWorld.height)
+        val (iw, ih) = cz.uhk.macroflow.pokemon.skills.GatherLayout.imageSize(currentBiome.name)
+        val geo = cz.uhk.macroflow.pokemon.walk.MapGeometry(iw, ih, mapWorld.width, mapWorld.height)
         cz.uhk.macroflow.pokemon.skills.GatherSpot.entries.filter { it.biome == currentBiome.name }.forEach { spot ->
             val place = cz.uhk.macroflow.pokemon.skills.GatherLayout.PLACES[spot] ?: return@forEach
             val (px, w, h) = cz.uhk.macroflow.pokemon.skills.GearArt.spot(spot)

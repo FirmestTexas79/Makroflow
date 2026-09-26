@@ -23,9 +23,9 @@ enum class Berry(
     /** Cena semínka v obchodě (makro penízky). */
     val seedPrice: Int
 ) {
-    GREEN(1, "green", "Olivová bobule", "Olivové semínko", Makroball.MAKRO, 15 * 60L, 15, 10, 15),
-    BLUE(2, "blue", "Modrá bobule", "Modré semínko", Makroball.PROTEIN, 60 * 60L, 40, 25, 45),
-    BLACK(3, "black", "Černozlatá bobule", "Černozlaté semínko", Makroball.KREATIN, 4 * 60 * 60L, 100, 60, 120);
+    GREEN(1, "green", "Olivová bobule", "Olivové semínko", Makroball.MAKRO, 15 * 60L, 15, 10, 10),
+    BLUE(2, "blue", "Modrá bobule", "Modré semínko", Makroball.PROTEIN, 60 * 60L, 40, 25, 20),
+    BLACK(3, "black", "Černozlatá bobule", "Černozlaté semínko", Makroball.KREATIN, 4 * 60 * 60L, 100, 60, 50);
 
     val berryItemId: String get() = "berry_$id"
     val seedItemId: String get() = "seed_$id"

@@ -16,7 +16,7 @@ class ItemInfoTest {
         assertEquals("1,25 %", ItemInfo.sources("seed_black")[0].rate)
         assertEquals("5 %", ItemInfo.sources("seed_blue")[0].rate)
         assertEquals("18,75 %", ItemInfo.sources("seed_green")[0].rate)
-        assertTrue(ItemInfo.sources("ore_gold")[0].where.startsWith("Hory"))
+        assertTrue(ItemInfo.sources("ore_gold")[0].where.startsWith("Mechová"))
         assertTrue(ItemInfo.sources("log_oak")[0].rate.contains("3 min"))
     }
 }

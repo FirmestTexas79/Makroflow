@@ -70,15 +70,25 @@ enum class GatherSpot(
     val biome: String
 ) {
     COPPER(1, "zila_med", Skill.MINING, "Měděná žíla", Resource.ORE_COPPER, 10, 180, 10, "MOUNTAINS"),
-    SILVER(2, "zila_stribro", Skill.MINING, "Stříbrná žíla", Resource.ORE_SILVER, 30, 360, 25, "MOUNTAINS"),
-    GOLD(3, "zila_zlato", Skill.MINING, "Zlatá žíla", Resource.ORE_GOLD, 70, 720, 60, "MOUNTAINS"),
+    SILVER(2, "zila_stribro", Skill.MINING, "Stříbrná žíla", Resource.ORE_SILVER, 30, 360, 25, "CAVE_MAZE"),
+    GOLD(3, "zila_zlato", Skill.MINING, "Zlatá žíla", Resource.ORE_GOLD, 70, 720, 60, "CAVE_OPEN"),
     OAK(4, "strom_dub", Skill.LOGGING, "Dub", Resource.LOG_OAK, 10, 180, 10, "MEADOW"),
-    BIRCH(5, "strom_briza", Skill.LOGGING, "Bříza", Resource.LOG_BIRCH, 30, 360, 25, "MEADOW"),
-    MAPLE(6, "strom_javor", Skill.LOGGING, "Javor", Resource.LOG_MAPLE, 70, 720, 60, "MEADOW");
+    BIRCH(5, "strom_briza", Skill.LOGGING, "Bříza", Resource.LOG_BIRCH, 30, 360, 25, "FOREST"),
+    MAPLE(6, "strom_javor", Skill.LOGGING, "Javor", Resource.LOG_MAPLE, 70, 720, 60, "FOREST");
 
     /** Nástroj, bez kterého to nejde. */
     val toolSlot: GearSlot get() = if (skill == Skill.MINING) GearSlot.PICKAXE else GearSlot.AXE
     val verb: String get() = if (skill == Skill.MINING) "Těžit" else "Kácet"
+
+    /** Kde to na mapě je (pro cedule a deník). */
+    val placeLabel: String get() = when (biome) {
+        "MOUNTAINS" -> "Hory"
+        "MEADOW" -> "Louka"
+        "CAVE_MAZE" -> "Starý důl (levá jeskyně v horách)"
+        "CAVE_OPEN" -> "Mechová jeskyně (pravá jeskyně v horách)"
+        "FOREST" -> "Hvozd nad loukou"
+        else -> biome
+    }
 
     companion object {
         fun fromNode(node: String) = entries.firstOrNull { it.node == node }
