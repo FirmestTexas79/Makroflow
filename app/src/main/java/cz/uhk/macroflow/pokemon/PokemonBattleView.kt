@@ -66,7 +66,22 @@ class PokemonBattleView @JvmOverloads constructor(
     private var itemPage = 0
 
     // ── Stavy (spánek, paralýza…) – platí jen po dobu souboje ──
-    private val playerCond = cz.uhk.macroflow.pokemon.status.Condition()
+    private var playerCond = cz.uhk.macroflow.pokemon.status.Condition()
+
+    // ── Tým (docs/adr/0034): až 6 Makromonů, v souboji se dají střídat ──
+    private class PartyMember(
+        val capturedId: Int,
+        val mon: Makromon,
+        val shiny: Boolean,
+        val cond: cz.uhk.macroflow.pokemon.status.Condition = cz.uhk.macroflow.pokemon.status.Condition()
+    )
+    private val party = mutableListOf<PartyMember>()
+    private var partyIdx = 0
+    /** Menu týmu je vynucené (bojující Makromon omdlel) – nejde zavřít. */
+    private var partyForced = false
+    private var partyMenu = false
+    /** Pasivní bonus Chytání (snižuje šanci na útěk po vyskočení z ballu). */
+    private var catchingPassive = 0.0
     private val enemyCond = cz.uhk.macroflow.pokemon.status.Condition()
 
     private val absorbPaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
@@ -105,6 +120,13 @@ class PokemonBattleView @JvmOverloads constructor(
             val caughtEntity = if (activeCapturedId != -1) {
                 db.capturedMakromonDao().getMakromonById(activeCapturedId)
             } else null
+            catchingPassive = runCatching {
+                cz.uhk.macroflow.pokemon.skills.SkillStore.state(context).passive(cz.uhk.macroflow.pokemon.skills.Skill.CATCHING)
+            }.getOrDefault(0.0)
+            // Ostatní členové týmu (první = aktivní parťák, ten je už načtený výš)
+            val teamRest = runCatching { cz.uhk.macroflow.pokemon.skills.SkillStore.team(context) }.getOrDefault(emptyList())
+                .filter { it != caughtEntity?.id }
+                .mapNotNull { db.capturedMakromonDao().getMakromonById(it) }
 
             val mId = caughtEntity?.makromonId ?: backupMakromonId
             val playerLevel = caughtEntity?.level ?: 1
@@ -141,7 +163,19 @@ class PokemonBattleView @JvmOverloads constructor(
             val currentPokeballs = counts.values.sum()
             val meds = cz.uhk.macroflow.pokemon.status.MedItem.entries.associateWith { db.userItemDao().getItemCount(it.id) ?: 0 }
 
+            val restMembers = teamRest.map { e ->
+                val base = BattleFactory.createById(e.makromonId)
+                PartyMember(e.id, createPlayerMakromon(e.makromonId, e.level).copy(
+                    moves = cz.uhk.macroflow.pokemon.wild.MovePool.resolve(e.moveListStr, base.moves),
+                    type = base.speciesType
+                ), e.isShiny)
+            }
+
             handler.post {
+                party.clear()
+                party += PartyMember(caughtEntity?.id ?: -1, playerWithStats, playerIsShiny, playerCond)
+                party += restMembers
+                partyIdx = 0
                 gs = BattleState(
                     player = playerWithStats,
                     enemy  = enemyWithStats,
@@ -377,11 +411,38 @@ class PokemonBattleView @JvmOverloads constructor(
     private fun drawBottomUI(c: Canvas) {
         fp.color = C_UI_BG; c.drawRect(0f, 96f, 160f, 144f, fp)
         fp.color = C_BORDER; c.drawRect(0f, 96f, 160f, 97f, fp)
+        if (partyMenu) { drawPartyMenu(c); return }
         when (gs.phase) {
             BattlePhase.MAIN_MENU, BattlePhase.INTRO -> drawMainMenu(c)
             BattlePhase.FIGHT_MENU                   -> drawFightMenu(c)
             BattlePhase.ITEM_MENU                    -> drawItemMenu(c)
             else                                     -> drawTextPanel(c)
+        }
+    }
+
+    /** Tým: 2 sloupce × 3 řádky, bojující má šipku, omdlelí šedě. */
+    private fun drawPartyMenu(c: Canvas) {
+        val bx = 2; val by = 97; val bw = 156; val bh = 46; drawUIBox(c, bx, by, bw, bh)
+        zones.clear()
+        party.forEachIndexed { i, m ->
+            val col = i / 3; val row = i % 3
+            val x = bx + 3 + col * 76; val y = by + 4 + row * 11
+            val alive = m.mon.currentHp > 0
+            val color = if (alive) C_TEXT else 0xFF9A9A9A.toInt()
+            if (i == partyIdx) PokemonSprites.drawText(c, ">", x, y, C_TEXT, fp)
+            PokemonSprites.drawText(c, "${m.mon.name.take(7)} L${m.mon.level}", x + 7, y, color, fp)
+            // mini ukazatel HP
+            val frac = m.mon.currentHp.toFloat() / m.mon.maxHp.coerceAtLeast(1)
+            fp.color = C_HP_BG; c.drawRect((x + 7).toFloat(), (y + 7).toFloat(), (x + 67).toFloat(), (y + 8).toFloat(), fp)
+            fp.color = if (frac > 0.5f) C_HP_G else if (frac > 0.2f) C_HP_Y else C_HP_R
+            c.drawRect((x + 7).toFloat(), (y + 7).toFloat(), x + 7 + 60 * frac, (y + 8).toFloat(), fp)
+            zones.add(Zone(Rect(x - 1, y - 2, x + 74, y + 9)) { if (!busy) switchTo(i) })
+        }
+        if (!partyForced) {
+            PokemonSprites.drawText(c, "BACK", bx+bw-28, by+37, C_TEXT, fp)
+            zones.add(Zone(Rect(bx+bw-32, by+33, bx+bw, by+bh)) { if (!busy) { partyMenu = false; showMain() } })
+        } else {
+            PokemonSprites.drawText(c, "CHOOSE NEXT!", bx + 4, by + 37, C_TEXT, fp)
         }
     }
 
@@ -690,7 +751,28 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun showMain()    { busy = false; gs.phase = BattlePhase.MAIN_MENU; zones.clear(); invalidate() }
     private fun startFight()  { if (gs.player.moves.all { it.pp <= 0 }) { setText("NO PP LEFT!", ""); return }; gs.phase = BattlePhase.FIGHT_MENU; invalidate() }
-    private fun showPkmn()    { setText("ONLY ${gs.player.name}", "IN PARTY!") }
+    private fun showPkmn() {
+        if (party.size <= 1) { setText("ONLY ${gs.player.name}", "IN PARTY!"); return }
+        partyForced = false; partyMenu = true; gs.phase = BattlePhase.MAIN_MENU; invalidate()
+    }
+
+    /** Výměna Makromona: dobrovolná stojí tah, po omdlení je zdarma. */
+    private fun switchTo(i: Int) {
+        val m = party.getOrNull(i) ?: return
+        if (i == partyIdx) { if (!partyForced) { partyMenu = false; showMain() }; return }
+        if (m.mon.currentHp <= 0) { return }
+        val forced = partyForced
+        val old = gs.player.name
+        partyMenu = false; partyForced = false
+        partyIdx = i
+        gs.player = m.mon
+        gs.isPlayerShiny = m.shiny
+        playerCond = m.cond
+        loadMakromonSprite(m.mon, isPlayer = true)
+        busy = true
+        if (forced) say("GO ${m.mon.name}!", "") { showMain() }
+        else say("COME BACK $old!", "GO ${m.mon.name}!") { enemyTurn() }
+    }
     private fun startItem()   { itemPage = 0; gs.phase = BattlePhase.ITEM_MENU; zones.clear(); invalidate() }
 
     private fun doRun() {
@@ -907,6 +989,14 @@ class PokemonBattleView @JvmOverloads constructor(
             }
             return
         }
+        if (party.any { it.mon.currentHp > 0 }) {
+            // Další člen týmu nastoupí
+            say("${gs.player.name}", "FAINTED!") {
+                partyForced = true; partyMenu = true; busy = false
+                gs.phase = BattlePhase.MAIN_MENU; invalidate()
+            }
+            return
+        }
         gs.phase = BattlePhase.PLAYER_FAINTED
         setText("${gs.player.name}", "FAINTED!")
         busy = false
@@ -951,13 +1041,18 @@ class PokemonBattleView @JvmOverloads constructor(
             val totalBattleXp = baseScore + (gs.enemy.level * 3)
             awardXpToActiveMakromon(totalBattleXp)
             if (coins > 0) db.coinDao().addCoins(coins)
+            // Kořist (docs/adr/0034): fragment energie, z travních i semínko
+            val drops = if (special == null) grantDrops(caught = false) else emptyList()
 
             handler.post {
-                // Makro penízky za výhru (1–5), pak po 2 s zpět na mapu
-                if (coins > 0) handler.postDelayed({ setText("YOU GOT", if (coins == 1) "1 MAKRO COIN!" else "$coins MAKRO COINS!") }, 900)
+                // Makro penízky za výhru (1–5) a kořist postupně, pak zpět na mapu
+                val lines = mutableListOf<Pair<String, String>>()
+                if (coins > 0) lines += "YOU GOT" to (if (coins == 1) "1 MAKRO COIN!" else "$coins MAKRO COINS!")
+                lines += dropLines(drops)
+                lines.forEachIndexed { i, (a, b) -> handler.postDelayed({ setText(a, b) }, 900L + i * 1500L) }
                 handler.postDelayed({
                     onCaught?.invoke()
-                }, if (coins > 0) 2600 else 2000)
+                }, if (lines.isEmpty()) 2000L else 900L + lines.size * 1500L + 400L)
             }
         }.start()
     }
@@ -1305,8 +1400,9 @@ class PokemonBattleView @JvmOverloads constructor(
         }
 
         busy = false
+        val flee = cz.uhk.macroflow.pokemon.skills.CatchRules.fleeChance(runAwayChance.toDouble(), catchingPassive)
 
-        if (Random.nextFloat() < runAwayChance) {
+        if (Random.nextDouble() < flee) {
             gs.phase = BattlePhase.ESCAPED
             setText("${gs.enemy.name}", "RAN AWAY!")
             pendingAction = { onCaught?.invoke() }
@@ -1347,8 +1443,46 @@ class PokemonBattleView @JvmOverloads constructor(
         canvas.restore()
     }
 
+    // ── Dovednosti a kořist (docs/adr/0034) ──
+
+    private fun grantDrops(caught: Boolean): List<cz.uhk.macroflow.pokemon.skills.Drops.Drop> {
+        val drops = cz.uhk.macroflow.pokemon.skills.Drops.roll(gs.enemy.level, gs.enemy.speciesType == MakromonType.GRASS, caught)
+        drops.forEach { runCatching { cz.uhk.macroflow.pokemon.skills.SkillStore.add(context, it.itemId, it.amount) } }
+        return drops
+    }
+
+    private fun dropLabel(id: String) = when (id) {
+        "energy_fragment" -> "ENERGY FRAGMENT"
+        "seed_green" -> "OLIVE SEED"
+        "seed_blue" -> "BLUE SEED"
+        "seed_black" -> "BLACKGOLD SEED"
+        else -> id.uppercase().replace('_', ' ')
+    }
+
+    private fun dropLines(drops: List<cz.uhk.macroflow.pokemon.skills.Drops.Drop>) =
+        drops.map { d -> "FOUND" to ((if (d.amount > 1) "${d.amount}X " else "") + dropLabel(d.itemId) + "!") }
+
+    private fun skillLines(r: cz.uhk.macroflow.pokemon.skills.SkillStore.XpResult?): List<Pair<String, String>> {
+        if (r == null || r.gained <= 0) return emptyList()
+        val name = r.skill.name
+        val out = mutableListOf("$name SKILL" to "GAINED ${r.gained} XP!")
+        if (r.leveledUp) out += "$name LV ${r.newLevel}!" to (if (r.newPoints > 0) "GOT A SKILL POINT!" else "")
+        return out
+    }
+
+    /** Postupně ukáže hlášky (každá čeká na ťuknutí), pak [end]. */
+    private fun sayChain(lines: List<Pair<String, String>>, end: () -> Unit) {
+        if (lines.isEmpty()) { end(); return }
+        gs.phase = BattlePhase.TEXT_WAIT
+        val (a, b) = lines.first()
+        setText(a, b)
+        busy = false
+        pendingAction = { sayChain(lines.drop(1), end) }
+    }
+
     private fun caught() {
-        gs.phase = BattlePhase.CAUGHT
+        gs.phase = BattlePhase.ANIMATING
+        busy = true
         cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.CATCH)
         tween(650, { p -> clickStars = p }) { clickStars = -1f }
 
@@ -1379,9 +1513,19 @@ class PokemonBattleView @JvmOverloads constructor(
             val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
             val isAcquired = prefs.getBoolean("makromonAcquired", false)
 
+            // Chytání: XP podle levelu chyceného (shiny ×2) + kořist
+            val skillXp = runCatching {
+                val st = cz.uhk.macroflow.pokemon.skills.SkillStore.state(context)
+                val gain = st.gain(cz.uhk.macroflow.pokemon.skills.Skill.CATCHING,
+                    cz.uhk.macroflow.pokemon.skills.CatchRules.baseXp(gs.enemy.level),
+                    cz.uhk.macroflow.pokemon.skills.CatchRules.multipliers(gs.isEnemyShiny))
+                cz.uhk.macroflow.pokemon.skills.SkillStore.addXp(context, cz.uhk.macroflow.pokemon.skills.Skill.CATCHING, gain)
+            }.getOrNull()
+            val drops = grantDrops(caught = true)
+
             handler.post {
-                setText((if (gs.isEnemyShiny) "CAUGHT *" else "CAUGHT ") + "${gs.enemy.name.take(7)}!",
-                    if (gs.isEnemyShiny) "SHINY!" else "")
+                val caughtLine = (if (gs.isEnemyShiny) "CAUGHT *" else "CAUGHT ") + "${gs.enemy.name.take(7)}!" to
+                    (if (gs.isEnemyShiny) "SHINY!" else "")
                 busy = false
 
                 if (isAcquired) {
@@ -1399,7 +1543,10 @@ class PokemonBattleView @JvmOverloads constructor(
 
                     awardXpToActiveMakromon(xpReward)
                 }
-                pendingAction = { onCaught?.invoke() }
+                sayChain(listOf(caughtLine) + skillLines(skillXp) + dropLines(drops)) {
+                    gs.phase = BattlePhase.CAUGHT
+                    onCaught?.invoke()
+                }
             }
         }.start()
     }
@@ -1410,7 +1557,8 @@ class PokemonBattleView @JvmOverloads constructor(
      */
     private fun awardXpToActiveMakromon(xpAmount: Int) {
         val prefs = context.getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE)
-        val activeCapturedId = prefs.getInt("currentOnBarCapturedId", -1)
+        val activeCapturedId = party.getOrNull(partyIdx)?.capturedId?.takeIf { it > 0 }
+            ?: prefs.getInt("currentOnBarCapturedId", -1)
         if (activeCapturedId == -1) return
 
         Thread {

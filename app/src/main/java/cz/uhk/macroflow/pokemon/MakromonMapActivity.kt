@@ -77,7 +77,9 @@ class MakromonMapActivity : AppCompatActivity() {
         "les", "domov", "pokedex", "obchod", "hory",
         "vstup_z_town", "krovi1", "krovi2", "voda", "gudwin", "starter_bush",
         "meadow_npc", "les_sever",
-        "vstup_z_meadow", "rozcesti_hory", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2"
+        "vstup_z_meadow", "rozcesti_hory", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2",
+        // Dílna na louce (docs/adr/0034)
+        "vyrobna", "zahon_1", "zahon_2", "zahon_3", "zahon_4"
     )
 
     /** Uzly, kde může vyskočit divoký Makromon (90 % šance). Jeskyně mají vlastní (CaveMap.encounterNodes). */
@@ -121,6 +123,18 @@ class MakromonMapActivity : AppCompatActivity() {
         val imageLoader = ImageLoader.Builder(this).components {
             if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory()) else add(GifDecoder.Factory())
         }.build()
+
+        // Debug: suroviny a XP pro vyzkoušení dílny (adb … --ez seed_skills true)
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("seed_skills", false)) {
+            val ctx = applicationContext
+            lifecycleScope.launch(Dispatchers.IO) {
+                val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+                SS.add(ctx, "energy_fragment", 6)
+                cz.uhk.macroflow.pokemon.skills.Berry.entries.forEach { SS.add(ctx, it.seedItemId, 2); SS.add(ctx, it.berryItemId, 2) }
+                SS.addXp(ctx, cz.uhk.macroflow.pokemon.skills.Skill.CATCHING, 80)
+                SS.addXp(ctx, cz.uhk.macroflow.pokemon.skills.Skill.HARVESTING, 80)
+            }
+        }
 
         movementEngine = MovementEngine(this, ashView, mapBackground)
         movementEngine.onMoved = { updateCamera() }
@@ -184,6 +198,8 @@ class MakromonMapActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this) {
             when {
                 questDialogManager.isVisible() -> questDialogManager.hide()   // zpět zavře tutoriál/dialog
+                cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.isOpen(findViewById(R.id.mapRootContainer)) ->
+                    cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.close(findViewById(R.id.mapRootContainer))
                 supportFragmentManager.backStackEntryCount > 0 -> supportFragmentManager.popBackStack()
                 else -> finish()
             }
@@ -347,6 +363,7 @@ class MakromonMapActivity : AppCompatActivity() {
      */
     private fun handleMapTap(event: MotionEvent): Boolean {
         if (questDialogManager.isVisible() || supportFragmentManager.backStackEntryCount != 0) return false
+        if (cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.isOpen(findViewById(R.id.mapRootContainer))) return false
         val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
         if (kotlin.math.hypot(event.rawX - touchDownX, event.rawY - touchDownY) > slop * 2) return false
 
@@ -426,6 +443,9 @@ class MakromonMapActivity : AppCompatActivity() {
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
                 "tezba" -> scanInMine()
+                cz.uhk.macroflow.pokemon.skills.MeadowLayout.TABLE_NODE -> openCraftingTable()
+                "zahon_1", "zahon_2", "zahon_3", "zahon_4" ->
+                    cz.uhk.macroflow.pokemon.skills.MeadowLayout.plotIndex(nodeName)?.let { onPlot(it) }
                 "les_sever" -> tryEnterForest()
                 "mytina" -> showMapToast("🌳 Mýtina v srdci Hvozdu. Na prastarém pařezu rostou rudé houby a v korunách je slyšet šepot…\n(Tady příběh teprve začne.)")
                 "krystal_modry", "krystal_cerveny" -> BiomeRegistry.definition(currentBiome)?.cave?.let { onCrystalNode(it) }
@@ -718,6 +738,7 @@ class MakromonMapActivity : AppCompatActivity() {
             when {
                 cave != null -> { placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave) }
                 currentBiome == BiomeType.MOUNTAINS -> placeShrineDecor(progress)
+                currentBiome == BiomeType.MEADOW -> placeMeadowWorkshop()
                 else -> {}
             }
         }
@@ -835,7 +856,108 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // DÍLNA NA LOUCE (docs/adr/0034): pracovní stůl a záhony
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private var gardenView: cz.uhk.macroflow.pokemon.skills.ui.GardenView? = null
+
+    /** Dekorace „na zemi“ – pod postavou (hned za pozadím mapy). */
+    private fun addGroundDecor(v: View) { mapWorld.addView(v, 1); decorViews += v }
+
+    private fun meadowGeometry() = cz.uhk.macroflow.pokemon.walk.MapGeometry(688, 1536, mapWorld.width, mapWorld.height)
+
+    private fun placeMeadowWorkshop() {
+        if (mapWorld.width == 0) return
+        val geo = meadowGeometry()
+        val ML = cz.uhk.macroflow.pokemon.skills.MeadowLayout
+        val SA = cz.uhk.macroflow.pokemon.skills.SkillArt
+        // pracovní stůl
+        val t = ML.TABLE
+        val tl = geo.toWorld(cz.uhk.macroflow.pokemon.walk.Pt(t.x0.toFloat(), t.y0.toFloat()))
+        val table = pixelView(SA.craftingTable(), SA.TABLE_W, SA.TABLE_H, (t.w * geo.scale).toInt(), (t.h * geo.scale).toInt()).apply {
+            x = tl.x; y = tl.y
+        }
+        addGroundDecor(table)
+        // zahrada
+        val garden = cz.uhk.macroflow.pokemon.skills.ui.GardenView(this, geo.scale)
+        val g = ML.GARDEN
+        val gl = geo.toWorld(cz.uhk.macroflow.pokemon.walk.Pt(g.x0.toFloat(), (g.y0 - cz.uhk.macroflow.pokemon.skills.ui.GardenView.TOP_MARGIN).toFloat()))
+        garden.layoutParams = FrameLayout.LayoutParams(garden.viewWidth, garden.viewHeight)
+        garden.x = gl.x; garden.y = gl.y
+        addGroundDecor(garden)
+        gardenView = garden
+        refreshGarden()
+    }
+
+    private fun refreshGarden() {
+        val gv = gardenView ?: return
+        val ctx = applicationContext
+        lifecycleScope.launch {
+            val (plots, state) = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.skills.SkillStore.plots(ctx) to cz.uhk.macroflow.pokemon.skills.SkillStore.state(ctx)
+            }
+            gv.plots = plots; gv.plotsOpen = state.plotsOpen; gv.speedup = state.growthSpeedup
+        }
+    }
+
+    private fun skillLevelText(r: cz.uhk.macroflow.pokemon.skills.SkillStore.XpResult): String =
+        if (!r.leveledUp) "" else "\n⭐ ${r.skill.label} Lv ${r.newLevel}!" +
+            (if (r.newPoints > 0) " Nový dovednostní bod – utrať ho v deníku (Postava)." else "")
+
+    private fun onPlot(i: Int) {
+        val ctx = applicationContext
+        val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+        val G = cz.uhk.macroflow.pokemon.skills.Garden
+        lifecycleScope.launch {
+            val (plots, state, owned) = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                Triple(SS.plots(ctx), SS.state(ctx), SS.counts(ctx))
+            }
+            val now = System.currentTimeMillis() / 1000
+            val plot = plots[i]
+            when {
+                !G.isOpen(i, state.plotsOpen) -> showMapToast("🪵 Zničený záhon. Opravíš ho uzlem „Nové záhony“ ve stromu Pěstování (deník → Postava).")
+                plot.isEmpty -> cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.seedMenu(findViewById(R.id.mapRootContainer), i, owned, state) { berry ->
+                    lifecycleScope.launch {
+                        val ok = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.plant(ctx, i, berry, System.currentTimeMillis() / 1000) }
+                        if (ok) showMapToast("🌱 Zasazeno: ${berry.seedLabel}. Sklizeň za ${G.clock(G.growSeconds(berry, state.growthSpeedup))}.")
+                        refreshGarden()
+                    }
+                }
+                G.isReady(plot, now, state.growthSpeedup) -> {
+                    val res = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.harvest(ctx, i, now) }
+                    if (res != null) {
+                        val (n, xp) = res
+                        val berry = plot.berry!!
+                        showMapToast("🧺 Sklizeno: ${n}× ${berry.label}" + (if (n > 1) " (dvojitá sklizeň!)" else "") +
+                            "\n+${xp.gained} XP Pěstování" + skillLevelText(xp))
+                    }
+                    refreshGarden()
+                }
+                else -> showMapToast("⏳ Roste ${plot.berry!!.label} – zbývá ${G.clock(G.remaining(plot, now, state.growthSpeedup))}.")
+            }
+        }
+    }
+
+    private fun openCraftingTable() {
+        val ctx = applicationContext
+        val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+        lifecycleScope.launch {
+            val (owned, state) = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.counts(ctx) to SS.state(ctx) }
+            cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.craftMenu(findViewById(R.id.mapRootContainer), owned, state) { ball, times ->
+                lifecycleScope.launch {
+                    val res = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.craft(ctx, ball, times) }
+                    if (res == null) { showMapToast("Chybí suroviny."); return@launch }
+                    val (made, xp) = res
+                    showMapToast("🔨 Vyrobeno: ${made}× ${ball.label}" + (if (made > times) " (dvojitá výroba!)" else "") +
+                        "\n+${xp.gained} XP Výroba" + skillLevelText(xp))
+                }
+            }
+        }
+    }
+
     private fun clearDecor() {
+        gardenView = null
         crystalAnimators.forEach { it.cancel() }
         crystalAnimators.clear()
         decorViews.forEach { mapWorld.removeView(it) }

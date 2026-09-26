@@ -88,33 +88,86 @@ class QuestJournalFragment : Fragment() {
         }
 
         loadDataAndSetup()
-        // Záložky: Příběh / Denní úkoly (docs/adr/0029)
-        rootView.findViewById<View>(R.id.tabStory).setOnClickListener { showTab(daily = false) }
-        rootView.findViewById<View>(R.id.tabDaily).setOnClickListener { showTab(daily = true) }
-        showTab(daily = showDailyFirst)
+        // Záložky: Postava / Příběh / Denní úkoly / Suroviny (docs/adr/0029, 0034)
+        rootView.findViewById<View>(R.id.tabCharacter).setOnClickListener { showTab(Tab.CHARACTER) }
+        rootView.findViewById<View>(R.id.tabStory).setOnClickListener { showTab(Tab.STORY) }
+        rootView.findViewById<View>(R.id.tabDaily).setOnClickListener { showTab(Tab.DAILY) }
+        rootView.findViewById<View>(R.id.tabResources).setOnClickListener { showTab(Tab.RESOURCES) }
+        showTab(if (showDailyFirst) Tab.DAILY else Tab.CHARACTER)
         return rootView
     }
 
     // Metoda pro refresh zvenčí (z MakromonMapActivity)
     fun refreshData() {
         loadDataAndSetup()
-        if (dailyShown) renderDaily()
+        when (tab) {
+            Tab.DAILY -> renderDaily()
+            Tab.CHARACTER -> renderCharacter()
+            Tab.RESOURCES -> renderResources()
+            Tab.STORY -> {}
+        }
     }
 
     // ── Denní úkoly ─────────────────────────────────────────────────────────
 
-    private var dailyShown = false
+    private enum class Tab { CHARACTER, STORY, DAILY, RESOURCES }
+    private var tab = Tab.CHARACTER
     /** Nastaví se před zobrazením, když má deník otevřít rovnou denní úkoly. */
     var showDailyFirst = false
 
-    private fun showTab(daily: Boolean) {
-        dailyShown = daily
+    private fun showTab(t: Tab) {
+        tab = t
+        val story = t == Tab.STORY
         val storyViews = listOf(R.id.leftPage, R.id.rightPage, R.id.bindingShadowContainer, R.id.btnPrevPage, R.id.btnNextPage)
-        storyViews.forEach { rootView.findViewById<View>(it)?.visibility = if (daily) View.GONE else View.VISIBLE }
-        rootView.findViewById<View>(R.id.dailyPage).visibility = if (daily) View.VISIBLE else View.GONE
-        rootView.findViewById<View>(R.id.tabStory).alpha = if (daily) 0.55f else 1f
-        rootView.findViewById<View>(R.id.tabDaily).alpha = if (daily) 1f else 0.55f
-        if (daily) renderDaily()
+        storyViews.forEach { rootView.findViewById<View>(it)?.visibility = if (story) View.VISIBLE else View.GONE }
+        rootView.findViewById<View>(R.id.dailyPage).visibility = if (t == Tab.DAILY) View.VISIBLE else View.GONE
+        rootView.findViewById<View>(R.id.characterPage).visibility = if (t == Tab.CHARACTER) View.VISIBLE else View.GONE
+        rootView.findViewById<View>(R.id.resourcesPage).visibility = if (t == Tab.RESOURCES) View.VISIBLE else View.GONE
+        mapOf(Tab.CHARACTER to R.id.tabCharacter, Tab.STORY to R.id.tabStory, Tab.DAILY to R.id.tabDaily, Tab.RESOURCES to R.id.tabResources)
+            .forEach { (k, id) -> rootView.findViewById<View>(id).alpha = if (k == t) 1f else 0.55f }
+        when (t) {
+            Tab.DAILY -> renderDaily()
+            Tab.CHARACTER -> renderCharacter()
+            Tab.RESOURCES -> renderResources()
+            Tab.STORY -> {}
+        }
+    }
+
+    // ── Postava a suroviny (docs/adr/0034) ──────────────────────────────────
+
+    private var selectedSkill = cz.uhk.macroflow.pokemon.skills.Skill.CATCHING
+
+    private fun renderCharacter() {
+        val ctx = context?.applicationContext ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (state, team) = withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.skills.SkillStore.state(ctx) to cz.uhk.macroflow.pokemon.skills.SkillStore.team(ctx)
+            }
+            if (!isAdded) return@launch
+            cz.uhk.macroflow.pokemon.skills.ui.JournalPages.character(
+                rootView.findViewById(R.id.characterPage), state, team.size, selectedSkill,
+                onSelect = { selectedSkill = it; renderCharacter() },
+                onUnlock = { node ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val ok = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.unlock(ctx, node.id) }
+                        if (ok) {
+                            rootView.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                            android.widget.Toast.makeText(ctx, "✨ Odemčeno: ${node.title}", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                        renderCharacter()
+                    }
+                }
+            )
+        }
+    }
+
+    private fun renderResources() {
+        val ctx = context?.applicationContext ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val counts = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.counts(ctx) }
+            if (!isAdded) return@launch
+            cz.uhk.macroflow.pokemon.skills.ui.JournalPages.resources(rootView.findViewById(R.id.llResources), counts)
+        }
     }
 
     private fun renderDaily() {
@@ -241,6 +294,7 @@ class QuestJournalFragment : Fragment() {
     }
 
     private fun flipPage(direction: Int) {
+        if (tab != Tab.STORY) return
         if (unlockedQuests.isEmpty()) return
         val newIndex = currentPageIndex + direction
         if (newIndex !in unlockedQuests.indices) return

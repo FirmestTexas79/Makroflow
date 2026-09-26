@@ -118,14 +118,15 @@ def build(name, img_path, classify, cell, nodes_img, edges, corridor_r, extra_wa
         for gy in range(int(y0 / cell), int(math.ceil(y1 / cell))):
             for gx in range(int(x0 / cell), int(math.ceil(x1 / cell))):
                 if 0 <= gx < gw and 0 <= gy < gh: grid[gy][gx] = True
-    for (x0, y0, x1, y1) in extra_block:
-        for gy in range(int(y0 / cell), int(math.ceil(y1 / cell))):
-            for gx in range(int(x0 / cell), int(math.ceil(x1 / cell))):
-                if 0 <= gx < gw and 0 <= gy < gh: grid[gy][gx] = False
     # uzly samotné vždy průchozí
     for (x, y) in nodes_img.values():
         gx, gy = int(x / cell), int(y / cell)
         if 0 <= gx < gw and 0 <= gy < gh: grid[gy][gx] = True
+    # ruční zdi až po uzlech – uzel může stát na neprůchozím místě (záhon, stůl)
+    for (x0, y0, x1, y1) in extra_block:
+        for gy in range(int(y0 / cell), int(math.ceil(y1 / cell))):
+            for gx in range(int(x0 / cell), int(math.ceil(x1 / cell))):
+                if 0 <= gx < gw and 0 <= gy < gh: grid[gy][gx] = False
 
     # jen oblast spojená s uzly (ostrůvky trávy za stromy by lákaly k nedosažitelným klepnutím)
     from collections import deque
@@ -186,7 +187,10 @@ def main():
 forest_c = forest
 # Ruční doladění (obdélníky v pixelech obrázku): extra_walk / extra_block
 TOWN_FIX = dict(extra_walk=[], extra_block=[])
-MEADOW_FIX = dict(extra_walk=[], extra_block=[])
+# Louka (docs/adr/0034): záhony – 4 v rozích, cesta plus mezi nimi – a pracovní stůl; sedí s MeadowLayout.kt
+MEADOW_FIX = dict(extra_walk=[(345, 824, 520, 846), (426, 745, 448, 925)],
+                  extra_block=[(360, 769, 426, 824), (448, 769, 514, 824), (360, 846, 426, 901), (448, 846, 514, 901),
+                               (93, 790, 161, 830)])
 MOUNTAIN_FIX = dict(extra_walk=[], extra_block=[(304, 700, 384, 812)])   # socha krále na podstavci
 
 if __name__ == "__main__":

@@ -54,14 +54,44 @@ class InventoryFragment : Fragment() {
         loadData()
     }
 
+    /** Aktivní tým (docs/adr/0034): první = parťák na liště. */
+    private var team: List<Int> = emptyList()
+    private var teamSlots = 1
+
+    private fun saveTeam(t: List<Int>) {
+        team = t
+        cz.uhk.macroflow.pokemon.skills.SkillStore.saveTeam(requireContext(), t)
+    }
+
+    /** Připne Makromona na lištu (aktivní parťák = první v týmu). */
+    private fun pinToBar(item: CapturedMakromonEntity) {
+        requireContext().getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
+            .putBoolean("pokemonAcquired", true)
+            .putLong("currentOnBarCaughtDate", item.caughtDate)
+            .putString("currentOnBarName", item.name.uppercase())
+            .putInt("currentOnBarCapturedId", item.id)
+            .apply()
+        saveTeam(cz.uhk.macroflow.pokemon.skills.Team.makeActive(team, item.id, teamSlots))
+        (requireActivity() as? MainActivity)?.updateMakromonVisibility()
+        (requireActivity() as? MainActivity)?.refreshStickyNotification()
+    }
+
     private fun loadData() {
         lifecycleScope.launch {
             if (currentTab == 0) {
-                val list = withContext(Dispatchers.IO) { db.capturedMakromonDao().getAllCaught() }
+                val ctx = requireContext().applicationContext
+                val (list, team, slots) = withContext(Dispatchers.IO) {
+                    Triple(db.capturedMakromonDao().getAllCaught(),
+                        cz.uhk.macroflow.pokemon.skills.SkillStore.team(ctx),
+                        cz.uhk.macroflow.pokemon.skills.SkillStore.state(ctx).teamSlots)
+                }
+                this@InventoryFragment.team = team
+                teamSlots = slots
                 rvInventory.adapter = MakromonAdapter(list)
             } else {
                 val list = withContext(Dispatchers.IO) { db.userItemDao().getAllItems() }
-                val ownedItems = list.filter { it.quantity > 0 }
+                // Stav dovedností a záhonů je v user_items taky, ale do inventáře nepatří
+                val ownedItems = list.filter { it.quantity > 0 && !cz.uhk.macroflow.pokemon.skills.SkillStore.isInternal(it.itemId) }
                 rvInventory.adapter = ItemAdapter(ownedItems)
             }
         }
@@ -80,6 +110,8 @@ class InventoryFragment : Fragment() {
             val btnPin: ImageButton    = v.findViewById(R.id.btnPinToBar)
             val btnUnpin: ImageButton  = v.findViewById(R.id.btnUnpinFromBar)
             val btnDelete: ImageButton = v.findViewById(R.id.btnDeletePokemon)
+            val btnTeam: ImageButton   = v.findViewById(R.id.btnTeam)
+            val tvTeam: TextView       = v.findViewById(R.id.tvTeamBadge)
         }
 
         /**
@@ -156,16 +188,42 @@ class InventoryFragment : Fragment() {
             }
 
             // 6. Tlačítko Připnout (Pin) na hlavní lištu
-            holder.btnPin.setOnClickListener {
-                prefs.edit()
-                    .putBoolean("pokemonAcquired", true)
-                    .putLong("currentOnBarCaughtDate", item.caughtDate)
-                    .putString("currentOnBarName", item.name.uppercase())
-                    .putInt("currentOnBarCapturedId", item.id)
-                    .apply()
+            // Tým: odznak s pořadím a tlačítko přidat / odebrat
+            val teamIdx = team.indexOf(item.id)
+            holder.tvTeam.visibility = if (teamIdx >= 0) View.VISIBLE else View.GONE
+            holder.tvTeam.text = if (teamIdx == 0 && isActiveOnBar) "Aktivní" else "Tým ${teamIdx + 1}"
+            holder.btnTeam.setImageResource(if (teamIdx >= 0) android.R.drawable.ic_menu_close_clear_cancel else android.R.drawable.ic_input_add)
+            holder.btnTeam.contentDescription = if (teamIdx >= 0) "Odebrat z týmu" else "Přidat do týmu"
+            holder.btnTeam.setOnClickListener {
+                if (teamIdx >= 0) {
+                    val rest = cz.uhk.macroflow.pokemon.skills.Team.remove(team, item.id)
+                    saveTeam(rest)
+                    if (isActiveOnBar) {
+                        // Aktivní odešel z týmu → nastoupí další, jinak se parťák schová
+                        val next = list.firstOrNull { it.id == rest.firstOrNull() }
+                        if (next != null) pinToBar(next) else {
+                            prefs.edit().putBoolean("pokemonAcquired", false).putLong("currentOnBarCaughtDate", -1L).apply()
+                            (requireActivity() as? MainActivity)?.updateMakromonVisibility()
+                        }
+                    }
+                    Toast.makeText(context, "${item.name} odešel z týmu.", Toast.LENGTH_SHORT).show()
+                } else {
+                    when (val r = cz.uhk.macroflow.pokemon.skills.Team.add(team, item.id, teamSlots)) {
+                        is cz.uhk.macroflow.pokemon.skills.Team.Result.Ok -> {
+                            saveTeam(r.team)
+                            if (!isAcquired) pinToBar(item)
+                            Toast.makeText(context, "${item.name} je v týmu (${r.team.size}/$teamSlots).", Toast.LENGTH_SHORT).show()
+                        }
+                        cz.uhk.macroflow.pokemon.skills.Team.Result.Full -> Toast.makeText(context,
+                            "Tým je plný ($teamSlots/$teamSlots). Další místo odemkneš ve stromu Chytání (deník → Postava).",
+                            Toast.LENGTH_LONG).show()
+                    }
+                }
+                loadData()
+            }
 
-                (requireActivity() as? MainActivity)?.updateMakromonVisibility()
-                (requireActivity() as? MainActivity)?.refreshStickyNotification()
+            holder.btnPin.setOnClickListener {
+                pinToBar(item)
                 loadData()
                 android.widget.Toast.makeText(context, "📌 ${item.name} vybaven!", android.widget.Toast.LENGTH_SHORT).show()
             }
@@ -235,7 +293,8 @@ class InventoryFragment : Fragment() {
             val ball = cz.uhk.macroflow.pokemon.balls.Makroball.from(item.itemId)
             val med = cz.uhk.macroflow.pokemon.status.MedItem.from(item.itemId)
             val crystal = cz.uhk.macroflow.pokemon.cave.CrystalColor.fromItem(item.itemId)
-            holder.tvName.text = ball?.label ?: med?.label ?: crystal?.label ?: when (item.itemId) {
+            val resource = cz.uhk.macroflow.pokemon.skills.Resource.from(item.itemId)
+            holder.tvName.text = ball?.label ?: med?.label ?: crystal?.label ?: resource?.label ?: when (item.itemId) {
                 "lure_lamp"  -> "Spooky Plate"
                 else         -> item.itemId
             }
@@ -249,7 +308,11 @@ class InventoryFragment : Fragment() {
                 else         -> ""
             }
 
-            if (crystal != null) {
+            if (resource != null) {
+                holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(resource,
+                    cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(resource), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM,
+                    (64 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (crystal != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(crystal,
                     cz.uhk.macroflow.pokemon.cave.Crystals.iconPixels(crystal), cz.uhk.macroflow.pokemon.cave.Crystals.H,
                     (64 * holder.itemView.resources.displayMetrics.density).toInt()))
@@ -267,6 +330,10 @@ class InventoryFragment : Fragment() {
             }
 
             holder.itemView.setOnClickListener {
+                if (resource != null) {
+                    Toast.makeText(requireContext(), "${resource.label}: ${resource.description}", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
                 if (crystal != null) {
                     android.app.AlertDialog.Builder(requireContext())
                         .setTitle("💎 ${crystal.label}")
@@ -303,7 +370,7 @@ class InventoryFragment : Fragment() {
                 }
             }
 
-            listOf(R.id.btnLock, R.id.btnPinToBar, R.id.btnUnpinFromBar, R.id.btnDeletePokemon, R.id.separator)
+            listOf(R.id.btnLock, R.id.btnPinToBar, R.id.btnUnpinFromBar, R.id.btnDeletePokemon, R.id.btnTeam, R.id.tvTeamBadge, R.id.separator)
                 .forEach { id -> holder.itemView.findViewById<View>(id)?.visibility = View.GONE }
             holder.itemView.findViewById<View>(R.id.pbPokemonXp)?.visibility = View.GONE
         }

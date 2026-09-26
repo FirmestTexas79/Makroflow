@@ -31,7 +31,9 @@ data class ShopProduct(
     /** Makroball se kreslí z vlastního pixel artu (bez obrázku z internetu). */
     val ball: cz.uhk.macroflow.pokemon.balls.Makroball? = null,
     /** Lék na stavy – ikonka z vlastního pixel artu. */
-    val med: cz.uhk.macroflow.pokemon.status.MedItem? = null
+    val med: cz.uhk.macroflow.pokemon.status.MedItem? = null,
+    /** Semínko (docs/adr/0034) – ikonka z pixel artu surovin. */
+    val resource: cz.uhk.macroflow.pokemon.skills.Resource? = null
 )
 
 class PokemonShopFragment : Fragment() {
@@ -51,7 +53,10 @@ class PokemonShopFragment : Fragment() {
     } + listOf(
         ShopProduct("lure_lamp", "Spooky Plate", "Zvedne spawn Gengara v noci.", 150, 1, "https://img.pokemondb.net/sprites/items/spooky-plate.png", 1),
         ShopProduct("lure_protein", "Black Belt", "Zaručí spawn Machampa.", 100, 1, "https://img.pokemondb.net/sprites/items/black-belt.png", 1),
-)
+    ) + cz.uhk.macroflow.pokemon.skills.Berry.entries.map { b ->
+        val r = cz.uhk.macroflow.pokemon.skills.Resource.from(b.seedItemId)!!
+        ShopProduct(b.seedItemId, b.seedLabel, r.description, b.seedPrice, 1, "", 2, resource = r)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -123,7 +128,12 @@ class PokemonShopFragment : Fragment() {
 
             val ball = product.ball
             val med = product.med
-            if (med != null) {
+            val res = product.resource
+            if (res != null) {
+                holder.ivIcon.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(res,
+                    cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(res), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM,
+                    (48 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (med != null) {
                 holder.ivIcon.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(med, med.pixels, cz.uhk.macroflow.pokemon.status.MedItem.SIZE, (48 * holder.itemView.resources.displayMetrics.density).toInt()))
             } else if (ball != null) {
                 holder.ivIcon.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.icon(ball, (48 * holder.itemView.resources.displayMetrics.density).toInt()))
@@ -155,6 +165,9 @@ class PokemonShopFragment : Fragment() {
                 if (success) {
                     withContext(Dispatchers.IO) {
                         db.userItemDao().addItem(product.id, product.quantityToGive)
+                        if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) runCatching {
+                            db.userItemDao().getItem(product.id)?.let { cz.uhk.macroflow.data.FirebaseRepository.uploadUserItem(it) }
+                        }
                     }
                     Toast.makeText(requireContext(), "Koupeno: ${product.name}!", Toast.LENGTH_SHORT).show()
                     updateUI()

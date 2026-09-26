@@ -17,7 +17,7 @@ enum class BiomeType {
 
 object BiomeRegistry {
     val TOWN_GRAPH = listOf(
-        MovementEngine.Waypoint("les",        PointF(0.455f, 0.150f), listOf("spawn", "starter_bush")),
+        MovementEngine.Waypoint("les",        PointF(0.455f, 0.150f), listOf("spawn")),
         MovementEngine.Waypoint("spawn",      PointF(0.480f, 0.275f), listOf("les", "krizovatka_hlavni")),
         MovementEngine.Waypoint("krizovatka_hlavni", PointF(0.480f, 0.340f), listOf("spawn", "rozbocka_zapad", "prah_pokedex")),
         MovementEngine.Waypoint("prah_pokedex", PointF(0.690f, 0.340f), listOf("krizovatka_hlavni", "pokedex")),
@@ -29,17 +29,27 @@ object BiomeRegistry {
 
 
 
-        MovementEngine.Waypoint("gudwin",         PointF(0.120f, 0.520f), listOf("roh_obchod")),
+        MovementEngine.Waypoint("gudwin",         PointF(0.120f, 0.520f), listOf("roh_obchod", "starter_bush")),
 
-        MovementEngine.Waypoint("starter_bush", PointF(0.200f, 0.170f), listOf("les")),
+        // Keřík se starterem na trávě pod Gudwinem (nahoře ho zakrývala ikona parťáka)
+        MovementEngine.Waypoint("starter_bush", PointF(0.130f, 0.600f), listOf("gudwin")),
 
         MovementEngine.Waypoint("prah_obchodu",   PointF(0.700f, 0.505f), listOf("roh_obchod", "obchod")),
         MovementEngine.Waypoint("obchod",         PointF(0.700f, 0.480f), listOf("prah_obchodu"))
     )
 
     val MEADOW_GRAPH = listOf(
-        MovementEngine.Waypoint("vstup_z_town", PointF(0.340f, 0.640f), listOf("rozcesti")),
-        MovementEngine.Waypoint("rozcesti",      PointF(0.500f, 0.425f), listOf("vstup_z_town", "krovi1", "krovi2", "voda", "meadow_npc", "hory", "cesta_sever")),
+        MovementEngine.Waypoint("vstup_z_town", PointF(0.340f, 0.640f), listOf("rozcesti", "vyrobna")),
+        MovementEngine.Waypoint("rozcesti",      PointF(0.500f, 0.425f), listOf("vstup_z_town", "krovi1", "krovi2", "voda", "meadow_npc", "hory", "cesta_sever", "zahrada")),
+        // Dovednosti (docs/adr/0034): pracovní stůl vlevo dole na světlé trávě u cedule,
+        // záhony vpravo pod mostem do hor – čtyři v rozích, mezi nimi cesta ve tvaru plus.
+        // Záhony stojí na neprůchozí hlíně; bod je posunutý ke středu, postava zastaví u kraje.
+        MovementEngine.Waypoint("vyrobna",       PointF(0.185f, 0.552f), listOf("vstup_z_town")),
+        MovementEngine.Waypoint("zahrada",       PointF(0.635f, 0.544f), listOf("rozcesti")),
+        MovementEngine.Waypoint("zahon_1",       PointF(0.586f, 0.525f), emptyList()),
+        MovementEngine.Waypoint("zahon_2",       PointF(0.685f, 0.525f), emptyList()),
+        MovementEngine.Waypoint("zahon_3",       PointF(0.586f, 0.563f), emptyList()),
+        MovementEngine.Waypoint("zahon_4",       PointF(0.685f, 0.563f), emptyList()),
         // Cesta nahoru do Hvozdu (zamčeno: 5 splněných fází úkolů)
         MovementEngine.Waypoint("cesta_sever",   PointF(0.500f, 0.280f), listOf("rozcesti", "les_sever")),
         MovementEngine.Waypoint("les_sever",     PointF(0.470f, 0.090f), listOf("cesta_sever")),

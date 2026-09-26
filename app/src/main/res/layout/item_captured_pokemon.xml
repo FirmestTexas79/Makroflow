@@ -109,6 +109,19 @@
                     app:tint="@color/brand_accent_warm" />
 
                 <ImageButton
+                    android:id="@+id/btnTeam"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginHorizontal="6dp"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="#1A283618"
+                    android:contentDescription="Tým"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    android:src="@android:drawable/ic_input_add"
+                    app:tint="@color/brand_primary" />
+
+                <ImageButton
                     android:id="@+id/btnDeletePokemon"
                     android:layout_width="38dp"
                     android:layout_height="38dp"
@@ -123,6 +136,21 @@
             </LinearLayout>
 
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvTeamBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start|top"
+            android:layout_margin="12dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="#606C38"
+            android:fontFamily="@font/jersey_15"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="2dp"
+            android:textColor="#FEFAE0"
+            android:textSize="15sp"
+            android:visibility="gone" />
 
         <ImageButton
             android:id="@+id/btnLock"
