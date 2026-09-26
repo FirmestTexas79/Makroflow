@@ -34,7 +34,7 @@
             android:layout_height="38dp"
             android:layout_marginStart="0dp"
             android:background="@drawable/bg_journal_tab"
-            android:backgroundTint="#283618"
+            android:backgroundTint="#2E4677"
             android:fontFamily="@font/jersey_15"
             android:gravity="center"
             android:paddingHorizontal="11dp"

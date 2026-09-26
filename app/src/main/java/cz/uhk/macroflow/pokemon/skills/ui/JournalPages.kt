@@ -65,7 +65,9 @@ object JournalPages {
         names.addView(outlined(ui.text("Celkový level $total", 17f, GOLD)))
         names.addView(ui.text("Tým ${teamSize.coerceAtLeast(0)}/${state.teamSlots} (max ${Team.MAX})", 15f, Color.parseColor("#C9D6F0")))
         head.addView(names, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        root.addView(head, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        // vpravo nahoře je v knize zavírací křížek – hlavička mu uhne
+        root.addView(head, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            .apply { marginEnd = ui.px(40f) })
 
         val body = ui.row().apply { gravity = Gravity.TOP }
         // Levý sloupec: tři dovednosti pod sebou

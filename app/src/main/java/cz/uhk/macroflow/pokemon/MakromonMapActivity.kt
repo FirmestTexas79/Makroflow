@@ -216,7 +216,10 @@ class MakromonMapActivity : AppCompatActivity() {
         }
 
         mapBackground.post {
-            changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), MapTransition.NONE)
+            // Debug: rovnou do jiné lokace (adb … --es debug_biome MEADOW)
+            val debugBiome = if (BuildConfig.DEBUG) intent.getStringExtra("debug_biome")?.let { runCatching { BiomeType.valueOf(it) }.getOrNull() } else null
+            if (debugBiome != null) enterBiomeAtNode(debugBiome, BiomeRegistry.definition(debugBiome)?.graph?.first()?.id ?: "", MapTransition.NONE)
+            else changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), MapTransition.NONE)
             intent.getStringExtra("TARGET_LOCATION")?.let { triggerHotspotAction(it.lowercase()) }
         }
 
