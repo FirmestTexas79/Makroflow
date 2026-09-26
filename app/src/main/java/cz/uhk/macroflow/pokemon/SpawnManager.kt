@@ -96,6 +96,8 @@ object SpawnManager {
         // ── WATER (Voda) ──────────────────────────────────────────────
         SpawnPool("020", "FINLET",   Rarity.COMMON, listOf(BiomeType.WATER), listOf(Conditions.ALWAYS))      { BattleFactory.createFinlet() },
         SpawnPool("004", "AQULIN",   Rarity.COMMON, listOf(BiomeType.TOWN), listOf(Conditions.ALWAYS))      { BattleFactory.createAqulin() },
+        // TEST (docs/adr/0040): Gudwin dočasně i v městském křoví – zkouška dropu Makromonovy sekery a krumpáče. Pak smazat!
+        SpawnPool("030", "GUDWIN",   Rarity.COMMON, listOf(BiomeType.TOWN), listOf(Conditions.ALWAYS))      { BattleFactory.createGudwin() },
         SpawnPool("014", "AQUIRRA",   Rarity.RARE,   listOf(BiomeType.WATER), listOf(Conditions.ALWAYS))       { BattleFactory.createAquirra() },
         SpawnPool("005", "AQULIND",   Rarity.RARE,   listOf(BiomeType.WATER), listOf(Conditions.ALWAYS))       { BattleFactory.createAqlind() },
         SpawnPool("021", "SERPFIN",   Rarity.RARE,   listOf(BiomeType.WATER), listOf(Conditions.MinCheckInCount(3))) { BattleFactory.createSerpfin() },
