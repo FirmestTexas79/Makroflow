@@ -112,7 +112,7 @@ class PokemonBattleFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = (8 * dp).toInt(); it.bottomMargin = (28 * dp).toInt() }
+            ).also { it.topMargin = (8 * dp).toInt(); it.bottomMargin = (resources.displayMetrics.heightPixels * 0.22f).toInt() }
             setOnClickListener { safeClose() }
         }
 

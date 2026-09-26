@@ -325,6 +325,8 @@ class PokemonBattleView @JvmOverloads constructor(
         drawSpritesOverlay(canvas)
         canvas.restore()
         canvas.drawBitmap(gbBmp, srcR, dstR, sp)
+        // záblesk útoku přes celou arénu i herní plátno
+        if (flashOn) canvas.drawColor(0xBBFFFFFF.toInt())
     }
 
     private fun drawSpritesOverlay(canvas: Canvas) {
@@ -400,7 +402,6 @@ class PokemonBattleView @JvmOverloads constructor(
         drawEnemyHUD(c)
         drawPlayerHUD(c)
         drawBottomUI(c)
-        if (flashOn) { fp.color = 0xBBFFFFFF.toInt(); c.drawRect(0f, 0f, 160f, 144f, fp) }
     }
 
     private fun drawEnemyHUD(c: Canvas) {
