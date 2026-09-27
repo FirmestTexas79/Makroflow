@@ -15,7 +15,13 @@ enum class RequirementType {
      * targetId = kcal | protein | carbs | fat, metadata = snědeno v % cíle.
      */
     HIT_TARGET,
-    BATTLE_BIOME     // Výhry v soubojích v daném biomu; targetId = BiomeType.name
+    BATTLE_BIOME,    // Výhry v soubojích v daném biomu; targetId = BiomeType.name
+    /** Vypít dnes OSOBNÍ cíl vody; metadata = vypito v % cíle (docs/adr/0045). */
+    HIT_WATER,
+    /** Přinést NPC předměty; targetId = "itemId:počet,itemId:počet", metadata 1 = odevzdáno. */
+    DELIVER_ITEMS,
+    /** Příznak příběhu (StoryFlags) – např. poražený boss; targetId = klíč, metadata 1 = nastaven. */
+    STORY_FLAG
 }
 
 data class QuestStage(
@@ -25,14 +31,19 @@ data class QuestStage(
     val requirementType: RequirementType,
     val targetValue: Int,            // Počet (např. 3000 kroků nebo 3 budovy)
     val targetId: String? = null,    // Např. "starter_bush" nebo "domov,pokedex,obchod"
-    val speakerName: String = ""     // Prázdné = jmenovka se v dialogu skryje
+    val speakerName: String = "",    // Prázdné = jmenovka se v dialogu skryje
+    /** Vlastní krátká připomínka při dalším oslovení (jinak ji složí QuestProgression.reminder). */
+    val hint: String? = null
 )
 
 data class QuestDefinition(
     val id: String,
     val stages: List<QuestStage>,
     /** Co NPC řekne, když s ním hráč mluví po dokončení celého questu. */
-    val farewell: String = "Už jsi pro mě udělal dost. Hodně štěstí na cestách, hrdino!"
+    val farewell: String = "Už jsi pro mě udělal dost. Hodně štěstí na cestách, hrdino!",
+    /** Kdo se loučí (0 = mluvčí poslední fáze) – ve Hvozdu dává Srdce dub, ale loučí se Mydrus. */
+    val farewellSpeakerResId: Int = 0,
+    val farewellSpeakerName: String = ""
 )
 
 // Objekt se všemi questy ve hře
@@ -192,7 +203,94 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST) }
+    // ════════════════════════════════════════════════════════════════════════
+    // HVOZD – druid Mydrus a Starý dub (docs/adr/0045)
+    // Téma: voda, pohyb, suroviny ze všech dovedností. Po probuzení legendy padal z křídel
+    // Drakirry nad Hvozdem žhavý popel a z něj vyrašila Rudá hniloba. Konec: Srdce Hvozdu,
+    // klíč k Bráně světů na Nebeském průsmyku.
+    // ════════════════════════════════════════════════════════════════════════
+    private const val MYDRUS = "Mydrus"
+    private const val DUB = "Starý dub"
+
+    val FOREST_QUEST = QuestDefinition(
+        id = "forest_heart",
+        farewell = "Hvozd zase dýchá – a já taky. Mycité se vracejí na mýtinu a rudé houby usychají. " +
+            "Srdce Hvozdu patří do Brány světů nahoře na Nebeském průsmyku, za svatyní na vrcholu hor. " +
+            "A kdyby ses tam někdy potkal s Drakirrou… vyřiď jí, že jí les odpustil.",
+        farewellSpeakerResId = R.drawable.makromon_23_mydrus,
+        farewellSpeakerName = MYDRUS,
+        stages = listOf(
+            QuestStage(
+                title = "Druid z mýtiny",
+                text = "Pst… nelekej se. Jsem Mydrus, poslední druid Hvozdu. Tyhle fialové skvrny na mé srsti? " +
+                    "Rudá hniloba. Té noci, kdy nad lesem přeletěla probuzená Drakirra, padal z jejích křídel žhavý popel – " +
+                    "a kam dopadl, vyrašily rudé houby. Pijí z kořenů život. Když jsem je zkoušel zastavit, dostala se mi hniloba do krve.\n\n" +
+                    "Musím vědět, jak daleko se rozlezla. Prohlédni tiché jezírko, houštinu a Starý dub. Buď opatrný – zvěř tam zdivočela.",
+                speakerResId = R.drawable.makromon_23_mydrus,
+                speakerName = MYDRUS,
+                requirementType = RequirementType.VISIT_NODE,
+                targetValue = 3,
+                targetId = "jezirko_1,houstina,stary_dub"
+            ),
+            QuestStage(
+                title = "Živá voda",
+                text = "Je to horší, než jsem čekal. Hniloba vysušuje kořeny – jezírka mělčí a pramen pod dubem zmlkl. " +
+                    "Staří druidi říkali, že les pije spolu s těmi, kdo ho chrání. Vypij dnes svůj denní cíl vody " +
+                    "a já s každým tvým douškem zazpívám pramenu, aby se probudil. Vodu si zapisuj v aplikaci.",
+                speakerResId = R.drawable.makromon_23_mydrus,
+                speakerName = MYDRUS,
+                requirementType = RequirementType.HIT_WATER,
+                targetValue = 100
+            ),
+            QuestStage(
+                title = "Zdivočelí",
+                text = "Slyšíš to zurčení? Pramen se probudil! Jenže hniloba otrávila i mysl zvířat – Makromoni Hvozdu útočí " +
+                    "na všechno, co se hýbe. Poraz jich ve Hvozdu čtyři. Neboj, neublížíš jim: souboj z nich vytřese spory " +
+                    "a oni se zase vrátí k sobě.",
+                speakerResId = R.drawable.makromon_23_mydrus,
+                speakerName = MYDRUS,
+                requirementType = RequirementType.BATTLE_BIOME,
+                targetValue = 4,
+                targetId = "FOREST"
+            ),
+            QuestStage(
+                title = "Léčivý odvar",
+                text = "Teď můžu uvařit odvar, který hnilobu zastaví aspoň ve mně. Recept je starý jako Hvozd sám: " +
+                    "pět modrých bobulí (na záhonu na louce dozrají za hodinu), pět březových polen na oheň pod kotlíkem " +
+                    "a pět suchých listů – ty nosí listoví Makromoni. Až to budeš mít, přines mi to sem na mýtinu.",
+                speakerResId = R.drawable.makromon_23_mydrus,
+                speakerName = MYDRUS,
+                requirementType = RequirementType.DELIVER_ITEMS,
+                targetValue = 1,
+                targetId = "berry_blue:5,log_birch:5,mat_leaf_dry:5"
+            ),
+            QuestStage(
+                title = "Po kořenech",
+                text = "Ach… to je lepší. Poprvé po dlouhé době cítím tlapky. A s čistou hlavou konečně vidím, kam hniloba míří: " +
+                    "všechna její vlákna se pod zemí sbíhají ke Starému dubu. Musíme po kořenech projít celý les, " +
+                    "abychom našli její jádro. Ujdi dnes 7000 kroků – půjdu s tebou.",
+                speakerResId = R.drawable.makromon_23_mydrus,
+                speakerName = MYDRUS,
+                requirementType = RequirementType.WALK_STEPS,
+                targetValue = 7000
+            ),
+            QuestStage(
+                title = "Hlas Starého dubu",
+                text = "Mmmmm… maličký druide… a ty, poutníku s parťákem. Jsem Starý dub. Pamatuji časy, kdy mezi světy " +
+                    "vedly brány a draci je hlídali. V mé dřeni zraje Srdce Hvozdu – klíč, kterým druidi kdysi zapečetili " +
+                    "Bránu světů.\n\nHniloba ho chce. V mých kořenech se usadil SOULORD, pán hniloby, a pije moje světlo. " +
+                    "Přijď ke mně a vyžeň ho… dřív, než Srdce zčerná.",
+                speakerResId = R.drawable.npc_stary_dub,
+                speakerName = DUB,
+                requirementType = RequirementType.STORY_FLAG,
+                targetValue = 1,
+                targetId = "forest_rot_defeated",
+                hint = "Soulord pořád sídlí v mých kořenech… Klepni na Starý dub na severu Hvozdu a vyžeň ho."
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST) }
 
     fun byId(id: String): QuestDefinition? = ALL.firstOrNull { it.id == id }
 }

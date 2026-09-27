@@ -110,7 +110,8 @@ object BiomeRegistry {
                 cave = CaveMaps.OPEN),
             BiomeDefinition(BiomeType.CAVE_MAZE, R.drawable.cave_maze, graphOf(CaveMaps.MAZE), questId = null,
                 cave = CaveMaps.MAZE),
-            BiomeDefinition(BiomeType.FOREST, R.drawable.forest, graphOf(cz.uhk.macroflow.pokemon.cave.ForestMap.MAP), questId = null,
+            BiomeDefinition(BiomeType.FOREST, R.drawable.forest, graphOf(cz.uhk.macroflow.pokemon.cave.ForestMap.MAP),
+                questId = QuestRegistry.FOREST_QUEST.id,
                 cave = cz.uhk.macroflow.pokemon.cave.ForestMap.MAP),
             BiomeDefinition(BiomeType.SKY_PASS, R.drawable.sky_pass, graphOf(cz.uhk.macroflow.pokemon.cave.SkyPass.MAP), questId = null,
                 cave = cz.uhk.macroflow.pokemon.cave.SkyPass.MAP)

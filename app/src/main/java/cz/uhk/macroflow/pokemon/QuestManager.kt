@@ -46,7 +46,15 @@ class QuestManager(
     /** Dnešní OSOBNÍ cíle (volá se na IO vlákně); null = fáze HIT_TARGET se nevyhodnocují. */
     private val targetsProvider: (() -> Adherence.Targets)? = null,
     /** Kde si pamatujeme, které úvodní dialogy už hráč slyšel. */
-    private val introPrefs: android.content.SharedPreferences? = null
+    private val introPrefs: android.content.SharedPreferences? = null,
+    /** Dnešní voda: (vypito ml, osobní cíl ml); volá se na IO vlákně (docs/adr/0045). */
+    private val waterProvider: (() -> Pair<Int, Int>)? = null,
+    /** Je nastavený příznak příběhu? (StoryFlags) */
+    private val storyFlagProvider: ((String) -> Boolean)? = null,
+    /** Kolik hráč vlastní daných předmětů (IO vlákno). */
+    private val itemCounter: ((List<String>) -> Map<String, Int>)? = null,
+    /** Odebere předměty, jen když má hráč všechny (IO vlákno); true = odevzdáno. */
+    private val itemConsumer: ((List<Pair<String, Int>>) -> Boolean)? = null
 ) {
     private var activeQuest: QuestDefinition? = null
     private var currentProgress: QuestProgressEntity? = null
@@ -117,6 +125,11 @@ class QuestManager(
                 .collect { syncDerivedProgress() }
         }
         launch {
+            today.flatMapLatest { date -> db.waterDao().observeTotalMlForDate(date) }
+                .distinctUntilChanged()
+                .collect { syncDerivedProgress() }
+        }
+        launch {
             db.gameEventDao().observeCount(GameEventType.BARCODE_SCANNED.name)
                 .distinctUntilChanged()
                 .collect { syncDerivedProgress() }
@@ -129,10 +142,11 @@ class QuestManager(
      * @param enemyType typ poraženého Makromona (MakromonType.name)
      * @param biome biom, ve kterém souboj proběhl (BiomeType.name), pokud je znám
      */
-    fun onBattleWon(enemyType: String, biome: String? = null) = mutate { progress, stage ->
+    fun onBattleWon(enemyType: String, biome: String? = null, location: String? = null) = mutate { progress, stage ->
         val counts = when (stage.requirementType) {
             RequirementType.BATTLE_TYPE -> stage.targetId.equals(enemyType, ignoreCase = true)
-            RequirementType.BATTLE_BIOME -> biome != null && stage.targetId.equals(biome, ignoreCase = true)
+            // biome = biom divokých Makromonů (jeskyně → hory), location = skutečná lokace (Hvozd)
+            RequirementType.BATTLE_BIOME -> listOfNotNull(biome, location).any { stage.targetId.equals(it, ignoreCase = true) }
             else -> false
         }
         if (counts) {
@@ -158,6 +172,18 @@ class QuestManager(
 
     // --- ODVOZENÝ POSTUP (data z funkční části) ---
 
+    /** Debug: splní aktuální fázi aktivního questu (i s odměnou a úvodem další fáze). */
+    fun debugCompleteStage() = mutate { _, stage -> QuestProgression.satisfyingMetadata(stage) }
+
+    /** Zapomene načtený quest (po debug resetu v DB se příště načte znovu od začátku). */
+    fun forget(questId: String) {
+        if (activeQuest?.id == questId) { activeQuest = null; currentProgress = null }
+        introPrefs?.edit()?.remove("intro_seen_$questId")?.apply()
+    }
+
+    /** Přepočítá odvozenou fázi hned (např. po souboji s bossem, který nastavil příznak příběhu). */
+    fun recheck() = syncDerivedProgress()
+
     private fun syncDerivedProgress() {
         scope.launch(Dispatchers.Main) {
             progressMutex.withLock { syncDerivedProgressLocked(silent = false) }
@@ -178,6 +204,10 @@ class QuestManager(
                     db.stepsDao().getStepsForDateSync(today())?.count ?: 0
                 RequirementType.SCAN_BARCODE ->
                     db.gameEventDao().countSince(GameEventType.BARCODE_SCANNED.name, progress.stageStartedAt)
+                RequirementType.HIT_WATER -> waterProvider?.invoke()?.let { (drank, target) ->
+                    QuestProgression.waterPercent(drank, target)
+                }
+                RequirementType.STORY_FLAG -> storyFlagProvider?.let { if (it(stage.targetId.orEmpty())) 1 else 0 }
                 RequirementType.HIT_TARGET -> {
                     val targets = targetsProvider?.invoke() ?: return@withContext null
                     val meals = db.consumedSnackDao().getConsumedByDateSync(today())
@@ -247,16 +277,25 @@ class QuestManager(
         val lastStage = quest.stages.last()
 
         if (progress.isCompleted) {
-            if (!playerInitiated) {
-                // Právě dokončeno – rozlučka hned, bez čekání na kliknutí
-                showLine(quest, lastStage, "Splněno!", quest.farewell, quest.stages.size)
-            } else {
-                showLine(quest, lastStage, "Hotovo", quest.farewell, quest.stages.size)
+            val reward = pendingRewardLine
+            if (!playerInitiated && reward != null) {
+                // Odměna za poslední fázi (Srdce Hvozdu) – předá ji mluvčí poslední fáze
+                pendingRewardLine = null
+                showLine(quest, lastStage, "Splněno!", reward, quest.stages.size)
+                return
             }
+            val speaker = if (quest.farewellSpeakerResId != 0)
+                lastStage.copy(speakerResId = quest.farewellSpeakerResId, speakerName = quest.farewellSpeakerName) else lastStage
+            showLine(quest, speaker, if (playerInitiated) "Hotovo" else "Splněno!", quest.farewell, quest.stages.size)
             return
         }
 
         val stage = quest.stages.getOrNull(progress.currentStageIndex) ?: return
+        if (playerInitiated && stage.requirementType == RequirementType.DELIVER_ITEMS &&
+            introSeenIndex(quest.id) >= progress.currentStageIndex) {
+            tryDeliver(quest, stage)
+            return
+        }
         val introSeen = introSeenIndex(quest.id) >= progress.currentStageIndex
         var text = if (!playerInitiated || !introSeen) stage.text
             else QuestProgression.reminder(stage, progress.metadata)
@@ -264,6 +303,27 @@ class QuestManager(
         pendingRewardLine?.let { text = it + "\n\n" + stage.text; pendingRewardLine = null }
         markIntroSeen(quest.id, progress.currentStageIndex)
         showLine(quest, stage, stage.title, text, progress.currentStageIndex)
+    }
+
+    /** Odevzdání předmětů NPC: má-li hráč vše, odebere se a fáze se splní; jinak připomínka s počty. */
+    private fun tryDeliver(quest: QuestDefinition, stage: QuestStage) {
+        val items = QuestProgression.deliveryItems(stage)
+        scope.launch(Dispatchers.Main) {
+            val owned = withContext(Dispatchers.IO) { itemCounter?.invoke(items.map { it.first }) ?: emptyMap() }
+            if (QuestProgression.missingItems(stage, owned).isNotEmpty()) {
+                showLine(quest, stage, stage.title,
+                    "Ještě nemáš všechno. Přines mi: ${QuestProgression.deliveryText(stage, owned)}.",
+                    currentProgress?.currentStageIndex ?: 0)
+                return@launch
+            }
+            val taken = withContext(Dispatchers.IO) { itemConsumer?.invoke(items) == true }
+            if (!taken) return@launch
+            progressMutex.withLock {
+                val progress = currentProgress ?: return@withLock
+                if (progress.isCompleted || getActiveStage() != stage) return@withLock
+                commit(progress, "1", silent = false)
+            }
+        }
     }
 
     private fun showLine(quest: QuestDefinition, speaker: QuestStage, title: String, text: String, stepIndex: Int) {

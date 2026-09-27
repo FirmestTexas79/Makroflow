@@ -80,6 +80,49 @@ object SkyPassArt {
         return p - w
     }
 
+    /** Srdce Hvozdu v lůžku (5×5 px jantar s lístkem), kreslí se na mapu i do detailu brány. */
+    val HEART_IN_SOCKET: IntArray = run {
+        val a = 0xFFD8841C.toInt(); val l = 0xFFF4B840.toInt(); val g = 0xFF4EB84A.toInt(); val o = 0xFF5A300C.toInt()
+        intArrayOf(
+            0, 0, g, 0, 0,
+            0, o, a, o, 0,
+            o, a, l, a, o,
+            o, a, a, a, o,
+            0, o, o, o, 0
+        )
+    }
+
+    /** Průhledné [top] přes neprůhledné [base] (ARGB, na stejném místě). */
+    fun blend(base: Int, top: Int): Int {
+        val ta = top ushr 24
+        if (ta == 0) return base
+        if (ta == 255) return top
+        fun ch(sh: Int) = (((top ushr sh) and 0xFF) * ta + ((base ushr sh) and 0xFF) * (255 - ta)) / 255
+        return (0xFF shl 24) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
+    }
+
+    /**
+     * Detail brány pro tabuli: výřez mapy [base] (od [cropX], [cropY], [w]×[h]) se závojem
+     * a – když je brána otevřená – se Srdcem Hvozdu v lůžku (statický obrázek mapy ani jedno nemá).
+     */
+    fun gateDetail(base: IntArray, cropX: Int, cropY: Int, w: Int, h: Int, open: Boolean): IntArray {
+        val out = base.copyOf()
+        val v = veil(0, open)
+        val ox = GATE_X - VEIL_R - cropX; val oy = GATE_Y - VEIL_R - cropY
+        for (y in 0 until VEIL_SIZE) for (x in 0 until VEIL_SIZE) {
+            val tx = ox + x; val ty = oy + y
+            if (tx in 0 until w && ty in 0 until h) out[ty * w + tx] = blend(out[ty * w + tx], v[y * VEIL_SIZE + x])
+        }
+        if (open) {
+            val hx = SOCKET_X - 2 - cropX; val hy = SOCKET_Y - 2 - cropY
+            for (y in 0 until 5) for (x in 0 until 5) {
+                val c = HEART_IN_SOCKET[y * 5 + x]
+                if (c != 0 && hx + x in 0 until w && hy + y in 0 until h) out[(hy + y) * w + hx + x] = c
+            }
+        }
+        return out
+    }
+
     /** Pulz lůžka 0..1 (sinus s periodou [periodMs]). */
     fun pulse(tMs: Long, periodMs: Long = 2200): Double = (1 - cos(2 * PI * (tMs % periodMs) / periodMs)) / 2
 }

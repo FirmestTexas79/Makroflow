@@ -458,7 +458,18 @@ class QuestJournalFragment : Fragment() {
                 RequirementType.BATTLE_BIOME -> {
                     val value = if (viewingIndex < currentIndex || isAllDone) stageToDisplay.targetValue
                         else QuestProgression.currentValue(stageToDisplay, progress.metadata)
-                    "Cíl: Výhry v horách ($value / ${stageToDisplay.targetValue})"
+                    "Cíl: Výhry ${QuestProgression.biomeLabel(stageToDisplay)} ($value / ${stageToDisplay.targetValue})"
+                }
+                RequirementType.HIT_WATER -> {
+                    if (viewingIndex < currentIndex || isAllDone) "Cíl: Splněno"
+                    else "Cíl: Voda dnes ${QuestProgression.currentValue(stageToDisplay, progress.metadata)} % tvého cíle (potřeba 100 %)"
+                }
+                RequirementType.DELIVER_ITEMS -> {
+                    if (viewingIndex < currentIndex || isAllDone) "Cíl: Odevzdáno"
+                    else "Cíl: Přines Mydrusovi ${QuestProgression.deliveryText(stageToDisplay, null)}"
+                }
+                RequirementType.STORY_FLAG -> {
+                    if (viewingIndex < currentIndex || isAllDone) "Cíl: Splněno" else "Cíl: Vyžeň Soulorda z kořenů Starého dubu"
                 }
                 RequirementType.HIT_TARGET -> {
                     val n = cz.uhk.macroflow.energy.Adherence.Nutrient.from(stageToDisplay.targetId)
@@ -492,6 +503,7 @@ class QuestJournalFragment : Fragment() {
         QuestRegistry.TOWN_INTRO_QUEST.id -> "I · MĚSTO"
         QuestRegistry.MEADOW_QUEST.id -> "II · LOUKA"
         QuestRegistry.MOUNTAINS_QUEST.id -> "III · HORY"
+        QuestRegistry.FOREST_QUEST.id -> "IV · HVOZD"
         else -> "DOBRODRUŽSTVÍ"
     }
 

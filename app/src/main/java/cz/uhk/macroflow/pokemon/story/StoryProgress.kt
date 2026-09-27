@@ -31,7 +31,8 @@ object StoryProgress {
     /** Pevné klíče příběhu (kromě strážců a krystalů, které mají předponu). */
     val STORY_KEYS = setOf(
         "crystals_placed", "legend_faced",
-        SkyPass.VISITED_KEY, SkyPass.GATE_SEEN_KEY, SkyPass.HEART_PLACED_KEY
+        SkyPass.VISITED_KEY, SkyPass.GATE_SEEN_KEY, SkyPass.HEART_PLACED_KEY,
+        ForestHeart.ROT_DEFEATED_KEY
     )
 
     fun isStoryKey(key: String): Boolean =

@@ -13,7 +13,12 @@ object QuestRewards {
                 "tak s křikem utekl směrem do lesa. Vytáhni si ji, stejně mě pořád píchala do větví."),
         ("mountains_macro_king" to 0) to Reward("tool_pickaxe_old", "Starý krumpáč",
             "Eeee… koukni se mi prosím zezadu na krk. Něco mě tam tak už čtyři roky svědí. … Krumpáč?! " +
-                "Tak to vysvětluje hodně. Nech si ho, hrdino – a nikomu ani slovo.")
+                "Tak to vysvětluje hodně. Nech si ho, hrdino – a nikomu ani slovo."),
+        // docs/adr/0045 – po vyhnání Soulorda vydá Starý dub Srdce Hvozdu
+        ("forest_heart" to 5) to Reward("srdce_hvozdu", "Srdce Hvozdu",
+            "Hniloba… odchází. Cítím, jak mi mízou znovu stoupá světlo. Poutníku, vezmi si Srdce Hvozdu. " +
+                "Druidi ho do mě kdysi vložili, abych ho chránil, dokud nepřijde někdo, kdo les uzdraví. " +
+                "Nes ho k Bráně světů – na Nebeský průsmyk za svatyní. Vlož ho do lůžka… a brána se otevře.")
     )
 
     /** Odměna za dokončení fáze [stageIndex] questu [questId], nebo null. */

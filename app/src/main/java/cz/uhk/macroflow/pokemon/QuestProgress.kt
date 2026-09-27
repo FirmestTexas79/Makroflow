@@ -27,4 +27,7 @@ interface QuestDao {
 
     @Query("DELETE FROM quest_progress")
     fun deleteAllLocally() // Odstraněn suspend i Unit
+
+    @Query("DELETE FROM quest_progress WHERE questId = :id")
+    fun deleteById(id: String)
 }

@@ -295,13 +295,15 @@ class InventoryFragment : Fragment() {
             val crystal = cz.uhk.macroflow.pokemon.cave.CrystalColor.fromItem(item.itemId)
             val resource = cz.uhk.macroflow.pokemon.skills.Resource.from(item.itemId)
             val gear = cz.uhk.macroflow.pokemon.skills.Gear.from(item.itemId)
+            val heart = item.itemId == cz.uhk.macroflow.pokemon.story.ForestHeart.ITEM_ID   // docs/adr/0045
             holder.tvName.text = ball?.label ?: med?.label ?: crystal?.label ?: resource?.label ?: gear?.label ?: when (item.itemId) {
+                cz.uhk.macroflow.pokemon.story.ForestHeart.ITEM_ID -> cz.uhk.macroflow.pokemon.story.ForestHeart.LABEL
                 "lure_lamp"  -> "Spooky Plate"
                 else         -> item.itemId
             }
 
             holder.tvQuantity.visibility = View.VISIBLE
-            holder.tvQuantity.text = if (crystal != null) "Klíčový předmět · klepni pro popis" else "Vlastníš: ${item.quantity} ks"
+            holder.tvQuantity.text = if (crystal != null || heart) "Klíčový předmět · klepni pro popis" else "Vlastníš: ${item.quantity} ks"
 
             // Itemy zatím stále načítají z URL – nemáme lokální drawable pro itemy
             val imageUrl = when (item.itemId) {
@@ -315,6 +317,10 @@ class InventoryFragment : Fragment() {
             } else if (resource != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(resource,
                     cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(resource), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM,
+                    (64 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (heart) {
+                holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(item.itemId,
+                    cz.uhk.macroflow.pokemon.story.ForestHeart.iconPixels(), cz.uhk.macroflow.pokemon.story.ForestHeart.ICON,
                     (64 * holder.itemView.resources.displayMetrics.density).toInt()))
             } else if (crystal != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(crystal,
@@ -340,6 +346,14 @@ class InventoryFragment : Fragment() {
                 }
                 if (resource != null) {
                     Toast.makeText(requireContext(), "${resource.label}: ${resource.description}", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                if (heart) {
+                    android.app.AlertDialog.Builder(requireContext())
+                        .setTitle("🍃 ${cz.uhk.macroflow.pokemon.story.ForestHeart.LABEL}")
+                        .setMessage(cz.uhk.macroflow.pokemon.story.ForestHeart.DESCRIPTION)
+                        .setPositiveButton("OK", null)
+                        .show()
                     return@setOnClickListener
                 }
                 if (crystal != null) {

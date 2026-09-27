@@ -1089,6 +1089,7 @@ class PokemonBattleView @JvmOverloads constructor(
         special?.crystal?.let { c ->
             cz.uhk.macroflow.pokemon.story.StoryFlags.set(context, cz.uhk.macroflow.pokemon.legend.LegendProgress.bossKey(c))
         }
+        special?.winKey?.let { cz.uhk.macroflow.pokemon.story.StoryFlags.set(context, it) }
         gs.enemyVisible = false
         gs.phase = BattlePhase.ENEMY_FAINTED
         setText("${gs.enemy.name}", "FAINTED!")
@@ -1100,7 +1101,8 @@ class PokemonBattleView @JvmOverloads constructor(
 
         // Informujeme QuestManager o výhře nad konkrétním typem
         (context as? MakromonMapActivity)?.let { map ->
-            map.questManager.onBattleWon(enemyType.name, biome = map.getCurrentBiome().wildBiome.name)
+            map.questManager.onBattleWon(enemyType.name, biome = map.getCurrentBiome().wildBiome.name,
+                location = map.getCurrentBiome().name)
             cz.uhk.macroflow.pokemon.daily.DailyQuestStore.recordWin(context, enemyType.name, map.getCurrentBiome().name)
         }
 

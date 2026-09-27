@@ -20,11 +20,16 @@ enum class SpecialBattle(
     /** Krystal, který strážce hlídá (u legendy null). */
     val crystal: CrystalColor?,
     /** Drawable spritu (strážce stojí na mapě před oltářem). */
-    val spriteName: String
+    val spriteName: String,
+    /** Příznak příběhu, který výhra nastaví (StoryFlags) – krystaly mají vlastní bossKey. */
+    val winKey: String? = null
 ) {
     BOSS_BLUE("boss_blue", "021", 12, Kind.BOSS, CrystalColor.BLUE, "makromon_21_serpfin"),     // had z podzemního jezírka
     BOSS_RED("boss_red", "003", 12, Kind.BOSS, CrystalColor.RED, "makromon_03_ignaroth"),       // oheň v hlubinách dolu
-    LEGEND_PEAK("legend_peak", "019", 80, Kind.LEGEND, null, "makromon_19_drakirra");           // drak z vrcholu
+    LEGEND_PEAK("legend_peak", "019", 80, Kind.LEGEND, null, "makromon_19_drakirra"),           // drak z vrcholu
+    // pán Rudé hniloby v kořenech Starého dubu (docs/adr/0045)
+    FOREST_ROT("forest_rot", "026", 14, Kind.BOSS, null, "makromon_26_soulord",
+        winKey = cz.uhk.macroflow.pokemon.story.ForestHeart.ROT_DEFEATED_KEY);
 
     enum class Kind { BOSS, LEGEND }
 
@@ -32,9 +37,10 @@ enum class SpecialBattle(
     val canRun: Boolean get() = false
 
     /** Úvodní hláška místo „WILD X APPEARED!“ (max. 23 znaků na řádek). */
-    fun appearLines(name: String): Pair<String, String> = when (kind) {
-        Kind.BOSS -> "GUARDIAN $name" to "BLOCKS THE WAY!"
-        Kind.LEGEND -> "LEGENDARY $name" to "HAS AWAKENED!"
+    fun appearLines(name: String): Pair<String, String> = when {
+        this == FOREST_ROT -> "$name ROSE FROM" to "THE ROTTEN ROOTS!"
+        kind == Kind.BOSS -> "GUARDIAN $name" to "BLOCKS THE WAY!"
+        else -> "LEGENDARY $name" to "HAS AWAKENED!"
     }
 
     /** Legendu nelze porazit: HP po zásahu neklesne pod 1. */

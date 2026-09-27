@@ -43,6 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import cz.uhk.macroflow.pokemon.cave.SkyPass
 import cz.uhk.macroflow.pokemon.story.StoryFlags
+import cz.uhk.macroflow.pokemon.story.ForestHeart
 import java.util.Locale
 import kotlin.math.sqrt
 
@@ -195,7 +196,21 @@ class MakromonMapActivity : AppCompatActivity() {
                 val t = cz.uhk.macroflow.dashboard.MacroCalculator.calculate(applicationContext)
                 cz.uhk.macroflow.energy.Adherence.Targets(t.calories, t.protein, t.carbs, t.fat)
             },
-            introPrefs = getSharedPreferences("QuestPrefs", Context.MODE_PRIVATE)
+            introPrefs = getSharedPreferences("QuestPrefs", Context.MODE_PRIVATE),
+            // Hvozd (docs/adr/0045): voda proti osobnímu cíli, příznaky příběhu, odevzdání surovin
+            waterProvider = {
+                val today = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())
+                val drank = AppDatabase.getDatabase(applicationContext).waterDao().getTotalMlForDateSync(today)
+                val target = (cz.uhk.macroflow.dashboard.MacroCalculator.calculate(applicationContext).water * 1000).toInt()
+                drank to target
+            },
+            storyFlagProvider = { key -> StoryFlags.isSet(applicationContext, key) },
+            itemCounter = { ids -> ids.associateWith { cz.uhk.macroflow.pokemon.skills.SkillStore.count(applicationContext, it) } },
+            itemConsumer = { items ->
+                val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+                if (items.any { (id, n) -> SS.count(applicationContext, id) < n }) false
+                else { items.forEach { (id, n) -> SS.consume(applicationContext, id, n) }; true }
+            }
         )
 
         // PROPOJENÍ: Když se v manageru změní progres (např. onMealLogged), refreshneme UI
@@ -203,6 +218,13 @@ class MakromonMapActivity : AppCompatActivity() {
         questManager.onProgressChanged = { progress ->
             // lifecycleScope zajistí, že nebudeme sahat do UI, pokud aktivita umírá
             lifecycleScope.launch(Dispatchers.Main) {
+                // Hvozd: nová fáze mění mapu (Soulord u dubu, uzdravený les) – docs/adr/0045
+                val forestStage = progress.currentStageIndex to progress.isCompleted
+                if (progress.questId == ForestHeart.QUEST_ID && forestStage != lastForestStage) {
+                    val first = lastForestStage == null
+                    lastForestStage = forestStage
+                    if (!first || currentBiome == BiomeType.FOREST) refreshStoryDecor()
+                }
                 val journalFragment = supportFragmentManager.findFragmentByTag(TAG_JOURNAL) as? QuestJournalFragment
                 // Kontrolujeme isAdded(), aby fragment nespadl při pokusu o refresh
                 if (journalFragment != null && journalFragment.isAdded) {
@@ -260,6 +282,7 @@ class MakromonMapActivity : AppCompatActivity() {
             if (supportFragmentManager.backStackEntryCount == 0) {
                 companionManager.refresh()
                 refreshStoryDecor()     // po souboji se strážcem / legendou
+                questManager.recheck()  // boss Hvozdu nastavil příznak → fáze questu se splní
                 checkAwards()           // chycení, denní úkoly… (docs/adr/0037)
             }
         }
@@ -549,8 +572,14 @@ class MakromonMapActivity : AppCompatActivity() {
         lastClickTime = now
         lastClickedNode = nodeName
 
-        val action = {
+        val action: () -> Unit = action@{
             questManager.onNodeVisited(nodeName)
+            // Starý dub: ve fázi s bossem se z kořenů vynoří Soulord místo divokého setkání
+            if (nodeName == ForestHeart.OAK_NODE && rotBossWaiting()) {
+                showMapToast("🍂 Kořeny Starého dubu se zachvějí a z hniloby stoupá fialová mlha…")
+                startSpecialBattle(SpecialBattle.FOREST_ROT, BiomeType.FOREST)
+                return@action
+            }
 
             when (nodeName) {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
@@ -569,7 +598,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 "zahon_1", "zahon_2", "zahon_3", "zahon_4" ->
                     cz.uhk.macroflow.pokemon.skills.MeadowLayout.plotIndex(nodeName)?.let { onPlot(it) }
                 "les_sever" -> tryEnterForest()
-                "mytina" -> showMapToast("🌳 Mýtina v srdci Hvozdu. Na prastarém pařezu rostou rudé houby a v korunách je slyšet šepot…\n(Tady příběh teprve začne.)")
+                ForestHeart.MYDRUS_NODE -> onMytina()
                 "krystal_modry", "krystal_cerveny" -> BiomeRegistry.definition(currentBiome)?.cave?.let { onCrystalNode(it) }
                 "peak" -> onShrine()
                 SkyPass.GATE_NODE -> onWorldGate()
@@ -771,7 +800,10 @@ class MakromonMapActivity : AppCompatActivity() {
             findViewById<View>(R.id.btnStartTutorial).visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
 
             val def = BiomeRegistry.definition(newBiome)
-            def?.questId?.let { questManager.loadQuest(it) }
+            if (newBiome == BiomeType.FOREST) lastForestStage = null   // po načtení questu se dekorace obnoví
+            // Quest Hvozdu začne až po souboji s legendou – do té doby je mýtina prázdná
+            if (newBiome != BiomeType.FOREST || ForestHeart.questAvailable(StoryFlags.isSet(this, LegendProgress.LEGEND_KEY)))
+                def?.questId?.let { questManager.loadQuest(it) }
             cz.uhk.macroflow.pokemon.audio.GameAudio.playFor(this, newBiome.name)
             gudwinNPC.visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
             starterBush.visibility = if (newBiome == BiomeType.TOWN) View.VISIBLE else View.GONE
@@ -962,6 +994,7 @@ class MakromonMapActivity : AppCompatActivity() {
             val cave = BiomeRegistry.definition(currentBiome)?.cave
             when {
                 currentBiome == BiomeType.SKY_PASS -> placeSkyPassDecor()
+                currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
                 cave != null -> { placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots() }
                 currentBiome == BiomeType.MOUNTAINS -> { placeShrineDecor(progress); placeGatherSpots() }
                 currentBiome == BiomeType.MEADOW -> { placeMeadowWorkshop(); placeGatherSpots() }
@@ -988,7 +1021,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val veil = pixelView(A.veil(0, open), A.VEIL_SIZE, A.VEIL_SIZE, veilSize, veilSize).apply {
             x = (A.GATE_X - A.VEIL_R) * s; y = (A.GATE_Y - A.VEIL_R) * s; elevation = 1.5f
         }
-        val runeGlow = glowView((60 * s).toInt(), 0xFF6AE8D8.toInt(), 0x55).apply {
+        val runeGlow = glowView((60 * s).toInt(), if (open) 0xFF7CFF9A.toInt() else 0xFF6AE8D8.toInt(), if (open) 0x77 else 0x55).apply {
             x = (A.GATE_X - 30) * s; y = (A.GATE_Y - 30) * s; elevation = 1.4f
         }
         val socketGlow = glowView((12 * s).toInt(), if (open) 0xFF7CFF9A.toInt() else 0xFF4ECB6A.toInt(), 0xCC).apply {
@@ -1004,6 +1037,9 @@ class MakromonMapActivity : AppCompatActivity() {
             Cloud(v, w, speed, 55.0 * i)
         }
         addDecor(runeGlow); clouds.forEach { addDecor(it.view) }; addDecor(veil); addDecor(socketGlow)
+        if (open) addDecor(pixelView(A.HEART_IN_SOCKET, 5, 5, (5 * s).toInt(), (5 * s).toInt()).apply {
+            x = (A.SOCKET_X - 2) * s; y = (A.SOCKET_Y - 2) * s; elevation = 1.7f
+        })
 
         val artW = SkyPass.MAP.artW
         val t0 = android.os.SystemClock.uptimeMillis()
@@ -1419,7 +1455,11 @@ class MakromonMapActivity : AppCompatActivity() {
             "✦ Příští setkání bude shiny",
             "💎 Reset krystalů, strážců a legendy",
             "⚔ Porazit oba strážce",
-            "🎒 Dát oba krystaly do inventáře"
+            "🎒 Dát oba krystaly do inventáře",
+            "🐉 Legenda odletěla nad Hvozd (odemkne Mydruse)",
+            "🌳 Splnit aktuální fázi questu",
+            "🍃 Dát Srdce Hvozdu do inventáře",
+            "🍂 Reset příběhu Hvozdu"
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("Debug – Makrosvět")
@@ -1453,9 +1493,47 @@ class MakromonMapActivity : AppCompatActivity() {
                         showMapToast("🎒 Debug: oba krystaly jsou v inventáři")
                         refreshStoryDecor()
                     }
+                    5 -> {
+                        CrystalColor.entries.forEach {
+                            StoryFlags.set(this@MakromonMapActivity, LegendProgress.bossKey(it))
+                            StoryFlags.set(this@MakromonMapActivity, LegendProgress.takenKey(it))
+                        }
+                        StoryFlags.set(this@MakromonMapActivity, LegendProgress.PLACED_KEY)
+                        StoryFlags.set(this@MakromonMapActivity, LegendProgress.LEGEND_KEY)
+                        showMapToast("🐉 Debug: Drakirra odletěla nad Hvozd – Mydrus čeká na mýtině")
+                        if (currentBiome == BiomeType.FOREST) questManager.loadQuest(ForestHeart.QUEST_ID)
+                        refreshStoryDecor()
+                    }
+                    6 -> { questManager.debugCompleteStage(); showMapToast("🌳 Debug: fáze splněna") }
+                    7 -> lifecycleScope.launch {
+                        kotlinx.coroutines.withContext(Dispatchers.IO) {
+                            cz.uhk.macroflow.pokemon.skills.SkillStore.grantItemOnce(applicationContext, ForestHeart.ITEM_ID)
+                        }
+                        showMapToast("🍃 Debug: Srdce Hvozdu je v inventáři")
+                    }
+                    8 -> debugResetForest()
                 }
             }
             .show()
+    }
+
+    /** Hvozd od začátku: quest, hniloba, Srdce (i vložené do brány). */
+    private fun debugResetForest() {
+        val ctx = applicationContext
+        gamePrefs.edit().remove(ForestHeart.ROT_DEFEATED_KEY).remove(SkyPass.HEART_PLACED_KEY).apply()
+        questManager.forget(ForestHeart.QUEST_ID)
+        lifecycleScope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                StoryFlags.clear(ctx, ForestHeart.ROT_DEFEATED_KEY)
+                StoryFlags.clear(ctx, SkyPass.HEART_PLACED_KEY)
+                val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+                SS.count(ctx, ForestHeart.ITEM_ID).takeIf { it > 0 }?.let { SS.consume(ctx, ForestHeart.ITEM_ID, it) }
+                db.questDao().deleteById(ForestHeart.QUEST_ID)
+            }
+            if (currentBiome == BiomeType.FOREST && StoryFlags.isSet(ctx, LegendProgress.LEGEND_KEY)) questManager.loadQuest(ForestHeart.QUEST_ID)
+            showMapToast("🍂 Debug: Hvozd je zase nemocný a quest začíná od začátku")
+            refreshStoryDecor()
+        }
     }
 
     /** Vrátí celý příběh krystalů na začátek: strážci zpět, krystaly na oltářích, svatyně prázdná. */
@@ -1581,15 +1659,194 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // HVOZD: druid Mydrus, Rudá hniloba a Srdce Hvozdu (docs/adr/0045)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Poslední známá fáze questu Hvozdu (index, dokončeno) – dekorace se obnoví jen při změně. */
+    private var lastForestStage: Pair<Int, Boolean>? = null
+
+    /** Je aktivní quest Hvozdu ve fázi, kdy v kořenech Starého dubu čeká Soulord? */
+    private fun rotBossWaiting(): Boolean =
+        currentBiome == BiomeType.FOREST && questManager.getActiveQuestId() == ForestHeart.QUEST_ID &&
+            questManager.getCurrentProgress()?.let { !it.isCompleted && it.currentStageIndex == ForestHeart.BOSS_STAGE } == true &&
+            !StoryFlags.isSet(this, ForestHeart.ROT_DEFEATED_KEY)
+
+    /** Mýtina: dokud legenda spí, jen šepot lesa; potom tu čeká Mydrus s questem. */
+    private fun onMytina() {
+        if (!ForestHeart.questAvailable(StoryFlags.isSet(this, LegendProgress.LEGEND_KEY))) {
+            showMapToast(ForestHeart.MYTINA_BEFORE); return
+        }
+        if (questManager.getActiveQuestId() != ForestHeart.QUEST_ID) {
+            // quest se právě odemkl (legenda porazila hráče, když byl Hvozd už načtený)
+            questManager.loadQuest(ForestHeart.QUEST_ID)
+            mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 300)
+            return
+        }
+        questManager.checkNpcInteraction()
+    }
+
+    /**
+     * Příběh na mapě Hvozdu: Mydrus u pařezu na mýtině, fialové skvrny hniloby s rudými houbami,
+     * Soulord u kořenů dubu (ve fázi s bossem) a po uzdravení Mycité na mýtině a zlaté světlušky.
+     */
+    private fun placeForestStory(legendFaced: Boolean) {
+        if (worldScale <= 0 || !ForestHeart.questAvailable(legendFaced)) return
+        val s = worldScale.toFloat()
+        val cured = StoryFlags.isSet(this, ForestHeart.ROT_DEFEATED_KEY)
+        val t0 = android.os.SystemClock.uptimeMillis()
+        val pulsing = mutableListOf<Pair<View, Long>>()     // pohled + fáze pulzu
+
+        fun sprite(res: Int, artSize: Int, pos: Pair<Int, Int>, elev: Float): ImageView = ImageView(this).apply {
+            val px = (artSize * s).toInt()
+            layoutParams = FrameLayout.LayoutParams(px, px)
+            setImageResource(res)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            x = pos.first * s - px / 2f; y = pos.second * s - px; elevation = elev
+        }
+
+        if (!cured) {
+            ForestHeart.ROT_SPOTS.forEachIndexed { i, (cx, cy, r) ->
+                val glow = glowView((r * 3.2f * s).toInt(), 0xFFB050D0.toInt(), 0x88).apply {
+                    x = cx * s - r * 1.6f * s; y = cy * s - r * 1.6f * s; elevation = 1.1f
+                }
+                val w = 2 * r + 1; val h = r + 1
+                val patch = pixelView(ForestHeart.rotPatch(r, i + 1), w, h, (w * s).toInt(), (h * s).toInt()).apply {
+                    x = (cx - r) * s; y = (cy - h / 2f) * s; elevation = 1.2f
+                }
+                addDecor(glow); addDecor(patch)
+                pulsing += glow to (i * 530L)
+            }
+            if (rotBossWaiting()) {
+                val aura = glowView((40 * s).toInt(), 0xFF8A3AFF.toInt(), 0xAA).apply {
+                    x = ForestHeart.SOULORD_POS.first * s - 20 * s; y = ForestHeart.SOULORD_POS.second * s - 30 * s; elevation = 1.9f
+                }
+                val ghost = sprite(R.drawable.makromon_26_soulord, 26, ForestHeart.SOULORD_POS, 2f).apply { alpha = 0.8f }
+                addDecor(aura); addDecor(ghost)
+                pulsing += aura to 0L
+                crystalAnimators += android.animation.ObjectAnimator.ofFloat(ghost, "translationY", 0f, -2.5f * s, 0f).apply {
+                    duration = 2600; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+                }
+            }
+        } else {
+            // les dýchá: zlatá záře u dubu a světlušky
+            val oak = glowView((46 * s).toInt(), 0xFFFFD86A.toInt(), 0x66).apply {
+                x = 92 * s - 23 * s; y = 72 * s - 23 * s; elevation = 1.1f
+            }
+            addDecor(oak); pulsing += oak to 0L
+            listOf(80 to 96, 110 to 64, 132 to 110, 60 to 120, 176 to 40, 146 to 84).forEachIndexed { i, (fx, fy) ->
+                val fly = glowView((5 * s).toInt(), 0xFFFFF2A0.toInt(), 0xEE).apply {
+                    x = fx * s; y = fy * s; elevation = 2.2f
+                }
+                addDecor(fly); pulsing += fly to (i * 410L)
+                crystalAnimators += android.animation.ObjectAnimator.ofFloat(fly, "translationY", 0f, -4f * s, 1.5f * s, 0f).apply {
+                    duration = 3000L + i * 350; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+                }
+            }
+            if (questManager.getCurrentProgress()?.isCompleted == true || cured) {
+                ForestHeart.MYCIT_POS.forEachIndexed { i, p ->
+                    val m = sprite(R.drawable.makromon_22_mycit, 14, p, 2f).apply { if (i == 0) scaleX = -1f }
+                    addDecor(m)
+                }
+            }
+        }
+
+        // Mydrus u pařezu (lehce se pohupuje)
+        val mydrus = sprite(R.drawable.makromon_23_mydrus, 22, ForestHeart.MYDRUS_POS, 2.1f)
+        addDecor(mydrus)
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(mydrus, "translationY", 0f, -1.2f * s, 0f).apply {
+            duration = 1800; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+
+        if (pulsing.isNotEmpty()) crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 1000; repeatCount = android.animation.ValueAnimator.INFINITE
+            addUpdateListener {
+                val t = android.os.SystemClock.uptimeMillis() - t0
+                pulsing.forEach { (v, phase) -> v.alpha = 0.35f + 0.65f * cz.uhk.macroflow.pokemon.cave.SkyPassArt.pulse(t + phase, 2600).toFloat() }
+            }
+            start()
+        }
+    }
+
     /** Brána světů na konci Nebeského průsmyku (docs/adr/0044): zatím zapečetěná, chybí Srdce Hvozdu. */
     private fun onWorldGate() {
         StoryFlags.set(this, SkyPass.GATE_SEEN_KEY)
+        if (!StoryFlags.isSet(this, SkyPass.HEART_PLACED_KEY)) {
+            val ctx = applicationContext
+            lifecycleScope.launch {
+                val hasHeart = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    cz.uhk.macroflow.pokemon.skills.SkillStore.count(ctx, ForestHeart.ITEM_ID) > 0
+                }
+                if (hasHeart) placeHeartCeremony() else showWorldGateBoard()
+            }
+            return
+        }
+        showWorldGateBoard()
+    }
+
+    /**
+     * Vložení Srdce Hvozdu (docs/adr/0045): jantarové semeno vyletí od hráče obloukem do lůžka,
+     * prstenec se rozzáří zeleně, závoj se promění v otevřenou bránu a zazní tabule.
+     */
+    private fun placeHeartCeremony() {
+        if (worldScale <= 0) { showWorldGateBoard(); return }
+        transitionRunning = true
+        movementEngine.cancel()
+        val ctx = applicationContext
+        lifecycleScope.launch(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.consume(ctx, ForestHeart.ITEM_ID, 1) }
+        StoryFlags.set(this, SkyPass.HEART_PLACED_KEY)
+
+        val s = worldScale.toFloat()
+        val A = cz.uhk.macroflow.pokemon.cave.SkyPassArt
+        val size = (10 * s).toInt()
+        val seed = pixelView(ForestHeart.iconPixels(), ForestHeart.ICON, ForestHeart.ICON, size, size).apply {
+            x = ashView.x + ashView.width / 2f - size / 2f; y = ashView.y; elevation = 6f
+        }
+        val halo = glowView(size * 3, 0xFFFFD86A.toInt(), 0xCC).apply { elevation = 5.9f }
+        addDecor(halo); addDecor(seed)
+        val tx = A.SOCKET_X * s - size / 2f; val ty = A.SOCKET_Y * s - size / 2f
+        val sx = seed.x; val sy = seed.y
+        android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 1700; interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+            addUpdateListener {
+                val p = it.animatedValue as Float
+                seed.x = sx + (tx - sx) * p
+                seed.y = sy + (ty - sy) * p - kotlin.math.sin(p * Math.PI).toFloat() * 40 * s
+                seed.rotation = p * 360f
+                halo.x = seed.x + size / 2f - halo.layoutParams.width / 2f; halo.y = seed.y + size / 2f - halo.layoutParams.height / 2f
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    // záblesk: zelené světlo z brány přes celou obrazovku
+                    val flash = View(this@MakromonMapActivity).apply {
+                        setBackgroundColor(0xFFB8FFC8.toInt()); alpha = 0f; elevation = 50f
+                        layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+                    }
+                    val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+                    root.addView(flash)
+                    flash.animate().alpha(0.85f).setDuration(260).withEndAction {
+                        refreshStoryDecor()          // závoj se přebarví na otevřenou bránu
+                        flash.animate().alpha(0f).setDuration(900).withEndAction {
+                            root.removeView(flash)
+                            transitionRunning = false
+                            showMapToast("🍃 Srdce Hvozdu zapadlo do lůžka a runy se rozzářily zeleně. Brána světů je otevřená!")
+                            mapWorld.postDelayed({ if (!isFinishing) showWorldGateBoard() }, 900)
+                        }.start()
+                    }.start()
+                }
+            })
+            start()
+        }
+    }
+
+    private fun showWorldGateBoard() {
         val board = SkyPass.gateBoard(StoryFlags.isSet(this, SkyPass.HEART_PLACED_KEY))
         val (cx, cy, cw, ch) = SkyPass.GATE_CROP.toList()
         val art = runCatching {
             val full = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.sky_pass,
                 android.graphics.BitmapFactory.Options().apply { inScaled = false })
-            IntArray(cw * ch).also { full.getPixels(it, 0, cw, cx, cy, cw, ch); full.recycle() }
+            val px = IntArray(cw * ch).also { full.getPixels(it, 0, cw, cx, cy, cw, ch); full.recycle() }
+            cz.uhk.macroflow.pokemon.cave.SkyPassArt.gateDetail(px, cx, cy, cw, ch, StoryFlags.isSet(this, SkyPass.HEART_PLACED_KEY))
         }.getOrNull()
         cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Brána světů", board.subtitle) { ui, body, close ->
             art?.let { px ->

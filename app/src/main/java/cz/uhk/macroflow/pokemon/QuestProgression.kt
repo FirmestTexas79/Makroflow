@@ -39,8 +39,39 @@ object QuestProgression {
 
     private val nodeNames = mapOf(
         "domov" to "Domov", "pokedex" to "Makrodex", "obchod" to "Obchod",
-        "camp" to "tábor", "cave" to "jeskyni"
+        "camp" to "tábor", "cave" to "jeskyni",
+        "jezirko_1" to "tiché jezírko", "houstina" to "houštinu", "stary_dub" to "Starý dub"
     )
+
+    private val biomeNames = mapOf("MOUNTAINS" to "v horách", "FOREST" to "ve Hvozdu", "MEADOW" to "na louce", "TOWN" to "ve městě")
+
+    /** Kde se souboj fáze BATTLE_BIOME počítá (pro deník a připomínku). */
+    fun biomeLabel(stage: QuestStage): String = biomeNames[stage.targetId] ?: "v této lokaci"
+
+    /** Předměty fáze DELIVER_ITEMS: "berry_blue:5,log_birch:5" → [(berry_blue, 5), (log_birch, 5)]. */
+    fun deliveryItems(stage: QuestStage): List<Pair<String, Int>> =
+        stage.targetId.orEmpty().split(",").mapNotNull { part ->
+            val bits = part.trim().split(":")
+            val id = bits.getOrNull(0)?.trim().orEmpty()
+            val n = bits.getOrNull(1)?.trim()?.toIntOrNull() ?: 1
+            if (id.isEmpty() || n <= 0) null else id to n
+        }
+
+    /** Chybějící kusy podle toho, co hráč má; prázdné = může odevzdat. */
+    fun missingItems(stage: QuestStage, owned: Map<String, Int>): List<Pair<String, Int>> =
+        deliveryItems(stage).mapNotNull { (id, n) -> val lack = n - (owned[id] ?: 0); if (lack > 0) id to lack else null }
+
+    private fun itemLabel(id: String): String = cz.uhk.macroflow.pokemon.skills.Resource.from(id)?.label ?: id
+
+    /** Seznam předmětů s tím, kolik hráč má: „5× Modrá bobule (máš 2)“. */
+    fun deliveryText(stage: QuestStage, owned: Map<String, Int>?): String =
+        deliveryItems(stage).joinToString(", ") { (id, n) ->
+            "$n× ${itemLabel(id)}" + (owned?.let { " (máš ${minOf(it[id] ?: 0, n)})" } ?: "")
+        }
+
+    /** Vypito v % osobního cíle vody (zaokrouhleno dolů); cíl ≤ 0 → 0 %. */
+    fun waterPercent(drankMl: Int, targetMl: Int): Int =
+        if (targetMl <= 0) 0 else (drankMl.toLong() * 100 / targetMl).toInt().coerceAtLeast(0)
 
     /**
      * Krátká připomínka, co ještě chybí – NPC ji řekne, když s ním hráč mluví podruhé.
@@ -48,6 +79,7 @@ object QuestProgression {
      */
     fun reminder(stage: QuestStage, metadata: String): String {
         val v = currentValue(stage, metadata)
+        stage.hint?.let { return it }
         return when (stage.requirementType) {
             RequirementType.VISIT_NODE -> {
                 val missing = (stage.targetId?.split(",")?.map { it.trim() } ?: emptyList()) - visitedNodes(metadata)
@@ -59,7 +91,10 @@ object QuestProgression {
                 "Dnes máš $v kroků z ${stage.targetValue}. Ještě ${(stage.targetValue - v).coerceAtLeast(0)} – rozhýbej se!"
             RequirementType.LOG_MEAL -> "Dnes máš zapsáno $v jídel z ${stage.targetValue}. Zapiš je v sekci Jídlo."
             RequirementType.BATTLE_TYPE -> "Poraženo $v z ${stage.targetValue}. Pokračuj v soubojích!"
-            RequirementType.BATTLE_BIOME -> "Výhry v horách: $v z ${stage.targetValue}. Ještě chvíli!"
+            RequirementType.BATTLE_BIOME -> "Výhry ${biomeLabel(stage)}: $v z ${stage.targetValue}. Ještě chvíli!"
+            RequirementType.HIT_WATER -> "Dnes máš vypito $v % svého cíle vody. Potřebuju celých ${stage.targetValue} % – zapisuj vodu v aplikaci."
+            RequirementType.DELIVER_ITEMS -> "Přines mi: ${deliveryText(stage, null)}."
+            RequirementType.STORY_FLAG -> stage.text
             RequirementType.SCAN_BARCODE -> "Pořád čekám na čárový kód! Naskenuj ho u jídla v sekci Jídlo."
             RequirementType.HIT_TARGET -> {
                 val n = Adherence.Nutrient.from(stage.targetId)
@@ -69,6 +104,13 @@ object QuestProgression {
             }
             RequirementType.TALK_TO_NPC -> stage.text
         }
+    }
+
+    /** Metadata, se kterými je fáze splněná (debug „splnit fázi“). */
+    fun satisfyingMetadata(stage: QuestStage): String = when (stage.requirementType) {
+        RequirementType.VISIT_NODE -> stage.targetId.orEmpty()
+        RequirementType.HIT_TARGET -> if (stage.targetId == ALL_MACROS) "3" else "100"
+        else -> stage.targetValue.toString()
     }
 
     fun visitedNodes(metadata: String): Set<String> =
