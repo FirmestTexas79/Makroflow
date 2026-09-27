@@ -476,6 +476,7 @@ class MakromonMapActivity : AppCompatActivity() {
      */
     private fun handleMapTap(event: MotionEvent): Boolean {
         if (questDialogManager.isVisible() || supportFragmentManager.backStackEntryCount != 0) return false
+        if (cameraOverride) return true          // kamera se kochá výhledem
         if (cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.isOpen(findViewById(R.id.mapRootContainer))) return false
         val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
         if (kotlin.math.hypot(event.rawX - touchDownX, event.rawY - touchDownY) > slop * 2) return false
@@ -576,8 +577,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     "Drakirra tudy odletěla – stopy míří dolů, nad korunami Hvozdu.")
                 SkyPass.CAIRN_NODE -> showMapToast("🪨 Mužík z plochých kamenů. Poutníci sem pokládají kámen pro štěstí na cestě mezi světy.\n" +
                     "Na tom nejvyšším je vyrytý list.")
-                SkyPass.VISTA_NODE, SkyPass.LEDGE_NODE -> showMapToast("🌄 Pod mořem mraků se v údolí rozkládá cizí kraj: terasová pole, řeka " +
-                    "a město s arénou. Za ním kouří sopka a nad vším plují ostrovy s vodopády.\nTam vede Brána světů.")
+                SkyPass.VISTA_NODE, SkyPass.LEDGE_NODE -> vistaShot()
                 "camp" -> restAtCamp()
                 "rozcesti_hory" -> showMapToast("🪧 ↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku")
                 "starter_bush" -> {
@@ -753,6 +753,9 @@ class MakromonMapActivity : AppCompatActivity() {
         val container = findViewById<ViewGroup>(R.id.mapMainContent)
         val transitionAction: () -> Unit = {
             currentBiome = newBiome
+            // první návštěva průsmyku: kamera začne nahoře na výhledu a sjede k hráči
+            mapWorld.animate().cancel(); cameraOverride = false
+            val firstSkyVisit = newBiome == BiomeType.SKY_PASS && !StoryFlags.isSet(this, SkyPass.VISITED_KEY)
             if (newBiome == BiomeType.SKY_PASS) StoryFlags.set(this, SkyPass.VISITED_KEY)
             if (newBiome == BiomeType.FOREST) {
                 val ctx = applicationContext
@@ -804,6 +807,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 else -> {}
             }
             mapWorld.post { refreshStoryDecor() }
+            if (firstSkyVisit) mapWorld.post { mapWorld.post { vistaShot(establishing = true) } }   // až po rozložení mapy a postavy
         }
 
         when (transition) {
@@ -850,8 +854,44 @@ class MakromonMapActivity : AppCompatActivity() {
         mapWorld.layoutParams = lp
     }
 
+    /** Kamera právě jede po vlastní dráze (výhled v průsmyku) – nesleduje postavu. */
+    private var cameraOverride = false
+
+    /**
+     * Pohled na nový kraj z Nebeského průsmyku (docs/adr/0044): kamera vyjede nahoru k výhledu,
+     * chvíli se kochá a vrátí se k hráči. [establishing] = první příchod: začne rovnou nahoře
+     * (ještě pod otevírajícím se přechodem) a pomalu sjede dolů k hráči.
+     */
+    private fun vistaShot(establishing: Boolean = false) {
+        if (currentBiome != BiomeType.SKY_PASS || cameraOverride) return
+        val viewport = findViewById<View>(R.id.mapMainContent)
+        if (viewport.height <= 0 || mapWorld.height <= viewport.height) return
+        val playerTy = MapCamera.offset(ashView.y + ashView.height / 2f, viewport.height, mapWorld.height)
+        val topTy = MapCamera.offset(0f, viewport.height, mapWorld.height)
+        cameraOverride = true
+        movementEngine.cancel()
+        fun pan(from: Float, to: Float, ms: Long, delay: Long, end: () -> Unit) {
+            mapWorld.translationY = from
+            mapWorld.animate().translationY(to).setStartDelay(delay).setDuration(ms)
+                .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
+                .withEndAction { if (!isFinishing) end() }.start()
+        }
+        val done = { cameraOverride = false; updateCamera() }
+        if (establishing) {
+            mapWorld.postDelayed({ if (!isFinishing) showMapToast("🌄 Za Branou světů leží cizí kraj – řeka, terasová pole a město s arénou…") }, 1400)
+            pan(topTy, playerTy, 3600, 2600) { done() }
+        } else {
+            pan(playerTy, topTy, 2400, 0) {
+                showMapToast("🌄 Pod mořem mraků se v údolí rozkládá cizí kraj: terasová pole, řeka " +
+                    "a město s arénou. Za ním kouří sopka a nad vším plují ostrovy s vodopády.\nTam vede Brána světů.")
+                pan(topTy, playerTy, 2400, 3200) { done() }
+            }
+        }
+    }
+
     /** Postava uprostřed obrazovky, ale kamera nevyjede za okraj pozadí. */
     private fun updateCamera() {
+        if (cameraOverride) return
         if (BiomeRegistry.definition(currentBiome)?.cave == null) {
             mapWorld.translationX = 0f; mapWorld.translationY = 0f
             return
