@@ -12,7 +12,9 @@ enum class BiomeType {
     /** Jeskyně v Horách (docs/adr/0013) – mapy větší než obrazovka s pohyblivou kamerou. */
     CAVE_OPEN, CAVE_MAZE,
     /** Hvozd nad loukou (docs/adr/0015) – bludiště palouků, stejná kamera jako jeskyně. */
-    FOREST
+    FOREST,
+    /** Nebeský průsmyk za svatyní (docs/adr/0044) – serpentina k Bráně světů. */
+    SKY_PASS
 }
 
 object BiomeRegistry {
@@ -109,7 +111,9 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.CAVE_MAZE, R.drawable.cave_maze, graphOf(CaveMaps.MAZE), questId = null,
                 cave = CaveMaps.MAZE),
             BiomeDefinition(BiomeType.FOREST, R.drawable.forest, graphOf(cz.uhk.macroflow.pokemon.cave.ForestMap.MAP), questId = null,
-                cave = cz.uhk.macroflow.pokemon.cave.ForestMap.MAP)
+                cave = cz.uhk.macroflow.pokemon.cave.ForestMap.MAP),
+            BiomeDefinition(BiomeType.SKY_PASS, R.drawable.sky_pass, graphOf(cz.uhk.macroflow.pokemon.cave.SkyPass.MAP), questId = null,
+                cave = cz.uhk.macroflow.pokemon.cave.SkyPass.MAP)
         ).associateBy { it.type }
     }
 

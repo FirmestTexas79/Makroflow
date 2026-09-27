@@ -17,7 +17,7 @@ object WildLevels {
     fun weights(biome: BiomeType): Map<Int, Int> = when (biome) {
         BiomeType.TOWN, BiomeType.MEADOW, BiomeType.LAKE, BiomeType.WATER -> mapOf(2 to 45, 3 to 45, 4 to 10)
         BiomeType.FOREST -> (3..6).associateWith { 1 }
-        BiomeType.MOUNTAINS -> (4..8).associateWith { 1 }
+        BiomeType.MOUNTAINS, BiomeType.SKY_PASS -> (4..8).associateWith { 1 }
         BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE -> (6..12).associateWith { 1 }
     }
 

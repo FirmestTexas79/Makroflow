@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 object SkillStore {
 
     /** ID předmětů, které nejsou vidět v inventáři (interní stav). */
-    fun isInternal(itemId: String) = listOf("skill_", "garden_", "equip_", "gather_", "starter_", "stat_", "award_").any { itemId.startsWith(it) }
+    fun isInternal(itemId: String) = listOf("skill_", "garden_", "equip_", "gather_", "starter_", "stat_", "award_", "story_").any { itemId.startsWith(it) }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

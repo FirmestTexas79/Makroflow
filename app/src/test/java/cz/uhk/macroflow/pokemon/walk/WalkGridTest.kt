@@ -3,6 +3,7 @@ package cz.uhk.macroflow.pokemon.walk
 import cz.uhk.macroflow.pokemon.cave.CaveMap
 import cz.uhk.macroflow.pokemon.cave.CaveMaps
 import cz.uhk.macroflow.pokemon.cave.ForestMap
+import cz.uhk.macroflow.pokemon.cave.SkyPass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -106,7 +107,7 @@ class WalkGridTest {
     }
 
     @Test fun allMasksParseAndHaveWalkableArea() {
-        for (n in listOf("town", "meadow", "mountains", "cave_open", "cave_maze", "forest")) {
+        for (n in listOf("town", "meadow", "mountains", "cave_open", "cave_maze", "forest", "sky_pass")) {
             val g = asset(n)
             val share = g.walkableCount.toFloat() / (g.cols * g.rows)
             assertTrue("$n: $share", share in 0.1f..0.8f)
@@ -115,7 +116,7 @@ class WalkGridTest {
 
     /** Každý uzel jeskyní a lesa leží na průchozí ploše (nebo těsně u ní) a ze vchodu se k němu dá dojít. */
     @Test fun caveAndForestNodesAreReachable() {
-        val maps = mapOf<String, CaveMap>("cave_open" to CaveMaps.OPEN, "cave_maze" to CaveMaps.MAZE, "forest" to ForestMap.MAP)
+        val maps = mapOf<String, CaveMap>("cave_open" to CaveMaps.OPEN, "cave_maze" to CaveMaps.MAZE, "forest" to ForestMap.MAP, "sky_pass" to SkyPass.MAP)
         for ((name, map) in maps) {
             val g = asset(name)
             assertEquals(map.artW, g.imgW); assertEquals(map.artH, g.imgH)

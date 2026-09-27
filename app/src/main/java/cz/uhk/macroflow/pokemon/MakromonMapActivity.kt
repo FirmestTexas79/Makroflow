@@ -41,6 +41,8 @@ import cz.uhk.macroflow.pokemon.legend.SpecialBattle
 import cz.uhk.macroflow.pokemon.ui.StepProgressBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import cz.uhk.macroflow.pokemon.cave.SkyPass
+import cz.uhk.macroflow.pokemon.story.StoryFlags
 import java.util.Locale
 import kotlin.math.sqrt
 
@@ -95,7 +97,7 @@ class MakromonMapActivity : AppCompatActivity() {
     companion object {
         private const val DOUBLE_CLICK_TIME = 300L
         /** Lokace s vlastní scénou přechodu (docs/adr/0042). */
-        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS")
+        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS")
         /** Dosah klepnutí na uzel v podílu obrazovky. */
         private const val TAP_RADIUS = 0.1f
         /** V jeskyních a lese jsou body husté a mezi nimi se chodí volně – menší dosah. */
@@ -106,7 +108,7 @@ class MakromonMapActivity : AppCompatActivity() {
             "krystal_modry", "krystal_cerveny",
             // těžba a kácení v jeskyních a Hvozdu (docs/adr/0035)
             "zila_stribro", "zila_zlato", "strom_briza", "strom_javor"
-        )
+        ) + cz.uhk.macroflow.pokemon.cave.SkyPass.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
     }
@@ -245,6 +247,14 @@ class MakromonMapActivity : AppCompatActivity() {
         // Parťák vlevo nahoře: dřív se načetl jen při otevření mapy – změna v Domově se neprojevila.
         // Obnoví se při změně aktivního Makromona i po návratu z Domova / souboje (level, evoluce).
         gamePrefs.registerOnSharedPreferenceChangeListener(companionPrefsListener)
+
+        // Postup příběhu: sloučení GamePrefs se synchronizovanými story_* předměty (docs/adr/0044)
+        lifecycleScope.launch {
+            val restored = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) { StoryFlags.sync(applicationContext) }
+            }.getOrDefault(0)
+            if (restored > 0 && !isFinishing) refreshStoryDecor()
+        }
         supportFragmentManager.addOnBackStackChangedListener {
             refreshStepBar()            // nad deníkem / soubojem ukazatel kroků nemá co dělat (a bral dotyky)
             if (supportFragmentManager.backStackEntryCount == 0) {
@@ -547,7 +557,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     val entry = BiomeRegistry.definition(cave)?.cave?.exitNode ?: return@let
                     enterBiomeAtNode(cave, entry, MapTransition.CAVE_IN)
                 }
-                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
+                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
                     enterBiomeAtNode(BiomeType.valueOf(it.parentBiome), it.mountainNode,
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
@@ -561,6 +571,13 @@ class MakromonMapActivity : AppCompatActivity() {
                 "mytina" -> showMapToast("🌳 Mýtina v srdci Hvozdu. Na prastarém pařezu rostou rudé houby a v korunách je slyšet šepot…\n(Tady příběh teprve začne.)")
                 "krystal_modry", "krystal_cerveny" -> BiomeRegistry.definition(currentBiome)?.cave?.let { onCrystalNode(it) }
                 "peak" -> onShrine()
+                SkyPass.GATE_NODE -> onWorldGate()
+                SkyPass.CLAWS_NODE -> showMapToast("🐉 Do skály jsou vyryté hluboké rýhy po drápech a leží tu šupina rudá jako žhavé uhlí.\n" +
+                    "Drakirra tudy odletěla – stopy míří dolů, nad korunami Hvozdu.")
+                SkyPass.CAIRN_NODE -> showMapToast("🪨 Mužík z plochých kamenů. Poutníci sem pokládají kámen pro štěstí na cestě mezi světy.\n" +
+                    "Na tom nejvyšším je vyrytý list.")
+                SkyPass.VISTA_NODE, SkyPass.LEDGE_NODE -> showMapToast("🌄 Pod mořem mraků se v údolí rozkládá cizí kraj: terasová pole, řeka " +
+                    "a město s arénou. Za ním kouří sopka a nad vším plují ostrovy s vodopády.\nTam vede Brána světů.")
                 "camp" -> restAtCamp()
                 "rozcesti_hory" -> showMapToast("🪧 ↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku")
                 "starter_bush" -> {
@@ -736,6 +753,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val container = findViewById<ViewGroup>(R.id.mapMainContent)
         val transitionAction: () -> Unit = {
             currentBiome = newBiome
+            if (newBiome == BiomeType.SKY_PASS) StoryFlags.set(this, SkyPass.VISITED_KEY)
             if (newBiome == BiomeType.FOREST) {
                 val ctx = applicationContext
                 lifecycleScope.launch {
@@ -903,11 +921,67 @@ class MakromonMapActivity : AppCompatActivity() {
             clearDecor()
             val cave = BiomeRegistry.definition(currentBiome)?.cave
             when {
+                currentBiome == BiomeType.SKY_PASS -> placeSkyPassDecor()
                 cave != null -> { placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots() }
                 currentBiome == BiomeType.MOUNTAINS -> { placeShrineDecor(progress); placeGatherSpots() }
                 currentBiome == BiomeType.MEADOW -> { placeMeadowWorkshop(); placeGatherSpots() }
                 else -> {}
             }
+        }
+    }
+
+    /**
+     * Živý Nebeský průsmyk (docs/adr/0044): třpytivý závoj v Bráně světů, pulzující lůžko
+     * pro Srdce Hvozdu a obláčky plující přes moře mraků nad údolím.
+     */
+    private fun placeSkyPassDecor() {
+        if (worldScale <= 0) return
+        val s = worldScale.toFloat()
+        val A = cz.uhk.macroflow.pokemon.cave.SkyPassArt
+        val open = StoryFlags.isSet(this, SkyPass.HEART_PLACED_KEY)
+
+        // závoj v prstenci – smyčka snímků
+        val frames = (0 until A.FRAMES).map {
+            android.graphics.Bitmap.createBitmap(A.veil(it, open), A.VEIL_SIZE, A.VEIL_SIZE, android.graphics.Bitmap.Config.ARGB_8888)
+        }
+        val veilSize = (A.VEIL_SIZE * s).toInt()
+        val veil = pixelView(A.veil(0, open), A.VEIL_SIZE, A.VEIL_SIZE, veilSize, veilSize).apply {
+            x = (A.GATE_X - A.VEIL_R) * s; y = (A.GATE_Y - A.VEIL_R) * s; elevation = 1.5f
+        }
+        val runeGlow = glowView((60 * s).toInt(), 0xFF6AE8D8.toInt(), 0x55).apply {
+            x = (A.GATE_X - 30) * s; y = (A.GATE_Y - 30) * s; elevation = 1.4f
+        }
+        val socketGlow = glowView((12 * s).toInt(), if (open) 0xFF7CFF9A.toInt() else 0xFF4ECB6A.toInt(), 0xCC).apply {
+            x = (A.SOCKET_X - 6) * s; y = (A.SOCKET_Y - 6) * s; elevation = 1.6f
+        }
+        // obláčky v moři mraků (různá velikost, rychlost a výška)
+        data class Cloud(val view: ImageView, val w: Int, val speed: Double, val start: Double)
+        val band = A.CLOUD_BAND
+        val clouds = listOf(Triple(22, 7, 3.0), Triple(16, 6, 4.5), Triple(28, 8, 2.2)).mapIndexed { i, (w, h, speed) ->
+            val v = pixelView(A.cloud(w, h, i + 1), w, h, (w * s).toInt(), (h * s).toInt()).apply {
+                y = (band.first + (band.last - band.first - h) * i / 2f) * s; elevation = 1.2f; alpha = 0.9f
+            }
+            Cloud(v, w, speed, 55.0 * i)
+        }
+        addDecor(runeGlow); clouds.forEach { addDecor(it.view) }; addDecor(veil); addDecor(socketGlow)
+
+        val artW = SkyPass.MAP.artW
+        val t0 = android.os.SystemClock.uptimeMillis()
+        crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 1000; repeatCount = android.animation.ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener {
+                val t = android.os.SystemClock.uptimeMillis() - t0
+                (veil.drawable as? android.graphics.drawable.BitmapDrawable)?.let { d ->
+                    val f = frames[((t / 110) % A.FRAMES).toInt()]
+                    if (d.bitmap !== f) veil.setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, f).apply { isFilterBitmap = false })
+                }
+                val p = A.pulse(t).toFloat()
+                socketGlow.alpha = 0.25f + 0.75f * p
+                runeGlow.alpha = 0.45f + 0.35f * A.pulse(t + 700, 3400).toFloat()
+                clouds.forEach { c -> c.view.x = kotlin.math.floor(A.cloudX(t, c.speed, c.start, artW, c.w)).toFloat() * s }
+            }
+            start()
         }
     }
 
@@ -1322,9 +1396,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     }
                     2 -> debugResetLegend()
                     3 -> {
-                        gamePrefs.edit().apply {
-                            CrystalColor.entries.forEach { putBoolean(LegendProgress.bossKey(it), true) }
-                        }.apply()
+                        CrystalColor.entries.forEach { StoryFlags.set(this@MakromonMapActivity, LegendProgress.bossKey(it)) }
                         showMapToast("⚔ Debug: strážci poraženi – krystaly jdou vzít")
                         refreshStoryDecor()
                     }
@@ -1334,11 +1406,10 @@ class MakromonMapActivity : AppCompatActivity() {
                                 if ((db.userItemDao().getItemCount(c.itemId) ?: 0) == 0) db.userItemDao().addItem(c.itemId, 1)
                             }
                         }
-                        gamePrefs.edit().apply {
-                            CrystalColor.entries.forEach {
-                                putBoolean(LegendProgress.bossKey(it), true); putBoolean(LegendProgress.takenKey(it), true)
-                            }
-                        }.apply()
+                        CrystalColor.entries.forEach {
+                            StoryFlags.set(this@MakromonMapActivity, LegendProgress.bossKey(it))
+                            StoryFlags.set(this@MakromonMapActivity, LegendProgress.takenKey(it))
+                        }
                         showMapToast("🎒 Debug: oba krystaly jsou v inventáři")
                         refreshStoryDecor()
                     }
@@ -1349,12 +1420,14 @@ class MakromonMapActivity : AppCompatActivity() {
 
     /** Vrátí celý příběh krystalů na začátek: strážci zpět, krystaly na oltářích, svatyně prázdná. */
     private fun debugResetLegend() {
-        gamePrefs.edit().apply {
-            CrystalColor.entries.forEach { remove(LegendProgress.bossKey(it)); remove(LegendProgress.takenKey(it)) }
-            remove(LegendProgress.PLACED_KEY); remove(LegendProgress.LEGEND_KEY)
-        }.apply()
+        val keys = CrystalColor.entries.flatMap { listOf(LegendProgress.bossKey(it), LegendProgress.takenKey(it)) } +
+            listOf(LegendProgress.PLACED_KEY, LegendProgress.LEGEND_KEY,
+                SkyPass.VISITED_KEY, SkyPass.GATE_SEEN_KEY, SkyPass.HEART_PLACED_KEY)
+        // GamePrefs hned (decor se čte z nich), předměty story_* na pozadí
+        gamePrefs.edit().apply { keys.forEach { remove(it) } }.apply()
         lifecycleScope.launch {
             kotlinx.coroutines.withContext(Dispatchers.IO) {
+                keys.forEach { StoryFlags.clear(applicationContext, it) }
                 CrystalColor.entries.forEach { c ->
                     db.userItemDao().insertOrUpdateItem(UserItemEntity(c.itemId, 0))
                     if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) {
@@ -1397,7 +1470,7 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     private fun takeCrystal(color: CrystalColor) {
-        gamePrefs.edit().putBoolean(LegendProgress.takenKey(color), true).apply()
+        StoryFlags.set(this, LegendProgress.takenKey(color))
         lifecycleScope.launch(Dispatchers.IO) {
             db.userItemDao().addItem(color.itemId, 1)
             if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) {
@@ -1468,6 +1541,32 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    /** Brána světů na konci Nebeského průsmyku (docs/adr/0044): zatím zapečetěná, chybí Srdce Hvozdu. */
+    private fun onWorldGate() {
+        StoryFlags.set(this, SkyPass.GATE_SEEN_KEY)
+        val board = SkyPass.gateBoard(StoryFlags.isSet(this, SkyPass.HEART_PLACED_KEY))
+        val (cx, cy, cw, ch) = SkyPass.GATE_CROP.toList()
+        val art = runCatching {
+            val full = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.sky_pass,
+                android.graphics.BitmapFactory.Options().apply { inScaled = false })
+            IntArray(cw * ch).also { full.getPixels(it, 0, cw, cx, cy, cw, ch); full.recycle() }
+        }.getOrNull()
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Brána světů", board.subtitle) { ui, body, close ->
+            art?.let { px ->
+                body.addView(ui.icon(px, cw, ch, 200f).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                        .apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = ui.px(8f) }
+                })
+            }
+            board.lines.forEach { body.addView(ui.text(it, 17f).apply { setPadding(0, 0, 0, ui.px(6f)) }) }
+            board.missing?.let { body.addView(ui.text("Chybí: $it 🍃", 19f, ui.rust).apply { setPadding(0, ui.px(4f), 0, ui.px(6f)) }) }
+            body.addView(ui.button("Rozumím") { close() }.apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = ui.px(8f) }
+            })
+        }
+    }
+
     private fun onShrine() {
         lifecycleScope.launch {
             val p = loadLegend()
@@ -1481,8 +1580,11 @@ class MakromonMapActivity : AppCompatActivity() {
                     showMapToast("Krystaly v lůžkách září… Drak se znovu probouzí!")
                     startSpecialBattle(SpecialBattle.LEGEND_PEAK, BiomeType.MOUNTAINS)
                 }
-                LegendProgress.Shrine.GateOpen -> showMapToast(
-                    "Brána za svatyní zůstala otevřená. Z temnoty za ní táhne studený vítr…\n(Cesta dál se teprve chystá.)")
+                LegendProgress.Shrine.GateOpen -> {
+                    if (!StoryFlags.isSet(this@MakromonMapActivity, SkyPass.VISITED_KEY))
+                        showMapToast("Brána za svatyní zůstala otevřená. Za ní stoupá úzká stezka do mraků…")
+                    enterBiomeAtNode(BiomeType.SKY_PASS, SkyPass.MAP.exitNode, MapTransition.FADE)
+                }
             }
         }
     }
@@ -1499,7 +1601,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 db.userItemDao().getItem(c.itemId)?.let { runCatching { cz.uhk.macroflow.data.FirebaseRepository.uploadUserItem(it) } }
             }
         }
-        gamePrefs.edit().putBoolean(LegendProgress.PLACED_KEY, true).apply()
+        StoryFlags.set(this, LegendProgress.PLACED_KEY)
 
         val startX = ashView.x + ashView.width / 2f
         val startY = ashView.y + ashView.height * 0.2f

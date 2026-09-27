@@ -1055,7 +1055,7 @@ class PokemonBattleView @JvmOverloads constructor(
     private fun playerFainted() {
         if (special?.kind == cz.uhk.macroflow.pokemon.legend.SpecialBattle.Kind.LEGEND) {
             // Legenda hráče porazí a uletí → brána na vrcholu se otevře
-            gamePrefs().edit().putBoolean(cz.uhk.macroflow.pokemon.legend.LegendProgress.LEGEND_KEY, true).apply()
+            cz.uhk.macroflow.pokemon.story.StoryFlags.set(context, cz.uhk.macroflow.pokemon.legend.LegendProgress.LEGEND_KEY)
             val (roar, flee) = special.fleeLines(gs.enemy.name)
             say(gs.player.name, "FAINTED!") {
                 say(roar.first, roar.second) {
@@ -1087,7 +1087,7 @@ class PokemonBattleView @JvmOverloads constructor(
         cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.VICTORY)
         // Poražený strážce jeskyně uvolní svůj krystal
         special?.crystal?.let { c ->
-            gamePrefs().edit().putBoolean(cz.uhk.macroflow.pokemon.legend.LegendProgress.bossKey(c), true).apply()
+            cz.uhk.macroflow.pokemon.story.StoryFlags.set(context, cz.uhk.macroflow.pokemon.legend.LegendProgress.bossKey(c))
         }
         gs.enemyVisible = false
         gs.phase = BattlePhase.ENEMY_FAINTED

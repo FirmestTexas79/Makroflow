@@ -655,6 +655,8 @@ object FirebaseRepository {
 
             localDb.coinDao().setBalance(coins)
             items.forEach { localDb.userItemDao().insertOrUpdateItem(it) }
+            // postup příběhu (story_* předměty) zpět do GamePrefs – docs/adr/0044
+            runCatching { cz.uhk.macroflow.pokemon.story.StoryFlags.sync(context) }
 
             localDb.capturedMakromonDao().deleteAllCapturedLocally()
             makromon.forEach { localDb.capturedMakromonDao().insertMakromon(it) }

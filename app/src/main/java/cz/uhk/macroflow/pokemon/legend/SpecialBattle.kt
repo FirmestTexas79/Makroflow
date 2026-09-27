@@ -48,7 +48,7 @@ enum class SpecialBattle(
 
     /** Konec souboje s legendou (hráčův Makromon padl): legenda odletí. */
     fun fleeLines(name: String): List<Pair<String, String>> =
-        listOf("$name LET OUT" to "A MIGHTY ROAR!", "$name FLEW AWAY" to "OVER THE PEAKS!")
+        listOf("$name LET OUT" to "A MIGHTY ROAR!", "$name FLEW AWAY" to "OVER THE FOREST!")
 
     companion object {
         /** Klíč v GamePrefs: souboj, který se má spustit místo divokého setkání. */
