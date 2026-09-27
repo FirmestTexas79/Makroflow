@@ -1663,6 +1663,17 @@ class MakromonMapActivity : AppCompatActivity() {
     // HVOZD: druid Mydrus, Rudá hniloba a Srdce Hvozdu (docs/adr/0045)
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Pomalé pohupování nahoru a dolů. Pozice dekorace je uložená v translationY (View.y),
+     * takže se animuje kolem ní – animace od 0 by postavu přesunula k hornímu okraji mapy.
+     */
+    private fun bob(v: View, amplitude: Float, periodMs: Long) {
+        val base = v.translationY
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(v, "translationY", base, base - amplitude, base).apply {
+            duration = periodMs; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+    }
+
     /** Poslední známá fáze questu Hvozdu (index, dokončeno) – dekorace se obnoví jen při změně. */
     private var lastForestStage: Pair<Int, Boolean>? = null
 
@@ -1724,9 +1735,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 val ghost = sprite(R.drawable.makromon_26_soulord, 26, ForestHeart.SOULORD_POS, 2f).apply { alpha = 0.8f }
                 addDecor(aura); addDecor(ghost)
                 pulsing += aura to 0L
-                crystalAnimators += android.animation.ObjectAnimator.ofFloat(ghost, "translationY", 0f, -2.5f * s, 0f).apply {
-                    duration = 2600; repeatCount = android.animation.ValueAnimator.INFINITE; start()
-                }
+                bob(ghost, 2.5f * s, 2600)
             }
         } else {
             // les dýchá: zlatá záře u dubu a světlušky
@@ -1739,9 +1748,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     x = fx * s; y = fy * s; elevation = 2.2f
                 }
                 addDecor(fly); pulsing += fly to (i * 410L)
-                crystalAnimators += android.animation.ObjectAnimator.ofFloat(fly, "translationY", 0f, -4f * s, 1.5f * s, 0f).apply {
-                    duration = 3000L + i * 350; repeatCount = android.animation.ValueAnimator.INFINITE; start()
-                }
+                bob(fly, 4f * s, 3000L + i * 350)
             }
             if (questManager.getCurrentProgress()?.isCompleted == true || cured) {
                 ForestHeart.MYCIT_POS.forEachIndexed { i, p ->
@@ -1754,9 +1761,7 @@ class MakromonMapActivity : AppCompatActivity() {
         // Mydrus u pařezu (lehce se pohupuje)
         val mydrus = sprite(R.drawable.makromon_23_mydrus, 22, ForestHeart.MYDRUS_POS, 2.1f)
         addDecor(mydrus)
-        crystalAnimators += android.animation.ObjectAnimator.ofFloat(mydrus, "translationY", 0f, -1.2f * s, 0f).apply {
-            duration = 1800; repeatCount = android.animation.ValueAnimator.INFINITE; start()
-        }
+        bob(mydrus, 1.2f * s, 1800)
 
         if (pulsing.isNotEmpty()) crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 1000; repeatCount = android.animation.ValueAnimator.INFINITE
