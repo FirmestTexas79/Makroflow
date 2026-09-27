@@ -298,6 +298,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 else -> changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), MapTransition.NONE)
             }
             intent.getStringExtra("TARGET_LOCATION")?.let { triggerHotspotAction(it.lowercase()) }
+            // Debug: splnit N fází aktivního questu (adb … --ei debug_quest_complete 5)
+            if (BuildConfig.DEBUG) intent.getIntExtra("debug_quest_complete", 0).takeIf { it > 0 }?.let { n ->
+                (1..n).forEach { i -> mapWorld.postDelayed({ if (!isFinishing) questManager.debugCompleteStage() }, 1500L + i * 600L) }
+            }
             // Debug: rovnou souboj v aréně dané lokace (adb … --es debug_battle WATER)
             if (BuildConfig.DEBUG) intent.getStringExtra("debug_battle")?.let { b ->
                 if (runCatching { BiomeType.valueOf(b) }.isSuccess) {
