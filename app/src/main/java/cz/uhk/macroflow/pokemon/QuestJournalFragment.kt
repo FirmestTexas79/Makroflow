@@ -466,10 +466,11 @@ class QuestJournalFragment : Fragment() {
                 }
                 RequirementType.DELIVER_ITEMS -> {
                     if (viewingIndex < currentIndex || isAllDone) "Cíl: Odevzdáno"
-                    else "Cíl: Přines Mydrusovi ${QuestProgression.deliveryText(stageToDisplay, null)}"
+                    else "Cíl: Přines ${QuestProgression.deliveryText(stageToDisplay, null)}"
                 }
                 RequirementType.STORY_FLAG -> {
-                    if (viewingIndex < currentIndex || isAllDone) "Cíl: Splněno" else "Cíl: Vyžeň Soulorda z kořenů Starého dubu"
+                    if (viewingIndex < currentIndex || isAllDone) "Cíl: Splněno"
+                    else "Cíl: " + (stageToDisplay.hint ?: "Dokonči, co po tobě chtějí")
                 }
                 RequirementType.HIT_TARGET -> {
                     val n = cz.uhk.macroflow.energy.Adherence.Nutrient.from(stageToDisplay.targetId)
@@ -504,6 +505,7 @@ class QuestJournalFragment : Fragment() {
         QuestRegistry.MEADOW_QUEST.id -> "II · LOUKA"
         QuestRegistry.MOUNTAINS_QUEST.id -> "III · HORY"
         QuestRegistry.FOREST_QUEST.id -> "IV · HVOZD"
+        QuestRegistry.SECRET_GROVE_QUEST.id -> "✦ ZAPOMENUTÝ HÁJ"
         else -> "DOBRODRUŽSTVÍ"
     }
 

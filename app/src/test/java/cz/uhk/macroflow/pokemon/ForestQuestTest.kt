@@ -89,3 +89,31 @@ class ForestQuestTest {
         }
     }
 }
+
+/** Tajný quest Zapomenutého háje (docs/adr/0046). */
+class SecretGroveQuestTest {
+    private val q = QuestRegistry.SECRET_GROVE_QUEST
+
+    @Test
+    fun `tajná linka vede od kamenů přes noc a dary k vysvobození`() {
+        assertEquals(cz.uhk.macroflow.pokemon.story.SecretGrove.QUEST_ID, q.id)
+        assertEquals(
+            listOf(RequirementType.VISIT_NODE, RequirementType.STORY_FLAG, RequirementType.DELIVER_ITEMS,
+                RequirementType.WALK_STEPS, RequirementType.STORY_FLAG),
+            q.stages.map { it.requirementType })
+        assertEquals(cz.uhk.macroflow.pokemon.story.SecretGrove.VIGIL_KEY, q.stages[cz.uhk.macroflow.pokemon.story.SecretGrove.VIGIL_STAGE].targetId)
+        assertEquals(cz.uhk.macroflow.pokemon.story.SecretGrove.RELEASED_KEY, q.stages[cz.uhk.macroflow.pokemon.story.SecretGrove.RELEASE_STAGE].targetId)
+        // šepot se teprve v průběhu příběhu představí jako Elderan
+        assertEquals(listOf("Šepot", "Šepot", "Elderan", "Elderan", "Elderan"), q.stages.map { it.speakerName })
+        val nodes = cz.uhk.macroflow.pokemon.cave.GroveMap.MAP.nodes.map { it.id }.toSet()
+        q.stages[0].targetId!!.split(",").forEach { assertTrue(it, it in nodes) }
+        QuestProgression.deliveryItems(q.stages[2]).forEach { (id, _) -> assertTrue(id, Resource.from(id) != null) }
+    }
+
+    @Test
+    fun `za vysvobození zůstane deník a Mydrus prozradí stopu`() {
+        val r = QuestRewards.forStage(q.id, q.stages.size - 1)!!
+        assertEquals(cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_ID, r.itemId)
+        assertTrue(QuestRegistry.FOREST_QUEST.farewell.contains("modré houby"))
+    }
+}

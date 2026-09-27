@@ -33,7 +33,7 @@ object StoryProgress {
         "crystals_placed", "legend_faced",
         SkyPass.VISITED_KEY, SkyPass.GATE_SEEN_KEY, SkyPass.HEART_PLACED_KEY,
         ForestHeart.ROT_DEFEATED_KEY
-    )
+    ) + SecretGrove.KEYS
 
     fun isStoryKey(key: String): Boolean =
         key.startsWith("boss_defeated_") || key.startsWith("crystal_") || key in STORY_KEYS

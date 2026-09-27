@@ -296,14 +296,16 @@ class InventoryFragment : Fragment() {
             val resource = cz.uhk.macroflow.pokemon.skills.Resource.from(item.itemId)
             val gear = cz.uhk.macroflow.pokemon.skills.Gear.from(item.itemId)
             val heart = item.itemId == cz.uhk.macroflow.pokemon.story.ForestHeart.ITEM_ID   // docs/adr/0045
+            val diary = item.itemId == cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_ID   // docs/adr/0046
             holder.tvName.text = ball?.label ?: med?.label ?: crystal?.label ?: resource?.label ?: gear?.label ?: when (item.itemId) {
                 cz.uhk.macroflow.pokemon.story.ForestHeart.ITEM_ID -> cz.uhk.macroflow.pokemon.story.ForestHeart.LABEL
+                cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_ID -> cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_LABEL
                 "lure_lamp"  -> "Spooky Plate"
                 else         -> item.itemId
             }
 
             holder.tvQuantity.visibility = View.VISIBLE
-            holder.tvQuantity.text = if (crystal != null || heart) "Klíčový předmět · klepni pro popis" else "Vlastníš: ${item.quantity} ks"
+            holder.tvQuantity.text = if (crystal != null || heart) "Klíčový předmět · klepni pro popis" else if (diary) "Klíčový předmět · klepni a čti" else "Vlastníš: ${item.quantity} ks"
 
             // Itemy zatím stále načítají z URL – nemáme lokální drawable pro itemy
             val imageUrl = when (item.itemId) {
@@ -317,6 +319,10 @@ class InventoryFragment : Fragment() {
             } else if (resource != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(resource,
                     cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(resource), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM,
+                    (64 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (diary) {
+                holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(item.itemId,
+                    cz.uhk.macroflow.pokemon.story.SecretGrove.diaryIcon(), cz.uhk.macroflow.pokemon.story.SecretGrove.ICON,
                     (64 * holder.itemView.resources.displayMetrics.density).toInt()))
             } else if (heart) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(item.itemId,
@@ -346,6 +352,16 @@ class InventoryFragment : Fragment() {
                 }
                 if (resource != null) {
                     Toast.makeText(requireContext(), "${resource.label}: ${resource.description}", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                if (diary) {
+                    val text = cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_PAGES
+                        .joinToString("\n\n") { (title, body) -> "📜 $title\n$body" }
+                    android.app.AlertDialog.Builder(requireContext())
+                        .setTitle("📖 ${cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_LABEL}")
+                        .setMessage(text)
+                        .setPositiveButton("Zavřít", null)
+                        .show()
                     return@setOnClickListener
                 }
                 if (heart) {

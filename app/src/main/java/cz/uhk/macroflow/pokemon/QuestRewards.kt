@@ -18,7 +18,11 @@ object QuestRewards {
         ("forest_heart" to 5) to Reward("srdce_hvozdu", "Srdce Hvozdu",
             "Hniloba… odchází. Cítím, jak mi mízou znovu stoupá světlo. Poutníku, vezmi si Srdce Hvozdu. " +
                 "Druidi ho do mě kdysi vložili, abych ho chránil, dokud nepřijde někdo, kdo les uzdraví. " +
-                "Nes ho k Bráně světů – na Nebeský průsmyk za svatyní. Vlož ho do lůžka… a brána se otevře.")
+                "Nes ho k Bráně světů – na Nebeský průsmyk za svatyní. Vlož ho do lůžka… a brána se otevře."),
+        // docs/adr/0046 – vysvobozený Elderan zanechá deník
+        ("secret_grove" to 4) to Reward("denik_strazce", "Deník strážce Elderana",
+            "Děkuju ti… Cítím vítr a vůni dubů, poprvé po tolika stoletích. Deník leží pod hrobovým kamenem – vezmi si ho. " +
+                "Jsou v něm runy brány a všechno, co vím o Pánu popela. A řekni Mydrusovi… že jsem na něj byl vždycky pyšný.")
     )
 
     /** Odměna za dokončení fáze [stageIndex] questu [questId], nebo null. */

@@ -14,7 +14,9 @@ enum class BiomeType {
     /** Hvozd nad loukou (docs/adr/0015) – bludiště palouků, stejná kamera jako jeskyně. */
     FOREST,
     /** Nebeský průsmyk za svatyní (docs/adr/0044) – serpentina k Bráně světů. */
-    SKY_PASS
+    SKY_PASS,
+    /** Zapomenutý háj za trním ve Hvozdu (docs/adr/0046) – tajná linka příběhu. */
+    HIDDEN_GROVE
 }
 
 object BiomeRegistry {
@@ -114,7 +116,9 @@ object BiomeRegistry {
                 questId = QuestRegistry.FOREST_QUEST.id,
                 cave = cz.uhk.macroflow.pokemon.cave.ForestMap.MAP),
             BiomeDefinition(BiomeType.SKY_PASS, R.drawable.sky_pass, graphOf(cz.uhk.macroflow.pokemon.cave.SkyPass.MAP), questId = null,
-                cave = cz.uhk.macroflow.pokemon.cave.SkyPass.MAP)
+                cave = cz.uhk.macroflow.pokemon.cave.SkyPass.MAP),
+            BiomeDefinition(BiomeType.HIDDEN_GROVE, R.drawable.hidden_grove, graphOf(cz.uhk.macroflow.pokemon.cave.GroveMap.MAP),
+                questId = QuestRegistry.SECRET_GROVE_QUEST.id, cave = cz.uhk.macroflow.pokemon.cave.GroveMap.MAP)
         ).associateBy { it.type }
     }
 

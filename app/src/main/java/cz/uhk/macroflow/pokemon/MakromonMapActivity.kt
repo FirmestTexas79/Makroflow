@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 import cz.uhk.macroflow.pokemon.cave.SkyPass
 import cz.uhk.macroflow.pokemon.story.StoryFlags
 import cz.uhk.macroflow.pokemon.story.ForestHeart
+import cz.uhk.macroflow.pokemon.story.SecretGrove
 import java.util.Locale
 import kotlin.math.sqrt
 
@@ -98,7 +99,7 @@ class MakromonMapActivity : AppCompatActivity() {
     companion object {
         private const val DOUBLE_CLICK_TIME = 300L
         /** Lokace s vlastní scénou přechodu (docs/adr/0042). */
-        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS")
+        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS", "HIDDEN_GROVE")
         /** Dosah klepnutí na uzel v podílu obrazovky. */
         private const val TAP_RADIUS = 0.1f
         /** V jeskyních a lese jsou body husté a mezi nimi se chodí volně – menší dosah. */
@@ -109,9 +110,11 @@ class MakromonMapActivity : AppCompatActivity() {
             "krystal_modry", "krystal_cerveny",
             // těžba a kácení v jeskyních a Hvozdu (docs/adr/0035)
             "zila_stribro", "zila_zlato", "strom_briza", "strom_javor"
-        ) + cz.uhk.macroflow.pokemon.cave.SkyPass.ACTION_NODES
+        ) + cz.uhk.macroflow.pokemon.cave.SkyPass.ACTION_NODES +
+            cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka"
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
+        private const val TAG_GROVE_GHOST = "grove_ghost"
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -591,7 +594,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     val entry = BiomeRegistry.definition(cave)?.cave?.exitNode ?: return@let
                     enterBiomeAtNode(cave, entry, MapTransition.CAVE_IN)
                 }
-                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
+                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
                     enterBiomeAtNode(BiomeType.valueOf(it.parentBiome), it.mountainNode,
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
@@ -603,6 +606,12 @@ class MakromonMapActivity : AppCompatActivity() {
                     cz.uhk.macroflow.pokemon.skills.MeadowLayout.plotIndex(nodeName)?.let { onPlot(it) }
                 "les_sever" -> tryEnterForest()
                 ForestHeart.MYDRUS_NODE -> onMytina()
+                // Zapomenutý háj (docs/adr/0046)
+                SecretGrove.FOREST_NODE -> onHiddenThorns()
+                "mural_1", "mural_2", "mural_3" -> SecretGrove.mural(nodeName)?.let { showMural(it) }
+                SecretGrove.POOL_NODE -> showMapToast("✨ " + SecretGrove.POOL_TEXT)
+                SecretGrove.ALTAR_NODE -> onGroveAltar()
+                SecretGrove.GRAVE_NODE -> onGroveGrave()
                 "krystal_modry", "krystal_cerveny" -> BiomeRegistry.definition(currentBiome)?.cave?.let { onCrystalNode(it) }
                 "peak" -> onShrine()
                 SkyPass.GATE_NODE -> onWorldGate()
@@ -805,6 +814,14 @@ class MakromonMapActivity : AppCompatActivity() {
 
             val def = BiomeRegistry.definition(newBiome)
             if (newBiome == BiomeType.FOREST) lastForestStage = null   // po načtení questu se dekorace obnoví
+            // První příchod do háje: ozve se šepot (úvod tajného questu)
+            if (newBiome == BiomeType.HIDDEN_GROVE && !StoryFlags.isSet(this, SecretGrove.FOUND_KEY)) {
+                StoryFlags.set(this, SecretGrove.FOUND_KEY)
+                mapWorld.postDelayed({
+                    if (!isFinishing && currentBiome == BiomeType.HIDDEN_GROVE && questManager.getActiveQuestId() == SecretGrove.QUEST_ID)
+                        questManager.checkNpcInteraction()
+                }, 2200)
+            }
             // Quest Hvozdu začne až po souboji s legendou – do té doby je mýtina prázdná
             if (newBiome != BiomeType.FOREST || ForestHeart.questAvailable(StoryFlags.isSet(this, LegendProgress.LEGEND_KEY)))
                 def?.questId?.let { questManager.loadQuest(it) }
@@ -999,6 +1016,7 @@ class MakromonMapActivity : AppCompatActivity() {
             when {
                 currentBiome == BiomeType.SKY_PASS -> placeSkyPassDecor()
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
+                currentBiome == BiomeType.HIDDEN_GROVE -> placeGroveDecor()
                 cave != null -> { placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots() }
                 currentBiome == BiomeType.MOUNTAINS -> { placeShrineDecor(progress); placeGatherSpots() }
                 currentBiome == BiomeType.MEADOW -> { placeMeadowWorkshop(); placeGatherSpots() }
@@ -1463,7 +1481,10 @@ class MakromonMapActivity : AppCompatActivity() {
             "🐉 Legenda odletěla nad Hvozd (odemkne Mydruse)",
             "🌳 Splnit aktuální fázi questu",
             "🍃 Dát Srdce Hvozdu do inventáře",
-            "🍂 Reset příběhu Hvozdu"
+            "🍂 Reset příběhu Hvozdu",
+            "🍄 Soulord poražen (otevře háj)",
+            "🌕 Bdění u oltáře splněno (noc)",
+            "🗝 Reset Zapomenutého háje"
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("Debug – Makrosvět")
@@ -1516,9 +1537,34 @@ class MakromonMapActivity : AppCompatActivity() {
                         showMapToast("🍃 Debug: Srdce Hvozdu je v inventáři")
                     }
                     8 -> debugResetForest()
+                    9 -> { StoryFlags.set(this@MakromonMapActivity, ForestHeart.ROT_DEFEATED_KEY); showMapToast("🍄 Debug: kletba padla, v trní svítí houby"); refreshStoryDecor() }
+                    10 -> {
+                        StoryFlags.set(this@MakromonMapActivity, SecretGrove.VIGIL_KEY)
+                        questManager.recheck(); refreshStoryDecor()
+                        showMapToast("🌕 Debug: bdění splněno")
+                    }
+                    11 -> debugResetGrove()
                 }
             }
             .show()
+    }
+
+    /** Tajný háj od začátku (quest, příznaky, deník). */
+    private fun debugResetGrove() {
+        val ctx = applicationContext
+        gamePrefs.edit().apply { SecretGrove.KEYS.forEach { remove(it) } }.apply()
+        questManager.forget(SecretGrove.QUEST_ID)
+        lifecycleScope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                SecretGrove.KEYS.forEach { StoryFlags.clear(ctx, it) }
+                val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+                SS.count(ctx, SecretGrove.DIARY_ID).takeIf { it > 0 }?.let { SS.consume(ctx, SecretGrove.DIARY_ID, it) }
+                db.questDao().deleteById(SecretGrove.QUEST_ID)
+            }
+            if (currentBiome == BiomeType.HIDDEN_GROVE) questManager.loadQuest(SecretGrove.QUEST_ID)
+            showMapToast("🗝 Debug: Zapomenutý háj je zase zapomenutý")
+            refreshStoryDecor()
+        }
     }
 
     /** Hvozd od začátku: quest, hniloba, Srdce (i vložené do brány). */
@@ -1692,6 +1738,14 @@ class MakromonMapActivity : AppCompatActivity() {
         if (!ForestHeart.questAvailable(StoryFlags.isSet(this, LegendProgress.LEGEND_KEY))) {
             showMapToast(ForestHeart.MYTINA_BEFORE); return
         }
+        // Po vysvobození Elderana se Mydrus jednou dozví pravdu o svém učiteli
+        if (StoryFlags.isSet(this, SecretGrove.RELEASED_KEY) && !StoryFlags.isSet(this, SecretGrove.MYDRUS_TOLD_KEY)) {
+            StoryFlags.set(this, SecretGrove.MYDRUS_TOLD_KEY)
+            questDialogManager.showQuestDialog(
+                speakerResource = R.drawable.makromon_23_mydrus, speakerName = "Mydrus", stageName = "Mistr Elderan",
+                text = SecretGrove.MYDRUS_CLOSURE, totalSteps = 1, currentStepIndex = 0)
+            return
+        }
         if (questManager.getActiveQuestId() != ForestHeart.QUEST_ID) {
             // quest se právě odemkl (legenda porazila hráče, když byl Hvozd už načtený)
             questManager.loadQuest(ForestHeart.QUEST_ID)
@@ -1699,6 +1753,156 @@ class MakromonMapActivity : AppCompatActivity() {
             return
         }
         questManager.checkNpcInteraction()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ZAPOMENUTÝ HÁJ: duch Elderana a tajemství Pána popela (docs/adr/0046)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun groveStage(): Int? = if (questManager.getActiveQuestId() == SecretGrove.QUEST_ID)
+        questManager.getCurrentProgress()?.takeIf { !it.isCompleted }?.currentStageIndex else null
+
+    private fun isNightNow(): Boolean = SecretGrove.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))
+
+    /** Trní na západě Hvozdu: po vyhnání Soulorda vede mezerou do Zapomenutého háje. */
+    private fun onHiddenThorns() {
+        val open = SecretGrove.canEnter(StoryFlags.isSet(this, ForestHeart.ROT_DEFEATED_KEY))
+        showMapToast("🍄 " + SecretGrove.thornText(open))
+        if (open) mapWorld.postDelayed({
+            if (!isFinishing && currentBiome == BiomeType.FOREST)
+                enterBiomeAtNode(BiomeType.HIDDEN_GROVE, SecretGrove.EXIT_NODE, MapTransition.FADE)
+        }, 1600)
+    }
+
+    /** Vytesaný kámen: obraz z kamene na dřevěné tabuli a runy pod ním. */
+    private fun showMural(m: SecretGrove.Mural) {
+        val res = resources.getIdentifier(m.drawable, "drawable", packageName)
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), m.title, "Vytesáno do kamene kruhu") { ui, body, close ->
+            if (res != 0) body.addView(ImageView(this).apply {
+                setImageDrawable(androidx.core.content.ContextCompat.getDrawable(this@MakromonMapActivity, res)?.apply {
+                    (this as? android.graphics.drawable.BitmapDrawable)?.isFilterBitmap = false
+                })
+                adjustViewBounds = true
+                layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { bottomMargin = ui.px(10f) }
+            })
+            body.addView(ui.text(m.text, 17f))
+            body.addView(ui.button("Pokračovat") { close() }.apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = ui.px(10f) }
+            })
+        }
+    }
+
+    /** Oltář: v noci bdění (fáze 1), jinak rozhovor s Elderanem (i odevzdání darů). */
+    private fun onGroveAltar() {
+        val stage = groveStage()
+        if (stage == SecretGrove.VIGIL_STAGE && !StoryFlags.isSet(this, SecretGrove.VIGIL_KEY)) {
+            if (!isNightNow()) { showMapToast("🌑 " + SecretGrove.ALTAR_DAY_TEXT); return }
+            StoryFlags.set(this, SecretGrove.VIGIL_KEY)
+            showMapToast("🌕 Posadil ses k oltáři. Měsíc vystoupal nad koruny, runy parohů se rozzářily a ze tmy se vynořila průsvitná postava…")
+            refreshStoryDecor()
+            mapWorld.postDelayed({ if (!isFinishing) questManager.recheck() }, 2500)
+            return
+        }
+        questManager.checkNpcInteraction()
+    }
+
+    /** Hrob strážce: v poslední fázi vysvobození duše, jinak nápis na kameni. */
+    private fun onGroveGrave() {
+        if (groveStage() != SecretGrove.RELEASE_STAGE || StoryFlags.isSet(this, SecretGrove.RELEASED_KEY)) {
+            showMapToast("🪦 " + SecretGrove.GRAVE_TEXT); return
+        }
+        releaseElderan()
+    }
+
+    /** Vysvobození: duch se zvedne nad hrob, rozplyne se ve sloup světla a háj zazáří. */
+    private fun releaseElderan() {
+        if (worldScale <= 0) return
+        transitionRunning = true
+        movementEngine.cancel()
+        val s = worldScale.toFloat()
+        val ghost = decorViews.firstOrNull { it.tag == TAG_GROVE_GHOST }
+        val (gx, gy) = 124 to 94
+        val pillar = glowView((36 * s).toInt(), 0xFF9AF8FF.toInt(), 0xDD).apply {
+            x = gx * s - 18 * s; y = gy * s - 30 * s; elevation = 3f; alpha = 0f; scaleY = 2.4f
+        }
+        addDecor(pillar)
+        ghost?.let { g -> g.animate().x(gx * s - g.width / 2f).y(gy * s - g.height - 6 * s).setDuration(1400).start() }
+        pillar.animate().alpha(1f).setStartDelay(900).setDuration(1100).withEndAction {
+            ghost?.animate()?.translationYBy(-40 * s)?.alpha(0f)?.setDuration(1800)?.start()
+            val flash = View(this).apply {
+                setBackgroundColor(0xFFD8FFFF.toInt()); alpha = 0f; elevation = 50f
+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            }
+            val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+            root.addView(flash)
+            flash.animate().alpha(0.8f).setStartDelay(1200).setDuration(500).withEndAction {
+                StoryFlags.set(this, SecretGrove.RELEASED_KEY)
+                refreshStoryDecor()
+                flash.animate().alpha(0f).setDuration(1200).withEndAction {
+                    root.removeView(flash)
+                    transitionRunning = false
+                    questManager.recheck()          // fáze se splní → Elderan zanechá deník
+                }.start()
+            }.start()
+        }.start()
+    }
+
+    /**
+     * Háj na mapě: duch Elderana za oltářem (v noci nebo po bdění), dýchající světlo kamenů s obrazy,
+     * světlušky; po vysvobození jen klidná záře nad hrobem.
+     */
+    private fun placeGroveDecor() {
+        if (worldScale <= 0) return
+        val s = worldScale.toFloat()
+        val released = StoryFlags.isSet(this, SecretGrove.RELEASED_KEY)
+        val t0 = android.os.SystemClock.uptimeMillis()
+        val pulsing = mutableListOf<Pair<View, Long>>()
+        // záře tří kamenů s obrazy
+        listOf(24 to 148, 136 to 148, 46 to 104).forEachIndexed { i, (cx, cy) ->
+            val g = glowView((34 * s).toInt(), 0xFF6AF0E0.toInt(), 0x66).apply {
+                x = cx * s - 17 * s; y = cy * s - 17 * s; elevation = 1.1f
+            }
+            addDecor(g); pulsing += g to (i * 700L)
+        }
+        // světlušky nad studánkou a u oltáře
+        listOf(60 to 150, 104 to 176, 70 to 120, 98 to 90, 40 to 200, 126 to 210, 84 to 240).forEachIndexed { i, (fx, fy) ->
+            val fly = glowView((5 * s).toInt(), 0xFFE8FF9A.toInt(), 0xEE).apply { x = fx * s; y = fy * s; elevation = 2.2f }
+            addDecor(fly); pulsing += fly to (i * 380L); bob(fly, 4f * s, 2800L + i * 300)
+        }
+        if (released) {
+            val calm = glowView((30 * s).toInt(), 0xFF9AF8FF.toInt(), 0x55).apply {
+                x = 124 * s - 15 * s; y = 94 * s - 20 * s; elevation = 1.2f
+            }
+            addDecor(calm); pulsing += calm to 0L
+        } else if (StoryFlags.isSet(this, SecretGrove.VIGIL_KEY) || isNightNow()) {
+            // Elderan: průsvitný duch za oltářem (před bděním jen slabě v noci)
+            val size = (30 * s).toInt()
+            val ghost = ImageView(this).apply {
+                tag = TAG_GROVE_GHOST
+                layoutParams = FrameLayout.LayoutParams(size, size)
+                setImageResource(R.drawable.npc_elderan)
+                (drawable as? android.graphics.drawable.BitmapDrawable)?.isFilterBitmap = false
+                x = SecretGrove.GHOST_POS.first * s - size / 2f; y = SecretGrove.GHOST_POS.second * s - size
+                elevation = 2.4f
+                alpha = if (StoryFlags.isSet(this@MakromonMapActivity, SecretGrove.VIGIL_KEY)) 0.85f else 0.35f
+            }
+            val aura = glowView((44 * s).toInt(), 0xFF7AF0E8.toInt(), 0x77).apply {
+                x = SecretGrove.GHOST_POS.first * s - 22 * s; y = SecretGrove.GHOST_POS.second * s - 34 * s; elevation = 2.3f
+            }
+            addDecor(aura); addDecor(ghost)
+            pulsing += aura to 0L
+            bob(ghost, 2f * s, 3200)
+        }
+        if (pulsing.isNotEmpty()) crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 1000; repeatCount = android.animation.ValueAnimator.INFINITE
+            addUpdateListener {
+                val t = android.os.SystemClock.uptimeMillis() - t0
+                pulsing.forEach { (v, phase) -> v.alpha = 0.3f + 0.7f * cz.uhk.macroflow.pokemon.cave.SkyPassArt.pulse(t + phase, 3000).toFloat() }
+            }
+            start()
+        }
     }
 
     /**
@@ -1753,6 +1957,13 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 addDecor(fly); pulsing += fly to (i * 410L)
                 bob(fly, 4f * s, 3000L + i * 350)
+            }
+            // modré houby v trní – jediná viditelná stopa k Zapomenutému háji
+            SecretGrove.FOREST_MUSHROOMS.forEachIndexed { i, (mx, my) ->
+                val g = glowView((8 * s).toInt(), 0xFF7ADCFF.toInt(), 0xCC).apply { x = mx * s - 4 * s; y = my * s - 4 * s; elevation = 1.3f }
+                val cap = pixelView(intArrayOf(0, 0xFF3AA8E0.toInt(), 0, 0xFF3AA8E0.toInt(), 0xFF7ADCFF.toInt(), 0xFF3AA8E0.toInt(),
+                    0, 0xFFC8E8F0.toInt(), 0), 3, 3, (3 * s).toInt(), (3 * s).toInt()).apply { x = (mx - 1) * s; y = (my - 1) * s; elevation = 1.4f }
+                addDecor(g); addDecor(cap); pulsing += g to (i * 450L)
             }
             if (questManager.getCurrentProgress()?.isCompleted == true || cured) {
                 ForestHeart.MYCIT_POS.forEachIndexed { i, p ->
@@ -1865,6 +2076,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 })
             }
             board.lines.forEach { body.addView(ui.text(it, 17f).apply { setPadding(0, 0, 0, ui.px(6f)) }) }
+            if (StoryFlags.isSet(this, SecretGrove.RELEASED_KEY))
+                body.addView(ui.text(SecretGrove.GATE_RUNES_LINE, 17f, ui.olive).apply { setPadding(0, ui.px(2f), 0, ui.px(6f)) })
             board.missing?.let { body.addView(ui.text("Chybí: $it 🍃", 19f, ui.rust).apply { setPadding(0, ui.px(4f), 0, ui.px(6f)) }) }
             body.addView(ui.button("Rozumím") { close() }.apply {
                 layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)

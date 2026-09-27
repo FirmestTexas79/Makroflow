@@ -12,7 +12,7 @@ enum class ArenaTheme {
         fun fromBiome(name: String?): ArenaTheme = when (name) {
             "TOWN" -> TOWN
             "MEADOW" -> MEADOW
-            "FOREST" -> FOREST
+            "FOREST", "HIDDEN_GROVE" -> FOREST
             "MOUNTAINS", "SKY_PASS" -> MOUNTAINS
             "CAVE_OPEN" -> CAVE_OPEN
             "CAVE_MAZE" -> CAVE_MAZE

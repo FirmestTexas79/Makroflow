@@ -39,7 +39,9 @@ object ForestMap {
             CaveNode("f_n", 156, 104),
             CaveNode("mytina", 150, 54),
             CaveNode("f_ne", 198, 110),
-            CaveNode("strom_javor", 232, 112)
+            CaveNode("strom_javor", 232, 112),
+            // tajná mezera v trní do Zapomenutého háje (docs/adr/0046)
+            CaveNode("skryta_stezka", 96, 312)
         ),
         edges = listOf(
             "vstup_z_louky" to "f_a",
@@ -70,7 +72,8 @@ object ForestMap {
             "f_n" to "f_ne",
             "f_ne" to "strom_javor",
             "f_w2" to "f_w3",
-            "trava_2" to "f_e2"
+            "trava_2" to "f_e2",
+            "f_w2" to "skryta_stezka"
         ),
         exitNode = "vstup_z_louky",
         mountainNode = "les_sever",
@@ -85,7 +88,8 @@ object ForestMap {
             "jezirko_1" to Triple(40, 366, 24), "jezirko_2" to Triple(262, 230, 22),
             "trava_1" to Triple(62, 492, 15), "trava_2" to Triple(212, 324, 14), "houstina" to Triple(66, 242, 17),
             "trava_3" to Triple(60, 136, 14), "stary_dub" to Triple(92, 62, 20), "mytina" to Triple(157, 48, 17),
-            "strom_briza" to Triple(238, 455, 13), "strom_javor" to Triple(232, 85, 13)
+            "strom_briza" to Triple(238, 455, 13), "strom_javor" to Triple(232, 85, 13),
+            "skryta_stezka" to Triple(88, 311, 9)
         )
     )
 

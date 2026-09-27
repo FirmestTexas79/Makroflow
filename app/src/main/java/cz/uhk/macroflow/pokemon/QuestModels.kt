@@ -216,7 +216,8 @@ object QuestRegistry {
         id = "forest_heart",
         farewell = "Hvozd zase dýchá – a já taky. Mycité se vracejí na mýtinu a rudé houby usychají. " +
             "Srdce Hvozdu patří do Brány světů nahoře na Nebeském průsmyku, za svatyní na vrcholu hor. " +
-            "A kdyby ses tam někdy potkal s Drakirrou… vyřiď jí, že jí les odpustil.",
+            "A kdyby ses tam někdy potkal s Drakirrou… vyřiď jí, že jí les odpustil.\n\n" +
+            cz.uhk.macroflow.pokemon.story.SecretGrove.MYDRUS_HINT,
         farewellSpeakerResId = R.drawable.makromon_23_mydrus,
         farewellSpeakerName = MYDRUS,
         stages = listOf(
@@ -290,7 +291,83 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST) }
+    // ════════════════════════════════════════════════════════════════════════
+    // TAJEMSTVÍ: Zapomenutý háj – duch Elderana, posledního Strážce brány (docs/adr/0046)
+    // Soulord byla jeho zkažená duše. Odhalí, že hniloba přišla zpoza Brány světů
+    // od Pána popela a že Drakirra je strážkyně, ne viník.
+    // ════════════════════════════════════════════════════════════════════════
+    private const val SEPOT = "Šepot"
+    private const val ELDERAN = "Elderan"
+
+    val SECRET_GROVE_QUEST = QuestDefinition(
+        id = "secret_grove",
+        farewell = "Háj je tichý. Na hrobovém kameni se ve svitu měsíce třpytí rosa ve tvaru parohů a studánka " +
+            "odráží zase jen hvězdy tohohle světa. Elderan odešel – ale jeho deník ti zůstal. Čti ho, než projdeš branou.",
+        farewellSpeakerResId = R.drawable.npc_elderan,
+        farewellSpeakerName = "Zapomenutý háj",
+        stages = listOf(
+            QuestStage(
+                title = "Kamenný kruh",
+                text = "…konečně… někdo prošel trním. Neboj se mě, poutníku. Jsem jen ozvěna – to, co zbylo, když jsi " +
+                    "v kořenech Starého dubu porazil Soulorda. Kdysi jsem měl jméno. Abych si na něj vzpomněl, " +
+                    "potřebuju, aby sis přečetl, co jsme vytesali do kamenů.\n\nObejdi kruh a prohlédni všechny tři kameny s obrazy.",
+                speakerResId = R.drawable.npc_elderan,
+                speakerName = SEPOT,
+                requirementType = RequirementType.VISIT_NODE,
+                targetValue = 3,
+                targetId = "mural_1,mural_2,mural_3"
+            ),
+            QuestStage(
+                title = "Noční bdění",
+                text = "Ano… obrazy si pamatuju. Slova ne. Vzpomínky duchů se vracejí jen v noci, když měsíc stojí nad háji. " +
+                    "Přijď k oltáři, až padne tma – mezi devátou večer a pátou ráno – a posaď se ke mně.",
+                speakerResId = R.drawable.npc_elderan,
+                speakerName = SEPOT,
+                requirementType = RequirementType.STORY_FLAG,
+                targetValue = 1,
+                targetId = "grove_vigil",
+                hint = "Oltář se probouzí jen v noci, mezi 21:00 a 5:00. Přijď k němu po setmění."
+            ),
+            QuestStage(
+                title = "Dary mrtvým",
+                text = "Teď už vím, kdo jsem. Jmenuju se Elderan. Byl jsem posledním Strážcem brány a Mydrusovým učitelem.\n\n" +
+                    "Aby moje duše unesla pravdu, kterou ti musím říct, potřebuje kotvu. Přines na oltář staré dary pro mrtvé: " +
+                    "tři malé dušičky (nosí je duchové, kteří v noci bloudí krajem), tři vodní perly a jeden živý list. " +
+                    "Duše, voda a život.",
+                speakerResId = R.drawable.npc_elderan,
+                speakerName = ELDERAN,
+                requirementType = RequirementType.DELIVER_ITEMS,
+                targetValue = 1,
+                targetId = "mat_soul_wisp:3,mat_water_pearl:3,mat_leaf_living:1"
+            ),
+            QuestStage(
+                title = "Hranice lesa",
+                text = "Cítím, jak se mi vrací síla. Dokud jsem žil, obcházel jsem každou noc hranice Hvozdu, aby popel " +
+                    "nenašel cestu dovnitř. Obejdi je dnes za mě – ujdi 10 000 kroků. Každý tvůj krok je kámen v mé staré zdi.",
+                speakerResId = R.drawable.npc_elderan,
+                speakerName = ELDERAN,
+                requirementType = RequirementType.WALK_STEPS,
+                targetValue = 10000
+            ),
+            QuestStage(
+                title = "Poslední slovo strážce",
+                text = "Teď ti můžu říct pravdu.\n\nRudá hniloba nebyl Drakiřin popel. Drakirra není zlá – je to strážkyně brány. " +
+                    "Spala na vrcholu hor, aby svou vahou držela pečeť. Za Branou světů leží Popelavý kraj a v něm vládne " +
+                    "Ten, který spaluje – Pán popela. Jednou už k nám prošel a my druidi jsme ho zahnali zpátky za cenu všeho.\n\n" +
+                    "Když jsi vložil krystaly, drak se probudil a pečeť povolila. Popel, který padal na Hvozd, přišel zpoza brány " +
+                    "a šel po Drakiřině stopě. Mě, zakletého v kořenech jako strážce Srdce, proměnil v Soulorda.\n\n" +
+                    "Jdi k mému hrobu vedle oltáře a pusť mě. Pod kamenem najdeš můj deník – budeš ho potřebovat.",
+                speakerResId = R.drawable.npc_elderan,
+                speakerName = ELDERAN,
+                requirementType = RequirementType.STORY_FLAG,
+                targetValue = 1,
+                targetId = "grove_released",
+                hint = "Klepni na můj hrob vedle oltáře a pusť mou duši."
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, SECRET_GROVE_QUEST) }
 
     fun byId(id: String): QuestDefinition? = ALL.firstOrNull { it.id == id }
 }

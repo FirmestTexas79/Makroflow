@@ -15,7 +15,7 @@ object MusicMap {
         "TOWN" -> TOWN
         "MEADOW", "FOREST", "LAKE", "WATER" -> MEADOW
         "MOUNTAINS", "SKY_PASS" -> MOUNTAINS
-        "CAVE_OPEN", "CAVE_MAZE" -> CAVE
+        "CAVE_OPEN", "CAVE_MAZE", "HIDDEN_GROVE" -> CAVE
         else -> null
     }
 

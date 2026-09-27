@@ -40,7 +40,8 @@ object QuestProgression {
     private val nodeNames = mapOf(
         "domov" to "Domov", "pokedex" to "Makrodex", "obchod" to "Obchod",
         "camp" to "tábor", "cave" to "jeskyni",
-        "jezirko_1" to "tiché jezírko", "houstina" to "houštinu", "stary_dub" to "Starý dub"
+        "jezirko_1" to "tiché jezírko", "houstina" to "houštinu", "stary_dub" to "Starý dub",
+        "mural_1" to "západní kámen", "mural_2" to "východní kámen", "mural_3" to "severní kámen u oltáře"
     )
 
     private val biomeNames = mapOf("MOUNTAINS" to "v horách", "FOREST" to "ve Hvozdu", "MEADOW" to "na louce", "TOWN" to "ve městě")
