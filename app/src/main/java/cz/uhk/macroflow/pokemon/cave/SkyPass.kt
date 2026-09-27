@@ -47,6 +47,9 @@ object SkyPass {
         )
     )
 
+    /** Kam se kamera zadívá při výhledu (art px svisle): údolí s městem pod mořem mraků. */
+    const val VISTA_FOCUS_Y = 112
+
     /** Uzly, které něco dělají (ostatní jsou jen cesta). */
     val ACTION_NODES = setOf(GATE_NODE, CLAWS_NODE, CAIRN_NODE, VISTA_NODE, LEDGE_NODE)
 

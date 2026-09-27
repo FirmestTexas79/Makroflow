@@ -867,7 +867,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val viewport = findViewById<View>(R.id.mapMainContent)
         if (viewport.height <= 0 || mapWorld.height <= viewport.height) return
         val playerTy = MapCamera.offset(ashView.y + ashView.height / 2f, viewport.height, mapWorld.height)
-        val topTy = MapCamera.offset(0f, viewport.height, mapWorld.height)
+        val topTy = MapCamera.offset(SkyPass.VISTA_FOCUS_Y * mapWorld.height.toFloat() / SkyPass.MAP.artH, viewport.height, mapWorld.height)
         cameraOverride = true
         movementEngine.cancel()
         fun pan(from: Float, to: Float, ms: Long, delay: Long, end: () -> Unit) {
