@@ -94,7 +94,7 @@ object QuestProgression {
             RequirementType.BATTLE_BIOME -> "Výhry ${biomeLabel(stage)}: $v z ${stage.targetValue}. Ještě chvíli!"
             RequirementType.HIT_WATER -> "Dnes máš vypito $v % svého cíle vody. Potřebuju celých ${stage.targetValue} % – zapisuj vodu v aplikaci."
             RequirementType.DELIVER_ITEMS -> "Přines mi: ${deliveryText(stage, null)}."
-            RequirementType.STORY_FLAG -> stage.text
+            RequirementType.STORY_FLAG -> "Ještě to není hotové. Co přesně tě čeká, najdeš v deníku u téhle kapitoly."
             RequirementType.SCAN_BARCODE -> "Pořád čekám na čárový kód! Naskenuj ho u jídla v sekci Jídlo."
             RequirementType.HIT_TARGET -> {
                 val n = Adherence.Nutrient.from(stage.targetId)
