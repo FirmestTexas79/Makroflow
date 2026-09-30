@@ -1733,8 +1733,8 @@ class PokemonBattleView @JvmOverloads constructor(
     /** Cíl po zásahu krátce bliká (do tohoto času). */
     private var hitBlinkUntil = 0L
     private var hitBlinkOnPlayer = false
-    private val fxPaint = Paint().apply { isAntiAlias = true }
-    private val fxPath = android.graphics.Path()
+    private val moveFxPaint = Paint().apply { isAntiAlias = true }
+    private val moveFxPath = android.graphics.Path()
 
     /** Přehraje animaci útoku; [onHit] přijde v okamžiku zásahu (záblesk, zranění). */
     private fun playMoveAnim(isPlayer: Boolean, mv: Move, onHit: () -> Unit) {
@@ -1772,55 +1772,55 @@ class PokemonBattleView @JvmOverloads constructor(
         val sc = scale
         for (p in f.particles) {
             val x = gbX(p.x); val y = gbY(p.y); val r = (p.r * sc).coerceAtLeast(1f)
-            fxPaint.color = p.color; fxPaint.alpha = (p.alpha * 255).toInt().coerceIn(0, 255)
-            fxPaint.style = Paint.Style.FILL
+            moveFxPaint.color = p.color; moveFxPaint.alpha = (p.alpha * 255).toInt().coerceIn(0, 255)
+            moveFxPaint.style = Paint.Style.FILL
             when (p.shape) {
                 cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.CIRCLE -> {
                     if (p.r > 8f) {
                         // velká záře: měkký kruhový přechod
-                        fxPaint.shader = android.graphics.RadialGradient(x, y, r, p.color and 0x00FFFFFF or (fxPaint.alpha shl 24),
+                        moveFxPaint.shader = android.graphics.RadialGradient(x, y, r, p.color and 0x00FFFFFF or (moveFxPaint.alpha shl 24),
                             p.color and 0x00FFFFFF, android.graphics.Shader.TileMode.CLAMP)
-                        canvas.drawCircle(x, y, r, fxPaint); fxPaint.shader = null
-                    } else canvas.drawCircle(x, y, r, fxPaint)
+                        canvas.drawCircle(x, y, r, moveFxPaint); moveFxPaint.shader = null
+                    } else canvas.drawCircle(x, y, r, moveFxPaint)
                 }
-                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.SQUARE -> canvas.drawRect(x - r, y - r, x + r, y + r, fxPaint)
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.SQUARE -> canvas.drawRect(x - r, y - r, x + r, y + r, moveFxPaint)
                 cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.LINE -> {
-                    fxPaint.style = Paint.Style.STROKE; fxPaint.strokeWidth = r; fxPaint.strokeCap = Paint.Cap.ROUND
-                    canvas.drawLine(x, y, gbX(p.x2), gbY(p.y2), fxPaint)
+                    moveFxPaint.style = Paint.Style.STROKE; moveFxPaint.strokeWidth = r; moveFxPaint.strokeCap = Paint.Cap.ROUND
+                    canvas.drawLine(x, y, gbX(p.x2), gbY(p.y2), moveFxPaint)
                 }
                 cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.RING -> {
-                    fxPaint.style = Paint.Style.STROKE; fxPaint.strokeWidth = 1.2f * sc
-                    canvas.drawCircle(x, y, r, fxPaint)
+                    moveFxPaint.style = Paint.Style.STROKE; moveFxPaint.strokeWidth = 1.2f * sc
+                    canvas.drawCircle(x, y, r, moveFxPaint)
                 }
-                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.STAR -> drawStar(canvas, x, y, r, p.rot, p.color, fxPaint.alpha)
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.STAR -> drawStar(canvas, x, y, r, p.rot, p.color, moveFxPaint.alpha)
                 cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.LEAF -> {
                     canvas.save(); canvas.rotate(p.rot, x, y)
-                    canvas.drawOval(x - r, y - r * 0.45f, x + r, y + r * 0.45f, fxPaint)
+                    canvas.drawOval(x - r, y - r * 0.45f, x + r, y + r * 0.45f, moveFxPaint)
                     canvas.restore()
                 }
                 cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.HEART -> {
-                    canvas.drawCircle(x - r * 0.45f, y - r * 0.2f, r * 0.55f, fxPaint)
-                    canvas.drawCircle(x + r * 0.45f, y - r * 0.2f, r * 0.55f, fxPaint)
-                    fxPath.reset(); fxPath.moveTo(x - r, y); fxPath.lineTo(x + r, y); fxPath.lineTo(x, y + r * 1.1f); fxPath.close()
-                    canvas.drawPath(fxPath, fxPaint)
+                    canvas.drawCircle(x - r * 0.45f, y - r * 0.2f, r * 0.55f, moveFxPaint)
+                    canvas.drawCircle(x + r * 0.45f, y - r * 0.2f, r * 0.55f, moveFxPaint)
+                    moveFxPath.reset(); moveFxPath.moveTo(x - r, y); moveFxPath.lineTo(x + r, y); moveFxPath.lineTo(x, y + r * 1.1f); moveFxPath.close()
+                    canvas.drawPath(moveFxPath, moveFxPaint)
                 }
                 cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.NOTE -> {
-                    canvas.drawOval(x - r * 0.7f, y - r * 0.45f, x + r * 0.5f, y + r * 0.45f, fxPaint)
-                    fxPaint.style = Paint.Style.STROKE; fxPaint.strokeWidth = 0.8f * sc
-                    canvas.drawLine(x + r * 0.45f, y, x + r * 0.45f, y - r * 2f, fxPaint)
-                    canvas.drawLine(x + r * 0.45f, y - r * 2f, x + r * 1.2f, y - r * 1.4f, fxPaint)
+                    canvas.drawOval(x - r * 0.7f, y - r * 0.45f, x + r * 0.5f, y + r * 0.45f, moveFxPaint)
+                    moveFxPaint.style = Paint.Style.STROKE; moveFxPaint.strokeWidth = 0.8f * sc
+                    canvas.drawLine(x + r * 0.45f, y, x + r * 0.45f, y - r * 2f, moveFxPaint)
+                    canvas.drawLine(x + r * 0.45f, y - r * 2f, x + r * 1.2f, y - r * 1.4f, moveFxPaint)
                 }
                 cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.FLAME -> {
-                    fxPath.reset(); fxPath.moveTo(x, y - r * 1.8f)
-                    fxPath.quadTo(x + r * 1.1f, y - r * 0.2f, x, y + r); fxPath.quadTo(x - r * 1.1f, y - r * 0.2f, x, y - r * 1.8f)
-                    canvas.drawPath(fxPath, fxPaint)
-                    fxPaint.color = 0xFFFFF4B0.toInt(); fxPaint.alpha = (p.alpha * 200).toInt()
-                    canvas.drawCircle(x, y + r * 0.2f, r * 0.4f, fxPaint)
+                    moveFxPath.reset(); moveFxPath.moveTo(x, y - r * 1.8f)
+                    moveFxPath.quadTo(x + r * 1.1f, y - r * 0.2f, x, y + r); moveFxPath.quadTo(x - r * 1.1f, y - r * 0.2f, x, y - r * 1.8f)
+                    canvas.drawPath(moveFxPath, moveFxPaint)
+                    moveFxPaint.color = 0xFFFFF4B0.toInt(); moveFxPaint.alpha = (p.alpha * 200).toInt()
+                    canvas.drawCircle(x, y + r * 0.2f, r * 0.4f, moveFxPaint)
                 }
                 cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.TOOTH -> {
                     val dir = if (p.rot > 90f) 1f else -1f        // 180° = zub dolů (horní čelist)
-                    fxPath.reset(); fxPath.moveTo(x - r, y - dir * r); fxPath.lineTo(x + r, y - dir * r); fxPath.lineTo(x, y + dir * r * 1.2f); fxPath.close()
-                    canvas.drawPath(fxPath, fxPaint)
+                    moveFxPath.reset(); moveFxPath.moveTo(x - r, y - dir * r); moveFxPath.lineTo(x + r, y - dir * r); moveFxPath.lineTo(x, y + dir * r * 1.2f); moveFxPath.close()
+                    canvas.drawPath(moveFxPath, moveFxPaint)
                 }
             }
         }
