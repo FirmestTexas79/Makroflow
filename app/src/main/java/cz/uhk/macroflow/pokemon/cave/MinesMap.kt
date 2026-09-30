@@ -45,6 +45,9 @@ object MinesMap {
             CaveNode(SPARK_NODE, 38, 470),
             CaveNode(NET_NODE, 112, 490),
             CaveNode("rumpal", 114, 448),
+            // havíř Vendelín u lucerny a šichtovní kniha na bedně (docs/adr/0050)
+            CaveNode(cz.uhk.macroflow.pokemon.story.Vendelin.NODE, 54, 458),
+            CaveNode(cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_NODE, 36, 502),
             // patro 1 – puklina do přirozené jeskyně
             CaveNode("prasklina", 75, 368),
             CaveNode(CRYSTAL_NODE, 108, 352),
@@ -59,6 +62,7 @@ object MinesMap {
         edges = listOf(
             EXIT_NODE to "nakladiste", "nakladiste" to SPARK_NODE, "nakladiste" to NET_NODE, "nakladiste" to "rumpal",
             "nakladiste" to "prasklina",
+            "nakladiste" to cz.uhk.macroflow.pokemon.story.Vendelin.NODE, "nakladiste" to cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_NODE,
             "prasklina" to CRYSTAL_NODE, "prasklina" to "puklina",
             "prasklina" to "pata_mostu",
             "pata_mostu" to "lavovy_sal", "lavovy_sal" to MAGMA_NODE, "lavovy_sal" to "popel", "lavovy_sal" to DOOR_NODE
@@ -75,12 +79,15 @@ object MinesMap {
             CRYSTAL_NODE to Triple(CRYSTAL_X, CRYSTAL_Y, 11),
             MAGMA_NODE to Triple(MAGMA_X, MAGMA_Y, 11),
             NET_NODE to Triple(120, 476, 10),
-            DOOR_NODE to Triple(75, 110, 12)
+            DOOR_NODE to Triple(75, 110, 12),
+            cz.uhk.macroflow.pokemon.story.Vendelin.NODE to Triple(cz.uhk.macroflow.pokemon.story.Vendelin.X, cz.uhk.macroflow.pokemon.story.Vendelin.Y - 8, 9),
+            cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_NODE to Triple(cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_X, cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_Y, 7)
         )
     )
 
     /** Uzly, které něco dělají (menší dosah klepnutí jako v jeskyních). */
-    val ACTION_NODES = setOf(EXIT_NODE, NET_NODE, DOOR_NODE, SPARK_NODE, CRYSTAL_NODE, MAGMA_NODE)
+    val ACTION_NODES = setOf(EXIT_NODE, NET_NODE, DOOR_NODE, SPARK_NODE, CRYSTAL_NODE, MAGMA_NODE,
+        cz.uhk.macroflow.pokemon.story.Vendelin.NODE, cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_NODE)
 
     // ── Místa s muškami: střed hejna (art px), mušky kolem něj krouží ──
     const val SPARK_X = 30
@@ -137,7 +144,9 @@ object MinesMap {
     const val FIRST_VISIT_TEXT = "Za shnilými prkny se otevřela štola s kolejemi. Vzduch je tu teplý a voní sírou – " +
         "odněkud zdola prosvítá rudá záře. Tohle nejsou jen štoly Starého dolu… tohle jsou Doly."
 
-    const val NET_TEXT = "Na rezavém háku u převráceného vozíku visí stará síťka na hmyz. Pár ok je potrhaných, ale obruč drží. " +
-        "Kolem lucerny tu poletují žhnoucí mušky – síťka se bude hodit."
+    const val NET_TEXT = "Odmotal jsi drát a sundal z háku Vendelínovu starou síťku. Pár ok je potrhaných, ale obruč drží. " +
+        "Na násadě je vyrytých dvě stě dvanáct zářezů."
     const val NET_GONE_TEXT = "Prázdný rezavý hák. Tady visela stará síťka."
+    const val NET_TIED_TEXT = "Na háku visí stará síťka, ale je k němu pečlivě přivázaná drátem. Asi patří tomu havíři, " +
+        "co sedí u lucerny vlevo."
 }

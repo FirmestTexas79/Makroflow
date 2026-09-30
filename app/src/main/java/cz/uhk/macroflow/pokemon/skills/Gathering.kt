@@ -120,7 +120,13 @@ enum class Gear(
         xpBonus = mapOf(Skill.BUG_CATCHING to 0.10), multiBonus = mapOf(Skill.BUG_CATCHING to 0.05)),
     GOLD_NET("tool_net_gold", 22, GearSlot.NET, "Zlatá síťka",
         "Zlatá obruč na javorové násadě, oka tenká jako vlas. Síla 150, +20 % XP a +8 % dvojitý úlovek, chytá o 4 h déle bez tebe.", 150,
-        xpBonus = mapOf(Skill.BUG_CATCHING to 0.20), multiBonus = mapOf(Skill.BUG_CATCHING to 0.08), afkHours = mapOf(Skill.BUG_CATCHING to 4));
+        xpBonus = mapOf(Skill.BUG_CATCHING to 0.20), multiBonus = mapOf(Skill.BUG_CATCHING to 0.08), afkHours = mapOf(Skill.BUG_CATCHING to 4)),
+
+    // ── Odměna od havíře Vendelína (docs/adr/0050) ──
+    MINER_LAMP("acc_trinket_miner_lamp", 23, GearSlot.TRINKET, "Havířský kahan",
+        "Vendelínův kahan, ve kterém místo oleje svítí jiskřivky. +10 % XP za těžbu, kácení a chytání hmyzu a každá z nich běží o 2 h déle bez tebe.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.10, Skill.LOGGING to 0.10, Skill.BUG_CATCHING to 0.10),
+        afkHours = mapOf(Skill.MINING to 2, Skill.LOGGING to 2, Skill.BUG_CATCHING to 2));
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null
@@ -250,6 +256,13 @@ object Gathering {
         val into = ((now - a.since).coerceAtLeast(0)) % secPerUnit.coerceAtLeast(1)
         return (into.toFloat() / secPerUnit) to (secPerUnit - into)
     }
+
+    /** user_items: celkem odpracované sekundy v dovednosti (docs/adr/0050). */
+    fun workedId(skill: Skill) = "stat_worked_${skill.id}"
+
+    /** Sekundy probíhající činnosti, které se ještě nevybraly (nejvýš strop AFK). */
+    fun pendingSeconds(a: Activity, now: Long, capHours: Int): Long =
+        minOf((now - a.since).coerceAtLeast(0), capHours * 3600L)
 
     /** Hotové, ještě nevybrané kusy (bez hodu na dvojnásobek, jen pro zobrazení). */
     fun pending(a: Activity, now: Long, secPerUnit: Long, capHours: Int): Int =

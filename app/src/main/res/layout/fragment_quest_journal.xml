@@ -18,6 +18,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:orientation="vertical">
 
     <LinearLayout
@@ -108,6 +110,8 @@
         android:layout_marginStart="10dp"
         android:layout_marginEnd="10dp"
         android:background="@drawable/journal_cover"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:elevation="14dp"
         android:padding="10dp">
 
@@ -390,12 +394,13 @@
             </ScrollView>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- Záložka (stužka) přes horní hranu -->
+        <!-- Záložka (stužka) přes horní hranu – jen přes kožený okraj desek, do textu nezasahuje
+             (dřív byla 56 dp dlouhá a zakrývala text vpravo nahoře) -->
         <View
             android:layout_width="12dp"
-            android:layout_height="56dp"
+            android:layout_height="22dp"
             android:layout_gravity="top|end"
-            android:layout_marginTop="-14dp"
+            android:layout_marginTop="-22dp"
             android:layout_marginEnd="54dp"
             android:background="#BC6C25"
             android:elevation="2dp" />

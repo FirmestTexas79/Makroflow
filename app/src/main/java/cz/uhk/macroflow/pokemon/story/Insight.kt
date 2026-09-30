@@ -18,7 +18,9 @@ object Insight {
         "sky_pass_visited" to 1,
         ForestHeart.ROT_DEFEATED_KEY to 1,
         SecretGrove.FOUND_KEY to 1,
-        SecretGrove.RELEASED_KEY to 2
+        SecretGrove.RELEASED_KEY to 2,
+        // šichtovní kniha v Dolech – hráč je Okruh 213 (docs/adr/0050)
+        Vendelin.BOOK_SIGNED_KEY to 1
     )
 
     /** Vhled = součet vah nastavených příznaků + 1 za každý nalezený list. */

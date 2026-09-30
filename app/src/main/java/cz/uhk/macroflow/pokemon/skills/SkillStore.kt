@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 object SkillStore {
 
     /** ID předmětů, které nejsou vidět v inventáři (interní stav). */
-    fun isInternal(itemId: String) = listOf("skill_", "garden_", "equip_", "gather_", "starter_", "stat_", "award_", "story_").any { itemId.startsWith(it) }
+    fun isInternal(itemId: String) = listOf("skill_", "garden_", "equip_", "gather_", "starter_", "stat_", "award_", "story_", "quest_afk_").any { itemId.startsWith(it) }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -216,12 +216,44 @@ object SkillStore {
             }
         val c = Gathering.claim(a, nowSec, sec, st.multiChance(a.spot.skill), st.afkCapHours(a.spot.skill))
         set(ctx, Gathering.SINCE_ITEM, Gathering.encodeSince(c.newSince))
+        // odpracovaný čas (docs/adr/0050) – jen spotřebované kusy, zbytek se započte příště
+        if (c.units > 0) add(ctx, Gathering.workedId(a.spot.skill), (c.units * sec).toInt())
         if (c.units == 0) return GatherResult(a.spot, c, null)
         add(ctx, a.spot.resource.itemId, c.amount)
         add(ctx, AwardStore.gatheredId(a.spot.resource.itemId), c.amount)
         val xp = addXp(ctx, a.spot.skill, st.gain(a.spot.skill, a.spot.xp.toDouble() * c.units))
         return GatherResult(a.spot, c, xp)
     }
+
+    /**
+     * Kolik sekund hráč celkem odpracoval v dovednosti (docs/adr/0050): vybrané kusy + to, co
+     * právě běží a ještě se nevybralo (nejvýš do stropu AFK). Bez nástroje / efektivity se nepočítá.
+     */
+    fun workedSeconds(ctx: Context, skill: Skill, nowSec: Long, st: SkillState = state(ctx)): Long {
+        val done = count(ctx, Gathering.workedId(skill)).toLong()
+        val a = activity(ctx)?.takeIf { it.spot.skill == skill } ?: return done
+        if (Gathering.secondsPerUnit(a.spot, efficiency(ctx, a.spot, st)) == null) return done
+        return done + Gathering.pendingSeconds(a, nowSec, st.afkCapHours(skill))
+    }
+
+    /**
+     * Minuty odpracované od začátku fáze questu [stageStartedMs] (zkouška havíře Vendelína). Při
+     * prvním dotazu v nové fázi si uloží výchozí stav, potom počítá rozdíl.
+     */
+    fun workedMinutesSince(ctx: Context, skillIds: List<String>, stageStartedMs: Long, nowSec: Long): Map<String, Int> {
+        val st = state(ctx)
+        val stamp = (stageStartedMs / 60_000L).toInt()               // minuty od 1970 – vejde se do Int
+        val fresh = count(ctx, QUEST_AFK_AT) != stamp
+        if (fresh) set(ctx, QUEST_AFK_AT, stamp)
+        return skillIds.mapNotNull { id -> Skill.from(id) }.associate { s ->
+            val now = workedSeconds(ctx, s, nowSec, st)
+            val baseKey = "quest_afk_base_${s.id}"
+            if (fresh) set(ctx, baseKey, now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+            s.id to ((now - count(ctx, baseKey)) / 60).coerceAtLeast(0).toInt()
+        }
+    }
+
+    private const val QUEST_AFK_AT = "quest_afk_at"
 
     // ── Tým ──
 

@@ -122,6 +122,7 @@ class QuestJournalFragment : Fragment() {
         val story = t == Tab.STORY
         val storyViews = listOf(R.id.leftPage, R.id.rightPage, R.id.bindingShadowContainer, R.id.btnPrevPage, R.id.btnNextPage)
         storyViews.forEach { rootView.findViewById<View>(it)?.visibility = if (story) View.VISIBLE else View.GONE }
+        if (!story) applyPageStyle(false) else if (unlockedQuests.isNotEmpty()) renderCurrentPage()
         rootView.findViewById<View>(R.id.dailyPage).visibility = if (t == Tab.DAILY) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.characterPage).visibility = if (t == Tab.CHARACTER) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.resourcesPage).visibility = if (t == Tab.RESOURCES) View.VISIBLE else View.GONE
@@ -373,6 +374,7 @@ class QuestJournalFragment : Fragment() {
 
     private fun loadDataAndSetup() {
         val db = AppDatabase.getDatabase(requireContext())
+        val appCtx = requireContext().applicationContext
         val mapActivity = activity as? MakromonMapActivity
         val currentBiome = mapActivity?.getCurrentBiome() ?: BiomeType.TOWN
         // V biomu bez vlastního questu (hory) otevřeme stránku právě aktivního questu
@@ -381,7 +383,18 @@ class QuestJournalFragment : Fragment() {
             ?: QuestRegistry.TOWN_INTRO_QUEST.id
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val allProgress = db.questDao().getAllQuests().sortedBy { it.lastUpdated }
+            // Kapitoly v pořadí příběhu (dřív podle poslední změny – stránky přeskakovaly), pak vedlejší, pak tajné
+            val allProgress = db.questDao().getAllQuests()
+                .filter { QuestRegistry.byId(it.questId) != null }
+                .sortedBy { QuestRegistry.journalOrder(it.questId) }
+            // zkouška havíře Vendelína: odpracované minuty zvlášť pro každou dovednost (docs/adr/0050)
+            afkBySkill = allProgress.firstOrNull { p ->
+                !p.isCompleted && QuestRegistry.byId(p.questId)?.stages?.getOrNull(p.currentStageIndex)?.requirementType == RequirementType.AFK_MINUTES
+            }?.let { p ->
+                val stage = QuestRegistry.byId(p.questId)!!.stages[p.currentStageIndex]
+                p.questId to cz.uhk.macroflow.pokemon.skills.SkillStore.workedMinutesSince(appCtx,
+                    QuestProgression.afkSkills(stage), p.stageStartedAt, System.currentTimeMillis() / 1000)
+            }
 
             withContext(Dispatchers.Main) {
                 if (isAdded) {
@@ -397,6 +410,34 @@ class QuestJournalFragment : Fragment() {
                 }
             }
         }
+    }
+
+    /** Odpracované minuty zkoušky (quest → Skill.id → minuty). */
+    private var afkBySkill: Pair<String, Map<String, Int>>? = null
+
+    private var goldLeaf: GoldLeafDrawable? = null
+
+    /** Tajná linka má zlatolesklou stránku (docs/adr/0050), ostatní obyčejný papír. */
+    private fun applyPageStyle(secret: Boolean) {
+        val paper = rootView.findViewById<View>(R.id.journalPaperBody)
+        if (secret) {
+            paper.background?.mutate()?.colorFilter =
+                android.graphics.PorterDuffColorFilter(0xFFF8DC8A.toInt(), android.graphics.PorterDuff.Mode.MULTIPLY)
+            val g = goldLeaf ?: GoldLeafDrawable(resources.displayMetrics.density).also { goldLeaf = it }
+            paper.foreground = g
+            g.start()
+            rootView.findViewById<TextView>(R.id.chapterLabel).setTextColor(Color.parseColor("#9A6A10"))
+        } else {
+            paper.background?.mutate()?.colorFilter = null
+            goldLeaf?.stop()
+            paper.foreground = null
+            rootView.findViewById<TextView>(R.id.chapterLabel).setTextColor(requireContext().getColor(R.color.journal_chapter_title_ink))
+        }
+    }
+
+    override fun onDestroyView() {
+        goldLeaf?.stop()
+        super.onDestroyView()
     }
 
     private fun renderCurrentPage() {
@@ -416,7 +457,8 @@ class QuestJournalFragment : Fragment() {
         val viewingIndex = selectedStageIndex ?: if (isAllDone) quest.stages.size - 1 else currentIndex
 
         // STRÁNKOVÁNÍ
-        rootView.findViewById<TextView>(R.id.chapterLabel).text = chapterName(quest.id)
+        rootView.findViewById<TextView>(R.id.chapterLabel).text = quest.chapter
+        applyPageStyle(quest.secret && tab == Tab.STORY)
         rootView.findViewById<TextView>(R.id.dateText).text = "Strana ${currentPageIndex + 1} / ${unlockedQuests.size}"
         rootView.findViewById<View>(R.id.btnPrevPage).alpha = if (currentPageIndex > 0) 1f else 0.2f
         rootView.findViewById<View>(R.id.btnNextPage).alpha = if (currentPageIndex < unlockedQuests.size - 1) 1f else 0.2f
@@ -483,6 +525,20 @@ class QuestJournalFragment : Fragment() {
                         "Cíl: ${n.label} dnes $pct % tvého cíle (potřeba ${n.minPct}–${n.maxPct} %)"
                     }
                 }
+                RequirementType.HAVE_ITEM -> if (viewingIndex < currentIndex || isAllDone) "Cíl: Splněno"
+                    else "Cíl: Mít ${cz.uhk.macroflow.pokemon.skills.Gear.from(stageToDisplay.targetId)?.label ?: stageToDisplay.targetId}"
+                RequirementType.AFK_MINUTES -> {
+                    if (viewingIndex < currentIndex || isAllDone) "Cíl: Splněno"
+                    else {
+                        val bySkill = afkBySkill?.takeIf { it.first == quest.id }?.second
+                        val need = stageToDisplay.targetValue
+                        "Cíl: " + QuestProgression.afkSkills(stageToDisplay).joinToString(" · ") { id ->
+                            val label = cz.uhk.macroflow.pokemon.skills.Skill.from(id)?.label ?: id
+                            val m = (bySkill?.get(id) ?: 0).coerceAtMost(need)
+                            "$label ${QuestProgression.clock(m)} / ${QuestProgression.clock(need)}" + if (m >= need) " ✓" else ""
+                        }
+                    }
+                }
                 RequirementType.SCAN_BARCODE -> {
                     val scanned = if (viewingIndex < currentIndex || isAllDone) {
                         stageToDisplay.targetValue
@@ -498,15 +554,6 @@ class QuestJournalFragment : Fragment() {
 
         renderStagesList(quest, currentIndex, isAllDone)
         drawTracker(rootView.findViewById(R.id.journalQuestProgressLine), quest.stages.size, if (isAllDone) quest.stages.size else currentIndex)
-    }
-
-    private fun chapterName(questId: String): String = when (questId) {
-        QuestRegistry.TOWN_INTRO_QUEST.id -> "I · MĚSTO"
-        QuestRegistry.MEADOW_QUEST.id -> "II · LOUKA"
-        QuestRegistry.MOUNTAINS_QUEST.id -> "III · HORY"
-        QuestRegistry.FOREST_QUEST.id -> "IV · HVOZD"
-        QuestRegistry.SECRET_GROVE_QUEST.id -> "✦ ZAPOMENUTÝ HÁJ"
-        else -> "DOBRODRUŽSTVÍ"
     }
 
     private fun renderStagesList(quest: QuestDefinition, currentIdx: Int, allDone: Boolean) {

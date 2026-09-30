@@ -34,6 +34,8 @@ NODES = {
     "hmyz_jiskrivky": (38, 470),
     "stara_sitka":    (112, 490),
     "rumpal":         (114, 448),
+    "vendelin":       (54, 458),        # havíř Vendelín (docs/adr/0050) – postavu kreslí aplikace
+    "sichtovni_kniha": (36, 502),
     "prasklina":      (75, 368),
     "hmyz_krystal":   (108, 352),
     "puklina":        (36, 352),
@@ -43,11 +45,12 @@ NODES = {
     "popel":          (114, 222),
     "zelezne_dvere":  (75, 130),
 }
-LVL = {"zpet_do_stoly": 0, "nakladiste": 0, "hmyz_jiskrivky": 0, "stara_sitka": 0, "rumpal": 0,
+LVL = {"zpet_do_stoly": 0, "nakladiste": 0, "hmyz_jiskrivky": 0, "stara_sitka": 0, "rumpal": 0, "vendelin": 0, "sichtovni_kniha": 0,
        "prasklina": 1, "hmyz_krystal": 1, "puklina": 1,
        "pata_mostu": 2, "lavovy_sal": 2, "hmyz_magma": 2, "popel": 2, "zelezne_dvere": 2}
 EDGES = [("zpet_do_stoly", "nakladiste"), ("nakladiste", "hmyz_jiskrivky"), ("nakladiste", "stara_sitka"),
          ("nakladiste", "rumpal"), ("nakladiste", "prasklina"),
+         ("nakladiste", "vendelin"), ("nakladiste", "sichtovni_kniha"),
          ("prasklina", "hmyz_krystal"), ("prasklina", "puklina"), ("prasklina", "pata_mostu"),
          ("pata_mostu", "lavovy_sal"), ("lavovy_sal", "hmyz_magma"), ("lavovy_sal", "popel"),
          ("lavovy_sal", "zelezne_dvere")]
@@ -208,6 +211,8 @@ def main():
             for (dx, dy) in ((7, -1), (9, 0), (10, -1), (-8, 0)):  # vysypaná ruda
                 c.px(cx + dx, cy + dy, ORE[0])
     cart(100, 478)
+    # Vendelín stojí u lucerny (postavu kreslí aplikace) – přes něj se nechodí
+    c.blocks.append((47, 440, 58, 450))
     cart(122, 482, tipped=True)
     # rezavý hák ve stěně nad převráceným vozíkem (síťku na něj kreslí aplikace)
     t = face_top(120, 470)

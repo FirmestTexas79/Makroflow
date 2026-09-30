@@ -47,6 +47,7 @@ import cz.uhk.macroflow.pokemon.story.StoryFlags
 import cz.uhk.macroflow.pokemon.story.ForestHeart
 import cz.uhk.macroflow.pokemon.story.SecretGrove
 import cz.uhk.macroflow.pokemon.story.Insight
+import cz.uhk.macroflow.pokemon.story.Vendelin
 import java.util.Locale
 import kotlin.math.sqrt
 
@@ -215,6 +216,10 @@ class MakromonMapActivity : AppCompatActivity() {
             },
             storyFlagProvider = { key -> StoryFlags.isSet(applicationContext, key) },
             itemCounter = { ids -> ids.associateWith { cz.uhk.macroflow.pokemon.skills.SkillStore.count(applicationContext, it) } },
+            // zkouška havíře Vendelína (docs/adr/0050): odpracované minuty od začátku fáze
+            afkMinutesProvider = { skills, startedAt ->
+                cz.uhk.macroflow.pokemon.skills.SkillStore.workedMinutesSince(applicationContext, skills, startedAt, System.currentTimeMillis() / 1000)
+            },
             itemConsumer = { items ->
                 val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
                 if (items.any { (id, n) -> SS.count(applicationContext, id) < n }) false
@@ -235,6 +240,13 @@ class MakromonMapActivity : AppCompatActivity() {
                     val first = lastForestStage == null
                     lastForestStage = forestStage
                     if (!first || currentBiome == BiomeType.FOREST) refreshStoryDecor()
+                }
+                // Doly: kniha se rozzáří ve fázi podpisu (jen při změně fáze, ne při každé minutě zkoušky)
+                val minesStage = progress.currentStageIndex to progress.isCompleted
+                if (progress.questId == Vendelin.QUEST_ID && minesStage != lastMinesStage) {
+                    val first = lastMinesStage == null
+                    lastMinesStage = minesStage
+                    if (!first && currentBiome == BiomeType.MINES) refreshStoryDecor()
                 }
                 val journalFragment = supportFragmentManager.findFragmentByTag(TAG_JOURNAL) as? QuestJournalFragment
                 // Kontrolujeme isAdded(), aby fragment nespadl při pokusu o refresh
@@ -609,7 +621,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 MinesMap.EXIT_NODE -> enterBiomeAtNode(BiomeType.CAVE_MAZE, MinesMap.MAZE_NODE, MapTransition.CAVE_IN)
                 MinesMap.NET_NODE -> onOldNet()
                 MinesMap.DOOR_NODE -> showMapToast("🚪 " + MinesMap.DOOR_TEXT +
-                    if (Insight.level(StoryFlags.all(this)) >= 3) MinesMap.DOOR_TEXT_INSIGHT else "")
+                    (if (Insight.level(StoryFlags.all(this)) >= 3) MinesMap.DOOR_TEXT_INSIGHT else "") +
+                    (if (StoryFlags.isSet(this, Vendelin.BOOK_SIGNED_KEY)) Vendelin.DOOR_HANDWRITING else ""))
+                Vendelin.NODE -> { questManager.loadQuest(Vendelin.QUEST_ID); mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150) }
+                Vendelin.BOOK_NODE -> onMinerBook()
                 "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
                     enterBiomeAtNode(BiomeType.valueOf(it.parentBiome), it.mountainNode,
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
@@ -1043,7 +1058,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.SKY_PASS -> placeSkyPassDecor()
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
                 currentBiome == BiomeType.HIDDEN_GROVE -> placeGroveDecor()
-                currentBiome == BiomeType.MINES -> { placeMinesDecor(); placeEncounterGlows(cave!!); placeGatherSpots() }
+                currentBiome == BiomeType.MINES -> { placeMinesDecor(); placeEncounterGlows(cave!!); placeGatherSpots(); placeVendelin() }
                 cave != null -> {
                     placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots()
                     if (currentBiome == BiomeType.CAVE_MAZE) placeMineDoorGlow()
@@ -1302,6 +1317,83 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Havíř Vendelín u lucerny (docs/adr/0050): postava se záři kahanu, a šichtovní kniha na bedně.
+     * Kniha se rozzáří, když na ni čeká podpis.
+     */
+    private fun placeVendelin() {
+        if (worldScale <= 0) return
+        val s = worldScale.toFloat()
+        val size = (24 * s).toInt()
+        val glow = glowView((30 * s).toInt(), 0xFFFFC04A.toInt(), 0x66).apply {
+            x = (Vendelin.X - 7) * s - 15 * s; y = (Vendelin.Y - 15) * s - 15 * s; elevation = 1.9f
+        }
+        val npc = ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(size, size)
+            setImageResource(R.drawable.npc_vendelin)
+            (drawable as? android.graphics.drawable.BitmapDrawable)?.isFilterBitmap = false
+            scaleType = ImageView.ScaleType.FIT_XY
+            x = Vendelin.X * s - size / 2f; y = Vendelin.Y * s - size; elevation = 2f
+            pivotY = size.toFloat()
+        }
+        addDecor(glow); addDecor(npc)
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(npc, "scaleY", 1f, 1.03f, 1f).apply {
+            duration = 2200; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.5f, 1f, 0.6f, 0.9f, 0.5f).apply {
+            duration = 1900; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+        // šichtovní kniha na bedně
+        val book = pixelView(cz.uhk.macroflow.pokemon.skills.GearArt.ledger(), 12, 12, (8 * s).toInt(), (8 * s).toInt()).apply {
+            x = (Vendelin.BOOK_X - 4) * s; y = (Vendelin.BOOK_Y - 5) * s; elevation = 2.1f
+        }
+        addDecor(book)
+        val p = questManager.getCurrentProgress()
+        val waiting = questManager.getActiveQuestId() == Vendelin.QUEST_ID && p != null && !p.isCompleted &&
+            p.currentStageIndex == Vendelin.SIGN_STAGE && !StoryFlags.isSet(this, Vendelin.BOOK_SIGNED_KEY)
+        if (waiting) {
+            val bg = glowView((20 * s).toInt(), 0xFFFFF2B0.toInt(), 0x88).apply {
+                x = Vendelin.BOOK_X * s - 10 * s; y = (Vendelin.BOOK_Y - 1) * s - 10 * s; elevation = 2.05f
+            }
+            addDecor(bg)
+            crystalAnimators += android.animation.ObjectAnimator.ofFloat(bg, "alpha", 0.3f, 1f, 0.3f).apply {
+                duration = 1500; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+            }
+        }
+    }
+
+    /** Šichtovní kniha: ve fázi podpisu se hráč podepíše, jinak je zavřená / jen se čte. */
+    private fun onMinerBook() {
+        val signed = StoryFlags.isSet(this, Vendelin.BOOK_SIGNED_KEY)
+        val p = questManager.getCurrentProgress()
+        val canSign = !signed && questManager.getActiveQuestId() == Vendelin.QUEST_ID && p != null && !p.isCompleted &&
+            p.currentStageIndex == Vendelin.SIGN_STAGE
+        if (!signed && !canSign) { showMapToast("📕 " + Vendelin.BOOK_CLOSED); return }
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Šichtovní kniha",
+            if (signed) "Tvůj podpis je pořád na posledním řádku." else "Poslední řádek je volný.") { ui, body, close ->
+            body.addView(ui.text(Vendelin.bookText(signed), 16f).apply {
+                typeface = android.graphics.Typeface.MONOSPACE
+                setBackgroundColor(0x22BC6C25)
+                setPadding(ui.px(10f), ui.px(10f), ui.px(10f), ui.px(10f))
+            })
+            body.addView(ui.button(if (signed) "Zavřít" else "Podepsat se") {
+                close()
+                if (!signed) {
+                    StoryFlags.set(this@MakromonMapActivity, Vendelin.BOOK_SIGNED_KEY)
+                    mapWorld.postDelayed({
+                        if (isFinishing) return@postDelayed
+                        onMinerBook()          // kniha s podpisem – rukopis je pořád stejný
+                        questManager.recheck()
+                        refreshStoryDecor()
+                    }, 250)
+                }
+            }.apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = ui.px(10f) }
+            })
+        }
+    }
+
     /** Ve Starém dole u zabedněné štoly do Dolů zdola prosvítá rudý žár. */
     private fun placeMineDoorGlow() {
         if (worldScale <= 0) return
@@ -1319,12 +1411,15 @@ class MakromonMapActivity : AppCompatActivity() {
     /** Stará síťka na háku: poprvé se sebere a nasadí, potom je hák prázdný. */
     private fun onOldNet() {
         if (StoryFlags.isSet(this, MinesMap.NET_TAKEN_KEY)) { showMapToast(MinesMap.NET_GONE_TEXT); return }
+        // síťka je Vendelínova – dokud se s ním hráč nepozná, je na háku přivázaná drátem (docs/adr/0050)
+        if (!questManager.hasSeenIntro(Vendelin.QUEST_ID, 0)) { showMapToast("🪝 " + MinesMap.NET_TIED_TEXT); return }
         val ctx = applicationContext
         lifecycleScope.launch {
             kotlinx.coroutines.withContext(Dispatchers.IO) {
                 cz.uhk.macroflow.pokemon.skills.SkillStore.grantItemOnce(ctx, cz.uhk.macroflow.pokemon.skills.Gear.OLD_NET.id)
             }
             StoryFlags.set(this@MakromonMapActivity, MinesMap.NET_TAKEN_KEY)
+            questManager.recheck()           // první fáze Vendelína: síťka je sebraná
             showMapToast("🪰 " + MinesMap.NET_TEXT + "\n\nZískal jsi: Stará síťka (nasazená v deníku → Postava → TOOLS).")
             refreshStoryDecor()
         }
@@ -1557,6 +1652,7 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             showMapToast((msg ?: "Zatím nic hotového.") + if (stop) "\nPřestal jsi." else "")
             refreshGatherPlaque()
+            questManager.recheck()
             checkAwards()
         }
     }
@@ -1579,6 +1675,7 @@ class MakromonMapActivity : AppCompatActivity() {
             showMapToast("Odešel jsi od: ${r.spot.label}." + if (r.claim.amount > 0) "\nVybráno ${r.claim.amount}× ${r.spot.resource.label}" +
                 (r.xp?.let { ", +${it.gained} XP ${it.skill.label}" } ?: "") else "")
             refreshGatherPlaque()
+            questManager.recheck()
         }
     }
 
@@ -1863,6 +1960,9 @@ class MakromonMapActivity : AppCompatActivity() {
             duration = periodMs; repeatCount = android.animation.ValueAnimator.INFINITE; start()
         }
     }
+
+    /** Poslední známá fáze questu Dolů (docs/adr/0050). */
+    private var lastMinesStage: Pair<Int, Boolean>? = null
 
     /** Poslední známá fáze questu Hvozdu (index, dokončeno) – dekorace se obnoví jen při změně. */
     private var lastForestStage: Pair<Int, Boolean>? = null

@@ -22,7 +22,12 @@ object QuestRewards {
         // docs/adr/0046 – vysvobozený Elderan zanechá deník
         ("secret_grove" to 4) to Reward("denik_strazce", "Deník strážce Elderana",
             "Děkuju ti… Cítím vítr a vůni dubů, poprvé po tolika stoletích. Deník leží pod hrobovým kamenem – vezmi si ho. " +
-                "Jsou v něm runy brány a všechno, co vím o Pánu popela. A řekni Mydrusovi… že jsem na něj byl vždycky pyšný.")
+                "Jsou v něm runy brány a všechno, co vím o Pánu popela. A řekni Mydrusovi… že jsem na něj byl vždycky pyšný."),
+        // docs/adr/0050 – po podpisu šichtovní knihy dá Vendelín svůj kahan
+        ("mines_vendelin" to 5) to Reward("acc_trinket_miner_lamp", "Havířský kahan",
+            "Podepsáno. Okruh dvě stě třináct. Tak. Vezmi si můj kahan – jiskřivky v něm tě poznají. " +
+                "Když budeš sekat, kopat nebo chytat, bude ti svítit na ruce. A kdyby ses někdy vrátil a já tě nepoznal… " +
+                "nezlob se. Tady dole se zapomíná rychle.")
     )
 
     /** Odměna za dokončení fáze [stageIndex] questu [questId], nebo null. */

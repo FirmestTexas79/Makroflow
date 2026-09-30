@@ -69,6 +69,7 @@ object ItemInfo {
         Gear.from(itemId)?.let { g ->
             if (g.legendary) return listOf(Source("Poražený Gudwin – legendární artefakt, padá jen jednou", pct(Drops.ARTIFACT_CHANCE)))
             if (g == Gear.OLD_NET) return listOf(Source("Doly – visí na rezavém háku nad převráceným vozíkem u vstupu", "jednou"))
+            if (g == Gear.MINER_LAMP) return listOf(Source("Doly – havíř Vendelín za podpis šichtovní knihy", "jednou"))
             val recipe = GearCrafting.recipe(g) ?: return listOf(Source("Startovní vybavení", "dostaneš na začátku"))
             val parts = recipe.entries.joinToString(" + ") { (id, n) -> "$n× ${Resource.from(id)?.label ?: id}" }
             return listOf(Source("Pracovní stůl na louce – Dobrodruhův set (uzel „Základní vybavení“ ve stromu Výroby)", parts))

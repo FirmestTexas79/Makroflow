@@ -56,7 +56,12 @@ class QuestManager(
     /** Odebere předměty, jen když má hráč všechny (IO vlákno); true = odevzdáno. */
     private val itemConsumer: ((List<Pair<String, Int>>) -> Boolean)? = null,
     /** Vzácné zaváhání postavy při dalším oslovení (docs/adr/0047); null = nic. */
-    private val crackProvider: ((String) -> String?)? = null
+    private val crackProvider: ((String) -> String?)? = null,
+    /**
+     * Odpracované minuty od začátku fáze v každé dovednosti (docs/adr/0050): (dovednosti, začátek fáze ms)
+     * → Skill.id na minuty. Volá se na IO vlákně.
+     */
+    private val afkMinutesProvider: ((List<String>, Long) -> Map<String, Int>)? = null
 ) {
     private var activeQuest: QuestDefinition? = null
     private var currentProgress: QuestProgressEntity? = null
@@ -210,6 +215,10 @@ class QuestManager(
                     QuestProgression.waterPercent(drank, target)
                 }
                 RequirementType.STORY_FLAG -> storyFlagProvider?.let { if (it(stage.targetId.orEmpty())) 1 else 0 }
+                RequirementType.HAVE_ITEM -> itemCounter?.invoke(listOf(stage.targetId.orEmpty()))
+                    ?.let { if ((it[stage.targetId.orEmpty()] ?: 0) > 0) 1 else 0 }
+                RequirementType.AFK_MINUTES -> afkMinutesProvider?.invoke(QuestProgression.afkSkills(stage), progress.stageStartedAt)
+                    ?.let { QuestProgression.afkProgress(it, stage) }
                 RequirementType.HIT_TARGET -> {
                     val targets = targetsProvider?.invoke() ?: return@withContext null
                     val meals = db.consumedSnackDao().getConsumedByDateSync(today())
@@ -265,6 +274,8 @@ class QuestManager(
 
         // Po splnění fáze NPC sám představí další úkol (nebo se rozloučí)
         if (result.stageCompleted && !silent) checkNpcInteraction(playerInitiated = false)
+        // odvozená fáze (AFK, předmět) se hned přepočítá – začne se počítat od teď
+        if (result.stageCompleted) syncDerivedProgress()
     }
 
     /**
@@ -340,6 +351,9 @@ class QuestManager(
             currentStepIndex = stepIndex
         )
     }
+
+    /** Slyšel hráč už úvod fáze [index]? (třeba síťka se dá vzít až po seznámení s havířem) */
+    fun hasSeenIntro(questId: String, index: Int): Boolean = introSeenIndex(questId) >= index
 
     private fun introSeenIndex(questId: String): Int = introPrefs?.getInt("intro_seen_$questId", -1) ?: -1
 

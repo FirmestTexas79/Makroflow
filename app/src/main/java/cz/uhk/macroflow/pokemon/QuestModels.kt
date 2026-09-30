@@ -21,7 +21,14 @@ enum class RequirementType {
     /** Přinést NPC předměty; targetId = "itemId:počet,itemId:počet", metadata 1 = odevzdáno. */
     DELIVER_ITEMS,
     /** Příznak příběhu (StoryFlags) – např. poražený boss; targetId = klíč, metadata 1 = nastaven. */
-    STORY_FLAG
+    STORY_FLAG,
+    /** Mít předmět (nic se neodebírá) – např. vyrobenou síťku; targetId = itemId (docs/adr/0050). */
+    HAVE_ITEM,
+    /**
+     * Odpracovat od začátku fáze v každé z dovedností aspoň targetValue minut (i AFK);
+     * targetId = "logging,mining,bugcatching", metadata = minuty nejslabší z nich (docs/adr/0050).
+     */
+    AFK_MINUTES
 }
 
 data class QuestStage(
@@ -43,7 +50,13 @@ data class QuestDefinition(
     val farewell: String = "Už jsi pro mě udělal dost. Hodně štěstí na cestách, hrdino!",
     /** Kdo se loučí (0 = mluvčí poslední fáze) – ve Hvozdu dává Srdce dub, ale loučí se Mydrus. */
     val farewellSpeakerResId: Int = 0,
-    val farewellSpeakerName: String = ""
+    val farewellSpeakerName: String = "",
+    /** Název kapitoly v deníku. */
+    val chapter: String = "DOBRODRUŽSTVÍ",
+    /** Vedlejší linka (v deníku za hlavními kapitolami). */
+    val side: Boolean = false,
+    /** Tajná linka – v deníku zlatolesklá stránka, úplně na konci. */
+    val secret: Boolean = false
 )
 
 // Objekt se všemi questy ve hře
@@ -53,6 +66,7 @@ object QuestRegistry {
 
     val TOWN_INTRO_QUEST = QuestDefinition(
         id = "town_intro_oliver",
+        chapter = "I · MĚSTO",
         farewell = "Město už znáš jako své boty. Cesta do Meadow je volná – a kdyby něco, víš, kde mě najdeš!",
         stages = listOf(
             QuestStage(
@@ -86,6 +100,7 @@ object QuestRegistry {
 
     val MEADOW_QUEST = QuestDefinition(
         id = "meadow_mastery",
+        chapter = "II · LOUKA",
         farewell = "Louku máš v malíčku. Za můstkem na východě začínají hory – ale bez pořádné procházky tě tam nepustí!",
         stages = listOf(
             QuestStage(
@@ -127,6 +142,7 @@ object QuestRegistry {
     // ════════════════════════════════════════════════════════════════════════
     val MOUNTAINS_QUEST = QuestDefinition(
         id = "mountains_macro_king",
+        chapter = "III · HORY",
         farewell = "Výživový rytíři hor! Moje armáda je silná a kuchyně reformovaná. Jen tak dál – trefuj své cíle každý den.",
         stages = listOf(
             QuestStage(
@@ -214,6 +230,7 @@ object QuestRegistry {
 
     val FOREST_QUEST = QuestDefinition(
         id = "forest_heart",
+        chapter = "IV · HVOZD",
         farewell = "Hvozd zase dýchá – a já taky. Mycité se vracejí na mýtinu a rudé houby usychají. " +
             "Srdce Hvozdu patří do Brány světů nahoře na Nebeském průsmyku, za svatyní na vrcholu hor. " +
             "A kdyby ses tam někdy potkal s Drakirrou… vyřiď jí, že jí les odpustil.\n\n" +
@@ -301,6 +318,8 @@ object QuestRegistry {
 
     val SECRET_GROVE_QUEST = QuestDefinition(
         id = "secret_grove",
+        chapter = "✦ ZAPOMENUTÝ HÁJ",
+        secret = true,
         farewell = "Háj je tichý. Na hrobovém kameni se ve svitu měsíce třpytí rosa ve tvaru parohů a studánka " +
             "odráží zase jen hvězdy tohohle světa. Elderan odešel – ale jeho deník ti zůstal. Čti ho, než projdeš branou.",
         farewellSpeakerResId = R.drawable.npc_elderan,
@@ -367,7 +386,108 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, SECRET_GROVE_QUEST) }
+    // ════════════════════════════════════════════════════════════════════════
+    // DOLY – havíř Vendelín a šichtovní kniha (docs/adr/0050)
+    // Učí chytat hmyz a zkouší hráče ze všech sběrných dovedností. Kniha je kalibrační
+    // protokol Kustodiátu: hráč je Okruh 213, všechny předchozí zápisy psal on sám.
+    // ════════════════════════════════════════════════════════════════════════
+    private const val VENDELIN = cz.uhk.macroflow.pokemon.story.Vendelin.NAME
+
+    val MINES_QUEST = QuestDefinition(
+        id = cz.uhk.macroflow.pokemon.story.Vendelin.QUEST_ID,
+        chapter = "⚒ DOLY",
+        side = true,
+        farewell = "Hó! Živá duše! Nový na šichtě? Já jsem Vendelín, havíř. Posaď se, ať ti ukážu, jak se chytají jiskřivky…\n\n" +
+            "…počkej. Proč nosíš můj kahan? A proč máš ruce od sazí, jako bys tu byl celou šichtu?\n\nNo nic. Hlavně na mě nezapomeň. Já na tebe určitě ne.",
+        farewellSpeakerResId = R.drawable.npc_vendelin,
+        farewellSpeakerName = VENDELIN,
+        stages = listOf(
+            QuestStage(
+                title = "Světlo v hlubině",
+                text = "Hó! Živá duše! A se stínem, to se tu dole jen tak nevidí. Jsem Vendelín, havíř – poslední ze šichty. " +
+                    "Ostatní… šli napřed. Kam? No… napřed.\n\nVidíš ten kahan? Nesvítí v něm olej, ale jiskřivky – mušky, co se živí " +
+                    "světlem. Bez nich tu oslepneš dřív, než řekneš švec. Na rezavém háku nad převráceným vozíkem visí moje stará síťka. " +
+                    "Vezmi si ji, stejně mi už ruce nesedí na násadu.",
+                speakerResId = R.drawable.npc_vendelin,
+                speakerName = VENDELIN,
+                requirementType = RequirementType.STORY_FLAG,
+                targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.cave.MinesMap.NET_TAKEN_KEY,
+                hint = "Síťka visí na rezavém háku nad převráceným vozíkem, vpravo od kolejí."
+            ),
+            QuestStage(
+                title = "Naplň kahan",
+                text = "Sedí ti v ruce, co? Teď se postav k lucerně támhle na sloupu a chytej. Mušky se chytají samy – síťku " +
+                    "jen držíš a čekáš. Klidně odejdi z Makrosvěta, chytá se dál. Jen nechoď po mapě pryč od hejna, to se lekneš " +
+                    "a síťku pustíš. Čím lepší síťka a čím víc se naučíš, tím rychleji to jde.\n\n" +
+                    "Přines mi deset jiskřivek do kahanu. Zvláštní potvůrky… když ti sednou do dlaně, chvíli jen tak sedí a čekají. " +
+                    "Jako by čekaly, až jim řekneš jméno.",
+                speakerResId = R.drawable.npc_vendelin,
+                speakerName = VENDELIN,
+                requirementType = RequirementType.DELIVER_ITEMS,
+                targetValue = 1,
+                targetId = "bug_spark:10"
+            ),
+            QuestStage(
+                title = "Lepší síťka",
+                text = "Svítí jako za mlada! Jenže stará síťka krystalové mušky neudrží – mají křídla ostrá jako sklo a oka " +
+                    "ti rozpářou. Stav se u pracovního stolu na louce a udělej si měděnou: obruč z mědi, násada z dubu a " +
+                    "pár jiskřivek na návnadu. A nasaď si ji, ať tě nevidím s tou rezavou.",
+                speakerResId = R.drawable.npc_vendelin,
+                speakerName = VENDELIN,
+                requirementType = RequirementType.HAVE_ITEM,
+                targetValue = 1,
+                targetId = "tool_net_copper",
+                hint = "Měděnou síťku vyrobíš u pracovního stolu na louce (Nástroje)."
+            ),
+            QuestStage(
+                title = "Pláč krystalů",
+                text = "Teď nahoru do pukliny. Tam, kde končí výdřeva, rostou krystaly. Stará parta jim říkala slzy. Vylámali " +
+                    "jsme je a do rána dorostly – pořád na stejném místě, pořád stejně rudé, jako by tam někdo nad námi " +
+                    "pořád plakal. Mušky z nich pijí světlo. Přines mi pět krystalových mušek. A kdyby ses cítil pozorovaný… " +
+                    "to je normální. Nekoukej se na ně dlouho.",
+                speakerResId = R.drawable.npc_vendelin,
+                speakerName = VENDELIN,
+                requirementType = RequirementType.DELIVER_ITEMS,
+                targetValue = 1,
+                targetId = "bug_crystal:5"
+            ),
+            QuestStage(
+                title = "Šichtovní kniha",
+                text = "Dobrá práce. Ale na šichtu tě pustím, až tě zapíšu do knihy, a do knihy tě zapíšu, až vím, co vydržíš. " +
+                    "Předpis je předpis: tři hodiny u sekery, tři u krumpáče a tři u síťky. Nemusíš u toho stát, klidně spi, " +
+                    "jez, choď – čas se počítá, dokud tvůj nástroj pracuje. Počítá se jen to, co odpracuješ ode dneška.\n\n" +
+                    "Kdo mi ten předpis dal? Hm. Ten, kdo dává předpisy. Vrať se, až budeš mít všech devět hodin.",
+                speakerResId = R.drawable.npc_vendelin,
+                speakerName = VENDELIN,
+                requirementType = RequirementType.AFK_MINUTES,
+                targetValue = cz.uhk.macroflow.pokemon.story.Vendelin.TEST_HOURS * 60,
+                targetId = cz.uhk.macroflow.pokemon.story.Vendelin.TEST_SKILLS.joinToString(",")
+            ),
+            QuestStage(
+                title = "Podpis",
+                text = "Devět hodin, na minutu. Přesně podle předpisu… jako minule. Ne, nic, to jsem si jen tak mumlal.\n\n" +
+                    "Kniha leží na bedně vedle lucerny. Otevři ji na posledním řádku a podepiš se. Pak ti dám svůj kahan – " +
+                    "já už ho nebudu potřebovat. Moje šichta tady dole brzy skončí.",
+                speakerResId = R.drawable.npc_vendelin,
+                speakerName = VENDELIN,
+                requirementType = RequirementType.STORY_FLAG,
+                targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_SIGNED_KEY,
+                hint = "Šichtovní kniha leží na bedně vlevo dole u vstupu. Klepni na ni a podepiš se."
+            )
+        )
+    )
+
+    /** Pořadí v deníku: hlavní kapitoly v pořadí příběhu, pak vedlejší linky, pak tajné. */
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, MINES_QUEST, SECRET_GROVE_QUEST) }
+
+    /** Pořadí kapitoly v deníku (neznámé na konec). */
+    fun journalOrder(id: String): Int {
+        val q = byId(id) ?: return Int.MAX_VALUE
+        val group = if (q.secret) 2 else if (q.side) 1 else 0
+        return group * 100 + ALL.indexOf(q)
+    }
 
     fun byId(id: String): QuestDefinition? = ALL.firstOrNull { it.id == id }
 }

@@ -121,7 +121,8 @@ object BiomeRegistry {
                 cave = cz.uhk.macroflow.pokemon.cave.SkyPass.MAP),
             BiomeDefinition(BiomeType.HIDDEN_GROVE, R.drawable.hidden_grove, graphOf(cz.uhk.macroflow.pokemon.cave.GroveMap.MAP),
                 questId = QuestRegistry.SECRET_GROVE_QUEST.id, cave = cz.uhk.macroflow.pokemon.cave.GroveMap.MAP),
-            BiomeDefinition(BiomeType.MINES, R.drawable.mines, graphOf(cz.uhk.macroflow.pokemon.cave.MinesMap.MAP), questId = null,
+            BiomeDefinition(BiomeType.MINES, R.drawable.mines, graphOf(cz.uhk.macroflow.pokemon.cave.MinesMap.MAP),
+                questId = cz.uhk.macroflow.pokemon.story.Vendelin.QUEST_ID,
                 cave = cz.uhk.macroflow.pokemon.cave.MinesMap.MAP)
         ).associateBy { it.type }
     }

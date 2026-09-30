@@ -105,8 +105,40 @@ object GearArt {
         Gear.SILVER_AXE -> axe(false, SILVER); Gear.SILVER_PICKAXE -> pickaxe(false, SILVER)
         Gear.GOLD_AXE -> axe(false, GOLD); Gear.GOLD_PICKAXE -> pickaxe(false, GOLD)
         Gear.OLD_NET -> net()
+        Gear.MINER_LAMP -> minerLamp()
         Gear.COPPER_NET -> net(false, COPPER); Gear.SILVER_NET -> net(false, SILVER); Gear.GOLD_NET -> net(false, GOLD)
         Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL -> MaterialArt.accessory(g)!!
+    }
+
+    /** Šichtovní kniha 12 × 12: okované tmavé desky s razítkem (docs/adr/0050). */
+    fun ledger(): IntArray {
+        val p = px(ITEM, ITEM)
+        val cover = c(0xFF3A1E14); val coverL = c(0xFF5E3424); val paper = c(0xFFE8DCC0); val iron = c(0xFF8C8C94)
+        for (y in 2..10) for (x in 1..10) p[x, y] = if (x == 1) coverL else cover
+        for (x in 2..10) p[x, 10] = paper
+        for (y in 3..9) p[10, y] = paper
+        for ((x, y) in listOf(2 to 2, 9 to 2, 2 to 9, 9 to 9)) p[x, y] = iron
+        p[5, 5] = c(0xFFB02020); p[6, 5] = c(0xFFB02020); p[5, 6] = c(0xFFB02020); p[6, 6] = c(0xFF801818)
+        p.outline(K)
+        return p.data
+    }
+
+    /** Havířský kahan: kovová klec s rukojetí, uvnitř tři žhnoucí jiskřivky (docs/adr/0050). */
+    fun minerLamp(): IntArray {
+        val p = px(ICON, ICON)
+        val brass = c(0xFFC8943A); val brassD = c(0xFF7E5820); val brassL = c(0xFFF2D07A)
+        val glass = c(0xFF3A2A1A); val glow = c(0xFFFFE27A); val glow2 = c(0xFFFFA83A)
+        for (x in 6..9) p[x, 1] = brassD                          // ucho
+        p[5, 2] = brassD; p[10, 2] = brassD
+        for (x in 5..10) p[x, 3] = brassL                         // víčko
+        for (x in 4..11) p[x, 4] = brass
+        for (y in 5..11) for (x in 4..11) p[x, y] = if (x == 4 || x == 11 || x == 7 && y % 2 == 0) brassD else glass
+        for ((x, y) in listOf(6 to 6, 9 to 8, 6 to 10)) { p[x, y] = glow; p[x + 1, y] = glow2 }
+        p[8, 6] = c(0xFFFFFFFF)
+        for (x in 4..11) p[x, 12] = brass
+        for (x in 5..10) p[x, 13] = brassD
+        p.outline(K)
+        return p.data
     }
 
     // ── Dobrodruhův set 16 × 16 (docs/adr/0039) ─────────────────────────────

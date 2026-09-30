@@ -104,8 +104,25 @@ object QuestProgression {
                 else "Dnes máš ${n.label} na $v % svého cíle. Potřebuješ ${n.minPct}–${n.maxPct} %."
             }
             RequirementType.TALK_TO_NPC -> stage.text
+            RequirementType.HAVE_ITEM -> "Ještě ho nemáš. Až ho budeš mít, stav se."
+            RequirementType.AFK_MINUTES -> "Nejméně máš zatím odpracováno ${clock(v)} z ${clock(stage.targetValue)}. " +
+                "Počítá se kácení, těžba i chytání hmyzu – každé zvlášť."
         }
     }
+
+    /** Minuty jako „2 h 5 min“ (AFK_MINUTES). */
+    fun clock(minutes: Int): String {
+        val h = minutes.coerceAtLeast(0) / 60; val m = minutes.coerceAtLeast(0) % 60
+        return when { h > 0 && m > 0 -> "$h h $m min"; h > 0 -> "$h h"; else -> "$m min" }
+    }
+
+    /** Dovednosti fáze AFK_MINUTES (Skill.id). */
+    fun afkSkills(stage: QuestStage): List<String> =
+        stage.targetId.orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
+    /** Postup AFK_MINUTES = minuty nejslabší dovednosti. */
+    fun afkProgress(minutesBySkill: Map<String, Int>, stage: QuestStage): Int =
+        afkSkills(stage).minOfOrNull { minutesBySkill[it] ?: 0 } ?: 0
 
     /** Metadata, se kterými je fáze splněná (debug „splnit fázi“). */
     fun satisfyingMetadata(stage: QuestStage): String = when (stage.requirementType) {
