@@ -158,33 +158,31 @@ class QuestJournalFragment : Fragment() {
     }
 
     /**
-     * Záložka Mapa: vlevo svislý sloupec záložek zón (zatím jen Zóna 1), vpravo mapa vybrané zóny.
+     * Záložka Mapa: mapa vybrané zóny přes celou stránku, vlevo nahoře přes ni svislý sloupec
+     * záložek zón (zatím jen Zóna 1).
      */
     private fun buildMapPage(page: android.widget.FrameLayout): cz.uhk.macroflow.pokemon.zone.ZoneMapView {
         val ctx = requireContext()
         val dp = resources.displayMetrics.density
         val font = androidx.core.content.res.ResourcesCompat.getFont(ctx, R.font.jersey_15)
-        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        val tabs = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(0, (6 * dp).toInt(), 0, 0) }
+        val map = cz.uhk.macroflow.pokemon.zone.ZoneMapView(ctx).apply { tag = "zone_map" }
+        page.addView(map, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        val tabs = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; elevation = 2 * dp }
         cz.uhk.macroflow.pokemon.zone.ZoneOne.ZONES.forEach { (title, selected) ->
             tabs.addView(zoneTab(title, selected, font, dp), LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, (34 * dp).toInt()).apply { bottomMargin = (6 * dp).toInt() })
+                (72 * dp).toInt(), (32 * dp).toInt()).apply { bottomMargin = (5 * dp).toInt() })
         }
-        row.addView(tabs, LinearLayout.LayoutParams((66 * dp).toInt(), ViewGroup.LayoutParams.MATCH_PARENT))
-        val mapFrame = android.widget.FrameLayout(ctx)
-        val map = cz.uhk.macroflow.pokemon.zone.ZoneMapView(ctx).apply { tag = "zone_map" }
-        mapFrame.addView(map, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        mapFrame.addView(TextView(ctx).apply {
-            text = "Klepni na objevené místo\na přenes se tam."
+        page.addView(tabs, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.TOP or Gravity.START).apply { topMargin = (4 * dp).toInt(); marginStart = (4 * dp).toInt() })
+        page.addView(TextView(ctx).apply {
+            text = "Klepni na objevené místo a přenes se tam."
             textSize = 13f
-            setTextColor(androidx.core.content.ContextCompat.getColor(ctx, R.color.journal_ink))
-            alpha = 0.75f
-            gravity = Gravity.END
+            setTextColor(0xFFF6E8C4.toInt())
+            setShadowLayer(2 * dp, 0f, 0f, 0xFF10140C.toInt())
+            gravity = Gravity.CENTER
             typeface = font
         }, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.BOTTOM or Gravity.END))
-        row.addView(mapFrame, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = (4 * dp).toInt() })
-        page.addView(row, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (4 * dp).toInt() })
         return map
     }
 

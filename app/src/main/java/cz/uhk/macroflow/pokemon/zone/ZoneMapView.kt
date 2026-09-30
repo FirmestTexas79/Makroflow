@@ -52,11 +52,19 @@ class ZoneMapView(context: Context) : View(context) {
     private val rust = 0xFF7A2E1E.toInt()
     private val paper = 0xFFF1E3C0.toInt()
     private val bmpPaint = Paint().apply { isFilterBitmap = false; isAntiAlias = false }
-    private val fogPaint = Paint().apply { isFilterBitmap = false; colorFilter = PorterDuffColorFilter(0xFFB8A27A.toInt(), PorterDuff.Mode.SRC_IN); alpha = 190 }
+    private val fogPaint = Paint().apply { isFilterBitmap = false; colorFilter = PorterDuffColorFilter(0xFFDAD6CC.toInt(), PorterDuff.Mode.SRC_IN); alpha = 215 }
+    /** Cesta: tmavý podklad a světlé čárky navrch – je vidět na lese, skále i v jeskyni. */
+    private val linkUnder = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeWidth = 9f; color = 0xFF281A0E.toInt(); strokeCap = Paint.Cap.ROUND
+    }
     private val linkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = 4f; color = rust; strokeCap = Paint.Cap.ROUND
+        style = Paint.Style.STROKE; strokeWidth = 4f; color = 0xFFF6E8C4.toInt(); strokeCap = Paint.Cap.ROUND
         pathEffect = DashPathEffect(floatArrayOf(12f, 10f), 0f)
     }
+    private val seaColor = 0xFF3D7DB5.toInt()
+    /** Souvislý terén celé zóny (gen_zone.py → zone/bg.png). */
+    private val bg: Bitmap? = bitmap("zone/bg.png")
+    private var titlePos = PointF(795f, 1150f)
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
@@ -72,6 +80,7 @@ class ZoneMapView(context: Context) : View(context) {
         val json = JSONObject(context.assets.open("zone/zone1.json").bufferedReader().use { it.readText() })
         cw = json.getDouble("w").toFloat(); ch = json.getDouble("h").toFloat()
         labelSize = json.optDouble("labelSize", 30.0).toFloat()
+        json.optJSONArray("title")?.let { titlePos = it.pt() }
         val l = json.getJSONObject("locations")
         ZoneOne.LOCATIONS.filter { l.has(it) }.forEach { id ->
             val o = l.getJSONObject(id)
@@ -104,17 +113,22 @@ class ZoneMapView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         s = min(width / cw, height / ch)
         ox = (width - cw * s) / 2f; oy = (height - ch * s) / 2f
+        canvas.drawColor(seaColor)                                   // moře i mimo plátno
         canvas.save()
         canvas.translate(ox, oy); canvas.scale(s, s)
+        bg?.let { canvas.drawBitmap(it, null, RectF(0f, 0f, cw, ch), bmpPaint) }
 
-        compass(canvas, 745f, 1110f)
+        compass(canvas, titlePos.x, titlePos.y)
         val state = locs.keys.associateWith { ZoneOne.shown(it, current, seen) }
         // spoje (pod lokacemi – vchod a východ označí kolečko na okraji tvaru)
         for (k in links) {
             if (!ZoneOne.linkShown(k.a, k.b, current, seen)) continue
             val fog = state[k.a] == ZoneOne.Shown.FOG || state[k.b] == ZoneOne.Shown.FOG
-            linkPaint.alpha = if (fog) 110 else 230
-            canvas.drawPath(curve(k), linkPaint)
+            val path = curve(k)
+            linkUnder.alpha = if (fog) 90 else 170
+            linkPaint.alpha = if (fog) 120 else 255
+            canvas.drawPath(path, linkUnder)
+            canvas.drawPath(path, linkPaint)
         }
         // lokace
         for ((id, loc) in locs) {
@@ -122,7 +136,7 @@ class ZoneMapView(context: Context) : View(context) {
             if (st == ZoneOne.Shown.HIDDEN) continue
             loc.bmp?.let { canvas.drawBitmap(it, null, loc.rect, if (st == ZoneOne.Shown.FOG) fogPaint else bmpPaint) }
             if (st == ZoneOne.Shown.FOG) {
-                text.textSize = 64f; text.color = 0xAA4A3520.toInt()
+                text.textSize = 64f; text.color = 0xCC5A5448.toInt()
                 canvas.drawText("?", loc.rect.centerX(), loc.rect.centerY() + 22f, text)
             }
         }
@@ -177,9 +191,15 @@ class ZoneMapView(context: Context) : View(context) {
 
     /** Název zóny a větrná růžice v prázdném rohu mapy. */
     private fun compass(canvas: Canvas, cx: Float, cy: Float) {
+        // název zóny na pergamenové stuze (jako cedule mapy)
         text.textSize = 64f; text.color = ink
-        halo.textSize = 64f
-        canvas.drawText(ZoneOne.TITLE, cx, cy - 92f, halo)
+        val tw = text.measureText(ZoneOne.TITLE)
+        val banner = RectF(cx - tw / 2f - 30f, cy - 150f, cx + tw / 2f + 30f, cy - 76f)
+        fill.color = 0xFFB08A58.toInt()
+        canvas.drawRect(banner.left - 18f, banner.top + 14f, banner.left + 8f, banner.bottom + 10f, fill)     // konce stuhy
+        canvas.drawRect(banner.right - 8f, banner.top + 14f, banner.right + 18f, banner.bottom + 10f, fill)
+        fill.color = paper; canvas.drawRoundRect(banner, 8f, 8f, fill)
+        stroke.color = ink; stroke.strokeWidth = 4f; canvas.drawRoundRect(banner, 8f, 8f, stroke)
         canvas.drawText(ZoneOne.TITLE, cx, cy - 92f, text)
         val r = 52f
         val star = Path()
@@ -190,15 +210,12 @@ class ZoneMapView(context: Context) : View(context) {
             if (i == 0) star.moveTo(x, y) else star.lineTo(x, y)
         }
         star.close()
-        fill.color = 0x33BC6C25; canvas.drawPath(star, fill)
+        fill.color = paper; canvas.drawPath(star, fill)
         stroke.color = ink; stroke.strokeWidth = 3f; canvas.drawPath(star, stroke)
         stroke.strokeWidth = 2f; canvas.drawCircle(cx, cy, r * 0.62f, stroke)
-        text.textSize = 26f; text.color = rust
-        canvas.drawText("S", cx, cy - r - 8f, text)
-        text.color = ink
-        canvas.drawText("J", cx, cy + r + 26f, text)
-        canvas.drawText("V", cx + r + 16f, cy + 9f, text)
-        canvas.drawText("Z", cx - r - 16f, cy + 9f, text)
+        text.textSize = 28f; halo.textSize = 28f
+        listOf(Triple("S", cx, cy - r - 8f), Triple("J", cx, cy + r + 28f), Triple("V", cx + r + 18f, cy + 10f), Triple("Z", cx - r - 18f, cy + 10f))
+            .forEach { (t, x, y) -> text.color = if (t == "S") rust else ink; canvas.drawText(t, x, y, halo); canvas.drawText(t, x, y, text) }
     }
 
     private fun door(canvas: Canvas, p: PointF) {

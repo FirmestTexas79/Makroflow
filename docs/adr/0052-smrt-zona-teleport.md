@@ -20,7 +20,9 @@
   
   Příznak přežije i zavření aplikace a scéna se přehraje při dalším otevření mapy.
 * **Mapa Zóna 1** – nová záložka deníku **Mapa**. Na její stránce je vlevo svislý sloupec záložek zón jako „WORLD 1…7“ v Idleonu (zatím jen **Zóna 1**, vybraná je zelená) a vpravo mapa zóny. Rozvržení vyrábí `tools/mapgen/gen_zone.py`:
-  * tvar lokace = maska chůze rozšířená o okolí, vyříznutá z obrázku lokace (lehká sépie, inkoustový obrys). Venkovní mapy berou jen část viditelnou na telefonu;
+  * tvar lokace = maska chůze rozšířená o okolí, vyříznutá z obrázku lokace (lehká sépie, jemný tmavý lem). Venkovní mapy berou jen část viditelnou na telefonu;
+  * **souvislý terén** (`zone/bg.png`): každý bod ostrova patří nejbližší lokaci a má její terén. Terén je zrcadlově dlaždicovaný výřez z obrázku lokace: pod Hvozdem les, pod horami skalní stěna, pod doly a jeskyněmi (zesvětlená) hornina. Hranice terénů jsou rozeklané šumem a pixelově promíchané. Kolem je moře s pobřežím; tajný háj terén neprozradí;
+  * mapa vyplní celou stránku a záložky zón leží přes ni vlevo nahoře;
   * vchody a východy leží na mapě přesně tam, kde jsou uzly ve hře. Spoje vedou jako čárkované křivky: z každého konce vyjedou směrem, kterým se z lokace odchází;
   * `zone1.json` nese obdélníky, převod pozice ve hře na plátno, spoje, pozice NPC a jmen. `ZoneOneTest` hlídá, že souřadnice sedí s `BiomeRegistry` a `CaveMap`;
   * **hlavy NPC** jsou kulaté odznaky na místě NPC: Gudwin, keřík, král Mlsák, Mydrus, Vendelín, Elderan;

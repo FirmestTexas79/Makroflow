@@ -5,6 +5,8 @@ Použití:  python tools/mapgen/gen_zone.py [--preview out.png]
 Výstup:   app/src/main/assets/zone/<BIOME>.png  – výřez lokace ve tvaru chozeného území (maska chůze
                                                   rozšířená o okolí), inkoustový obrys, lehce do sépie
           app/src/main/assets/zone/head_<BIOME>.png – hlava NPC lokace (kulatý odznak kreslí aplikace)
+          app/src/main/assets/zone/bg.png       – souvislý terén pod celou zónou: pod lesem les, pod horami skály,
+                                                  pod doly hornina; kolem ostrova moře (1 px = 2 jednotky)
           app/src/main/assets/zone/zone1.json   – rozvržení v jednotkách plátna W × H: obdélníky lokací,
                                                   převod pozice v lokaci na plátno, spoje východ → vchod
 
@@ -14,7 +16,9 @@ jen viditelná část a souřadnice uzlů jsou podíly obrazovky (stejně jako v
 Souřadnice uzlů jsou opsané z Kotlinu – ZoneOneTest je ověřuje proti BiomeRegistry / CaveMap.
 """
 import json, math, os, sys
+import numpy as np
 from PIL import Image, ImageFilter, ImageDraw
+from scipy import ndimage
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, "..", "..")
@@ -23,7 +27,8 @@ ASSETS = os.path.join(ROOT, "app", "src", "main", "assets")
 OUT = os.path.join(ASSETS, "zone")
 PHONE = (1280, 2856)
 
-W, H = 940, 1260                   # plátno mapy (jednotky)
+MX, MY = 50, 40                     # okraj moře kolem ostrova (jednotky)
+W, H = 940 + 2 * MX, 1260 + 2 * MY  # plátno mapy (jednotky)
 UNIT_PX = 2.0                       # 1 px výřezu = 2 jednotky plátna
 INK = (74, 53, 32, 255)
 
@@ -75,6 +80,21 @@ LABEL = {
     "SKY_PASS": (822, 110),
 }
 LABEL_SIZE = 30
+# název zóny s větrnou růžicí (střed růžice) – na moři vpravo dole
+TITLE = (745, 1110)
+
+# terén pod lokací: výřez obrázku lokace (x, y, š, v px), který se dlaždicuje zrcadlením.
+# Bez záznamu = největší čtverec obrázku daleko od chozeného území (stromy, skály, hornina).
+TEX = {
+    "TOWN": (0, 400, 100, 200),          # stromy vlevo dole
+    "MEADOW": (0, 1110, 500, 420),       # les v dolní části louky
+    "MOUNTAINS": (598, 560, 90, 240),    # skalní stěna vpravo
+    "SKY_PASS": (0, 250, 55, 180),       # sutě se sněhem
+}
+# tmavé jeskynní horniny by na mapě splynuly v černou díru – zesvětlit
+TEX_GAIN = {"CAVE_MAZE": (2.6, 22), "CAVE_OPEN": (2.3, 22), "MINES": (2.6, 22)}   # (násobek, posun)
+SEA = (61, 125, 181); SEA_LIGHT = (111, 165, 212); FOAM = (205, 232, 245)
+SAND = (232, 212, 154); SAND_DARK = (196, 170, 112)
 
 NPC = {"TOWN": "gudwin", "MEADOW": "meadow_npc", "MOUNTAINS": "kral_mlsak", "FOREST": "mytina",
        "MINES": "vendelin", "HIDDEN_GROVE": "oltar"}
@@ -123,7 +143,34 @@ def node_img(biome, node, iw, ih, outdoor):
     return vx0 + x * (vx1 - vx0), vy0 + y * (vy1 - vy0)
 
 
+def sepia(img):
+    """Lehká sépie – mapa v deníku, ne fotka lokace."""
+    a = np.asarray(img.convert("RGBA")).astype(np.float32)
+    l = (a[..., 0] * 30 + a[..., 1] * 59 + a[..., 2] * 11) / 100
+    sep = np.stack([np.minimum(255, l + 38), np.minimum(255, l + 22), np.maximum(0, l - 6)], -1)
+    a[..., :3] = a[..., :3] * 0.72 + sep * 0.28
+    return Image.fromarray(np.round(a).astype(np.uint8), "RGBA")
+
+
+def texture_rect(biome, grid, cell, vis_box):
+    if biome in TEX: return TEX[biome]
+    g = np.array(grid)
+    far = ndimage.distance_transform_edt(~g)
+    vx0, vy0, vx1, vy1 = vis_box
+    ys, xs = np.mgrid[0:g.shape[0], 0:g.shape[1]]
+    ok = (far >= 3) & (xs * cell >= vx0) & ((xs + 1) * cell <= vx1) & (ys * cell >= vy0) & ((ys + 1) * cell <= vy1)
+    h, w = ok.shape; dp = np.zeros((h + 1, w + 1), int); best = (0, 0, 0)
+    for y in range(h):
+        for x in range(w):
+            if ok[y, x]:
+                dp[y + 1, x + 1] = 1 + min(dp[y, x + 1], dp[y + 1, x], dp[y, x])
+                if dp[y + 1, x + 1] > best[0]: best = (dp[y + 1, x + 1], y, x)
+    n, y, x = best
+    return ((x - n + 1) * cell, (y - n + 1) * cell, n * cell, n * cell)
+
+
 def build(biome, spec):
+    spec = dict(spec, x=2 * round((spec["x"] + MX) / 2), y=2 * round((spec["y"] + MY) / 2))   # sudé = celé px pozadí
     src = Image.open(find_res(spec["img"])).convert("RGBA")
     iw, ih, cell, grid = walk_grid(biome)
     assert src.size == (iw, ih), (biome, src.size, iw, ih)
@@ -149,23 +196,15 @@ def build(biome, spec):
     crop = (bx0, by0, bx1, by1)
     th = max(8, round(spec["h"] / UNIT_PX))
     tw = max(8, round(th * (bx1 - bx0) / (by1 - by0)))
-    img = src.crop(crop).resize((tw, th), Image.LANCZOS)
+    img = sepia(src.crop(crop).resize((tw, th), Image.LANCZOS))
     m = mask.crop(crop).resize((tw, th), Image.BOX).point(lambda v: 255 if v >= 128 else 0)
     m = m.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.MinFilter(3))     # zahladit zoubky
-    # lehká sépie – mapa v deníku, ne fotka lokace
-    px = img.load()
-    for yy in range(th):
-        for xx in range(tw):
-            rr, gg, bb, aa = px[xx, yy]
-            l = (rr * 30 + gg * 59 + bb * 11) // 100
-            sr, sg, sb = min(255, l + 38), min(255, l + 22), max(0, l - 6)
-            k = 0.28
-            px[xx, yy] = (round(rr * (1 - k) + sr * k), round(gg * (1 - k) + sg * k), round(bb * (1 - k) + sb * k), 255)
     pad = 2
     out = Image.new("RGBA", (tw + 2 * pad, th + 2 * pad), (0, 0, 0, 0))
     mm = Image.new("L", out.size, 0); mm.paste(m, (pad, pad))
+    # jemný tmavý lem – lokace navazuje na terén, ale její tvar je pořád čitelný
     ring = mm.filter(ImageFilter.MaxFilter(3))
-    out.paste(Image.new("RGBA", out.size, INK), (0, 0), ring)
+    out.paste(Image.new("RGBA", out.size, (24, 16, 8, 120)), (0, 0), ring)
     body = Image.new("RGBA", out.size, (0, 0, 0, 0)); body.paste(img, (pad, pad))
     out.paste(body, (0, 0), mm)
     os.makedirs(OUT, exist_ok=True)
@@ -178,7 +217,11 @@ def build(biome, spec):
     fw, fh = (vx1 - vx0), (vy1 - vy0)
     tr = [ox + vx0 * sx, fw * sx, oy + vy0 * sy, fh * sy]
     rect = [spec["x"], spec["y"], out.width * UNIT_PX, out.height * UNIT_PX]
-    return dict(rect=rect, map=[round(v, 2) for v in tr], img=(iw, ih), outdoor=spec["outdoor"]), (ox, oy, sx, sy)
+    tx, ty, tw_, th_ = texture_rect(biome, grid, cell, (vx0, vy0, vx1, vy1))
+    k = tw / (bx1 - bx0)                                   # px výřezu na px obrázku
+    tex = sepia(src.crop((tx, ty, tx + tw_, ty + th_)).resize((max(2, round(tw_ * k)), max(2, round(th_ * k))), Image.LANCZOS))
+    return dict(rect=rect, map=[round(v, 2) for v in tr], img=(iw, ih), outdoor=spec["outdoor"],
+                mask=np.asarray(mm) > 0, tex=np.asarray(tex)[..., :3]), (ox, oy, sx, sy)
 
 
 def to_canvas(t, biome, node, info):
@@ -203,6 +246,89 @@ def head(biome):
     im.save(os.path.join(OUT, "head_" + biome + ".png"), optimize=True)
 
 
+def bezier(l, n=60):
+    p0 = l["aPos"]; p3 = l["bPos"]
+    k = max(60, 0.45 * math.dist(p0, p3))
+    dv = dict(n=(0, -1), s=(0, 1), e=(1, 0), w=(-1, 0))
+    p1 = (p0[0] + dv[l["aDir"]][0] * k, p0[1] + dv[l["aDir"]][1] * k)
+    p2 = (p3[0] + dv[l["bDir"]][0] * k, p3[1] + dv[l["bDir"]][1] * k)
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        pts.append(((1-t)**3*p0[0] + 3*(1-t)**2*t*p1[0] + 3*(1-t)*t*t*p2[0] + t**3*p3[0],
+                    (1-t)**3*p0[1] + 3*(1-t)**2*t*p1[1] + 3*(1-t)*t*t*p2[1] + t**3*p3[1]))
+    return pts
+
+
+def noise(rng, h, w, cell, amp):
+    """Hladký šum (hodnotový, bikubicky zvětšený) v rozsahu ±amp."""
+    g = rng.random((h // cell + 3, w // cell + 3)).astype(np.float32)
+    im = Image.fromarray((g * 255).astype(np.uint8)).resize(((w // cell + 3) * cell, (h // cell + 3) * cell), Image.BICUBIC)
+    return (np.asarray(im)[:h, :w].astype(np.float32) / 255 - 0.5) * 2 * amp
+
+
+def tile(tex, h, w):
+    """Dlaždice přes celé pozadí; zrcadlení skryje švy."""
+    th, tw = tex.shape[:2]
+    ys = np.arange(h) % (2 * th); ys = np.where(ys >= th, 2 * th - 1 - ys, ys)
+    xs = np.arange(w) % (2 * tw); xs = np.where(xs >= tw, 2 * tw - 1 - xs, xs)
+    return tex[ys][:, xs]
+
+
+def background(locs, links):
+    """Souvislý terén pod celou zónou: každý px patří nejbližší lokaci a má její terén."""
+    bw, bh = int(W / UNIT_PX), int(H / UNIT_PX)
+    rng = np.random.default_rng(52)
+    ids = [b for b in locs if b not in SECRET_BG]            # tajné místo se na terénu neprozradí
+    dist = np.empty((len(ids), bh, bw), np.float32)
+    for i, b in enumerate(ids):
+        m = np.zeros((bh, bw), bool)
+        x0 = int(locs[b]["rect"][0] / UNIT_PX); y0 = int(locs[b]["rect"][1] / UNIT_PX)
+        mk = locs[b]["mask"]
+        m[y0:y0 + mk.shape[0], x0:x0 + mk.shape[1]] = mk[:bh - y0, :bw - x0]
+        dist[i] = ndimage.distance_transform_edt(~m) + noise(rng, bh, bw, 18, 12) + noise(rng, bh, bw, 6, 3)
+    order = np.argsort(dist, 0)
+    first = order[0]; second = order[1]
+    d1 = np.take_along_axis(dist, order[:1], 0)[0]; d2 = np.take_along_axis(dist, order[1:2], 0)[0]
+    # na hranici terénů pixelové promíchání (dithering) místo ostré čáry
+    gap = d2 - d1
+    swap = (gap < 4) & (rng.random((bh, bw)) < 0.5 * (1 - gap / 4))
+    owner = np.where(swap, second, first)
+    out = np.zeros((bh, bw, 3), np.float32)
+    for i, b in enumerate(ids):
+        gain, lift = TEX_GAIN.get(b, (1.0, 0))
+        t = tile(locs[b]["tex"], bh, bw).astype(np.float32) * gain + lift
+        out[owner == i] = t[owner == i]
+    # souš = okolí lokací a cest mezi nimi, s rozeklaným pobřežím
+    path = np.ones((bh, bw), bool)
+    for l in links:
+        for x, y in bezier(l, 90):
+            xi, yi = int(x / UNIT_PX), int(y / UNIT_PX)
+            if 0 <= xi < bw and 0 <= yi < bh: path[yi, xi] = False
+    dpath = ndimage.distance_transform_edt(path)
+    land = (d1 < 26 + noise(rng, bh, bw, 26, 12) + noise(rng, bh, bw, 8, 3)) | (dpath < 12 + noise(rng, bh, bw, 10, 4))
+    land = ndimage.binary_closing(land, iterations=3)
+    land = ndimage.binary_fill_holes(land)
+    # čím dál od lokace, tím tmavší (hloubka), aby lokace vystoupily
+    shade = np.clip(1.0 - np.clip(d1, 0, 40) / 40 * 0.22, 0.78, 1.0)[..., None]
+    out = out * 0.9 * shade
+    dsea = ndimage.distance_transform_edt(land)          # vzdálenost souše od moře
+    dland = ndimage.distance_transform_edt(~land)        # vzdálenost moře od souše
+    sea = np.zeros_like(out); sea[:] = SEA
+    waves = (rng.random((bh, bw)) < 0.012)
+    waves = ndimage.binary_dilation(waves, structure=np.ones((1, 4), bool))
+    sea[waves & (dland > 3)] = SEA_LIGHT
+    sea[(dland > 0) & (dland <= 1.5)] = FOAM
+    sea[(dland > 1.5) & (dland <= 3)] = SEA_LIGHT
+    out[~land] = sea[~land]
+    out[land & (dsea <= 1.5)] = SAND_DARK
+    out[land & (dsea > 1.5) & (dsea <= 3.5)] = SAND
+    Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), "RGB").save(os.path.join(OUT, "bg.png"), optimize=True)
+
+
+SECRET_BG = {"HIDDEN_GROVE"}
+
+
 def main(preview=None):
     locs, tf = {}, {}
     for b, spec in LOC.items():
@@ -215,8 +341,10 @@ def main(preview=None):
                           secret=secret))
     npcs = {b: dict(node=n, pos=to_canvas(tf[b], b, n, locs[b]), frac=frac(b, n, locs[b])) for b, n in NPC.items()}
     for b in HEADS: head(b)
-    data = dict(w=W, h=H, labelSize=LABEL_SIZE,
-                locations={b: dict(rect=[round(v, 1) for v in i["rect"]], map=i["map"], label=list(LABEL[b])) for b, i in locs.items()},
+    background(locs, [l for l in links if not l["secret"]])
+    data = dict(w=W, h=H, labelSize=LABEL_SIZE, title=[TITLE[0] + MX, TITLE[1] + MY],
+                locations={b: dict(rect=[round(v, 1) for v in i["rect"]], map=i["map"],
+                                   label=[LABEL[b][0] + MX, LABEL[b][1] + MY]) for b, i in locs.items()},
                 links=links, npcs=npcs)
     json.dump(data, open(os.path.join(OUT, "zone1.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     print("zóna 1:", ", ".join(f"{b} {int(i['rect'][2])}×{int(i['rect'][3])}" for b, i in locs.items()))
@@ -226,33 +354,25 @@ def main(preview=None):
 def render_preview(d, path):
     """Náhled rozvržení (jen kontrola – aplikace kreslí sama)."""
     s = 0.6
-    im = Image.new("RGBA", (int(d["w"] * s), int(d["h"] * s)), (236, 220, 184, 255))
+    im = Image.open(os.path.join(OUT, "bg.png")).convert("RGBA").resize((int(d["w"] * s), int(d["h"] * s)), Image.NEAREST)
     dr = ImageDraw.Draw(im)
-    def bez(l):
-        p0 = l["aPos"]; p3 = l["bPos"]
-        k = max(60, 0.45 * math.dist(p0, p3))
-        dv = dict(n=(0, -1), s=(0, 1), e=(1, 0), w=(-1, 0))
-        p1 = (p0[0] + dv[l["aDir"]][0] * k, p0[1] + dv[l["aDir"]][1] * k)
-        p2 = (p3[0] + dv[l["bDir"]][0] * k, p3[1] + dv[l["bDir"]][1] * k)
-        pts = []
-        for i in range(41):
-            t = i / 40
-            x = (1-t)**3*p0[0] + 3*(1-t)**2*t*p1[0] + 3*(1-t)*t*t*p2[0] + t**3*p3[0]
-            y = (1-t)**3*p0[1] + 3*(1-t)**2*t*p1[1] + 3*(1-t)*t*t*p2[1] + t**3*p3[1]
-            pts.append((x * s, y * s))
-        return pts
     for l in d["links"]:
-        pts = bez(l)
-        for i in range(0, len(pts) - 1, 2): dr.line([pts[i], pts[i + 1]], fill=(120, 40, 30, 255), width=3)
+        if l["secret"]: continue
+        pts = [(x * s, y * s) for x, y in bezier(l, 40)]
+        dr.line(pts, fill=(40, 26, 14, 255), width=5)
+        for i in range(0, len(pts) - 1, 2): dr.line([pts[i], pts[i + 1]], fill=(246, 232, 196, 255), width=2)
     for b, loc in d["locations"].items():
+        if b in SECRET_BG: continue
         t = Image.open(os.path.join(OUT, b + ".png"))
         x, y, w, h = loc["rect"]
         t = t.resize((max(1, int(w * s)), max(1, int(h * s))), Image.NEAREST)
         im.alpha_composite(t, (int(x * s), int(y * s)))
     for l in d["links"]:
+        if l["secret"]: continue
         for p in (l["aPos"], l["bPos"]):
             dr.ellipse([p[0] * s - 5, p[1] * s - 5, p[0] * s + 5, p[1] * s + 5], fill=(250, 240, 200, 255), outline=(120, 40, 30, 255), width=2)
     for b, n in d["npcs"].items():
+        if b in SECRET_BG: continue
         hx, hy = n["pos"]
         hd = Image.open(os.path.join(OUT, "head_" + b + ".png")).resize((34, 34))
         dr.ellipse([hx * s - 19, hy * s - 19, hx * s + 19, hy * s + 19], fill=(250, 240, 200, 255), outline=INK, width=2)
@@ -262,6 +382,7 @@ def render_preview(d, path):
     names = {"TOWN": "Město", "MEADOW": "Louka", "FOREST": "Hvozd", "HIDDEN_GROVE": "Zapomenutý háj", "MOUNTAINS": "Hory",
              "CAVE_MAZE": "Starý důl", "MINES": "Doly", "CAVE_OPEN": "Mechová jeskyně", "SKY_PASS": "Nebeský průsmyk"}
     for b, loc in d["locations"].items():
+        if b in SECRET_BG: continue
         x, y = loc["label"]
         dr.text((x * s, y * s), names[b], font=font, fill=INK, anchor="ms", stroke_width=2, stroke_fill=(236, 220, 184, 255))
     im.save(path)
