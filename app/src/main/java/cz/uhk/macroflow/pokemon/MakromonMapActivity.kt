@@ -1324,22 +1324,29 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun placeVendelin() {
         if (worldScale <= 0) return
         val s = worldScale.toFloat()
-        // velikost vůči postavě hráče (~8 art px): Vendelín je o hlavu vyšší portrét
-        val size = (13 * s).toInt()
-        val glow = glowView((18 * s).toInt(), 0xFFFFC04A.toInt(), 0x66).apply {
-            x = (Vendelin.X - 4) * s - 9 * s; y = (Vendelin.Y - 9) * s - 9 * s; elevation = 1.9f
+        // kostlivý havíř ve stylu postav Sunnyside (docs/adr/0051): 1 px spritu = 1 art px mapy,
+        // 4 snímky idle (nadechnutí, plamen v kahanu, žhnutí v důlcích, jiskřivka kolem kahanu)
+        val sheet = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.npc_vendelin_map,
+            android.graphics.BitmapFactory.Options().apply { inScaled = false })
+        val fw = sheet.width / 4; val fh = sheet.height
+        val frames = (0 until 4).map { k ->
+            android.graphics.drawable.BitmapDrawable(resources, android.graphics.Bitmap.createBitmap(sheet, k * fw, 0, fw, fh)).apply { isFilterBitmap = false }
+        }
+        val glow = glowView((22 * s).toInt(), 0xFFFFC04A.toInt(), 0x77).apply {
+            x = (Vendelin.X - fw / 2 + 3) * s - 11 * s; y = (Vendelin.Y - fh + 20) * s - 11 * s; elevation = 1.9f
         }
         val npc = ImageView(this).apply {
-            layoutParams = FrameLayout.LayoutParams(size, size)
-            setImageResource(R.drawable.npc_vendelin)
-            (drawable as? android.graphics.drawable.BitmapDrawable)?.isFilterBitmap = false
+            layoutParams = FrameLayout.LayoutParams((fw * s).toInt(), (fh * s).toInt())
+            setImageDrawable(frames[0])
             scaleType = ImageView.ScaleType.FIT_XY
-            x = Vendelin.X * s - size / 2f; y = Vendelin.Y * s - size; elevation = 2f
-            pivotY = size.toFloat()
+            x = (Vendelin.X - fw / 2) * s; y = (Vendelin.Y - fh + 1) * s; elevation = 2f
         }
         addDecor(glow); addDecor(npc)
-        crystalAnimators += android.animation.ObjectAnimator.ofFloat(npc, "scaleY", 1f, 1.03f, 1f).apply {
-            duration = 2200; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        crystalAnimators += android.animation.ValueAnimator.ofInt(0, 4).apply {
+            duration = 1000; repeatCount = android.animation.ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { npc.setImageDrawable(frames[(it.animatedValue as Int).coerceIn(0, 3)]) }
+            start()
         }
         crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.5f, 1f, 0.6f, 0.9f, 0.5f).apply {
             duration = 1900; repeatCount = android.animation.ValueAnimator.INFINITE; start()
