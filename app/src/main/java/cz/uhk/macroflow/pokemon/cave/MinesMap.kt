@@ -80,7 +80,7 @@ object MinesMap {
             MAGMA_NODE to Triple(MAGMA_X, MAGMA_Y, 11),
             NET_NODE to Triple(120, 476, 10),
             DOOR_NODE to Triple(75, 110, 12),
-            cz.uhk.macroflow.pokemon.story.Vendelin.NODE to Triple(cz.uhk.macroflow.pokemon.story.Vendelin.X, cz.uhk.macroflow.pokemon.story.Vendelin.Y - 14, 13),
+            cz.uhk.macroflow.pokemon.story.Vendelin.NODE to Triple(cz.uhk.macroflow.pokemon.story.Vendelin.X, cz.uhk.macroflow.pokemon.story.Vendelin.Y - 10, 11),
             cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_NODE to Triple(cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_X, cz.uhk.macroflow.pokemon.story.Vendelin.BOOK_Y, 7)
         )
     )

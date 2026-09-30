@@ -261,13 +261,8 @@ object JournalPages {
 
     /** Trenér z mapy (sprite postavy bez oranžového pozadí). */
     private fun portrait(v: View): Bitmap? {
-        val d = ContextCompat.getDrawable(v.context, R.drawable.ash_down_idle) as? BitmapDrawable ?: return null
-        val src = d.bitmap
-        val px = IntArray(src.width * src.height)
-        src.getPixels(px, 0, src.width, 0, 0, src.width, src.height)
-        val key = Color.parseColor("#FF7F27")
-        for (i in px.indices) if (px[i] == key) px[i] = Color.TRANSPARENT
-        return Bitmap.createBitmap(px, src.width, src.height, Bitmap.Config.ARGB_8888)
+        // postava ze Sunnyside World (docs/adr/0051) – první snímek stání dolů
+        return runCatching { cz.uhk.macroflow.pokemon.HeroSprite(v.context).portrait() }.getOrNull()
     }
 
     // ── Suroviny ────────────────────────────────────────────────────────────

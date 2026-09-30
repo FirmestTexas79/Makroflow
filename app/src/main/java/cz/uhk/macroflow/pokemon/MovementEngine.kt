@@ -26,9 +26,58 @@ class MovementEngine(
     companion object {
         const val NORMAL_SPEED = 3L
         const val FAST_SPEED = 1L
-        private const val ANIM_FRAME_MS = 110L
-        private val TRANSPARENT_TARGET = Color.parseColor("#FF7F27")
+        /** Jak často se kontroluje snímek animace postavy. */
+        private const val TICK_MS = 33L
     }
+
+    // ── Postava ze Sunnyside World (docs/adr/0051): 8 směrů pohybu + animace práce ──
+    val hero = HeroSprite(context)
+    private var anim = "idle"
+    private var dir8 = "s"
+    private var animStart = android.os.SystemClock.uptimeMillis()
+    private var shownFrame: android.graphics.drawable.Drawable? = null
+    private val animHandler = Handler(Looper.getMainLooper())
+    private val animTick = object : Runnable {
+        override fun run() {
+            drawHero()
+            animHandler.postDelayed(this, TICK_MS)
+        }
+    }
+
+    init { animHandler.post(animTick) }
+
+    /** Nastaví animaci; když je stejná, běží dál (nezačíná znovu od prvního snímku). */
+    private fun setAnim(a: String, d: String = dir8) {
+        if (a == anim && d == dir8) return
+        anim = a; dir8 = d
+        animStart = android.os.SystemClock.uptimeMillis()
+        drawHero()
+    }
+
+    private fun drawHero() {
+        // za chůze podle rychlosti: dvojklik = běh
+        val a = if (isWalking) (if (currentSpeed == FAST_SPEED) "run" else "walk") else anim
+        val key = cz.uhk.macroflow.pokemon.walk.HeroAnims.key(a, dir8)
+        val frames = hero.frames(key)
+        if (frames.isEmpty()) return
+        val i = cz.uhk.macroflow.pokemon.walk.HeroAnims.frameAt(hero.durations(key), android.os.SystemClock.uptimeMillis() - animStart)
+        val f = frames[i.coerceIn(0, frames.lastIndex)]
+        if (f !== shownFrame) { shownFrame = f; ashView.setImageDrawable(f) }
+    }
+
+    /** Práce u sběrného místa (sekání, kopání, chytání) – běží ve smyčce, dokud postava nevyrazí. */
+    fun playAction(action: String, faceRight: Boolean) {
+        if (isWalking) return
+        setAnim(action, if (faceRight) "e" else "w")
+    }
+
+    /** Zastaví práci (postava zase jen stojí). */
+    fun stopAction() {
+        if (!isWalking && anim !in cz.uhk.macroflow.pokemon.walk.HeroAnims.MOVE) setAnim("idle")
+    }
+
+    /** Uvolní časovač animace (při zničení mapy). */
+    fun release() { animHandler.removeCallbacksAndMessages(null) }
 
     data class Waypoint(val id: String, val pos: PointF, val neighbors: List<String>)
 
@@ -176,6 +225,7 @@ class MovementEngine(
         val dx = targetX - ashView.x
         val dy = targetY - ashView.y
         currentDirection = WalkDirection.of(dx, dy, currentDirection)
+        dir8 = cz.uhk.macroflow.pokemon.walk.HeroAnims.dir8(dx, dy, dir8)
         val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
 
         ashView.animate().cancel()
@@ -210,7 +260,7 @@ class MovementEngine(
         handler.removeCallbacksAndMessages(null)
         // Na konci se postava otočí k hráči (dolů)
         currentDirection = WalkDirection.DOWN
-        updateSprite(1, WalkDirection.DOWN)
+        setAnim("idle", "s")
         val done = pendingFinish
         pendingFinish = null
         done?.invoke()
@@ -249,25 +299,17 @@ class MovementEngine(
     private fun getDistance(p1: PointF, p2: PointF): Float =
         sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y))
 
+    /** Chůze: animaci řídí [drawHero] (walk / run podle rychlosti). */
     private fun startAnimationLoop() {
         handler.removeCallbacksAndMessages(null)
-        val runnable = object : Runnable {
-            override fun run() {
-                if (!isWalking) return
-                // Rychlá chůze = rychlejší kroky
-                val frame = if (currentSpeed == FAST_SPEED) ANIM_FRAME_MS / 2 else ANIM_FRAME_MS
-                updateSprite(if (System.currentTimeMillis() % (frame * 4) < frame * 2) 0 else 2, currentDirection)
-                handler.postDelayed(this, frame)
-            }
-        }
-        handler.post(runnable)
+        setAnim("walk")
     }
 
     /** Otočí stojící postavu (např. čelem ke stromu při kácení). */
     fun face(direction: Int) {
         if (isWalking) return
         currentDirection = direction
-        updateSprite(1, direction)
+        setAnim("idle", cz.uhk.macroflow.pokemon.walk.HeroAnims.fromFacing(direction))
     }
 
     fun resetToPosition(relPos: PointF) {
@@ -275,35 +317,9 @@ class MovementEngine(
         mapBackground.post {
             ashView.x = relPos.x * mapBackground.width - (ashView.width / 2f)
             ashView.y = relPos.y * mapBackground.height - ashView.height.toFloat()
-            updateSprite(1, 0)
+            setAnim("idle", "s")
             onMoved?.invoke()
         }
-    }
-
-    /** Snímky postavy s odstraněným pozadím – dřív se dekódovaly a přebarvovaly každých 110 ms (záseky GC). */
-    private val spriteCache = HashMap<Int, Bitmap?>()
-    private var shownSprite = 0
-
-    private fun updateSprite(step: Int, direction: Int) {
-        val dirKey = when (direction) { 0 -> "down"; 1 -> "up"; 2 -> "left"; 3 -> "right"; else -> "down" }
-        val suffix = when (step) { 1 -> "idle"; 0 -> "1"; else -> "2" }
-        val resId = context.resources.getIdentifier("ash_${dirKey}_$suffix", "drawable", context.packageName)
-        if (resId == 0 || resId == shownSprite) return
-        val bmp = spriteCache.getOrPut(resId) {
-            ContextCompat.getDrawable(context, resId)?.let { removeBackground(it, TRANSPARENT_TARGET) }
-        } ?: return
-        shownSprite = resId
-        ashView.setImageBitmap(bmp)
-    }
-
-    private fun removeBackground(drawable: android.graphics.drawable.Drawable, color: Int): Bitmap? {
-        val bitmap = (drawable as? BitmapDrawable)?.bitmap?.copy(Bitmap.Config.ARGB_8888, true) ?: return null
-        val pixels = IntArray(bitmap.width * bitmap.height)
-        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        for (i in pixels.indices) if (pixels[i] == color) pixels[i] = Color.TRANSPARENT
-        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-        result.setPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        return result
     }
 
     fun cancel() {
@@ -314,5 +330,6 @@ class MovementEngine(
         currentTarget = null
         pendingFinish = null
         handler.removeCallbacksAndMessages(null)
+        if (anim == "walk" || anim == "run") setAnim("idle")
     }
 }

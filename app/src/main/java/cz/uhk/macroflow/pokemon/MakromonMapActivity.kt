@@ -133,9 +133,13 @@ class MakromonMapActivity : AppCompatActivity() {
         mapWorld = findViewById(R.id.mapWorld)
         stepProgressBar = findViewById(R.id.stepProgressBar)
 
+        // Postava ze Sunnyside World (docs/adr/0051): snímek 64 × 40 px, 1 px spritu = 2 dp
+        // (celé zařízení px, ať jsou pixely ostré); pata je u spodní hrany
         ashView = findViewById<ImageView>(R.id.ashView).also {
-            it.layoutParams.width  = (28 * resources.displayMetrics.density).toInt()
-            it.layoutParams.height = (42 * resources.displayMetrics.density).toInt()
+            val p = kotlin.math.max(1, kotlin.math.round(2 * resources.displayMetrics.density).toInt())
+            it.layoutParams.width  = 64 * p
+            it.layoutParams.height = 40 * p
+            it.scaleType = ImageView.ScaleType.FIT_XY
             it.requestLayout()
         }
 
@@ -418,6 +422,7 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (::movementEngine.isInitialized) movementEngine.release()
         cz.uhk.macroflow.pokemon.audio.GameAudio.release()
         gamePrefs.unregisterOnSharedPreferenceChangeListener(companionPrefsListener)
         super.onDestroy()
@@ -1332,14 +1337,17 @@ class MakromonMapActivity : AppCompatActivity() {
         val frames = (0 until 4).map { k ->
             android.graphics.drawable.BitmapDrawable(resources, android.graphics.Bitmap.createBitmap(sheet, k * fw, 0, fw, fh)).apply { isFilterBitmap = false }
         }
-        val glow = glowView((22 * s).toInt(), 0xFFFFC04A.toInt(), 0x77).apply {
-            x = (Vendelin.X - fw / 2 + 3) * s - 11 * s; y = (Vendelin.Y - fh + 20) * s - 11 * s; elevation = 1.9f
+        // o čtvrtinu menší než art px mapy (celé px zařízení, ať jsou pixely ostré)
+        val p = kotlin.math.max(1, (worldScale * 0.72f).toInt()).toFloat()
+        val left = Vendelin.X * s - fw * p / 2f; val top = (Vendelin.Y + 1) * s - fh * p
+        val glow = glowView((18 * s).toInt(), 0xFFFFC04A.toInt(), 0x77).apply {
+            x = left + 3 * p - 9 * s; y = top + 20 * p - 9 * s; elevation = 1.9f
         }
         val npc = ImageView(this).apply {
-            layoutParams = FrameLayout.LayoutParams((fw * s).toInt(), (fh * s).toInt())
+            layoutParams = FrameLayout.LayoutParams((fw * p).toInt(), (fh * p).toInt())
             setImageDrawable(frames[0])
             scaleType = ImageView.ScaleType.FIT_XY
-            x = (Vendelin.X - fw / 2) * s; y = (Vendelin.Y - fh + 1) * s; elevation = 2f
+            x = left; y = top; elevation = 2f
         }
         addDecor(glow); addDecor(npc)
         crystalAnimators += android.animation.ValueAnimator.ofInt(0, 4).apply {
@@ -1598,12 +1606,25 @@ class MakromonMapActivity : AppCompatActivity() {
                 v.visibility = if (on) View.VISIBLE else View.GONE
                 if (on) { v.secPerUnit = info!!.second!!; v.capHours = info.third; v.activity = info.first }
             }
-            // stojí u místa, kde těží → čelem k němu
-            if (info != null && info.first.spot.biome == currentBiome.name) {
-                val node = BiomeRegistry.definition(currentBiome)?.graph?.find { it.id == info.first.spot.node }
+            // stojí u místa, kde pracuje → seká / kope / chytá čelem k němu (docs/adr/0051)
+            var working = false
+            if (info != null && info.second != null && info.first.spot.biome == currentBiome.name) {
+                val spot = info.first.spot
+                val node = BiomeRegistry.definition(currentBiome)?.graph?.find { it.id == spot.node }
                 val pos = movementEngine.getCurrentPosition()
-                if (node != null && kotlin.math.hypot(node.pos.x - pos.x, node.pos.y - pos.y) < 0.05f) movementEngine.face(1)
+                if (node != null && kotlin.math.hypot(node.pos.x - pos.x, node.pos.y - pos.y) < 0.05f) {
+                    val place = cz.uhk.macroflow.pokemon.skills.GatherLayout.PLACES[spot]
+                    val (iw, ih) = cz.uhk.macroflow.pokemon.skills.GatherLayout.imageSize(currentBiome.name)
+                    val spotX = place?.let {
+                        cz.uhk.macroflow.pokemon.walk.MapGeometry(iw, ih, mapWorld.width, mapWorld.height)
+                            .toWorld(cz.uhk.macroflow.pokemon.walk.Pt(it.baseX.toFloat(), it.baseY.toFloat())).x
+                    } ?: (ashView.x + ashView.width / 2f)
+                    val faceRight = spotX >= ashView.x + ashView.width / 2f
+                    movementEngine.playAction(cz.uhk.macroflow.pokemon.walk.HeroAnims.actionFor(spot.skill.id), faceRight)
+                    working = true
+                }
             }
+            if (!working) movementEngine.stopAction()
         }
     }
 
