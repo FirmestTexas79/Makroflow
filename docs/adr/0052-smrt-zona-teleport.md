@@ -19,7 +19,7 @@
   * hráč se probudí na prahu domova ve městě (`prah_domova`).
   
   Příznak přežije i zavření aplikace a scéna se přehraje při dalším otevření mapy.
-* **Mapa Zóna 1** – nová záložka deníku. Rozvržení vyrábí `tools/mapgen/gen_zone.py`:
+* **Mapa Zóna 1** – nová záložka deníku **Mapa**. Na její stránce je vlevo svislý sloupec záložek zón jako „WORLD 1…7“ v Idleonu (zatím jen **Zóna 1**, vybraná je zelená) a vpravo mapa zóny. Rozvržení vyrábí `tools/mapgen/gen_zone.py`:
   * tvar lokace = maska chůze rozšířená o okolí, vyříznutá z obrázku lokace (lehká sépie, inkoustový obrys). Venkovní mapy berou jen část viditelnou na telefonu;
   * vchody a východy leží na mapě přesně tam, kde jsou uzly ve hře. Spoje vedou jako čárkované křivky: z každého konce vyjedou směrem, kterým se z lokace odchází;
   * `zone1.json` nese obdélníky, převod pozice ve hře na plátno, spoje, pozice NPC a jmen. `ZoneOneTest` hlídá, že souřadnice sedí s `BiomeRegistry` a `CaveMap`;

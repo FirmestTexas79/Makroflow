@@ -22,7 +22,7 @@
         android:clipToPadding="false"
         android:orientation="vertical">
 
-    <!-- záložky se posouvají do strany, když se na šířku nevejdou (Zóna 1, docs/adr/0052) -->
+    <!-- záložky se posouvají do strany, když se na šířku nevejdou (Mapa, docs/adr/0052) -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -118,7 +118,7 @@
             android:gravity="center"
             android:paddingHorizontal="8dp"
             android:paddingBottom="6dp"
-            android:text="Zóna 1"
+            android:text="Mapa"
             android:textColor="#FEFAE0"
             android:textSize="17sp" />
     </LinearLayout>
@@ -415,7 +415,7 @@
                     android:paddingBottom="24dp" />
             </ScrollView>
 
-            <!-- ZÓNA 1 (docs/adr/0052): mapa lokací, klepnutím teleport – plní QuestJournalFragment -->
+            <!-- MAPA (docs/adr/0052): záložky zón vlevo a mapa zóny, klepnutím teleport – plní QuestJournalFragment -->
             <FrameLayout
                 android:id="@+id/zonePage"
                 android:layout_width="0dp"

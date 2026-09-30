@@ -148,27 +148,67 @@ class QuestJournalFragment : Fragment() {
     private fun renderZone() {
         val act = activity as? MakromonMapActivity ?: return
         val page = rootView.findViewById<android.widget.FrameLayout>(R.id.zonePage)
-        val map = page.findViewWithTag<cz.uhk.macroflow.pokemon.zone.ZoneMapView>("zone_map")
-            ?: cz.uhk.macroflow.pokemon.zone.ZoneMapView(requireContext()).also { v ->
-                v.tag = "zone_map"
-                page.addView(v, android.widget.FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-                page.addView(TextView(requireContext()).apply {
-                    text = "Klepni na objevené místo\na přenes se tam."
-                    textSize = 13f
-                    setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.journal_ink))
-                    alpha = 0.75f
-                    gravity = android.view.Gravity.END
-                    typeface = androidx.core.content.res.ResourcesCompat.getFont(requireContext(), R.font.jersey_15)
-                }, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                    android.view.Gravity.BOTTOM or android.view.Gravity.END))
-            }
+        val map = page.findViewWithTag<cz.uhk.macroflow.pokemon.zone.ZoneMapView>("zone_map") ?: buildMapPage(page)
         val z = act.zoneState()
         map.current = z.current
         map.heroFrac = z.heroFrac
         map.heroHead = z.heroHead
         map.seen = z.seen
         map.onPick = { act.onZonePick(it) }
+    }
+
+    /**
+     * Záložka Mapa: vlevo svislý sloupec záložek zón (zatím jen Zóna 1), vpravo mapa vybrané zóny.
+     */
+    private fun buildMapPage(page: android.widget.FrameLayout): cz.uhk.macroflow.pokemon.zone.ZoneMapView {
+        val ctx = requireContext()
+        val dp = resources.displayMetrics.density
+        val font = androidx.core.content.res.ResourcesCompat.getFont(ctx, R.font.jersey_15)
+        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        val tabs = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(0, (6 * dp).toInt(), 0, 0) }
+        cz.uhk.macroflow.pokemon.zone.ZoneOne.ZONES.forEach { (title, selected) ->
+            tabs.addView(zoneTab(title, selected, font, dp), LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (34 * dp).toInt()).apply { bottomMargin = (6 * dp).toInt() })
+        }
+        row.addView(tabs, LinearLayout.LayoutParams((66 * dp).toInt(), ViewGroup.LayoutParams.MATCH_PARENT))
+        val mapFrame = android.widget.FrameLayout(ctx)
+        val map = cz.uhk.macroflow.pokemon.zone.ZoneMapView(ctx).apply { tag = "zone_map" }
+        mapFrame.addView(map, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        mapFrame.addView(TextView(ctx).apply {
+            text = "Klepni na objevené místo\na přenes se tam."
+            textSize = 13f
+            setTextColor(androidx.core.content.ContextCompat.getColor(ctx, R.color.journal_ink))
+            alpha = 0.75f
+            gravity = Gravity.END
+            typeface = font
+        }, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM or Gravity.END))
+        row.addView(mapFrame, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = (4 * dp).toInt() })
+        page.addView(row, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        return map
+    }
+
+    /** Záložka zóny jako ve starých RPG: rámeček s obrysem, vybraná je zelená, písmo s tmavým obrysem. */
+    private fun zoneTab(title: String, selected: Boolean, font: android.graphics.Typeface?, dp: Float) = TextView(requireContext()).apply {
+        text = title.uppercase()
+        typeface = font
+        textSize = 17f
+        gravity = Gravity.CENTER
+        includeFontPadding = false
+        setTextColor(if (selected) 0xFFF4FFE8.toInt() else 0xFF9FD3FF.toInt())
+        setShadowLayer(2.5f * dp, 0f, 0f, 0xFF10140C.toInt())
+        background = android.graphics.drawable.LayerDrawable(arrayOf(
+            android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 3 * dp
+                setColor(if (selected) 0xFF5FB54A.toInt() else 0xFF2C3440.toInt())
+                setStroke((2 * dp).toInt(), 0xFF1B1A14.toInt())
+            },
+            android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 2 * dp
+                setColor(0)
+                setStroke((1.5f * dp).toInt(), if (selected) 0xFFB9F09A.toInt() else 0xFF55657A.toInt())
+            }
+        )).apply { setLayerInset(1, (2.5f * dp).toInt(), (2.5f * dp).toInt(), (2.5f * dp).toInt(), (2.5f * dp).toInt()) }
     }
 
     // ── Postava a suroviny (docs/adr/0034) ──────────────────────────────────

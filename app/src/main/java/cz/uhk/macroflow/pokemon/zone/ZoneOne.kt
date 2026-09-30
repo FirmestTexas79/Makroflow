@@ -12,6 +12,9 @@ package cz.uhk.macroflow.pokemon.zone
 object ZoneOne {
     const val TITLE = "Zóna 1"
 
+    /** Záložky zón na stránce Mapa (název, vybraná) – další zóny přibydou sem. */
+    val ZONES = listOf(TITLE to true)
+
     /** Příznak objevené lokace (synchronizuje se se StoryFlags). */
     const val SEEN_PREFIX = "zone_seen_"
     fun seenKey(biome: String) = SEEN_PREFIX + biome

@@ -2532,7 +2532,8 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun cover(): View = cinemaCover ?: View(this).apply {
         setBackgroundColor(Color.BLACK); alpha = 0f; isClickable = true; isFocusable = true
         elevation = 400f
-        findViewById<FrameLayout>(R.id.mapRootContainer).addView(this,
+        // pozor: uvnitř apply je `this` nová View – kořen hledat na aktivitě
+        this@MakromonMapActivity.findViewById<FrameLayout>(R.id.mapRootContainer).addView(this,
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }.also { cinemaCover = it }
 
