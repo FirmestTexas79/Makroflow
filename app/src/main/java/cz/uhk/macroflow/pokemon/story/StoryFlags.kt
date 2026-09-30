@@ -15,6 +15,12 @@ object StoryFlags {
 
     fun isSet(ctx: Context, key: String): Boolean = prefs(ctx).getBoolean(key, false)
 
+    /** Všechny nastavené příznaky příběhu (pro Vhled a roztržené listy). */
+    fun all(ctx: Context): Set<String> = prefs(ctx).all.filter { (k, v) -> v == true && StoryProgress.isStoryKey(k) }.keys
+
+    /** Skrytý Vhled hráče (docs/adr/0047). */
+    fun insight(ctx: Context): Int = Insight.level(all(ctx))
+
     /** Nastaví příznak hned v GamePrefs; zápis do DB/Firebase běží na pozadí. */
     fun set(ctx: Context, key: String) {
         prefs(ctx).edit().putBoolean(key, true).apply()

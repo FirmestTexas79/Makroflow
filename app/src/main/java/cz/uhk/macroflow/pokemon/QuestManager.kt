@@ -54,7 +54,9 @@ class QuestManager(
     /** Kolik hráč vlastní daných předmětů (IO vlákno). */
     private val itemCounter: ((List<String>) -> Map<String, Int>)? = null,
     /** Odebere předměty, jen když má hráč všechny (IO vlákno); true = odevzdáno. */
-    private val itemConsumer: ((List<Pair<String, Int>>) -> Boolean)? = null
+    private val itemConsumer: ((List<Pair<String, Int>>) -> Boolean)? = null,
+    /** Vzácné zaváhání postavy při dalším oslovení (docs/adr/0047); null = nic. */
+    private val crackProvider: ((String) -> String?)? = null
 ) {
     private var activeQuest: QuestDefinition? = null
     private var currentProgress: QuestProgressEntity? = null
@@ -286,7 +288,9 @@ class QuestManager(
             }
             val speaker = if (quest.farewellSpeakerResId != 0)
                 lastStage.copy(speakerResId = quest.farewellSpeakerResId, speakerName = quest.farewellSpeakerName) else lastStage
-            showLine(quest, speaker, if (playerInitiated) "Hotovo" else "Splněno!", quest.farewell, quest.stages.size)
+            val crack = if (playerInitiated) crackProvider?.invoke(quest.id) else null
+            showLine(quest, speaker, if (playerInitiated) "Hotovo" else "Splněno!",
+                if (crack != null) crack + "\n\n" + quest.farewell else quest.farewell, quest.stages.size)
             return
         }
 
@@ -298,7 +302,7 @@ class QuestManager(
         }
         val introSeen = introSeenIndex(quest.id) >= progress.currentStageIndex
         var text = if (!playerInitiated || !introSeen) stage.text
-            else QuestProgression.reminder(stage, progress.metadata)
+            else (crackProvider?.invoke(quest.id)?.let { it + "\n\n" } ?: "") + QuestProgression.reminder(stage, progress.metadata)
         // odměna za předchozí fázi zazní jako první
         pendingRewardLine?.let { text = it + "\n\n" + stage.text; pendingRewardLine = null }
         markIntroSeen(quest.id, progress.currentStageIndex)

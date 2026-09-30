@@ -297,15 +297,18 @@ class InventoryFragment : Fragment() {
             val gear = cz.uhk.macroflow.pokemon.skills.Gear.from(item.itemId)
             val heart = item.itemId == cz.uhk.macroflow.pokemon.story.ForestHeart.ITEM_ID   // docs/adr/0045
             val diary = item.itemId == cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_ID   // docs/adr/0046
+            val pages = item.itemId == cz.uhk.macroflow.pokemon.story.Insight.PAGES_ITEM     // docs/adr/0047
             holder.tvName.text = ball?.label ?: med?.label ?: crystal?.label ?: resource?.label ?: gear?.label ?: when (item.itemId) {
                 cz.uhk.macroflow.pokemon.story.ForestHeart.ITEM_ID -> cz.uhk.macroflow.pokemon.story.ForestHeart.LABEL
                 cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_ID -> cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_LABEL
+                cz.uhk.macroflow.pokemon.story.Insight.PAGES_ITEM -> cz.uhk.macroflow.pokemon.story.Insight.PAGES_LABEL
                 "lure_lamp"  -> "Spooky Plate"
                 else         -> item.itemId
             }
 
             holder.tvQuantity.visibility = View.VISIBLE
-            holder.tvQuantity.text = if (crystal != null || heart) "Klíčový předmět · klepni pro popis" else if (diary) "Klíčový předmět · klepni a čti" else "Vlastníš: ${item.quantity} ks"
+            holder.tvQuantity.text = if (crystal != null || heart) "Klíčový předmět · klepni pro popis" else if (diary) "Klíčový předmět · klepni a čti"
+                else if (pages) "${item.quantity} ${if (item.quantity == 1) "list" else if (item.quantity < 5) "listy" else "listů"} · klepni a čti" else "Vlastníš: ${item.quantity} ks"
 
             // Itemy zatím stále načítají z URL – nemáme lokální drawable pro itemy
             val imageUrl = when (item.itemId) {
@@ -319,6 +322,10 @@ class InventoryFragment : Fragment() {
             } else if (resource != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(resource,
                     cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(resource), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM,
+                    (64 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (pages) {
+                holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(item.itemId,
+                    cz.uhk.macroflow.pokemon.story.Insight.pageIcon(), cz.uhk.macroflow.pokemon.story.Insight.ICON,
                     (64 * holder.itemView.resources.displayMetrics.density).toInt()))
             } else if (diary) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(item.itemId,
@@ -352,6 +359,26 @@ class InventoryFragment : Fragment() {
                 }
                 if (resource != null) {
                     Toast.makeText(requireContext(), "${resource.label}: ${resource.description}", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                if (pages) {
+                    val ctx = requireContext()
+                    val flags = cz.uhk.macroflow.pokemon.story.StoryFlags.all(ctx)
+                    val insight = cz.uhk.macroflow.pokemon.story.Insight.level(flags)
+                    val text = cz.uhk.macroflow.pokemon.story.Insight.foundPages(flags)
+                        .joinToString("\n\n────────\n\n") { cz.uhk.macroflow.pokemon.story.Insight.render(it.text, insight) }
+                    val tv = android.widget.TextView(ctx).apply {
+                        this.text = text.ifEmpty { "Listy jsou prázdné." }
+                        typeface = android.graphics.Typeface.MONOSPACE
+                        textSize = 14f
+                        val pad = (20 * resources.displayMetrics.density).toInt()
+                        setPadding(pad, pad, pad, pad)
+                    }
+                    android.app.AlertDialog.Builder(ctx)
+                        .setTitle("📄 ${cz.uhk.macroflow.pokemon.story.Insight.PAGES_LABEL}")
+                        .setView(android.widget.ScrollView(ctx).apply { addView(tv) })
+                        .setPositiveButton("Zavřít", null)
+                        .show()
                     return@setOnClickListener
                 }
                 if (diary) {

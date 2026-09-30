@@ -215,7 +215,8 @@ class MakrodexFragment : Fragment() {
         }
 
         tvDetailMacro.text = if (isUnlocked) {
-            entry.macroDesc
+            // docs/adr/0047 – u pár druhů drobná věta navíc
+            cz.uhk.macroflow.pokemon.story.Insight.dexWhisper(entry.makrodexId)?.let { entry.macroDesc + "\n\n" + it } ?: entry.macroDesc
         } else {
             val hint = getFallbackHint(entry.makrodexId)
             if (hint.startsWith("Zapiš") && entry.unlockedHint.isNotEmpty()) entry.unlockedHint else hint

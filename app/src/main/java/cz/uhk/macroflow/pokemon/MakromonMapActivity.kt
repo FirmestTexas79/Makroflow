@@ -45,6 +45,7 @@ import cz.uhk.macroflow.pokemon.cave.SkyPass
 import cz.uhk.macroflow.pokemon.story.StoryFlags
 import cz.uhk.macroflow.pokemon.story.ForestHeart
 import cz.uhk.macroflow.pokemon.story.SecretGrove
+import cz.uhk.macroflow.pokemon.story.Insight
 import java.util.Locale
 import kotlin.math.sqrt
 
@@ -213,7 +214,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
                 if (items.any { (id, n) -> SS.count(applicationContext, id) < n }) false
                 else { items.forEach { (id, n) -> SS.consume(applicationContext, id, n) }; true }
-            }
+            },
+            // Praskliny ve fasádě (docs/adr/0047): postava občas na zlomek věty zaváhá
+            crackProvider = { qid -> Insight.crack(qid, StoryFlags.insight(applicationContext), kotlin.random.Random.nextInt(100)) }
         )
 
         // PROPOJENÍ: Když se v manageru změní progres (např. onMealLogged), refreshneme UI
@@ -587,6 +590,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 startSpecialBattle(SpecialBattle.FOREST_ROT, BiomeType.FOREST)
                 return@action
             }
+            // Roztržený list Kustodiátu (docs/adr/0047) – najde se jednou, místo běžné akce místa
+            Insight.pageAt(currentBiome.name, nodeName, StoryFlags.all(this))?.let { findTornPage(it); return@action }
 
             when (nodeName) {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
@@ -814,6 +819,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
             val def = BiomeRegistry.definition(newBiome)
             if (newBiome == BiomeType.FOREST) lastForestStage = null   // po načtení questu se dekorace obnoví
+            if (newBiome == BiomeType.TOWN) maybeStationFlicker()
             // První příchod do háje: ozve se šepot (úvod tajného questu)
             if (newBiome == BiomeType.HIDDEN_GROVE && !StoryFlags.isSet(this, SecretGrove.FOUND_KEY)) {
                 StoryFlags.set(this, SecretGrove.FOUND_KEY)
@@ -1753,6 +1759,56 @@ class MakromonMapActivity : AppCompatActivity() {
             return
         }
         questManager.checkNpcInteraction()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // VHLED A ROZTRŽENÉ LISTY (docs/adr/0047)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun findTornPage(page: Insight.Page) {
+        StoryFlags.set(this, page.key)
+        val ctx = applicationContext
+        lifecycleScope.launch(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.add(ctx, Insight.PAGES_ITEM, 1) }
+        showTornPage(page, page.found)
+    }
+
+    /** List na papírové tabuli; začerněná místa podle aktuálního Vhledu. */
+    private fun showTornPage(page: Insight.Page, subtitle: String) {
+        val insight = StoryFlags.insight(this)
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Roztržený list", subtitle) { ui, body, close ->
+            body.addView(ui.text(Insight.render(page.text, insight), 16f).apply {
+                typeface = android.graphics.Typeface.MONOSPACE
+                setBackgroundColor(0x22BC6C25)
+                setPadding(ui.px(10f), ui.px(10f), ui.px(10f), ui.px(10f))
+            })
+            body.addView(ui.text("Uloženo v batohu (Roztržené listy).", 14f, ui.inkSoft).apply { setPadding(0, ui.px(8f), 0, 0) })
+            body.addView(ui.button("Schovat") { close() }.apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = ui.px(10f) }
+            })
+        }
+    }
+
+    /** Město na zlomek vteřiny problikne jako Stanice 7 (jen při vyšším Vhledu a vzácně). */
+    private fun maybeStationFlicker() {
+        if (!Insight.stationFlicker(StoryFlags.insight(this), kotlin.random.Random.nextInt(600))) return
+        val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+        val stamp = TextView(this).apply {
+            text = "STANICE 7"
+            textSize = 54f
+            setTextColor(0xFFB02020.toInt())
+            typeface = android.graphics.Typeface.MONOSPACE
+            gravity = Gravity.CENTER
+            setBackgroundColor(0x66000000)
+            elevation = 60f
+            alpha = 0f
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+        root.addView(stamp)
+        mapWorld.postDelayed({
+            stamp.alpha = 0.9f
+            stamp.postDelayed({ stamp.alpha = 0f; root.removeView(stamp) }, 110)
+        }, 1800)
     }
 
     // ─────────────────────────────────────────────────────────────────────────

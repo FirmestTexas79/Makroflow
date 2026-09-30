@@ -169,7 +169,11 @@ class PokemonShopFragment : Fragment() {
                             db.userItemDao().getItem(product.id)?.let { cz.uhk.macroflow.data.FirebaseRepository.uploadUserItem(it) }
                         }
                     }
-                    Toast.makeText(requireContext(), "Koupeno: ${product.name}!", Toast.LENGTH_SHORT).show()
+                    // Razítko S-7 na účtence (docs/adr/0047)
+                    val gp = requireContext().getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE)
+                    val seq = gp.getInt("receipt_seq", 4127) + 1
+                    gp.edit().putInt("receipt_seq", seq).apply()
+                    Toast.makeText(requireContext(), "Koupeno: ${product.name}!\n${cz.uhk.macroflow.pokemon.story.Insight.receipt(seq)}", Toast.LENGTH_SHORT).show()
                     updateUI()
                 }
             } else {

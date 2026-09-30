@@ -36,5 +36,5 @@ object StoryProgress {
     ) + SecretGrove.KEYS
 
     fun isStoryKey(key: String): Boolean =
-        key.startsWith("boss_defeated_") || key.startsWith("crystal_") || key in STORY_KEYS
+        key.startsWith("boss_defeated_") || key.startsWith("crystal_") || key.startsWith(Insight.PAGE_PREFIX) || key in STORY_KEYS
 }

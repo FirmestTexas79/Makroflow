@@ -38,7 +38,7 @@ enum class Berry(
 
 /** Suroviny v deníku (strana Suroviny) a v inventáři. */
 enum class Resource(val itemId: String, val label: String, val description: String) {
-    ENERGY("energy_fragment", "Fragment energie", "Padá z poražených i chycených Makromonů. S bobulí z něj u pracovního stolu vyrobíš Makroball."),
+    ENERGY("energy_fragment", "Fragment energie", "Padá z poražených i chycených Makromonů a v dlani je zvláštně teplý. S bobulí z něj u pracovního stolu vyrobíš Makroball."),
     BERRY_GREEN(Berry.GREEN.berryItemId, Berry.GREEN.label, "Z ní se vyrábí Makroball."),
     BERRY_BLUE(Berry.BLUE.berryItemId, Berry.BLUE.label, "Z ní se vyrábí Proteinball."),
     BERRY_BLACK(Berry.BLACK.berryItemId, Berry.BLACK.label, "Z ní se vyrábí Kreatinball."),
