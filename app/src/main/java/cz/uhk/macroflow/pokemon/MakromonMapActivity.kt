@@ -1338,13 +1338,13 @@ class MakromonMapActivity : AppCompatActivity() {
             android.graphics.drawable.BitmapDrawable(resources, android.graphics.Bitmap.createBitmap(sheet, k * fw, 0, fw, fh)).apply { isFilterBitmap = false }
         }
         // o čtvrtinu menší než art px mapy (celé px zařízení, ať jsou pixely ostré)
-        val p = kotlin.math.max(1, (worldScale * 0.72f).toInt()).toFloat()
-        val left = Vendelin.X * s - fw * p / 2f; val top = (Vendelin.Y + 1) * s - fh * p
+        val px = kotlin.math.max(1, (worldScale * 0.72f).toInt()).toFloat()
+        val left = Vendelin.X * s - fw * px / 2f; val top = (Vendelin.Y + 1) * s - fh * px
         val glow = glowView((18 * s).toInt(), 0xFFFFC04A.toInt(), 0x77).apply {
-            x = left + 3 * p - 9 * s; y = top + 20 * p - 9 * s; elevation = 1.9f
+            x = left + 3 * px - 9 * s; y = top + 20 * px - 9 * s; elevation = 1.9f
         }
         val npc = ImageView(this).apply {
-            layoutParams = FrameLayout.LayoutParams((fw * p).toInt(), (fh * p).toInt())
+            layoutParams = FrameLayout.LayoutParams((fw * px).toInt(), (fh * px).toInt())
             setImageDrawable(frames[0])
             scaleType = ImageView.ScaleType.FIT_XY
             x = left; y = top; elevation = 2f
