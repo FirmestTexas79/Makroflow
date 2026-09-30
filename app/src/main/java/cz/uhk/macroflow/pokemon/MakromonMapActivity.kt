@@ -311,6 +311,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 refreshStoryDecor()     // po souboji se strážcem / legendou
                 questManager.recheck()  // boss Hvozdu nastavil příznak → fáze questu se splní
                 checkAwards()           // chycení, denní úkoly… (docs/adr/0037)
+                maybeWhiteout()         // padl celý tým → smrt postavy (docs/adr/0052)
             }
         }
 
@@ -325,6 +326,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 else -> changeBiome(BiomeType.TOWN, PointF(0.480f, 0.275f), MapTransition.NONE)
             }
             intent.getStringExtra("TARGET_LOCATION")?.let { triggerHotspotAction(it.lowercase()) }
+            loadZoneSeen()
+            // aplikace se zavřela po prohraném souboji dřív, než mapa smrt přehrála
+            mapWorld.postDelayed({ if (!isFinishing) maybeWhiteout() }, 900)
             // Debug: splnit N fází aktivního questu (adb … --ei debug_quest_complete 5)
             if (BuildConfig.DEBUG) intent.getIntExtra("debug_quest_complete", 0).takeIf { it > 0 }?.let { n ->
                 (1..n).forEach { i -> mapWorld.postDelayed({ if (!isFinishing) questManager.debugCompleteStage() }, 1500L + i * 600L) }
@@ -835,6 +839,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val container = findViewById<ViewGroup>(R.id.mapMainContent)
         val transitionAction: () -> Unit = {
             currentBiome = newBiome
+            markZoneSeen(newBiome)      // mapa Zóna 1 v deníku (docs/adr/0052)
             // první návštěva průsmyku: kamera začne nahoře na výhledu a sjede k hráči
             mapWorld.animate().cancel(); cameraOverride = false
             val firstSkyVisit = newBiome == BiomeType.SKY_PASS && !StoryFlags.isSet(this, SkyPass.VISITED_KEY)
@@ -2510,6 +2515,238 @@ class MakromonMapActivity : AppCompatActivity() {
                 root.removeView(flash); transitionRunning = false
             }.start()
         }.start()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SMRT POSTAVY, MAPA ZÓNA 1 A TELEPORT (docs/adr/0052)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Běží scéna (smrt / teleport) – mapa nebere dotyky. */
+    private var cinematic = false
+    private var cinemaCover: View? = null
+
+    /** Objevené lokace (StoryFlags zone_seen_*, u starých uložených her odvozené). */
+    private val zoneSeen = HashSet<String>().apply { add("TOWN") }
+
+    /** Černá opona přes celou obrazovku; zároveň polyká dotyky, dokud scéna běží. */
+    private fun cover(): View = cinemaCover ?: View(this).apply {
+        setBackgroundColor(Color.BLACK); alpha = 0f; isClickable = true; isFocusable = true
+        elevation = 400f
+        findViewById<FrameLayout>(R.id.mapRootContainer).addView(this,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    }.also { cinemaCover = it }
+
+    private fun startCinematic() {
+        cinematic = true
+        movementEngine.cancel()
+        cover().apply { visibility = View.VISIBLE; alpha = 0f }
+    }
+
+    private fun endCinematic() {
+        cinematic = false
+        cinemaCover?.visibility = View.GONE
+    }
+
+    /** Přiblížení kamery na postavu (svět se zvětší kolem hráče a hráč sjede doprostřed). */
+    private fun zoomOnHero(scale: Float, ms: Long, end: () -> Unit) {
+        val vp = findViewById<View>(R.id.mapMainContent)
+        val hx = ashView.x + ashView.width / 2f
+        val hy = ashView.y + ashView.height * 0.75f
+        mapWorld.animate().cancel()
+        cameraOverride = true
+        // při měřítku 1 posun pivotu nic nepohne; poloha hráče na obrazovce = translace + pivot
+        mapWorld.pivotX = hx; mapWorld.pivotY = hy
+        mapWorld.animate().scaleX(scale).scaleY(scale)
+            .translationX(vp.width / 2f - hx).translationY(vp.height * 0.55f - hy)
+            .setDuration(ms).setInterpolator(android.view.animation.DecelerateInterpolator(1.6f))
+            .withEndAction { if (!isFinishing) end() }.start()
+    }
+
+    /** Zpět na běžnou kameru (translaci srovná layoutWorld / kamera při změně lokace). */
+    private fun resetZoom() {
+        mapWorld.animate().cancel()
+        mapWorld.scaleX = 1f; mapWorld.scaleY = 1f
+        cameraOverride = false
+    }
+
+    /** Prach od nohou (pixelové obláčky do stran). */
+    private fun dustPuff(count: Int = 10) {
+        val unit = maxOf(1, Math.round(2 * resources.displayMetrics.density)).toFloat()     // 1 px spritu
+        val footY = ashView.y + ashView.height * (38.5f / 40f)
+        val cx = ashView.x + ashView.width / 2f
+        repeat(count) { i ->
+            val size = (unit * (2 + i % 3)).toInt()
+            val side = if (i % 2 == 0) -1 else 1
+            val puff = View(this).apply {
+                setBackgroundColor(if (i % 3 == 0) 0xFFC8B48E.toInt() else 0xFFEADFC6.toInt())
+                elevation = ashView.elevation + 1f
+            }
+            mapWorld.addView(puff, FrameLayout.LayoutParams(size, size))
+            puff.x = cx - size / 2f + side * unit * (2 + i % 4)
+            puff.y = footY - size / 2f - unit * (i % 2)
+            puff.animate()
+                .x(puff.x + side * unit * (7 + (i * 5) % 11)).y(puff.y - unit * (2 + (i * 3) % 7))
+                .scaleX(1.9f).scaleY(1.9f).alpha(0f)
+                .setDuration(480L + (i % 3) * 90L).setInterpolator(android.view.animation.DecelerateInterpolator())
+                .withEndAction { mapWorld.removeView(puff) }.start()
+        }
+    }
+
+    /**
+     * Padl celý tým: souboj se zavřel → přiblížení na postavu, animace smrti, tma
+     * a probuzení na prahu domova ve městě.
+     */
+    private fun maybeWhiteout() {
+        if (cinematic || isFinishing || supportFragmentManager.backStackEntryCount > 0) return
+        if (!gamePrefs.getBoolean(cz.uhk.macroflow.pokemon.zone.Whiteout.PENDING_KEY, false)) return
+        gamePrefs.edit().remove(cz.uhk.macroflow.pokemon.zone.Whiteout.PENDING_KEY).apply()
+        startCinematic()
+        val curtain = cover()
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            zoomOnHero(2.4f, 900) {
+                val total = movementEngine.playOnce("death", slow = 1.7f)
+                mapWorld.postDelayed({
+                    curtain.animate().alpha(1f).setDuration(700).withEndAction {
+                        resetZoom()
+                        enterBiomeAtNode(BiomeType.TOWN, cz.uhk.macroflow.pokemon.zone.Whiteout.RESPAWN_NODE, MapTransition.NONE)
+                        movementEngine.resetIdle()
+                        mapWorld.postDelayed({
+                            curtain.animate().alpha(0f).setDuration(800).withEndAction {
+                                endCinematic()
+                                showMapToast(cz.uhk.macroflow.pokemon.zone.Whiteout.TEXT)
+                            }.start()
+                        }, 450)
+                    }.start()
+                }, total + 900)
+            }
+        }, 350)
+    }
+
+    /** Zapíše objevenou lokaci (synchronizuje se jako příběhový příznak). */
+    private fun markZoneSeen(biome: BiomeType) {
+        if (biome.name !in cz.uhk.macroflow.pokemon.zone.ZoneOne.LOCATIONS) return
+        if (zoneSeen.add(biome.name) || !StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.zone.ZoneOne.seenKey(biome.name)))
+            StoryFlags.set(this, cz.uhk.macroflow.pokemon.zone.ZoneOne.seenKey(biome.name))
+    }
+
+    /** Objevené lokace ze StoryFlags; u starších her doplní odvozené (a rovnou je zapíše). */
+    private fun loadZoneSeen() {
+        val ctx = applicationContext
+        lifecycleScope.launch {
+            val questBiomes = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    val ids = db.questDao().getAllQuests().map { it.questId }.toSet()
+                    BiomeRegistry.DEFINITIONS.values.filter { it.questId != null && it.questId in ids }.map { it.type.name }.toSet()
+                }
+            }.getOrDefault(emptySet())
+            val inferred = cz.uhk.macroflow.pokemon.zone.ZoneOne.inferSeen(StoryFlags.all(ctx), questBiomes) + currentBiome.name
+            inferred.filter { it in cz.uhk.macroflow.pokemon.zone.ZoneOne.LOCATIONS }.forEach { b ->
+                zoneSeen.add(b)
+                if (!StoryFlags.isSet(ctx, cz.uhk.macroflow.pokemon.zone.ZoneOne.seenKey(b)))
+                    StoryFlags.set(ctx, cz.uhk.macroflow.pokemon.zone.ZoneOne.seenKey(b))
+            }
+        }
+    }
+
+    /** Co ukáže mapa v deníku. */
+    data class ZoneState(val current: String, val heroFrac: PointF, val seen: Set<String>, val heroHead: android.graphics.Bitmap?)
+
+    private var heroHeadCache: android.graphics.Bitmap? = null
+
+    fun zoneState(): ZoneState {
+        val head = heroHeadCache ?: movementEngine.hero.portrait()?.let { p ->
+            // hlava = horní čtverec postavy, zvětšená bez vyhlazení
+            val side = minOf(p.width, p.height)
+            val sq = android.graphics.Bitmap.createBitmap(p, 0, 0, side, side)
+            android.graphics.Bitmap.createScaledBitmap(sq, side * 8, side * 8, false)
+        }.also { heroHeadCache = it }
+        val pos = movementEngine.getCurrentPosition()
+        return ZoneState(currentBiome.name, PointF(pos.x, pos.y), zoneSeen.toSet(), head)
+    }
+
+    /** Klepnutí na lokaci v mapě deníku: důvod, proč to nejde, nebo dřevěná nabídka teleportu. */
+    fun onZonePick(biome: String) {
+        if (cinematic) return
+        val target = runCatching { BiomeType.valueOf(biome) }.getOrNull() ?: return
+        val name = cz.uhk.macroflow.pokemon.zone.ZoneOne.NAMES[biome] ?: biome
+        lifecycleScope.launch {
+            val forestDone = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                runCatching {
+                    cz.uhk.macroflow.pokemon.cave.ForestMap.completedTasks(db.questDao().getAllQuests().map { p ->
+                        val total = cz.uhk.macroflow.pokemon.quests.QuestRegistry.byId(p.questId)?.stages?.size ?: 0
+                        Triple(total, p.currentStageIndex, p.isCompleted)
+                    })
+                }.getOrDefault(0)
+            }
+            val boots = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false)
+            val missing = if (boots) 0 else BiomeAccess.missingSteps(BiomeType.MOUNTAINS, currentDailySteps)
+            val block = cz.uhk.macroflow.pokemon.zone.ZoneOne.teleportBlock(biome, currentBiome.name, zoneSeen,
+                missing, forestDone, cz.uhk.macroflow.pokemon.cave.ForestMap.REQUIRED_TASKS)
+            val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+            when (block) {
+                cz.uhk.macroflow.pokemon.zone.ZoneOne.Block.Here -> showMapToast("📍 $name – tady právě stojíš.")
+                cz.uhk.macroflow.pokemon.zone.ZoneOne.Block.Unknown -> showMapToast("🌫️ Tohle místo jsi ještě neobjevil. Dojdi tam nejdřív po svých.")
+                cz.uhk.macroflow.pokemon.zone.ZoneOne.Block.Secret -> showMapToast("🌫️ Tahle cesta se na mapu zakreslit nedá.")
+                is cz.uhk.macroflow.pokemon.zone.ZoneOne.Block.Steps ->
+                    showMapToast("⛰️ $name leží za horami. Dnes ti na cestu chybí ještě ${block.missing} kroků.")
+                is cz.uhk.macroflow.pokemon.zone.ZoneOne.Block.Forest ->
+                    showMapToast("🌲 Hvozd tě pustí dál, až splníš ${block.need} úkolů (máš ${block.done}).")
+                null -> cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, "Teleport", "Zóna 1 · $name") { ui, body, close ->
+                    body.addView(ui.text("Vyskočíš vysoko nad Makrosvět a dopadneš rovnou na místo.", 16f, ui.inkSoft))
+                    body.addView(ui.spacer(12f))
+                    body.addView(ui.button("Přenést se: $name") { close(); teleportTo(target) })
+                }
+            }
+        }
+    }
+
+    /** Teleport: deník se zavře, přiblížení na postavu, výskok z obrazovky s prachem a dopad v cíli. */
+    private fun teleportTo(target: BiomeType) {
+        if (cinematic) return
+        val node = cz.uhk.macroflow.pokemon.zone.ZoneOne.ARRIVAL[target.name] ?: return
+        if (supportFragmentManager.backStackEntryCount > 0) supportFragmentManager.popBackStack()
+        startCinematic()
+        val curtain = cover()
+        val vp = findViewById<View>(R.id.mapMainContent)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            zoomOnHero(2.2f, 650) {
+                val total = movementEngine.playOnce("jump", slow = 1.3f)
+                // odraz: po přikrčení vyletí nahoru z obrazovky, od nohou se zvedne prach
+                mapWorld.postDelayed({
+                    dustPuff()
+                    ashView.animate().y(ashView.y - vp.height / mapWorld.scaleY - ashView.height * 2f)
+                        .setDuration(480).setInterpolator(android.view.animation.AccelerateInterpolator(1.4f))
+                        .withEndAction {
+                            curtain.animate().alpha(1f).setDuration(260).withEndAction {
+                                resetZoom()
+                                enterBiomeAtNode(target, node, MapTransition.NONE)
+                                movementEngine.resetIdle()
+                                // až resetToPosition postaví postavu: seskok shora a prach při dopadu
+                                mapBackground.post { mapBackground.post { landFromSky(curtain) } }
+                            }.start()
+                        }.start()
+                }, (total * 0.3f).toLong())
+            }
+        }, 380)
+    }
+
+    private fun landFromSky(curtain: View) {
+        if (isFinishing) return
+        val vp = findViewById<View>(R.id.mapMainContent)
+        val finalY = ashView.y
+        ashView.y = finalY - vp.height
+        curtain.animate().alpha(0f).setDuration(350).start()
+        ashView.animate().y(finalY).setStartDelay(200).setDuration(520)
+            .setInterpolator(android.view.animation.AccelerateInterpolator(1.6f))
+            .withEndAction {
+                ashView.animate().setStartDelay(0)
+                dustPuff(12)
+                ashView.pivotX = ashView.width / 2f; ashView.pivotY = ashView.height.toFloat()
+                ashView.scaleY = 0.82f
+                ashView.animate().scaleY(1f).setDuration(220).withEndAction { endCinematic() }.start()
+            }.start()
     }
 
     private fun replaceMapContent(fragment: Fragment, tag: String? = null) {

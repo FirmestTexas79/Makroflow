@@ -60,21 +60,42 @@ class MovementEngine(
         val key = cz.uhk.macroflow.pokemon.walk.HeroAnims.key(a, dir8)
         val frames = hero.frames(key)
         if (frames.isEmpty()) return
-        val i = cz.uhk.macroflow.pokemon.walk.HeroAnims.frameAt(hero.durations(key), android.os.SystemClock.uptimeMillis() - animStart)
+        val t = android.os.SystemClock.uptimeMillis() - animStart
+        val i = if (a in cz.uhk.macroflow.pokemon.walk.HeroAnims.ONCE) cz.uhk.macroflow.pokemon.walk.HeroAnims.frameOnce(hero.durations(key), (t / onceSlow).toLong())
+                else cz.uhk.macroflow.pokemon.walk.HeroAnims.frameAt(hero.durations(key), t)
         val f = frames[i.coerceIn(0, frames.lastIndex)]
         if (f !== shownFrame) { shownFrame = f; ashView.setImageDrawable(f) }
     }
 
     /** Práce u sběrného místa (sekání, kopání, chytání) – běží ve smyčce, dokud postava nevyrazí. */
     fun playAction(action: String, faceRight: Boolean) {
-        if (isWalking) return
+        if (isWalking || anim in HeroAnimsOnce) return
         setAnim(action, if (faceRight) "e" else "w")
     }
 
     /** Zastaví práci (postava zase jen stojí). */
     fun stopAction() {
-        if (!isWalking && anim !in cz.uhk.macroflow.pokemon.walk.HeroAnims.MOVE) setAnim("idle")
+        if (!isWalking && anim !in cz.uhk.macroflow.pokemon.walk.HeroAnims.MOVE && anim !in HeroAnimsOnce) setAnim("idle")
     }
+
+    private var onceSlow = 1f
+    private val HeroAnimsOnce get() = cz.uhk.macroflow.pokemon.walk.HeroAnims.ONCE
+
+    /**
+     * Jednorázová animace zepředu (smrt, skok – docs/adr/0052). Po doběhnutí zůstane poslední snímek,
+     * dokud se nezavolá [resetIdle]; [slow] = zpomalení (2 = poloviční rychlost). Vrací délku v ms.
+     */
+    fun playOnce(action: String, slow: Float = 1f, onEnd: (() -> Unit)? = null): Long {
+        cancel()
+        onceSlow = slow.coerceAtLeast(0.1f)
+        anim = ""; setAnim(action, "s")
+        val total = (hero.durations(cz.uhk.macroflow.pokemon.walk.HeroAnims.key(action, "s")).sum() * onceSlow).toLong()
+        if (onEnd != null) animHandler.postDelayed({ onEnd() }, total)
+        return total
+    }
+
+    /** Konec jednorázové animace – postava zase stojí čelem dolů. */
+    fun resetIdle() { anim = ""; setAnim("idle", "s") }
 
     /** Uvolní časovač animace (při zničení mapy). */
     fun release() { animHandler.removeCallbacksAndMessages(null) }

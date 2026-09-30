@@ -46,10 +46,24 @@ object HeroAnims {
         return durations.lastIndex
     }
 
-    /** Klíč pásu snímků; práce se přiklopí na stranu. */
-    fun key(anim: String, dir: String): String = if (anim in MOVE) "${anim}_$dir" else "${anim}_${side(dir)}"
+    /** Klíč pásu snímků; práce se přiklopí na stranu, jednorázové animace jsou jen zepředu. */
+    fun key(anim: String, dir: String): String = when (anim) {
+        in MOVE -> "${anim}_$dir"
+        in ONCE -> "${anim}_s"
+        else -> "${anim}_${side(dir)}"
+    }
 
     val MOVE = setOf("idle", "walk", "run")
+    /** Jednorázové animace zepředu (docs/adr/0052): smrt, skok (teleport), zásah. */
+    val ONCE = setOf("death", "jump", "hurt")
+
+    /** Index snímku jednorázové animace – po konci zůstane poslední snímek. */
+    fun frameOnce(durations: List<Int>, elapsedMs: Long): Int {
+        if (durations.isEmpty()) return 0
+        var t = elapsedMs.coerceAtLeast(0)
+        durations.forEachIndexed { i, d -> if (t < d) return i; t -= d }
+        return durations.lastIndex
+    }
 
     /** Popis pásů z hero.json. */
     data class Spec(val frameW: Int, val frameH: Int, val footY: Int, val anims: Map<String, List<Int>>)

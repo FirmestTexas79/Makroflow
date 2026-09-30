@@ -1135,6 +1135,9 @@ class PokemonBattleView @JvmOverloads constructor(
         gs.phase = BattlePhase.PLAYER_FAINTED
         setText("${gs.player.name}", "FAINTED!")
         busy = false
+        // Padl celý tým → po zavření souboje mapa přehraje smrt postavy (docs/adr/0052)
+        context.getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE).edit()
+            .putBoolean(cz.uhk.macroflow.pokemon.zone.Whiteout.PENDING_KEY, true).apply()
         pendingAction = { onCaught?.invoke() }
     }
 

@@ -94,6 +94,7 @@ class QuestJournalFragment : Fragment() {
         rootView.findViewById<View>(R.id.tabDaily).setOnClickListener { showTab(Tab.DAILY) }
         rootView.findViewById<View>(R.id.tabResources).setOnClickListener { showTab(Tab.RESOURCES) }
         rootView.findViewById<View>(R.id.tabAwards).setOnClickListener { showTab(Tab.AWARDS) }
+        rootView.findViewById<View>(R.id.tabZone).setOnClickListener { showTab(Tab.ZONE) }
         showTab(if (showDailyFirst) Tab.DAILY else Tab.CHARACTER)
         return rootView
     }
@@ -106,13 +107,14 @@ class QuestJournalFragment : Fragment() {
             Tab.CHARACTER -> renderCharacter()
             Tab.RESOURCES -> renderResources()
             Tab.AWARDS -> renderAwards()
+            Tab.ZONE -> renderZone()
             Tab.STORY -> {}
         }
     }
 
     // ── Denní úkoly ─────────────────────────────────────────────────────────
 
-    private enum class Tab { CHARACTER, STORY, DAILY, RESOURCES, AWARDS }
+    private enum class Tab { CHARACTER, STORY, DAILY, RESOURCES, AWARDS, ZONE }
     private var tab = Tab.CHARACTER
     /** Nastaví se před zobrazením, když má deník otevřít rovnou denní úkoly. */
     var showDailyFirst = false
@@ -127,16 +129,46 @@ class QuestJournalFragment : Fragment() {
         rootView.findViewById<View>(R.id.characterPage).visibility = if (t == Tab.CHARACTER) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.resourcesPage).visibility = if (t == Tab.RESOURCES) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.awardsPage).visibility = if (t == Tab.AWARDS) View.VISIBLE else View.GONE
+        rootView.findViewById<View>(R.id.zonePage).visibility = if (t == Tab.ZONE) View.VISIBLE else View.GONE
         mapOf(Tab.CHARACTER to R.id.tabCharacter, Tab.STORY to R.id.tabStory, Tab.DAILY to R.id.tabDaily, Tab.RESOURCES to R.id.tabResources,
-            Tab.AWARDS to R.id.tabAwards)
+            Tab.AWARDS to R.id.tabAwards, Tab.ZONE to R.id.tabZone)
             .forEach { (k, id) -> rootView.findViewById<View>(id).alpha = if (k == t) 1f else 0.55f }
         when (t) {
             Tab.DAILY -> renderDaily()
             Tab.CHARACTER -> renderCharacter()
             Tab.RESOURCES -> renderResources()
             Tab.AWARDS -> renderAwards()
+            Tab.ZONE -> renderZone()
             Tab.STORY -> {}
         }
+    }
+
+    // ── Zóna 1: mapa lokací a teleport (docs/adr/0052) ───────────────────────
+
+    private fun renderZone() {
+        val act = activity as? MakromonMapActivity ?: return
+        val page = rootView.findViewById<android.widget.FrameLayout>(R.id.zonePage)
+        val map = page.findViewWithTag<cz.uhk.macroflow.pokemon.zone.ZoneMapView>("zone_map")
+            ?: cz.uhk.macroflow.pokemon.zone.ZoneMapView(requireContext()).also { v ->
+                v.tag = "zone_map"
+                page.addView(v, android.widget.FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                page.addView(TextView(requireContext()).apply {
+                    text = "Klepni na objevené místo\na přenes se tam."
+                    textSize = 13f
+                    setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.journal_ink))
+                    alpha = 0.75f
+                    gravity = android.view.Gravity.END
+                    typeface = androidx.core.content.res.ResourcesCompat.getFont(requireContext(), R.font.jersey_15)
+                }, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                    android.view.Gravity.BOTTOM or android.view.Gravity.END))
+            }
+        val z = act.zoneState()
+        map.current = z.current
+        map.heroFrac = z.heroFrac
+        map.heroHead = z.heroHead
+        map.seen = z.seen
+        map.onPick = { act.onZonePick(it) }
     }
 
     // ── Postava a suroviny (docs/adr/0034) ──────────────────────────────────

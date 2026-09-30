@@ -32,6 +32,8 @@ MOVE = {"idle": "idle", "walk": "walk", "run": "run"}
 DIRS = {"s": "s", "se": "se", "ne": "nw", "n": "n"}
 ACTIONS = {"axe": 2, "mining": 1, "casting": 1, "doing": 1, "watering": 1, "dig": 1}
 MIRROR = {"se": "sw", "e": "w", "nw": "ne", "w": "e"}
+# jednorázové animace čelem k hráči (smrt, skok při teleportu, zásah) – jen směr „s“ (docs/adr/0052)
+ONCE = {"death": 1, "jump": 1, "hurt": 1}
 
 
 def main(hair=None):
@@ -54,6 +56,8 @@ def main(hair=None):
             if base in MOVE and d in DIRS: wanted.append((MOVE[base], DIRS[d], idx, durs))
         elif name in MOVE:
             wanted.append((MOVE[name], "e", idx, durs))     # boční pohled = doprava
+        elif name in ONCE and seen[name] == ONCE[name]:
+            wanted.append((name, "s", idx, durs))           # nakreslené zepředu, bez zrcadlení
         elif name in ACTIONS and seen[name] == ACTIONS[name]:
             wanted.append((name, "w", idx, durs))           # práce je nakreslená čelem doleva
 

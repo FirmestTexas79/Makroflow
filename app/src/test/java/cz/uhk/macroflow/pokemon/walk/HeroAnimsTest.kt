@@ -49,7 +49,8 @@ class HeroAnimsTest {
         val spec = HeroAnims.parseSpec(asset("hero.json").readText())
         assertEquals(64, spec.frameW); assertEquals(40, spec.frameH)
         val needed = HeroAnims.MOVE.flatMap { a -> HeroAnims.DIRS8.map { "${a}_$it" } } +
-            listOf("axe", "mining", "casting").flatMap { listOf("${it}_e", "${it}_w") }
+            listOf("axe", "mining", "casting").flatMap { listOf("${it}_e", "${it}_w") } +
+            HeroAnims.ONCE.map { "${it}_s" }
         for (k in needed) {
             val durs = spec.anims[k]
             assertTrue(k, durs != null && durs.isNotEmpty() && durs.all { it > 0 })

@@ -1,0 +1,439 @@
+{
+ "w": 940,
+ "h": 1260,
+ "labelSize": 30,
+ "locations": {
+  "SKY_PASS": {
+   "rect": [
+    541,
+    40,
+    182.0,
+    298.0
+   ],
+   "map": [
+    537.95,
+    188.11,
+    -180.52,
+    514.52
+   ],
+   "label": [
+    822,
+    110
+   ]
+  },
+  "HIDDEN_GROVE": {
+   "rect": [
+    0,
+    170,
+    120.0,
+    198.0
+   ],
+   "map": [
+    4.0,
+    112.0,
+    152.89,
+    211.11
+   ],
+   "label": [
+    96,
+    400
+   ]
+  },
+  "FOREST": {
+   "rect": [
+    112,
+    40,
+    166.0,
+    358.0
+   ],
+   "map": [
+    107.12,
+    177.53,
+    40.46,
+    353.54
+   ],
+   "label": [
+    270,
+    34
+   ]
+  },
+  "MEADOW": {
+   "rect": [
+    42,
+    430,
+    322.0,
+    478.0
+   ],
+   "map": [
+    46.0,
+    333.38,
+    399.4,
+    742.28
+   ],
+   "label": [
+    300,
+    452
+   ]
+  },
+  "MOUNTAINS": {
+   "rect": [
+    520,
+    360,
+    224.0,
+    508.0
+   ],
+   "map": [
+    519.85,
+    238.15,
+    330.8,
+    533.39
+   ],
+   "label": [
+    700,
+    352
+   ]
+  },
+  "CAVE_OPEN": {
+   "rect": [
+    800,
+    440,
+    110.0,
+    278.0
+   ],
+   "map": [
+    804.0,
+    102.0,
+    415.51,
+    298.49
+   ],
+   "label": [
+    832,
+    432
+   ]
+  },
+  "TOWN": {
+   "rect": [
+    60,
+    970,
+    206.0,
+    268.0
+   ],
+   "map": [
+    64.12,
+    198.47,
+    944.16,
+    443.28
+   ],
+   "label": [
+    163,
+    962
+   ]
+  },
+  "MINES": {
+   "rect": [
+    398,
+    40,
+    110.0,
+    308.0
+   ],
+   "map": [
+    402.0,
+    102.0,
+    -25.86,
+    369.86
+   ],
+   "label": [
+    453,
+    32
+   ]
+  },
+  "CAVE_MAZE": {
+   "rect": [
+    402,
+    400,
+    92.0,
+    268.0
+   ],
+   "map": [
+    402.5,
+    87.5,
+    381.01,
+    282.99
+   ],
+   "label": [
+    460,
+    702
+   ]
+  }
+ },
+ "links": [
+  {
+   "a": "TOWN",
+   "aNode": "les",
+   "aDir": "n",
+   "aPos": [
+    154.4,
+    1010.7
+   ],
+   "aFrac": [
+    0.455,
+    0.15
+   ],
+   "b": "MEADOW",
+   "bNode": "vstup_z_town",
+   "bDir": "s",
+   "bPos": [
+    159.4,
+    874.5
+   ],
+   "bFrac": [
+    0.34,
+    0.64
+   ],
+   "secret": false
+  },
+  {
+   "a": "MEADOW",
+   "aNode": "les_sever",
+   "aDir": "n",
+   "aPos": [
+    202.7,
+    466.2
+   ],
+   "aFrac": [
+    0.47,
+    0.09
+   ],
+   "b": "FOREST",
+   "bNode": "vstup_z_louky",
+   "bDir": "s",
+   "bPos": [
+    195.9,
+    386.9
+   ],
+   "bFrac": [
+    0.5,
+    0.98
+   ],
+   "secret": false
+  },
+  {
+   "a": "MEADOW",
+   "aNode": "hory",
+   "aDir": "e",
+   "aPos": [
+    301.0,
+    720.1
+   ],
+   "aFrac": [
+    0.765,
+    0.432
+   ],
+   "b": "MOUNTAINS",
+   "bNode": "vstup_z_meadow",
+   "bDir": "s",
+   "bPos": [
+    638.9,
+    842.9
+   ],
+   "bFrac": [
+    0.5,
+    0.96
+   ],
+   "secret": false
+  },
+  {
+   "a": "MOUNTAINS",
+   "aNode": "peak",
+   "aDir": "n",
+   "aPos": [
+    638.9,
+    410.8
+   ],
+   "aFrac": [
+    0.5,
+    0.15
+   ],
+   "b": "SKY_PASS",
+   "bNode": "vstup_ze_svatyne",
+   "bDir": "s",
+   "bPos": [
+    632.0,
+    315.3
+   ],
+   "bFrac": [
+    0.5,
+    0.9636
+   ],
+   "secret": false
+  },
+  {
+   "a": "MOUNTAINS",
+   "aNode": "cave",
+   "aDir": "e",
+   "aPos": [
+    708.0,
+    514.8
+   ],
+   "aFrac": [
+    0.79,
+    0.345
+   ],
+   "b": "CAVE_OPEN",
+   "bNode": "vychod_jeskyne",
+   "bDir": "s",
+   "bPos": [
+    855.0,
+    705.9
+   ],
+   "bFrac": [
+    0.5,
+    0.9727
+   ],
+   "secret": false
+  },
+  {
+   "a": "MOUNTAINS",
+   "aNode": "mine",
+   "aDir": "w",
+   "aPos": [
+    550.8,
+    581.5
+   ],
+   "aFrac": [
+    0.13,
+    0.47
+   ],
+   "b": "CAVE_MAZE",
+   "bNode": "vychod_dolu",
+   "bDir": "s",
+   "bPos": [
+    417.7,
+    655.7
+   ],
+   "bFrac": [
+    0.1733,
+    0.9708
+   ],
+   "secret": false
+  },
+  {
+   "a": "CAVE_MAZE",
+   "aNode": "vstup_doly",
+   "aDir": "w",
+   "aPos": [
+    417.7,
+    539.6
+   ],
+   "aFrac": [
+    0.1733,
+    0.5604
+   ],
+   "b": "MINES",
+   "bNode": "zpet_do_stoly",
+   "bDir": "s",
+   "bPos": [
+    453.0,
+    337.2
+   ],
+   "bFrac": [
+    0.5,
+    0.9815
+   ],
+   "secret": false
+  },
+  {
+   "a": "FOREST",
+   "aNode": "skryta_stezka",
+   "aDir": "w",
+   "aPos": [
+    163.9,
+    224.3
+   ],
+   "aFrac": [
+    0.32,
+    0.52
+   ],
+   "b": "HIDDEN_GROVE",
+   "bNode": "vstup_z_hvozdu",
+   "bDir": "s",
+   "bPos": [
+    60.0,
+    357.0
+   ],
+   "bFrac": [
+    0.5,
+    0.9667
+   ],
+   "secret": true
+  }
+ ],
+ "npcs": {
+  "TOWN": {
+   "node": "gudwin",
+   "pos": [
+    87.9,
+    1174.7
+   ],
+   "frac": [
+    0.12,
+    0.52
+   ]
+  },
+  "MEADOW": {
+   "node": "meadow_npc",
+   "pos": [
+    256.0,
+    703.7
+   ],
+   "frac": [
+    0.63,
+    0.41
+   ]
+  },
+  "MOUNTAINS": {
+   "node": "kral_mlsak",
+   "pos": [
+    638.9,
+    664.2
+   ],
+   "frac": [
+    0.5,
+    0.625
+   ]
+  },
+  "FOREST": {
+   "node": "mytina",
+   "pos": [
+    195.9,
+    72.3
+   ],
+   "frac": [
+    0.5,
+    0.09
+   ]
+  },
+  "MINES": {
+   "node": "vendelin",
+   "pos": [
+    438.7,
+    287.8
+   ],
+   "frac": [
+    0.36,
+    0.8481
+   ]
+  },
+  "HIDDEN_GROVE": {
+   "node": "oltar",
+   "pos": [
+    60.0,
+    223.3
+   ],
+   "frac": [
+    0.5,
+    0.3333
+   ]
+  }
+ }
+}

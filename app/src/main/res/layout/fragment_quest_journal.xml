@@ -22,12 +22,19 @@
         android:clipToPadding="false"
         android:orientation="vertical">
 
+    <!-- záložky se posouvají do strany, když se na šířku nevejdou (Zóna 1, docs/adr/0052) -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:overScrollMode="never"
+        android:scrollbars="none">
     <LinearLayout
         android:id="@+id/journalTabs"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
-        android:layout_marginStart="14dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
         android:orientation="horizontal">
 
         <TextView
@@ -100,7 +107,22 @@
             android:text="Ocenění"
             android:textColor="#FEFAE0"
             android:textSize="17sp" />
+        <TextView
+            android:id="@+id/tabZone"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/bg_journal_tab"
+            android:backgroundTint="#3F6B5A"
+            android:fontFamily="@font/jersey_15"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="6dp"
+            android:text="Zóna 1"
+            android:textColor="#FEFAE0"
+            android:textSize="17sp" />
     </LinearLayout>
+    </HorizontalScrollView>
 
     <FrameLayout
         android:id="@+id/journalBook"
@@ -392,6 +414,21 @@
                     android:paddingTop="18dp"
                     android:paddingBottom="24dp" />
             </ScrollView>
+
+            <!-- ZÓNA 1 (docs/adr/0052): mapa lokací, klepnutím teleport – plní QuestJournalFragment -->
+            <FrameLayout
+                android:id="@+id/zonePage"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:paddingStart="8dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="6dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <!-- Záložka (stužka) přes horní hranu – jen přes kožený okraj desek, do textu nezasahuje
