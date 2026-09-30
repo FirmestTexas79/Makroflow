@@ -92,6 +92,20 @@ object Arenas {
     fun render(theme: ArenaTheme, seed: Int = 0, extraTop: Int = 0): IntArray =
         VoxelRenderer.render(scene(theme, seed), camera, W, H + extraTop, extraTop + H / 2f)
 
+    /** Rozměry náhledu v 1/[div] rozlišení (šířka, výška). */
+    fun previewSize(extraTop: Int, div: Int = PREVIEW_DIV): Pair<Int, Int> = W / div to (H + extraTop + div - 1) / div
+
+    const val PREVIEW_DIV = 3
+
+    /**
+     * Rychlý náhled v 1/[div] rozlišení s hrubší stínovou mapou (docs/adr/0048) – ukáže se hned,
+     * než se dopočítá plná aréna. Stejná kamera i scéna, takže po prolnutí nic neposkočí.
+     */
+    fun renderPreview(theme: ArenaTheme, seed: Int = 0, extraTop: Int = 0, div: Int = PREVIEW_DIV): IntArray {
+        val (w, h) = previewSize(extraTop, div)
+        return VoxelRenderer.render(scene(theme, seed), camera, w, h, (extraTop + H / 2f) / div, shadowSize = 256)
+    }
+
     fun scene(theme: ArenaTheme, seed: Int = 0): Scene = when (theme) {
         ArenaTheme.MEADOW -> Builder(seed).meadow()
         ArenaTheme.TOWN -> Builder(seed).town()

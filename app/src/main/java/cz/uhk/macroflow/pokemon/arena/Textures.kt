@@ -28,9 +28,13 @@ object Textures {
 
     private val DIRT_SIDE = Mat(Pattern.DIRT, 0xFF5E3B1E.toInt(), 0xFF7A4E28.toInt(), 0xFF8E5E33.toInt(), 0xFF6B4423.toInt())
 
-    fun texel(m: Mat, box: Box, n: Int, p: V3, seed: Int): Int {
+    fun texel(m: Mat, box: Box, n: Int, p: V3, seed: Int): Int = texel(m, box, n, p.x, p.y, p.z, seed)
+
+    /** Varianta bez alokací pro horkou smyčku rendereru. */
+    fun texel(m: Mat, box: Box, n: Int, px: Float, py: Float, pz: Float, seed: Int): Int {
         val T = VoxelRenderer.TEX
-        val (u, v) = when (n) { 0, 1 -> p.x to p.z; 2, 3 -> p.z to p.y; else -> p.x to p.y }
+        val u = when (n) { 0, 1 -> px; 2, 3 -> pz; else -> px }
+        val v = when (n) { 0, 1 -> pz; 2, 3 -> py; else -> py }
         val tu = floor(u * T + 1e-3f).toInt(); val tv = floor(v * T + 1e-3f).toInt()
         val iu = mod(tu, T); val iv = mod(tv, T)
         val side = n >= 2
@@ -39,7 +43,7 @@ object Textures {
         return when (m.pattern) {
             Pattern.GRASS, Pattern.FLOWERS, Pattern.MOSS -> {
                 if (side) {
-                    val fromTop = floor((box.y1 - p.y) * T + 1e-3f).toInt()
+                    val fromTop = floor((box.y1 - py) * T + 1e-3f).toInt()
                     val rows = 1 + (if (hash(tu, 0, 9, seed) > 0.5f) 1 else 0)
                     if (fromTop < rows) pick(m, r) else pick(if (m.pattern == Pattern.MOSS) DIRT_SIDE else DIRT_SIDE, hash(tu, tv, 3, seed))
                         .let { if (grid) darker(it, 0.9f) else it }
@@ -58,7 +62,7 @@ object Textures {
             }
             Pattern.TILES -> {
                 // 2 × 2 dlaždice na blok, spáry a šachovnice
-                val tile = (floor(u * 2f).toInt() + floor(p.z * 2f + (if (side) p.y * 2f else 0f)).toInt())
+                val tile = (floor(u * 2f).toInt() + floor(pz * 2f + (if (side) py * 2f else 0f)).toInt())
                 if (iu % 3 == 0 || iv % 3 == 0) m.c0 else if (mod(tile, 2) == 0) (if (r > 0.85f) m.c3 else m.c2) else (if (r > 0.85f) m.c3 else m.c1)
             }
             Pattern.COBBLE -> {
@@ -103,7 +107,7 @@ object Textures {
             Pattern.LAMP -> if (iu == 0 || iv == 0) m.c0 else if (r > 0.5f) m.c2 else m.c1
             Pattern.WINDOW -> if (iu == 0 || iv == 0 || iu == 3 || iv == 3) m.c0 else if (iu + iv < 4) m.c3 else m.c1
             Pattern.METAL -> if (grid) m.c0 else if (r > 0.8f) m.c2 else m.c1
-            Pattern.MUSHROOM -> if (n == 0 || side && p.y > box.y1 - 0.34f) (if (hash(tu / 2, tv / 2, 26, seed) > 0.72f) m.c3 else if (r > 0.7f) m.c2 else m.c1) else m.c3
+            Pattern.MUSHROOM -> if (n == 0 || side && py > box.y1 - 0.34f) (if (hash(tu / 2, tv / 2, 26, seed) > 0.72f) m.c3 else if (r > 0.7f) m.c2 else m.c1) else m.c3
             Pattern.LILY -> if (r < 0.2f) m.c0 else if (r < 0.75f) m.c1 else m.c2
         }
     }

@@ -163,25 +163,31 @@ object VoxelRenderer {
 
     // ── Stínová mapa (ortogonální pohled ze slunce) ──
 
-    private class ShadowMap(val sun: V3, boxes: List<Box>) {
-        val size = 768
+    private class ShadowMap(val sun: V3, boxes: List<Box>, val size: Int = 768) {
         val r: V3 = V3(0f, 1f, 0f).cross(sun).norm().let { if (it.len() < 0.5f) V3(1f, 0f, 0f) else it }
         val u: V3 = sun.cross(r).norm()
         var minA = Float.MAX_VALUE; var maxA = -Float.MAX_VALUE; var minB = Float.MAX_VALUE; var maxB = -Float.MAX_VALUE
         val depth = FloatArray(size * size) { Float.MAX_VALUE }
+        // rozbalené složky pro horkou smyčku (bez alokací na pixel)
+        private val rx = r.x; private val ry = r.y; private val rz = r.z
+        private val ux = u.x; private val uy = u.y; private val uz = u.z
+        private val sx0 = sun.x; private val sy0 = sun.y; private val sz0 = sun.z
+        private var spanA = 1f; private var spanB = 1f
 
         init {
             val casters = boxes.filter { it.castsShadow }
             for (b in casters) for (f in faces(b)) for (v in f.v) {
                 minA = min(minA, v.dot(r)); maxA = max(maxA, v.dot(r)); minB = min(minB, v.dot(u)); maxB = max(maxB, v.dot(u))
             }
+            spanA = maxA - minA + 1e-3f; spanB = maxB - minB + 1e-3f
             val q = FloatArray(4) { 1f }
             val polys = ArrayList<Poly>()
             for (b in casters) for (f in faces(b)) {
                 val sx = FloatArray(4); val sy = FloatArray(4); val attr = Array(4) { FloatArray(4) }
                 for (i in 0 until 4) {
-                    val (x, y) = toMap(f.v[i]); sx[i] = x; sy[i] = y
-                    attr[i][3] = -f.v[i].dot(sun)
+                    val v = f.v[i]
+                    sx[i] = mapX(v.x, v.y, v.z); sy[i] = mapY(v.x, v.y, v.z)
+                    attr[i][3] = -v.dot(sun)
                 }
                 polys.add(Poly(4, sx, sy, q, attr, 0))
             }
@@ -190,14 +196,14 @@ object VoxelRenderer {
             }
         }
 
-        fun toMap(p: V3): Pair<Float, Float> =
-            (p.dot(r) - minA) / (maxA - minA + 1e-3f) * size to (p.dot(u) - minB) / (maxB - minB + 1e-3f) * size
+        // stejné pořadí operací jako V3.dot → stejný výsledek
+        private fun mapX(x: Float, y: Float, z: Float) = (x * rx + y * ry + z * rz - minA) / spanA * size
+        private fun mapY(x: Float, y: Float, z: Float) = (x * ux + y * uy + z * uz - minB) / spanB * size
 
-        fun lit(p: V3): Boolean {
-            val (x, y) = toMap(p)
-            val ix = x.toInt(); val iy = y.toInt()
-            if (ix !in 0 until size || iy !in 0 until size) return true
-            return -p.dot(sun) <= depth[iy * size + ix] + 0.04f
+        fun lit(x: Float, y: Float, z: Float): Boolean {
+            val ix = mapX(x, y, z).toInt(); val iy = mapY(x, y, z).toInt()
+            if (ix < 0 || ix >= size || iy < 0 || iy >= size) return true
+            return -(x * sx0 + y * sy0 + z * sz0) <= depth[iy * size + ix] + 0.04f
         }
     }
 
@@ -205,10 +211,11 @@ object VoxelRenderer {
      * Vykreslí scénu do pole ARGB (w × h). [cy] = řádek středu pohledu – když je obraz nahoře
      * prodloužený (aréna až k hornímu okraji displeje), střed zůstává na stejném místě scény.
      */
-    fun render(scene: Scene, cam: Camera, w: Int, h: Int, cy: Float = h / 2f): IntArray {
+    fun render(scene: Scene, cam: Camera, w: Int, h: Int, cy: Float = h / 2f, shadowSize: Int = 768): IntArray {
         val atm = scene.atmosphere
         val sun = atm.sun.norm()
-        val shadow = ShadowMap(sun, scene.boxes)
+        val shadow = ShadowMap(sun, scene.boxes, shadowSize)
+        val ctx = ShadeCtx(scene, sun, shadow)
         val depth = FloatArray(w * h) { Float.MAX_VALUE }
         val faceAt = IntArray(w * h) { -1 }
         val wx = FloatArray(w * h); val wy = FloatArray(w * h); val wz = FloatArray(w * h)
@@ -259,56 +266,82 @@ object VoxelRenderer {
                     if (dd < depth[idx]) { depth[idx] = dd; faceAt[idx] = fi; wx[idx] = x; wy[idx] = y; wz[idx] = z }
                 }
             }
-            for (py in y0..y1) for (pxi in 0 until w) {
-                val idx = py * w + pxi
-                val fi = faceAt[idx]
-                if (fi < 0) { img[idx] = sky(atm, cam.ray(pxi + 0.5f, py + 0.5f, w, h, cy), pxi, py, scene.seed); continue }
-                val face = allFaces[fi]
-                val p = V3(wx[idx], wy[idx], wz[idx])
-                img[idx] = shade(scene, face, p, sqrt(depth[idx]), sun, shadow)
+            // paprsek oblohy rozepsaný do složek (stejné pořadí operací jako Camera.ray)
+            val fx = cam.fwd.x; val fy = cam.fwd.y; val fz = cam.fwd.z
+            val rx = cam.right.x; val ry = cam.right.y; val rz = cam.right.z
+            val ux = cam.up.x; val uy = cam.up.y; val uz = cam.up.z
+            val fr = (w / 2f) / cam.fovTan
+            for (py in y0..y1) {
+                val b = (cy - (py + 0.5f)) / fr
+                for (pxi in 0 until w) {
+                    val idx = py * w + pxi
+                    val fi = faceAt[idx]
+                    if (fi < 0) {
+                        val a = ((pxi + 0.5f) - w / 2f) / fr
+                        var dx = fx + rx * a; var dy = fy + ry * a; var dz = fz + rz * a
+                        dx += ux * b; dy += uy * b; dz += uz * b
+                        val l = sqrt(dx * dx + dy * dy + dz * dz)
+                        if (l != 0f) { val k = 1f / l; dx *= k; dy *= k; dz *= k }
+                        img[idx] = sky(atm, dx, dy, dz, pxi, py, scene.seed); continue
+                    }
+                    img[idx] = shade(ctx, allFaces[fi], wx[idx], wy[idx], wz[idx], sqrt(depth[idx]))
+                }
             }
         }
         return img
     }
 
-    private fun shade(scene: Scene, face: Face, p: V3, dist: Float, sun: V3, shadow: ShadowMap): Int {
+    /** Předpočítané konstanty stínování (barvy světel jako floaty, pole místo seznamů). */
+    private class ShadeCtx(val scene: Scene, val sun: V3, val shadow: ShadowMap) {
         val atm = scene.atmosphere
+        val lr = ((atm.light shr 16) and 0xFF) / 255f; val lg = ((atm.light shr 8) and 0xFF) / 255f; val lb = (atm.light and 0xFF) / 255f
+        val fr = ((atm.fog shr 16) and 0xFF) / 255f; val fg = ((atm.fog shr 8) and 0xFF) / 255f; val fb = (atm.fog and 0xFF) / 255f
+        val nl = atm.lights.size
+        val lx = FloatArray(nl) { atm.lights[it].pos.x }; val ly = FloatArray(nl) { atm.lights[it].pos.y }; val lz = FloatArray(nl) { atm.lights[it].pos.z }
+        val lrad = FloatArray(nl) { atm.lights[it].radius }; val lstr = FloatArray(nl) { atm.lights[it].strength }
+        val lcol = IntArray(nl) { atm.lights[it].color }
+        val sunDot = FloatArray(6) { NORMALS[it].dot(sun) }
+    }
+
+    private fun shade(c: ShadeCtx, face: Face, px: Float, py: Float, pz: Float, dist: Float): Int {
+        val atm = c.atm
         val mat = face.box.mat
-        val base = Textures.texel(mat, face.box, face.n, p, scene.seed)
+        val base = Textures.texel(mat, face.box, face.n, px, py, pz, c.scene.seed)
         var r = ((base shr 16) and 0xFF) / 255f; var g = ((base shr 8) and 0xFF) / 255f; var b = (base and 0xFF) / 255f
         if (!mat.emissive) {
             val n = NORMALS[face.n]
             val faceShade = when (face.n) { 0 -> 1f; 5 -> 0.84f; 4 -> 0.62f; 1 -> 0.62f; else -> 0.72f }
-            val sunDot = n.dot(sun)
-            val lit = sunDot > 0f && shadow.lit(p + n * 0.02f)
+            val lit = c.sunDot[face.n] > 0f && c.shadow.lit(px + n.x * 0.02f, py + n.y * 0.02f, pz + n.z * 0.02f)
             val sunAmt = if (lit) 1f else atm.ambient
-            val lr = ((atm.light shr 16) and 0xFF) / 255f; val lg = ((atm.light shr 8) and 0xFF) / 255f; val lb = (atm.light and 0xFF) / 255f
-            var kr = faceShade * sunAmt * lr; var kg = faceShade * sunAmt * lg; var kb = faceShade * sunAmt * lb
-            for (l in atm.lights) {
-                val d = (p - l.pos).len()
-                if (d >= l.radius) continue
-                val fall = (1f - d / l.radius).let { it * it } * l.strength
-                kr += fall * ((l.color shr 16) and 0xFF) / 255f
-                kg += fall * ((l.color shr 8) and 0xFF) / 255f
-                kb += fall * (l.color and 0xFF) / 255f
+            var kr = faceShade * sunAmt * c.lr; var kg = faceShade * sunAmt * c.lg; var kb = faceShade * sunAmt * c.lb
+            for (i in 0 until c.nl) {
+                val dx = px - c.lx[i]; val dy = py - c.ly[i]; val dz = pz - c.lz[i]
+                val d = sqrt(dx * dx + dy * dy + dz * dz)
+                val rad = c.lrad[i]
+                if (d >= rad) continue
+                val t = 1f - d / rad
+                val fall = t * t * c.lstr[i]
+                val col = c.lcol[i]
+                kr += fall * ((col shr 16) and 0xFF) / 255f
+                kg += fall * ((col shr 8) and 0xFF) / 255f
+                kb += fall * (col and 0xFF) / 255f
             }
             r *= kr; g *= kg; b *= kb
         }
         // mlha
         val fogT = ((dist - atm.fogStart) / (atm.fogEnd - atm.fogStart)).coerceIn(0f, 1f) * atm.fogMax * (if (mat.emissive) 0.4f else 1f)
-        val fr = ((atm.fog shr 16) and 0xFF) / 255f; val fg = ((atm.fog shr 8) and 0xFF) / 255f; val fb = (atm.fog and 0xFF) / 255f
-        r += (fr - r) * fogT; g += (fg - g) * fogT; b += (fb - b) * fogT
+        r += (c.fr - r) * fogT; g += (c.fg - g) * fogT; b += (c.fb - b) * fogT
         return rgb(r, g, b)
     }
 
-    private fun sky(atm: Atmosphere, dir: V3, x: Int, y: Int, seed: Int): Int {
-        val t = (dir.y * 2.2f).coerceIn(0f, 1f)
+    private fun sky(atm: Atmosphere, dirX: Float, dirY: Float, dirZ: Float, x: Int, y: Int, seed: Int): Int {
+        val t = (dirY * 2.2f).coerceIn(0f, 1f)
         var c = mix(atm.skyHorizon, atm.skyTop, t)
-        if (atm.clouds && dir.y > 0.02f) {
+        if (atm.clouds && dirY > 0.02f) {
             // pixelové obláčky: šum na mřížce nad obzorem
             // hranaté obláčky: mřížka v úhlech (azimut × výška), bez perspektivního zkosení
-            val az = Math.toDegrees(kotlin.math.atan2(dir.x, dir.z).toDouble()).toFloat()
-            val el = Math.toDegrees(kotlin.math.asin(dir.y.coerceIn(-1f, 1f)).toDouble()).toFloat()
+            val az = Math.toDegrees(kotlin.math.atan2(dirX, dirZ).toDouble()).toFloat()
+            val el = Math.toDegrees(kotlin.math.asin(dirY.coerceIn(-1f, 1f)).toDouble()).toFloat()
             if (el in 3f..24f) {
                 val cw = 3.2f; val ch = 1.6f
                 val gx = floor(az / cw).toInt(); val gy = floor(el / ch).toInt()
@@ -328,8 +361,9 @@ object VoxelRenderer {
     fun rgb(r: Float, g: Float, b: Float): Int =
         (0xFF shl 24) or ((r.coerceIn(0f, 1f) * 255).toInt() shl 16) or ((g.coerceIn(0f, 1f) * 255).toInt() shl 8) or (b.coerceIn(0f, 1f) * 255).toInt()
 
-    fun mix(a: Int, b: Int, t: Float): Int {
-        fun ch(s: Int) = (((a shr s) and 0xFF) + (((b shr s) and 0xFF) - ((a shr s) and 0xFF)) * t).toInt().coerceIn(0, 255)
-        return (0xFF shl 24) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
-    }
+    fun mix(a: Int, b: Int, t: Float): Int =
+        (0xFF shl 24) or (mixCh(a, b, 16, t) shl 16) or (mixCh(a, b, 8, t) shl 8) or mixCh(a, b, 0, t)
+
+    private fun mixCh(a: Int, b: Int, s: Int, t: Float): Int =
+        (((a shr s) and 0xFF) + (((b shr s) and 0xFF) - ((a shr s) and 0xFF)) * t).toInt().coerceIn(0, 255)
 }

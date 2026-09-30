@@ -268,18 +268,32 @@ class PokemonBattleView @JvmOverloads constructor(
         arenaExtra = extra
         val theme = arenaTheme; val seed = arenaSeed
         Thread {
+            // 1) hrubý náhled (desetina času) → intro může hned skončit, 2) plná aréna se prolne přes něj
             val t0 = android.os.SystemClock.uptimeMillis()
-            val px = runCatching { A.render(theme, seed, extra) }.getOrNull() ?: return@Thread
-            android.util.Log.d("Arena", "render $theme extra=$extra threads=${cz.uhk.macroflow.pokemon.arena.VoxelRenderer.threads} ${android.os.SystemClock.uptimeMillis() - t0} ms")
-            val bmp = Bitmap.createBitmap(px, A.W, A.H + extra, Bitmap.Config.ARGB_8888)
-            handler.post {
-                if (extra == arenaExtra) {
-                    arenaBmp = bmp; arenaShownAt = now(); invalidate()
-                    arenaReady = true
-                    onArenaReady?.invoke(); onArenaReady = null
-                }
+            val (pw, ph) = A.previewSize(extra)
+            val pre = runCatching { A.renderPreview(theme, seed, extra) }.getOrNull()
+            if (pre != null) {
+                val pbmp = Bitmap.createBitmap(pre, pw, ph, Bitmap.Config.ARGB_8888)
+                handler.post { if (extra == arenaExtra && arenaBmp == null) showArena(pbmp) }
             }
+            val t1 = android.os.SystemClock.uptimeMillis()
+            val px = runCatching { A.render(theme, seed, extra) }.getOrNull() ?: return@Thread
+            android.util.Log.d("Arena", "$theme extra=$extra threads=${cz.uhk.macroflow.pokemon.arena.VoxelRenderer.threads} náhled ${t1 - t0} ms, plná ${android.os.SystemClock.uptimeMillis() - t1} ms")
+            val bmp = Bitmap.createBitmap(px, A.W, A.H + extra, Bitmap.Config.ARGB_8888)
+            handler.post { if (extra == arenaExtra) showArena(bmp) }
         }.start()
+    }
+
+    /** Pod novou arénou se během prolínání kreslí ta předchozí (náhled). */
+    private var arenaPrevBmp: Bitmap? = null
+
+    private fun showArena(bmp: Bitmap) {
+        arenaPrevBmp = arenaBmp
+        arenaBmp = bmp; arenaShownAt = now(); invalidate()
+        if (!arenaReady) {
+            arenaReady = true
+            onArenaReady?.invoke(); onArenaReady = null
+        }
     }
 
     /** Barva pozadí, než se aréna dopočítá. */
@@ -332,7 +346,9 @@ class PokemonBattleView @JvmOverloads constructor(
         if (shaking) { canvas.save(); canvas.translate(mf!!.screenDx * scale, mf.screenDy * scale) }
         val arena = arenaBmp
         val fadeIn = if (arena == null) 0f else ((now() - arenaShownAt) / 250f).coerceIn(0f, 1f)
-        if (fadeIn < 1f) {
+        val prev = arenaPrevBmp
+        if (fadeIn < 1f && prev != null) canvas.drawBitmap(prev, null, arenaDst, sp)
+        else if (fadeIn < 1f) {
             val (sky, ground) = arenaFallback()
             fp.color = sky; canvas.drawRect(arenaDst.left, arenaDst.top, arenaDst.right, gbY(40f), fp)
             // (dopočítává se na pozadí během intra)
@@ -341,7 +357,7 @@ class PokemonBattleView @JvmOverloads constructor(
         if (arena != null) {
             arenaFadePaint.alpha = (fadeIn * 255).toInt()
             canvas.drawBitmap(arena, null, arenaDst, if (fadeIn >= 1f) sp else arenaFadePaint)
-            if (fadeIn < 1f) postInvalidateOnAnimation()
+            if (fadeIn < 1f) postInvalidateOnAnimation() else if (prev != null) arenaPrevBmp = null
         }
         canvas.save()
         canvas.clipRect(arenaDst)

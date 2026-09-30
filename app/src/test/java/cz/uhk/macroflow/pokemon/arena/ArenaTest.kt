@@ -61,4 +61,26 @@ class ArenaTest {
             }
         } finally { VoxelRenderer.threads = before }
     }
+
+    @Test
+    fun previewMatchesTheFullArena() {
+        // docs/adr/0048: náhled v 1/3 rozlišení se prolne do plné arény – musí to být tentýž obraz
+        for (t in ArenaTheme.entries) for (extra in listOf(0, 200)) {
+            val full = Arenas.render(t, 9, extra)
+            val pre = Arenas.renderPreview(t, 9, extra)
+            val (pw, ph) = Arenas.previewSize(extra)
+            assertEquals(pw * ph, pre.size)
+            assertTrue(pre.all { (it ushr 24) == 0xFF })
+            var diff = 0L; var n = 0
+            for (y in 0 until ph) for (x in 0 until pw) {
+                val fx = x * 3 + 1; val fy = y * 3 + 1
+                if (fy >= Arenas.H + extra) continue
+                val a = pre[y * pw + x]; val b = full[fy * Arenas.W + fx]
+                for (s in intArrayOf(0, 8, 16)) diff += kotlin.math.abs(((a shr s) and 0xFF) - ((b shr s) and 0xFF))
+                n += 3
+            }
+            val mean = diff.toDouble() / n
+            assertTrue("$t extra=$extra mean=$mean", mean < 20.0)
+        }
+    }
 }
