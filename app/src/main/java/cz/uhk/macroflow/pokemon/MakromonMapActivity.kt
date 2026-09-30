@@ -1325,9 +1325,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.skills.SkillStore.grantItemOnce(ctx, cz.uhk.macroflow.pokemon.skills.Gear.OLD_NET.id)
             }
             StoryFlags.set(this@MakromonMapActivity, MinesMap.NET_TAKEN_KEY)
-            showMapToast("🪰 " + MinesMap.NET_TEXT + "
-
-Získal jsi: Stará síťka (nasazená v deníku → Postava → TOOLS).")
+            showMapToast("🪰 " + MinesMap.NET_TEXT + "\n\nZískal jsi: Stará síťka (nasazená v deníku → Postava → TOOLS).")
             refreshStoryDecor()
         }
     }
