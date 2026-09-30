@@ -16,7 +16,9 @@ Připomínky z testování:
 * **Rychlejší aréna** (`VoxelRenderer`):
   * Obraz se dělí na vodorovné pásy a každé vlákno (až 8) rasterizuje všechny polygony jen do svého pásu a hned ho stínuje. Pásy se nepřekrývají, takže to jde bez zámků. Stínová mapa stejně.
   * Výsledek je bit po bitu stejný jako v jednom vlákně (test `parallelRenderIsIdenticalToSingleThread`).
-  * Po dopočítání se aréna 250 ms prolne přes náhradní barvy místo skoku.
+  * Horké smyčky (stínování, stínová mapa, textury, paprsek oblohy) počítají se složkami x/y/z místo `V3`/`Pair` – na pixel se nic nealokuje. Na ART (hlavně v debug buildu) to byla většina času. Výstup je bit po bitu stejný jako dřív.
+  * **Náhled:** nejdřív se vykreslí aréna v 1/3 rozlišení s hrubší stínovou mapou (256 místo 768), zhruba za desetinu času (`Arenas.renderPreview`, test `previewMatchesTheFullArena`). Intro čeká jen na náhled, plná aréna se pak přes něj prolne.
+  * Po dopočítání se aréna 250 ms prolne přes náhradní barvy (nebo přes náhled) místo skoku.
 * **Animace útoků** (`battlefx/MoveAnims.kt`, čistá logika, a kreslení v `PokemonBattleView`):
   * 19 stylů:
 
