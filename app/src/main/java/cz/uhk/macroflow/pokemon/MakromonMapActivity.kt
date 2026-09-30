@@ -1298,9 +1298,9 @@ class MakromonMapActivity : AppCompatActivity() {
         })
         if (!StoryFlags.isSet(this, MinesMap.NET_TAKEN_KEY)) {
             val (hx, hy, _) = MinesMap.MAP.tapAreas.getValue(MinesMap.NET_NODE)
-            val size = (8 * s).toInt()
-            val glow = glowView((18 * s).toInt(), 0xFFFFF2B0.toInt(), 0x77).apply {
-                x = hx * s - 9 * s; y = hy * s - 9 * s; elevation = 2.5f
+            val size = (6 * s).toInt()
+            val glow = glowView((14 * s).toInt(), 0xFFFFF2B0.toInt(), 0x77).apply {
+                x = hx * s - 7 * s; y = hy * s - 7 * s; elevation = 2.5f
             }
             val net = pixelView(cz.uhk.macroflow.pokemon.skills.GearArt.gearIcon(cz.uhk.macroflow.pokemon.skills.Gear.OLD_NET),
                 16, 16, size, size).apply {
@@ -1324,9 +1324,10 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun placeVendelin() {
         if (worldScale <= 0) return
         val s = worldScale.toFloat()
-        val size = (24 * s).toInt()
-        val glow = glowView((30 * s).toInt(), 0xFFFFC04A.toInt(), 0x66).apply {
-            x = (Vendelin.X - 7) * s - 15 * s; y = (Vendelin.Y - 15) * s - 15 * s; elevation = 1.9f
+        // velikost vůči postavě hráče (~8 art px): Vendelín je o hlavu vyšší portrét
+        val size = (13 * s).toInt()
+        val glow = glowView((18 * s).toInt(), 0xFFFFC04A.toInt(), 0x66).apply {
+            x = (Vendelin.X - 4) * s - 9 * s; y = (Vendelin.Y - 9) * s - 9 * s; elevation = 1.9f
         }
         val npc = ImageView(this).apply {
             layoutParams = FrameLayout.LayoutParams(size, size)
@@ -1344,16 +1345,16 @@ class MakromonMapActivity : AppCompatActivity() {
             duration = 1900; repeatCount = android.animation.ValueAnimator.INFINITE; start()
         }
         // šichtovní kniha na bedně
-        val book = pixelView(cz.uhk.macroflow.pokemon.skills.GearArt.ledger(), 12, 12, (8 * s).toInt(), (8 * s).toInt()).apply {
-            x = (Vendelin.BOOK_X - 4) * s; y = (Vendelin.BOOK_Y - 5) * s; elevation = 2.1f
+        val book = pixelView(cz.uhk.macroflow.pokemon.skills.GearArt.ledger(), 12, 12, (5 * s).toInt(), (5 * s).toInt()).apply {
+            x = (Vendelin.BOOK_X - 2.5f) * s; y = (Vendelin.BOOK_Y - 3.5f) * s; elevation = 2.1f
         }
         addDecor(book)
         val p = questManager.getCurrentProgress()
         val waiting = questManager.getActiveQuestId() == Vendelin.QUEST_ID && p != null && !p.isCompleted &&
             p.currentStageIndex == Vendelin.SIGN_STAGE && !StoryFlags.isSet(this, Vendelin.BOOK_SIGNED_KEY)
         if (waiting) {
-            val bg = glowView((20 * s).toInt(), 0xFFFFF2B0.toInt(), 0x88).apply {
-                x = Vendelin.BOOK_X * s - 10 * s; y = (Vendelin.BOOK_Y - 1) * s - 10 * s; elevation = 2.05f
+            val bg = glowView((14 * s).toInt(), 0xFFFFF2B0.toInt(), 0x88).apply {
+                x = Vendelin.BOOK_X * s - 7 * s; y = (Vendelin.BOOK_Y - 1) * s - 7 * s; elevation = 2.05f
             }
             addDecor(bg)
             crystalAnimators += android.animation.ObjectAnimator.ofFloat(bg, "alpha", 0.3f, 1f, 0.3f).apply {
