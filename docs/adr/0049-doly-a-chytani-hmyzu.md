@@ -4,7 +4,7 @@
 
 ## Kontext
 * Levá jeskyně v horách je Starý důl. Hráč z ní chtěl další, hlubší lokaci: staré koleje, vozíky, praskliny ve zdech navazující na přirozené jeskyně a něco živého, třeba lávový vodopád, který opravdu teče.
-* Ve slotech nástrojů chyběla síťka. Chytání (IdleOn „Catching“) mělo jen chytání Makromonů, ne AFK chytání hmyzu jako těžba a kácení.
+* Ve slotech nástrojů chyběla síťka a chyběla dovednost na AFK chytání hmyzu (IdleOn „Catching“) vedle těžby a kácení.
 
 ## Rozhodnutí
 * **Vchod do Dolů**:
@@ -35,7 +35,8 @@
   | Magmové mušky | 70 | 12 min | 60 | Magmová muška |
 
   * U každého místa poletují tři mušky, každá po vlastní osmičce. Mávají křídly a zadeček bliká.
-  * Klepnutím se otevře stejná tabule jako u žíly nebo stromu. XP jdou do **Chytání**, takže jedna dovednost = Makromoni i hmyz.
+  * Klepnutím se otevře stejná tabule jako u žíly nebo stromu.
+  * **Chytání hmyzu je samostatná dovednost** (`Skill.BUG_CATCHING`, XP v `skill_xp_bugcatching`) s vlastním levelem, pasivním bonusem, body a stromem – stejně jako Těžba a Kácení. Chytání Makromonů (`Skill.CATCHING`) zůstává beze změny.
   * Šance na dvojitý úlovek = pasivní bonus + síťka + strom (`SkillState.multiChance`, platí teď pro všechna místa).
 * **Síťky** (slot NET):
 
@@ -48,19 +49,19 @@
 
   * Kovové síťky se vyrábějí u pracovního stolu (Nástroje) za 80 / 180 / 360 XP Výroby.
   * Návnadou je hmyz, který se chytá síťkou o stupeň horší.
-* **Strom Chytání** – nová větev síťky, nezávislá na uzlech týmu:
+* **Strom Chytání hmyzu**:
 
   | Uzel | Cena | Efekt |
   |---|---|---|
   | Lehká ruka | 1 bod | +20 % efektivita síťky |
-  | Entomolog | 1 bod | +10 % XP za chytání |
+  | Entomolog | 1 bod | +15 % XP za chytání hmyzu |
   | Plná síťka | 2 body | +10 % dvojitý úlovek (nový efekt `MultiChance`) |
   | Noční lov | 2 body | +12 h AFK |
 
 * **Deník a ocenění**:
   * Suroviny mají novou sekci „Hmyz z Dolů“ (ikony mušek ve sklenici).
-  * Chytání ukazuje dvojitý úlovek, efektivitu síťky a AFK.
-  * Nová ocenění: Světluška (100 jiskřivek), Duhová křídla (50 krystalových), Ohnivý tanec (25 magmových).
+  * Stránka Postava má šestou dovednost Chytání hmyzu (ikona síťky) s dvojitým úlovkem, efektivitou síťky a AFK.
+  * Nová kategorie ocenění „Chytání hmyzu“: Světluška (100 jiskřivek), Duhová křídla (50 krystalových), Ohnivý tanec (25 magmových), Mistr entomolog (Lv 20).
 * **Přechod „Sestup do hlubin“** (`MineDescent`):
   * Let šikmou štolou: ubíhají dřevěné rámy výdřevy, po zemi koleje s pražci, ve stěnách se blýskají fialové a rudé krystaly a žhnou praskliny.
   * Z hloubky roste rudý žár a proti nám letí jiskry. Mapa se vymění pod zakrytou obrazovkou v 0,9 s.
@@ -69,4 +70,4 @@
 
 ## Důsledky
 * Uzly a tvary lávy se musí měnit v `MinesMap.kt` i `gen_mines.py` zároveň; hlídají to testy `MinesTest` a `WalkGridTest`.
-* Body Chytání se teď dělí mezi tým a síťku – je to volba hráče jako v IdleOn.
+* Každá sběrná činnost má vlastní dovednost; nová (další světy) se přidá do `Skill`, `SkillTree.NODES` a `GatherSpot` stejně.

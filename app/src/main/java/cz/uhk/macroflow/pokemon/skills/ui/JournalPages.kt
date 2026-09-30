@@ -196,15 +196,16 @@ object JournalPages {
             Skill.CATCHING -> {
                 stat("Šance na útěk z ballu", "−${pct(state.catchReduction)}")
                 stat("Míst v týmu", "${state.teamSlots} / ${Team.MAX}")
-                // chytání hmyzu síťkou v Dolech (docs/adr/0049)
-                stat("Šance na dvojitý úlovek", pct(state.multiChance(s)))
-                if (state.efficiencyBonus(s) > 0) stat("Efektivita síťky", "+" + pct(state.efficiencyBonus(s)))
-                stat("AFK nejvýš", "${state.afkCapHours(s)} h")
             }
             Skill.CRAFTING -> stat("Šance na dvojitou výrobu", pct(passive))
             Skill.MINING -> {
                 stat("Šance na dvojitou rudu (multiore)", pct(passive))
                 if (state.efficiencyBonus(s) > 0) stat("Efektivita krumpáče", "+" + pct(state.efficiencyBonus(s)))
+                stat("AFK nejvýš", "${state.afkCapHours(s)} h")
+            }
+            Skill.BUG_CATCHING -> {
+                stat("Šance na dvojitý úlovek", pct(state.multiChance(s)))
+                if (state.efficiencyBonus(s) > 0) stat("Efektivita síťky", "+" + pct(state.efficiencyBonus(s)))
                 stat("AFK nejvýš", "${state.afkCapHours(s)} h")
             }
             Skill.LOGGING -> {

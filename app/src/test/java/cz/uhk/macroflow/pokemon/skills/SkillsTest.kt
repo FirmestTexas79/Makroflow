@@ -86,7 +86,7 @@ class SkillsTest {
         assertEquals(6, all.teamSlots)
         assertEquals(4, all.plotsOpen)
         assertTrue(all.basicEquipment)
-        assertEquals(1.25, all.xpMultiplier(Skill.CATCHING), 1e-9)   // Zkušený lovec + Entomolog (docs/adr/0049)
+        assertEquals(1.15, all.xpMultiplier(Skill.CATCHING), 1e-9)
         assertEquals(0.15, all.growthSpeedup, 1e-9)
         val none = SkillState()
         assertEquals(1, none.teamSlots)

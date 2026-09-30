@@ -10,12 +10,14 @@ import kotlin.random.Random
  * Chytání, Výrobu a Pěstování. Čistý Kotlin, pokryto testy.
  */
 enum class Skill(val id: String, val label: String, val verb: String) {
-    CATCHING("catching", "Chytání", "chytáním Makromonů a hmyzu síťkou v Dolech"),
+    CATCHING("catching", "Chytání", "chytáním Makromonů"),
     CRAFTING("crafting", "Výroba", "výrobou u pracovního stolu"),
     HARVESTING("harvesting", "Pěstování", "sklizní bobulí ze záhonů"),
     /** docs/adr/0035 – těží se krumpáčem v horách, i když jsi pryč (AFK). */
     MINING("mining", "Těžba", "těžbou rud krumpáčem"),
-    LOGGING("logging", "Kácení", "kácením stromů sekerou");
+    LOGGING("logging", "Kácení", "kácením stromů sekerou"),
+    /** docs/adr/0049 – chytá se síťkou v Dolech, i když jsi pryč (AFK). */
+    BUG_CATCHING("bugcatching", "Chytání hmyzu", "chytáním hmyzu síťkou v Dolech");
 
     /** Předmět v user_items, jehož množství = celkové nasbírané XP (synchronizuje se s Firebase). */
     val xpItemId: String get() = "skill_xp_$id"
@@ -134,11 +136,6 @@ object SkillTree {
         Node("team_4", Skill.CATCHING, "Čtveřice", "Můžeš mít v týmu až ČTYŘI Makromony.", 2, "team_3", Effect.TeamSlot),
         Node("team_5", Skill.CATCHING, "Pětice", "Můžeš mít v týmu až PĚT Makromonů.", 2, "team_4", Effect.TeamSlot),
         Node("team_6", Skill.CATCHING, "Plný tým", "Můžeš mít v týmu až ŠEST Makromonů.", 3, "team_5", Effect.TeamSlot),
-        // Chytání hmyzu síťkou v Dolech (docs/adr/0049)
-        Node("net_eff", Skill.CATCHING, "Lehká ruka", "+20 % efektivita síťky.", 1, effect = Effect.Efficiency(0.20)),
-        Node("net_xp", Skill.CATCHING, "Entomolog", "+10 % XP za chytání (Makromoni i hmyz).", 1, "net_eff", Effect.XpBonus(0.10)),
-        Node("net_multi", Skill.CATCHING, "Plná síťka", "+10 % šance na dvojitý úlovek hmyzu.", 2, "net_eff", Effect.MultiChance(0.10)),
-        Node("net_afk", Skill.CATCHING, "Noční lov", "Když jsi pryč, chytá se o 12 h déle.", 2, "net_eff", Effect.AfkHours(12)),
 
         Node("basic_gear", Skill.CRAFTING, "Základní vybavení", "Můžeš vyrábět dobrodruhův set u pracovního stolu na louce.", 1, effect = Effect.BasicEquipment),
         Node("craft_xp", Skill.CRAFTING, "Zručné ruce", "+15 % XP za výrobu.", 1, "basic_gear", Effect.XpBonus(0.15)),
@@ -153,7 +150,13 @@ object SkillTree {
 
         Node("log_eff", Skill.LOGGING, "Nabroušené ostří", "+20 % efektivita sekery.", 1, effect = Effect.Efficiency(0.20)),
         Node("log_xp", Skill.LOGGING, "Dřevorubec", "+15 % XP za kácení.", 1, "log_eff", Effect.XpBonus(0.15)),
-        Node("log_afk", Skill.LOGGING, "Celodenní šichta", "Když jsi pryč, kácí se o 12 h déle.", 2, "log_eff", Effect.AfkHours(12))
+        Node("log_afk", Skill.LOGGING, "Celodenní šichta", "Když jsi pryč, kácí se o 12 h déle.", 2, "log_eff", Effect.AfkHours(12)),
+
+        // Chytání hmyzu síťkou v Dolech (docs/adr/0049)
+        Node("net_eff", Skill.BUG_CATCHING, "Lehká ruka", "+20 % efektivita síťky.", 1, effect = Effect.Efficiency(0.20)),
+        Node("net_xp", Skill.BUG_CATCHING, "Entomolog", "+15 % XP za chytání hmyzu.", 1, "net_eff", Effect.XpBonus(0.15)),
+        Node("net_afk", Skill.BUG_CATCHING, "Noční lov", "Když jsi pryč, chytá se o 12 h déle.", 2, "net_eff", Effect.AfkHours(12)),
+        Node("net_multi", Skill.BUG_CATCHING, "Plná síťka", "+10 % šance na dvojitý úlovek.", 2, "net_eff", Effect.MultiChance(0.10))
     )
 
     fun node(id: String): Node? = NODES.firstOrNull { it.id == id }

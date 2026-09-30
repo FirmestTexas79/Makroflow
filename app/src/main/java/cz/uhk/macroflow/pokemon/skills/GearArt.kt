@@ -191,6 +191,7 @@ object GearArt {
     fun skillIcon(s: Skill): IntArray? = when (s) {
         Skill.MINING -> pickaxe(rusty = false)
         Skill.LOGGING -> axe(rusty = false)
+        Skill.BUG_CATCHING -> net(old = false)
         else -> null
     }
 
@@ -367,7 +368,7 @@ object GearArt {
     /** Obrázek místa na mapě; mušky (Chytání) žádný nemají – poletují živě (MinesFxView). */
     fun spot(spot: GatherSpot): Triple<IntArray, Int, Int>? = when (spot.skill) {
         Skill.MINING -> Triple(rock(spot), ROCK_W, ROCK_H)
-        Skill.CATCHING -> null
+        Skill.BUG_CATCHING -> null
         else -> Triple(tree(spot), TREE_W, TREE_H)
     }
 }

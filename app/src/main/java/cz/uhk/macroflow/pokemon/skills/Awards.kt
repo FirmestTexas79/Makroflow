@@ -9,7 +9,7 @@ import kotlin.math.hypot
  */
 enum class AwardCategory(val label: String) {
     GENERAL("Všeobecné"), CATCHING("Chytání"), CRAFTING("Výroba"), HARVESTING("Pěstování"),
-    MINING("Těžba"), LOGGING("Kácení")
+    MINING("Těžba"), LOGGING("Kácení"), BUG_CATCHING("Chytání hmyzu")
 }
 
 /** Obtížnost = barva medaile. */
@@ -70,6 +70,7 @@ object Awards {
     private val H = AwardCategory.HARVESTING
     private val M = AwardCategory.MINING
     private val L = AwardCategory.LOGGING
+    private val BG = AwardCategory.BUG_CATCHING
     private val B = AwardTier.BRONZE
     private val S = AwardTier.SILVER
     private val Gd = AwardTier.GOLD
@@ -94,10 +95,6 @@ object Awards {
         a("shiny_1", C, S, "Třpytka", "Chyť svého prvního shiny Makromona.", 1, AwardSymbol.SHINY) { it.shinyCaught },
         a("shiny_100", C, P, "Shiny lovec", "Chyť 100 shiny Makromonů.", 100, AwardSymbol.SHINY) { it.shinyCaught },
         a("team_6", C, Gd, "Plná parta", "Měj v týmu šest Makromonů.", 6, AwardSymbol.TEAM) { it.teamSize },
-        // hmyz v Dolech (docs/adr/0049)
-        a("spark_100", C, B, "Světluška", "Chyť síťkou 100 jiskřivek.", 100, AwardSymbol.BUG_SPARK) { it.got(Resource.BUG_SPARK) },
-        a("crystal_50", C, S, "Duhová křídla", "Chyť síťkou 50 krystalových mušek.", 50, AwardSymbol.BUG_CRYSTAL) { it.got(Resource.BUG_CRYSTAL) },
-        a("magma_25", C, Gd, "Ohnivý tanec", "Chyť síťkou 25 magmových mušek.", 25, AwardSymbol.BUG_MAGMA) { it.got(Resource.BUG_MAGMA) },
 
         // ── Výroba ──
         a("craft_10", CR, B, "Učeň", "Vyrob 10 Makroballů.", 10, AwardSymbol.BALL) { it.crafted },
@@ -121,7 +118,13 @@ object Awards {
         a("oak_100", L, B, "Dubový", "Pokácej 100 dubových polen.", 100, AwardSymbol.LOG_OAK) { it.got(Resource.LOG_OAK) },
         a("birch_50", L, S, "Březí", "Pokácej 50 březových polen.", 50, AwardSymbol.LOG_BIRCH) { it.got(Resource.LOG_BIRCH) },
         a("maple_25", L, Gd, "Javorník", "Pokácej 25 javorových polen.", 25, AwardSymbol.LOG_MAPLE) { it.got(Resource.LOG_MAPLE) },
-        a("logging_20", L, P, "Mistr dřevorubec", "Dosáhni levelu 20 v Kácení.", 20, AwardSymbol.STAR) { it.level(Skill.LOGGING) }
+        a("logging_20", L, P, "Mistr dřevorubec", "Dosáhni levelu 20 v Kácení.", 20, AwardSymbol.STAR) { it.level(Skill.LOGGING) },
+
+        // ── Chytání hmyzu (docs/adr/0049) ──
+        a("spark_100", BG, B, "Světluška", "Chyť síťkou 100 jiskřivek.", 100, AwardSymbol.BUG_SPARK) { it.got(Resource.BUG_SPARK) },
+        a("crystal_50", BG, S, "Duhová křídla", "Chyť síťkou 50 krystalových mušek.", 50, AwardSymbol.BUG_CRYSTAL) { it.got(Resource.BUG_CRYSTAL) },
+        a("magma_25", BG, Gd, "Ohnivý tanec", "Chyť síťkou 25 magmových mušek.", 25, AwardSymbol.BUG_MAGMA) { it.got(Resource.BUG_MAGMA) },
+        a("bugs_20", BG, P, "Mistr entomolog", "Dosáhni levelu 20 v Chytání hmyzu.", 20, AwardSymbol.STAR) { it.level(Skill.BUG_CATCHING) }
     )
 
     /** Cíl – u „chyť každý druh“ podle počtu druhů ve hře. */

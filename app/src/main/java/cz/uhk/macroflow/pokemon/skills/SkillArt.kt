@@ -64,7 +64,7 @@ object SkillArt {
         Skill.CATCHING -> catchingIcon()
         Skill.CRAFTING -> craftingIcon()
         Skill.HARVESTING -> harvestingIcon()
-        Skill.MINING, Skill.LOGGING -> GearArt.skillIcon(skill)!!
+        Skill.MINING, Skill.LOGGING, Skill.BUG_CATCHING -> GearArt.skillIcon(skill)!!
     }
 
     /** Makroball v letu: čáry pohybu a jiskra. */

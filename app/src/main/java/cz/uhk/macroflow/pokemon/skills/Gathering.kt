@@ -114,13 +114,13 @@ enum class Gear(
     OLD_NET("tool_net_old", 19, GearSlot.NET, "Stará síťka",
         "Visela na rezavém háku u vstupu do Dolů. Pár ok je potrhaných, ale mušku chytí. Síla 10.", 10),
     COPPER_NET("tool_net_copper", 20, GearSlot.NET, "Měděná síťka",
-        "Měděná obruč na dubové násadě. Síla 25, +5 % XP za chytání.", 25, xpBonus = mapOf(Skill.CATCHING to 0.05)),
+        "Měděná obruč na dubové násadě. Síla 25, +5 % XP za chytání hmyzu.", 25, xpBonus = mapOf(Skill.BUG_CATCHING to 0.05)),
     SILVER_NET("tool_net_silver", 21, GearSlot.NET, "Stříbrná síťka",
-        "Jemná stříbrná obruč na březové násadě. Síla 60, +10 % XP za chytání, +5 % šance na dvojitý úlovek.", 60,
-        xpBonus = mapOf(Skill.CATCHING to 0.10), multiBonus = mapOf(Skill.CATCHING to 0.05)),
+        "Jemná stříbrná obruč na březové násadě. Síla 60, +10 % XP za chytání hmyzu, +5 % šance na dvojitý úlovek.", 60,
+        xpBonus = mapOf(Skill.BUG_CATCHING to 0.10), multiBonus = mapOf(Skill.BUG_CATCHING to 0.05)),
     GOLD_NET("tool_net_gold", 22, GearSlot.NET, "Zlatá síťka",
         "Zlatá obruč na javorové násadě, oka tenká jako vlas. Síla 150, +20 % XP a +8 % dvojitý úlovek, chytá o 4 h déle bez tebe.", 150,
-        xpBonus = mapOf(Skill.CATCHING to 0.20), multiBonus = mapOf(Skill.CATCHING to 0.08), afkHours = mapOf(Skill.CATCHING to 4));
+        xpBonus = mapOf(Skill.BUG_CATCHING to 0.20), multiBonus = mapOf(Skill.BUG_CATCHING to 0.08), afkHours = mapOf(Skill.BUG_CATCHING to 4));
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null
@@ -154,20 +154,20 @@ enum class GatherSpot(
     BIRCH(5, "strom_briza", Skill.LOGGING, "Bříza", Resource.LOG_BIRCH, 30, 360, 25, "FOREST"),
     MAPLE(6, "strom_javor", Skill.LOGGING, "Javor", Resource.LOG_MAPLE, 70, 720, 60, "FOREST"),
     // Chytání hmyzu síťkou v Dolech (docs/adr/0049) – mušky poletující ve vzduchu
-    SPARK_FLIES(7, "hmyz_jiskrivky", Skill.CATCHING, "Jiskřivky u lucerny", Resource.BUG_SPARK, 10, 180, 10, "MINES"),
-    CRYSTAL_FLIES(8, "hmyz_krystal", Skill.CATCHING, "Krystalové mušky", Resource.BUG_CRYSTAL, 30, 360, 25, "MINES"),
-    MAGMA_FLIES(9, "hmyz_magma", Skill.CATCHING, "Magmové mušky", Resource.BUG_MAGMA, 70, 720, 60, "MINES");
+    SPARK_FLIES(7, "hmyz_jiskrivky", Skill.BUG_CATCHING, "Jiskřivky u lucerny", Resource.BUG_SPARK, 10, 180, 10, "MINES"),
+    CRYSTAL_FLIES(8, "hmyz_krystal", Skill.BUG_CATCHING, "Krystalové mušky", Resource.BUG_CRYSTAL, 30, 360, 25, "MINES"),
+    MAGMA_FLIES(9, "hmyz_magma", Skill.BUG_CATCHING, "Magmové mušky", Resource.BUG_MAGMA, 70, 720, 60, "MINES");
 
     /** Nástroj, bez kterého to nejde. */
     val toolSlot: GearSlot get() = when (skill) {
         Skill.MINING -> GearSlot.PICKAXE
-        Skill.CATCHING -> GearSlot.NET
+        Skill.BUG_CATCHING -> GearSlot.NET
         else -> GearSlot.AXE
     }
-    val verb: String get() = when (skill) { Skill.MINING -> "Těžit"; Skill.CATCHING -> "Chytat"; else -> "Kácet" }
+    val verb: String get() = when (skill) { Skill.MINING -> "Těžit"; Skill.BUG_CATCHING -> "Chytat"; else -> "Kácet" }
     /** „Právě tu …“ */
-    val doing: String get() = when (skill) { Skill.MINING -> "těžíš"; Skill.CATCHING -> "chytáš"; else -> "kácíš" }
-    val emoji: String get() = when (skill) { Skill.MINING -> "⛏️"; Skill.CATCHING -> "🪰"; else -> "🪓" }
+    val doing: String get() = when (skill) { Skill.MINING -> "těžíš"; Skill.BUG_CATCHING -> "chytáš"; else -> "kácíš" }
+    val emoji: String get() = when (skill) { Skill.MINING -> "⛏️"; Skill.BUG_CATCHING -> "🪰"; else -> "🪓" }
 
     /** Kde to na mapě je (pro cedule a deník). */
     val placeLabel: String get() = when (biome) {
