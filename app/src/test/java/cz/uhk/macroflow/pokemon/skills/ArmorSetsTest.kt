@@ -39,14 +39,24 @@ class ArmorSetsTest {
     @Test fun setBonusNeedsAllFourPieces() {
         val three = SkillState(gear = GearCrafting.PRISM_SET.dropLast(1).toSet())
         val four = SkillState(gear = GearCrafting.PRISM_SET.toSet())
-        assertEquals(0.06, three.gearMulti(Skill.MINING), 1e-9)
-        assertEquals(0.11, four.gearMulti(Skill.MINING), 1e-9)                    // +5 % za celou sadu
+        assertEquals(0.12, three.gearMulti(Skill.MINING), 1e-9)
+        assertEquals(0.17, four.gearMulti(Skill.MINING), 1e-9)                    // +5 % za celou sadu
         assertTrue(four.gain(Skill.LOGGING, 100.0) > three.gain(Skill.LOGGING, 100.0))
         val spark = SkillState(gear = GearCrafting.SPARK_SET.toSet())
         assertEquals(12 + 1, spark.afkCapHours(Skill.BUG_CATCHING))
         assertEquals(12, SkillState(gear = GearCrafting.SPARK_SET.drop(1).toSet()).afkCapHours(Skill.BUG_CATCHING))
         assertTrue(!GearSet.ADVENTURER.hasBonus && GearSet.SPARK.hasBonus && GearSet.PRISM.hasBonus)
-        assertEquals(1.1, four.dropRate, 1e-9)                                   // magmové boty
+        assertEquals(1.3, four.dropRate, 1e-9)                                   // magmové boty
+    }
+
+    /** Boty stojí trojnásobek, jen kořist z Makromonů (vzácné dropy) má dvojnásobek jako ostatní kusy. */
+    @Test fun bootsCostMoreButRareDropsStayModest() {
+        val r = GearCrafting.recipe(Gear.MAGMA_BOOTS)!!
+        assertEquals(60, r[Resource.ORE_GOLD.itemId]); assertEquals(36, r[Resource.BUG_MAGMA.itemId])
+        assertEquals(4, r[Resource.MAGMA_ORB.itemId]); assertEquals(4, r[Resource.DRAGON_SCALE.itemId])
+        assertEquals(240, Gear.SPARK_BOOTS.efficiencyBonus[Skill.MINING])
+        assertEquals(450, Gear.MAGMA_BOOTS.efficiencyBonus[Skill.BUG_CATCHING])
+        assertEquals(12, GearCrafting.recipe(Gear.SPARK_BOOTS)!![Resource.LEAF_DRY.itemId])
     }
 
     @Test fun iconsInfoAndUniqueCodes() {

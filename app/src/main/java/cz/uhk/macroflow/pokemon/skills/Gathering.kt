@@ -129,34 +129,36 @@ enum class Gear(
         afkHours = mapOf(Skill.MINING to 2, Skill.LOGGING to 2, Skill.BUG_CATCHING to 2)),
 
     // ── Jiskřivý set (docs/adr/0053): stříbro, jiskřivky a kořist z Makromonů; boty i s krystalovými muškami ──
+    // Kusy mají dvojnásobné bonusy proti prvnímu návrhu, boty trojnásobné – nejlepší nástroj z výroby
+    // tak s nimi dosáhne na efektivitu potřebnou pro vzácnější místa.
     SPARK_HELM("gear_spark_helm", 24, GearSlot.HELMET, "Jiskřivá přilba",
-        "Stříbrná přilba s hledím, za kterým svítí dvě jiskřivky. +15 % XP za těžbu, +40 k efektivitě těžby.", 0,
-        xpBonus = mapOf(Skill.MINING to 0.15), efficiencyBonus = mapOf(Skill.MINING to 40)),
+        "Stříbrná přilba s hledím, za kterým svítí dvě jiskřivky. +30 % XP za těžbu, +80 k efektivitě těžby.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.30), efficiencyBonus = mapOf(Skill.MINING to 80)),
     SPARK_CUIRASS("gear_spark_cuirass", 25, GearSlot.CHEST, "Jiskřivý kyrys",
-        "Stříbrný kyrys s lucernou na prsou – hejno jiskřivek se k ní samo slétá. +15 % XP za chytání hmyzu, +5 % šance na dvojitý úlovek.", 0,
-        xpBonus = mapOf(Skill.BUG_CATCHING to 0.15), multiBonus = mapOf(Skill.BUG_CATCHING to 0.05)),
+        "Stříbrný kyrys s lucernou na prsou – hejno jiskřivek se k ní samo slétá. +30 % XP za chytání hmyzu, +10 % šance na dvojitý úlovek.", 0,
+        xpBonus = mapOf(Skill.BUG_CATCHING to 0.30), multiBonus = mapOf(Skill.BUG_CATCHING to 0.10)),
     SPARK_GREAVES("gear_spark_greaves", 26, GearSlot.LEGS, "Jiskřivé nohavice",
-        "Stříbrné nohavice s jiskrou na kolenou. +15 % XP za kácení, +40 k efektivitě kácení.", 0,
-        xpBonus = mapOf(Skill.LOGGING to 0.15), efficiencyBonus = mapOf(Skill.LOGGING to 40)),
+        "Stříbrné nohavice s jiskrou na kolenou. +30 % XP za kácení, +80 k efektivitě kácení.", 0,
+        xpBonus = mapOf(Skill.LOGGING to 0.30), efficiencyBonus = mapOf(Skill.LOGGING to 80)),
     SPARK_BOOTS("gear_spark_boots", 27, GearSlot.BOOTS, "Jiskřivé boty",
-        "Stříbrné boty s krystalem v holeni. +80 k efektivitě těžby, kácení i chytání hmyzu a +10 % XP za všechny tři.", 0,
-        xpBonus = mapOf(Skill.MINING to 0.10, Skill.LOGGING to 0.10, Skill.BUG_CATCHING to 0.10),
-        efficiencyBonus = mapOf(Skill.MINING to 80, Skill.LOGGING to 80, Skill.BUG_CATCHING to 80)),
+        "Stříbrné boty s krystalem v holeni. +240 k efektivitě těžby, kácení i chytání hmyzu a +30 % XP za všechny tři.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.30, Skill.LOGGING to 0.30, Skill.BUG_CATCHING to 0.30),
+        efficiencyBonus = mapOf(Skill.MINING to 240, Skill.LOGGING to 240, Skill.BUG_CATCHING to 240)),
 
     // ── Duhový set (docs/adr/0053): zlato a krystalové mušky; boty z magmových mušek ──
     PRISM_HELM("gear_prism_helm", 28, GearSlot.HELMET, "Duhová přilba",
-        "Zlatá přilba s duhovým krystalem v čele. +25 % XP za těžbu, +6 % dvojitá ruda, těží o 2 h déle bez tebe.", 0,
-        xpBonus = mapOf(Skill.MINING to 0.25), multiBonus = mapOf(Skill.MINING to 0.06), afkHours = mapOf(Skill.MINING to 2)),
+        "Zlatá přilba s duhovým krystalem v čele. +50 % XP za těžbu, +12 % dvojitá ruda, těží o 4 h déle bez tebe.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.50), multiBonus = mapOf(Skill.MINING to 0.12), afkHours = mapOf(Skill.MINING to 4)),
     PRISM_CUIRASS("gear_prism_cuirass", 29, GearSlot.CHEST, "Duhový kyrys",
-        "Zlatý kyrys se zasazeným krystalem, který láme světlo jako křídla krystalových mušek. +25 % XP za chytání hmyzu, +8 % dvojitý úlovek, chytá o 2 h déle bez tebe.", 0,
-        xpBonus = mapOf(Skill.BUG_CATCHING to 0.25), multiBonus = mapOf(Skill.BUG_CATCHING to 0.08), afkHours = mapOf(Skill.BUG_CATCHING to 2)),
+        "Zlatý kyrys se zasazeným krystalem, který láme světlo jako křídla krystalových mušek. +50 % XP za chytání hmyzu, +16 % dvojitý úlovek, chytá o 4 h déle bez tebe.", 0,
+        xpBonus = mapOf(Skill.BUG_CATCHING to 0.50), multiBonus = mapOf(Skill.BUG_CATCHING to 0.16), afkHours = mapOf(Skill.BUG_CATCHING to 4)),
     PRISM_GREAVES("gear_prism_greaves", 30, GearSlot.LEGS, "Duhové nohavice",
-        "Zlaté nohavice s krystaly na kolenou. +25 % XP za kácení, +6 % dvojitá polena, kácí o 2 h déle bez tebe.", 0,
-        xpBonus = mapOf(Skill.LOGGING to 0.25), multiBonus = mapOf(Skill.LOGGING to 0.06), afkHours = mapOf(Skill.LOGGING to 2)),
+        "Zlaté nohavice s krystaly na kolenou. +50 % XP za kácení, +12 % dvojitá polena, kácí o 4 h déle bez tebe.", 0,
+        xpBonus = mapOf(Skill.LOGGING to 0.50), multiBonus = mapOf(Skill.LOGGING to 0.12), afkHours = mapOf(Skill.LOGGING to 4)),
     MAGMA_BOOTS("gear_magma_boots", 31, GearSlot.BOOTS, "Magmové boty",
-        "Černý krunýř magmových mušek se zlatým lemem, pod ním pořád prosvítá oheň. +150 k efektivitě těžby, kácení i chytání hmyzu, +15 % XP za všechny tři a kořist z Makromonů padá o 10 % častěji.", 0,
-        xpBonus = mapOf(Skill.MINING to 0.15, Skill.LOGGING to 0.15, Skill.BUG_CATCHING to 0.15),
-        efficiencyBonus = mapOf(Skill.MINING to 150, Skill.LOGGING to 150, Skill.BUG_CATCHING to 150), dropRate = 0.10);
+        "Černý krunýř magmových mušek se zlatým lemem, pod ním pořád prosvítá oheň. +450 k efektivitě těžby, kácení i chytání hmyzu, +45 % XP za všechny tři a kořist z Makromonů padá o 30 % častěji.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.45, Skill.LOGGING to 0.45, Skill.BUG_CATCHING to 0.45),
+        efficiencyBonus = mapOf(Skill.MINING to 450, Skill.LOGGING to 450, Skill.BUG_CATCHING to 450), dropRate = 0.30);
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null
@@ -375,16 +377,17 @@ object GearCrafting {
         Gear.COPPER_NET -> linkedMapOf(Resource.ORE_COPPER.itemId to 12, Resource.LOG_OAK.itemId to 15, Resource.BUG_SPARK.itemId to 8, Resource.BERRY_GREEN.itemId to 5)
         Gear.SILVER_NET -> linkedMapOf(Resource.ORE_SILVER.itemId to 18, Resource.LOG_BIRCH.itemId to 18, Resource.BUG_CRYSTAL.itemId to 10, Resource.BERRY_BLUE.itemId to 5)
         Gear.GOLD_NET -> linkedMapOf(Resource.ORE_GOLD.itemId to 22, Resource.LOG_MAPLE.itemId to 22, Resource.BUG_MAGMA.itemId to 10, Resource.BERRY_BLACK.itemId to 3)
-        // Jiskřivý set (docs/adr/0053): stříbro + jiskřivky + kořist z Makromonů, boty i krystalové mušky
-        Gear.SPARK_HELM -> linkedMapOf(Resource.ORE_SILVER.itemId to 20, Resource.BUG_SPARK.itemId to 12, Resource.EMBER.itemId to 4)
-        Gear.SPARK_CUIRASS -> linkedMapOf(Resource.ORE_SILVER.itemId to 30, Resource.BUG_SPARK.itemId to 16, Resource.SOUL_WISP.itemId to 5)
-        Gear.SPARK_GREAVES -> linkedMapOf(Resource.ORE_SILVER.itemId to 25, Resource.BUG_SPARK.itemId to 12, Resource.WATER_PEARL.itemId to 5, Resource.LOG_BIRCH.itemId to 10)
-        Gear.SPARK_BOOTS -> linkedMapOf(Resource.ORE_SILVER.itemId to 20, Resource.BUG_SPARK.itemId to 10, Resource.BUG_CRYSTAL.itemId to 8, Resource.LEAF_DRY.itemId to 6)
+        // Jiskřivý set (docs/adr/0053): stříbro + jiskřivky + kořist z Makromonů, boty i krystalové mušky.
+        // Ceny ×2 proti prvnímu návrhu, u bot ×3 – jen kořist z Makromonů (vzácné dropy) zůstává na ×2.
+        Gear.SPARK_HELM -> linkedMapOf(Resource.ORE_SILVER.itemId to 40, Resource.BUG_SPARK.itemId to 24, Resource.EMBER.itemId to 8)
+        Gear.SPARK_CUIRASS -> linkedMapOf(Resource.ORE_SILVER.itemId to 60, Resource.BUG_SPARK.itemId to 32, Resource.SOUL_WISP.itemId to 10)
+        Gear.SPARK_GREAVES -> linkedMapOf(Resource.ORE_SILVER.itemId to 50, Resource.BUG_SPARK.itemId to 24, Resource.WATER_PEARL.itemId to 10, Resource.LOG_BIRCH.itemId to 20)
+        Gear.SPARK_BOOTS -> linkedMapOf(Resource.ORE_SILVER.itemId to 60, Resource.BUG_SPARK.itemId to 30, Resource.BUG_CRYSTAL.itemId to 24, Resource.LEAF_DRY.itemId to 12)
         // Duhový set: zlato + krystalové mušky, boty z magmových mušek, koulí magmatu a dračích šupin
-        Gear.PRISM_HELM -> linkedMapOf(Resource.ORE_GOLD.itemId to 25, Resource.BUG_CRYSTAL.itemId to 14, Resource.PIXIE_DUST.itemId to 4)
-        Gear.PRISM_CUIRASS -> linkedMapOf(Resource.ORE_GOLD.itemId to 35, Resource.BUG_CRYSTAL.itemId to 18, Resource.SOUL_WISP.itemId to 6)
-        Gear.PRISM_GREAVES -> linkedMapOf(Resource.ORE_GOLD.itemId to 30, Resource.BUG_CRYSTAL.itemId to 14, Resource.WATER_PEARL.itemId to 6, Resource.LOG_MAPLE.itemId to 15)
-        Gear.MAGMA_BOOTS -> linkedMapOf(Resource.ORE_GOLD.itemId to 20, Resource.BUG_MAGMA.itemId to 12, Resource.MAGMA_ORB.itemId to 2, Resource.DRAGON_SCALE.itemId to 2)
+        Gear.PRISM_HELM -> linkedMapOf(Resource.ORE_GOLD.itemId to 50, Resource.BUG_CRYSTAL.itemId to 28, Resource.PIXIE_DUST.itemId to 8)
+        Gear.PRISM_CUIRASS -> linkedMapOf(Resource.ORE_GOLD.itemId to 70, Resource.BUG_CRYSTAL.itemId to 36, Resource.SOUL_WISP.itemId to 12)
+        Gear.PRISM_GREAVES -> linkedMapOf(Resource.ORE_GOLD.itemId to 60, Resource.BUG_CRYSTAL.itemId to 28, Resource.WATER_PEARL.itemId to 12, Resource.LOG_MAPLE.itemId to 30)
+        Gear.MAGMA_BOOTS -> linkedMapOf(Resource.ORE_GOLD.itemId to 60, Resource.BUG_MAGMA.itemId to 36, Resource.MAGMA_ORB.itemId to 4, Resource.DRAGON_SCALE.itemId to 4)
         else -> null
     }
 
