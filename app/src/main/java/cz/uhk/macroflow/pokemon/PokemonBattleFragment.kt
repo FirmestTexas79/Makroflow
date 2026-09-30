@@ -77,7 +77,7 @@ class PokemonBattleFragment : Fragment() {
         }
 
         // V onCreateView fragmentu uprav onCaught takto:
-        val battleView = PokemonBattleView(ctx, null, isShiny, special).apply {
+        val battleView = PokemonBattleView(ctx, null, isShiny, special).also { arenaView = it }.apply {
             // 3D aréna vyplní celou výšku nad herním plátnem (docs/adr/0038)
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
             // V onCreateView fragmentu uprav onCaught:
@@ -160,6 +160,9 @@ class PokemonBattleFragment : Fragment() {
     /** Intro už skončilo nebo bylo přeskočeno – další fáze se nespouštějí. */
     private var introDone = false
     private var revealStarted = false
+    private var waitedForArena = false
+    /** Pohled souboje – intro se ptá, jestli je 3D aréna hotová. */
+    private var arenaView: PokemonBattleView? = null
 
     private fun <T : Animator> T.tracked(): T { introAnimators += this; return this }
 
@@ -169,6 +172,7 @@ class PokemonBattleFragment : Fragment() {
         introHandler.removeCallbacksAndMessages(null)
         introAnimators.toList().forEach { it.cancel() }
         introAnimators.clear()
+        arenaView?.onArenaReady = null; arenaView = null
         super.onDestroyView()
     }
 
@@ -186,6 +190,17 @@ class PokemonBattleFragment : Fragment() {
         baseFlash: Int = Color.argb(235, 255, 255, 255)
     ) {
         if (revealStarted) return
+        // Aréna se ještě dopočítává → intro chvíli počká na posledním snímku (nejvýš 2,5 s),
+        // aby po záblesku nebylo vidět prázdné pozadí (docs/adr/0048)
+        val bv = arenaView
+        if (bv != null && !bv.arenaReady && !waitedForArena) {
+            waitedForArena = true
+            var fired = false
+            val go = { if (!fired) { fired = true; revealBattle(ctx, overlay, battleContent, screenW, screenH, dp, baseFlash) } }
+            bv.onArenaReady = { introHandler.post { go() } }
+            introHandler.postDelayed({ go() }, 2500)
+            return
+        }
         revealStarted = true
 
         val flashColor = if (isShiny) Color.argb(240, 255, 214, 102) else baseFlash

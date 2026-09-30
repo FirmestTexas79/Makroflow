@@ -249,6 +249,10 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private var arenaSeed = 0
+    /** Aréna je dopočítaná (intro na ni čeká, docs/adr/0048). */
+    var arenaReady = false
+        private set
+    var onArenaReady: (() -> Unit)? = null
     /** Kdy se aréna dopočítala – 250 ms se prolíná přes náhradní barvy. */
     private var arenaShownAt = 0L
     private val arenaFadePaint = Paint().apply { isFilterBitmap = false }
@@ -266,7 +270,13 @@ class PokemonBattleView @JvmOverloads constructor(
         Thread {
             val px = runCatching { A.render(theme, seed, extra) }.getOrNull() ?: return@Thread
             val bmp = Bitmap.createBitmap(px, A.W, A.H + extra, Bitmap.Config.ARGB_8888)
-            handler.post { if (extra == arenaExtra) { arenaBmp = bmp; arenaShownAt = now(); invalidate() } }
+            handler.post {
+                if (extra == arenaExtra) {
+                    arenaBmp = bmp; arenaShownAt = now(); invalidate()
+                    arenaReady = true
+                    onArenaReady?.invoke(); onArenaReady = null
+                }
+            }
         }.start()
     }
 
