@@ -108,7 +108,19 @@ enum class Gear(
         xpBonus = mapOf(Skill.LOGGING to 0.20), multiBonus = mapOf(Skill.LOGGING to 0.08), afkHours = mapOf(Skill.LOGGING to 4)),
     GOLD_PICKAXE("tool_pickaxe_gold", 18, GearSlot.PICKAXE, "Zlatý krumpáč",
         "Zlatý hrot na javorovém topůrku. Síla 150, +20 % XP a +8 % dvojitá ruda, těží o 4 h déle bez tebe.", 150,
-        xpBonus = mapOf(Skill.MINING to 0.20), multiBonus = mapOf(Skill.MINING to 0.08), afkHours = mapOf(Skill.MINING to 4));
+        xpBonus = mapOf(Skill.MINING to 0.20), multiBonus = mapOf(Skill.MINING to 0.08), afkHours = mapOf(Skill.MINING to 4)),
+
+    // ── Síťky na hmyz v Dolech (docs/adr/0049): stará + tři kovové stupně jako sekery a krumpáče ──
+    OLD_NET("tool_net_old", 19, GearSlot.NET, "Stará síťka",
+        "Visela na rezavém háku u vstupu do Dolů. Pár ok je potrhaných, ale mušku chytí. Síla 10.", 10),
+    COPPER_NET("tool_net_copper", 20, GearSlot.NET, "Měděná síťka",
+        "Měděná obruč na dubové násadě. Síla 25, +5 % XP za chytání.", 25, xpBonus = mapOf(Skill.CATCHING to 0.05)),
+    SILVER_NET("tool_net_silver", 21, GearSlot.NET, "Stříbrná síťka",
+        "Jemná stříbrná obruč na březové násadě. Síla 60, +10 % XP za chytání, +5 % šance na dvojitý úlovek.", 60,
+        xpBonus = mapOf(Skill.CATCHING to 0.10), multiBonus = mapOf(Skill.CATCHING to 0.05)),
+    GOLD_NET("tool_net_gold", 22, GearSlot.NET, "Zlatá síťka",
+        "Zlatá obruč na javorové násadě, oka tenká jako vlas. Síla 150, +20 % XP a +8 % dvojitý úlovek, chytá o 4 h déle bez tebe.", 150,
+        xpBonus = mapOf(Skill.CATCHING to 0.20), multiBonus = mapOf(Skill.CATCHING to 0.08), afkHours = mapOf(Skill.CATCHING to 4));
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null
@@ -140,11 +152,22 @@ enum class GatherSpot(
     GOLD(3, "zila_zlato", Skill.MINING, "Zlatá žíla", Resource.ORE_GOLD, 70, 720, 60, "CAVE_OPEN"),
     OAK(4, "strom_dub", Skill.LOGGING, "Dub", Resource.LOG_OAK, 10, 180, 10, "MEADOW"),
     BIRCH(5, "strom_briza", Skill.LOGGING, "Bříza", Resource.LOG_BIRCH, 30, 360, 25, "FOREST"),
-    MAPLE(6, "strom_javor", Skill.LOGGING, "Javor", Resource.LOG_MAPLE, 70, 720, 60, "FOREST");
+    MAPLE(6, "strom_javor", Skill.LOGGING, "Javor", Resource.LOG_MAPLE, 70, 720, 60, "FOREST"),
+    // Chytání hmyzu síťkou v Dolech (docs/adr/0049) – mušky poletující ve vzduchu
+    SPARK_FLIES(7, "hmyz_jiskrivky", Skill.CATCHING, "Jiskřivky u lucerny", Resource.BUG_SPARK, 10, 180, 10, "MINES"),
+    CRYSTAL_FLIES(8, "hmyz_krystal", Skill.CATCHING, "Krystalové mušky", Resource.BUG_CRYSTAL, 30, 360, 25, "MINES"),
+    MAGMA_FLIES(9, "hmyz_magma", Skill.CATCHING, "Magmové mušky", Resource.BUG_MAGMA, 70, 720, 60, "MINES");
 
     /** Nástroj, bez kterého to nejde. */
-    val toolSlot: GearSlot get() = if (skill == Skill.MINING) GearSlot.PICKAXE else GearSlot.AXE
-    val verb: String get() = if (skill == Skill.MINING) "Těžit" else "Kácet"
+    val toolSlot: GearSlot get() = when (skill) {
+        Skill.MINING -> GearSlot.PICKAXE
+        Skill.CATCHING -> GearSlot.NET
+        else -> GearSlot.AXE
+    }
+    val verb: String get() = when (skill) { Skill.MINING -> "Těžit"; Skill.CATCHING -> "Chytat"; else -> "Kácet" }
+    /** „Právě tu …“ */
+    val doing: String get() = when (skill) { Skill.MINING -> "těžíš"; Skill.CATCHING -> "chytáš"; else -> "kácíš" }
+    val emoji: String get() = when (skill) { Skill.MINING -> "⛏️"; Skill.CATCHING -> "🪰"; else -> "🪓" }
 
     /** Kde to na mapě je (pro cedule a deník). */
     val placeLabel: String get() = when (biome) {
@@ -153,6 +176,7 @@ enum class GatherSpot(
         "CAVE_MAZE" -> "Starý důl (levá jeskyně v horách)"
         "CAVE_OPEN" -> "Mechová jeskyně (pravá jeskyně v horách)"
         "FOREST" -> "Hvozd nad loukou"
+        "MINES" -> "Doly (za Starým dolem v horách)"
         else -> biome
     }
 
@@ -247,7 +271,8 @@ object Gathering {
 object GearCrafting {
     val SET = listOf(Gear.ADV_CAP, Gear.ADV_TUNIC, Gear.ADV_PANTS, Gear.ADV_SLIPPERS)
     val ACCESSORIES = listOf(Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL)
-    val TOOLS = listOf(Gear.COPPER_AXE, Gear.COPPER_PICKAXE, Gear.SILVER_AXE, Gear.SILVER_PICKAXE, Gear.GOLD_AXE, Gear.GOLD_PICKAXE)
+    val TOOLS = listOf(Gear.COPPER_AXE, Gear.COPPER_PICKAXE, Gear.COPPER_NET, Gear.SILVER_AXE, Gear.SILVER_PICKAXE, Gear.SILVER_NET,
+        Gear.GOLD_AXE, Gear.GOLD_PICKAXE, Gear.GOLD_NET)
 
     fun recipe(g: Gear): Map<String, Int>? = when (g) {
         Gear.ADV_CAP -> linkedMapOf(Resource.ENERGY.itemId to 5, Resource.BERRY_BLUE.itemId to 3)
@@ -266,6 +291,11 @@ object GearCrafting {
         Gear.SILVER_PICKAXE -> linkedMapOf(Resource.ORE_SILVER.itemId to 25, Resource.LOG_BIRCH.itemId to 15, Resource.LOG_OAK.itemId to 10, Resource.BERRY_BLUE.itemId to 5)
         Gear.GOLD_AXE -> linkedMapOf(Resource.ORE_GOLD.itemId to 20, Resource.LOG_MAPLE.itemId to 30, Resource.ORE_SILVER.itemId to 10, Resource.BERRY_BLACK.itemId to 3)
         Gear.GOLD_PICKAXE -> linkedMapOf(Resource.ORE_GOLD.itemId to 30, Resource.LOG_MAPLE.itemId to 20, Resource.LOG_BIRCH.itemId to 10, Resource.BERRY_BLACK.itemId to 3)
+        // Síťky (docs/adr/0049): kovová obruč, dřevěná násada a hmyz na návnadu – vždy ten,
+        // který jde chytit síťkou o stupeň horší (měděnou uděláš z jiskřivek ze staré síťky)
+        Gear.COPPER_NET -> linkedMapOf(Resource.ORE_COPPER.itemId to 12, Resource.LOG_OAK.itemId to 15, Resource.BUG_SPARK.itemId to 8, Resource.BERRY_GREEN.itemId to 5)
+        Gear.SILVER_NET -> linkedMapOf(Resource.ORE_SILVER.itemId to 18, Resource.LOG_BIRCH.itemId to 18, Resource.BUG_CRYSTAL.itemId to 10, Resource.BERRY_BLUE.itemId to 5)
+        Gear.GOLD_NET -> linkedMapOf(Resource.ORE_GOLD.itemId to 22, Resource.LOG_MAPLE.itemId to 22, Resource.BUG_MAGMA.itemId to 10, Resource.BERRY_BLACK.itemId to 3)
         else -> null
     }
 
@@ -273,9 +303,9 @@ object GearCrafting {
     fun xp(g: Gear): Int = when (g) {
         Gear.ADV_CAP -> 60; Gear.ADV_TUNIC -> 90; Gear.ADV_PANTS -> 110; Gear.ADV_SLIPPERS -> 150
         Gear.GRASS_RING -> 120; Gear.FIRE_RING -> 150; Gear.ADV_NECKLACE -> 180; Gear.FIRE_SOUL -> 250
-        Gear.COPPER_AXE, Gear.COPPER_PICKAXE -> 80
-        Gear.SILVER_AXE, Gear.SILVER_PICKAXE -> 180
-        Gear.GOLD_AXE, Gear.GOLD_PICKAXE -> 360
+        Gear.COPPER_AXE, Gear.COPPER_PICKAXE, Gear.COPPER_NET -> 80
+        Gear.SILVER_AXE, Gear.SILVER_PICKAXE, Gear.SILVER_NET -> 180
+        Gear.GOLD_AXE, Gear.GOLD_PICKAXE, Gear.GOLD_NET -> 360
         else -> 0
     }
 

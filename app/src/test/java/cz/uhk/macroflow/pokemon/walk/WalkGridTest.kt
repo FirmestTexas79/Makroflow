@@ -107,7 +107,7 @@ class WalkGridTest {
     }
 
     @Test fun allMasksParseAndHaveWalkableArea() {
-        for (n in listOf("town", "meadow", "mountains", "cave_open", "cave_maze", "forest", "sky_pass", "hidden_grove")) {
+        for (n in listOf("town", "meadow", "mountains", "cave_open", "cave_maze", "forest", "sky_pass", "hidden_grove", "mines")) {
             val g = asset(n)
             val share = g.walkableCount.toFloat() / (g.cols * g.rows)
             assertTrue("$n: $share", share in 0.1f..0.8f)
@@ -116,7 +116,7 @@ class WalkGridTest {
 
     /** Každý uzel jeskyní a lesa leží na průchozí ploše (nebo těsně u ní) a ze vchodu se k němu dá dojít. */
     @Test fun caveAndForestNodesAreReachable() {
-        val maps = mapOf<String, CaveMap>("cave_open" to CaveMaps.OPEN, "cave_maze" to CaveMaps.MAZE, "forest" to ForestMap.MAP, "sky_pass" to SkyPass.MAP, "hidden_grove" to cz.uhk.macroflow.pokemon.cave.GroveMap.MAP)
+        val maps = mapOf<String, CaveMap>("cave_open" to CaveMaps.OPEN, "cave_maze" to CaveMaps.MAZE, "forest" to ForestMap.MAP, "sky_pass" to SkyPass.MAP, "hidden_grove" to cz.uhk.macroflow.pokemon.cave.GroveMap.MAP, "mines" to cz.uhk.macroflow.pokemon.cave.MinesMap.MAP)
         for ((name, map) in maps) {
             val g = asset(name)
             assertEquals(map.artW, g.imgW); assertEquals(map.artH, g.imgH)
@@ -141,5 +141,15 @@ class WalkGridTest {
             var prev = g.snap(a)!!
             for (p in path) { assertTrue("${n.id}: $prev → $p", g.lineWalkable(prev, p) || prev.dist(p) <= g.cell); prev = p }
         }
+    }
+
+    /** Doly (docs/adr/0049): po lávě se chodit nedá, přes most ano. */
+    @Test fun minesLavaBlocksExceptTheBridge() {
+        val g = asset("mines")
+        val M = cz.uhk.macroflow.pokemon.cave.MinesMap
+        val midY = (M.RIVER_Y0 + M.RIVER_Y1) / 2f
+        assertTrue(!g.isWalkable(Pt(50f, midY)) && !g.isWalkable(Pt(110f, midY)))
+        assertTrue(g.isWalkable(Pt((M.BRIDGE_X0 + M.BRIDGE_X1) / 2f, midY)))
+        assertTrue(!g.isWalkable(Pt(M.POOL_CX, M.POOL_CY)))
     }
 }

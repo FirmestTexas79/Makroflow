@@ -14,12 +14,16 @@ import kotlin.math.ceil
  * násobkem bez vyhlazení. [onCovered] přijde jednou, když ústí pokryje celou obrazovku
  * (pod překryvem se vymění mapa), [onFinished] na konci scény.
  */
-class CaveTransitionView(context: Context, private val exiting: Boolean) : View(context) {
+class CaveTransitionView(context: Context, private val exiting: Boolean, private val descent: Boolean = false) : View(context) {
 
     var onCovered: (() -> Unit)? = null
     var onFinished: (() -> Unit)? = null
 
     private var scene: CaveTransitionScene? = null
+    /** Sestup do Dolů (docs/adr/0049) – místo ústí jeskyně let štolou do žáru. */
+    private var mine: MineDescentScene? = null
+    private val coveredAt get() = if (descent) MineDescent.COVERED_AT else CaveTransition.COVERED_AT
+    private val endAt get() = if (descent) MineDescent.END else CaveTransition.END
     private var pixels = IntArray(0)
     private var buffer: Bitmap? = null
     private val dst = Rect()
@@ -38,7 +42,7 @@ class CaveTransitionView(context: Context, private val exiting: Boolean) : View(
         val scale = (w / TARGET_WIDTH).coerceAtLeast(1)
         val lw = ceil(w / scale.toFloat()).toInt()
         val lh = ceil(h / scale.toFloat()).toInt()
-        scene = CaveTransitionScene(lw, lh, exiting)
+        if (descent) mine = MineDescentScene(lw, lh) else scene = CaveTransitionScene(lw, lh, exiting)
         pixels = IntArray(lw * lh)
         buffer?.recycle()
         buffer = Bitmap.createBitmap(lw, lh, Bitmap.Config.ARGB_8888)
@@ -46,16 +50,16 @@ class CaveTransitionView(context: Context, private val exiting: Boolean) : View(
     }
 
     override fun onDraw(canvas: Canvas) {
-        val s = scene; val b = buffer
-        if (s == null || b == null || startAt < 0) { canvas.drawColor(CaveTransition.VOID); return }
-        val t = (SystemClock.uptimeMillis() - startAt).coerceAtMost(CaveTransition.END)
-        s.render(t, pixels)
-        b.setPixels(pixels, 0, s.w, 0, 0, s.w, s.h)
+        val b = buffer
+        if ((scene == null && mine == null) || b == null || startAt < 0) { canvas.drawColor(CaveTransition.VOID); return }
+        val t = (SystemClock.uptimeMillis() - startAt).coerceAtMost(endAt)
+        mine?.render(t, pixels) ?: scene?.render(t, pixels)
+        b.setPixels(pixels, 0, b.width, 0, 0, b.width, b.height)
         canvas.drawBitmap(b, null, dst, blit)
 
-        if (!covered && t >= CaveTransition.COVERED_AT) { covered = true; post { onCovered?.invoke() } }
-        if (!finished && t >= CaveTransition.END) { finished = true; post { onFinished?.invoke() } }
-        if (t < CaveTransition.END && isAttachedToWindow) postInvalidateOnAnimation()
+        if (!covered && t >= coveredAt) { covered = true; post { onCovered?.invoke() } }
+        if (!finished && t >= endAt) { finished = true; post { onFinished?.invoke() } }
+        if (t < endAt && isAttachedToWindow) postInvalidateOnAnimation()
     }
 
     override fun onDetachedFromWindow() {

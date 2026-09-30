@@ -32,7 +32,9 @@ object StoryProgress {
     val STORY_KEYS = setOf(
         "crystals_placed", "legend_faced",
         SkyPass.VISITED_KEY, SkyPass.GATE_SEEN_KEY, SkyPass.HEART_PLACED_KEY,
-        ForestHeart.ROT_DEFEATED_KEY
+        ForestHeart.ROT_DEFEATED_KEY,
+        // Doly (docs/adr/0049)
+        cz.uhk.macroflow.pokemon.cave.MinesMap.VISITED_KEY, cz.uhk.macroflow.pokemon.cave.MinesMap.NET_TAKEN_KEY
     ) + SecretGrove.KEYS
 
     fun isStoryKey(key: String): Boolean =

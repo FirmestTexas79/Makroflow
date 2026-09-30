@@ -52,6 +52,10 @@ enum class Resource(val itemId: String, val label: String, val description: Stri
     LOG_OAK("log_oak", "Dubové poleno", "Pokácíš ho sekerou z dubu na louce."),
     LOG_BIRCH("log_birch", "Březové poleno", "Bříza v Hvozdu chce ostřejší sekeru."),
     LOG_MAPLE("log_maple", "Javorové poleno", "Tvrdé dřevo javoru – jen pro zkušené dřevorubce."),
+    // Hmyz z Dolů – chytá se síťkou (docs/adr/0049)
+    BUG_SPARK("bug_spark", "Jiskřivka", "Drobná muška se žhnoucím zadečkem. Žije ze světla starých luceren v Dolech."),
+    BUG_CRYSTAL("bug_crystal", "Krystalová muška", "Průsvitná křídla lámou světlo krystalů do duhy. Chce jemnější síťku."),
+    BUG_MAGMA("bug_magma", "Magmová muška", "Tančí v žáru nad lávovým vodopádem. Pod černým krunýřem jí prosvítá oheň."),
 
     // Materiály z Makromonů (docs/adr/0040)
     LEAF_DRY("mat_leaf_dry", "Suchý list", "Šustivý list z listových Makromonů (Flori, Verdirra)."),
@@ -73,6 +77,8 @@ enum class Resource(val itemId: String, val label: String, val description: Stri
     val isSeed: Boolean get() = itemId.startsWith("seed_")
     /** Materiál z Makromonů. */
     val isMonsterMaterial: Boolean get() = itemId.startsWith("mat_")
+    /** Hmyz chycený síťkou. */
+    val isBug: Boolean get() = itemId.startsWith("bug_")
 
     companion object {
         fun from(itemId: String?): Resource? = entries.firstOrNull { it.itemId == itemId }

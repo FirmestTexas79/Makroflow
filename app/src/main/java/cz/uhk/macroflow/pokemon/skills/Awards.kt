@@ -43,7 +43,8 @@ data class AwardFacts(
 
 /** Symbol v medaili. */
 enum class AwardSymbol { BALL, SHINY, CROWN, DEX, TEAM, SCROLL, TROPHY, FOREST, STAR, SEED, BERRY_GREEN, BERRY_BLACK, PLOT, SHIRT, RING, ENERGY,
-    ORE_COPPER, ORE_SILVER, ORE_GOLD, LOG_OAK, LOG_BIRCH, LOG_MAPLE, BALL_KREATIN }
+    ORE_COPPER, ORE_SILVER, ORE_GOLD, LOG_OAK, LOG_BIRCH, LOG_MAPLE, BALL_KREATIN,
+    BUG_SPARK, BUG_CRYSTAL, BUG_MAGMA }
 
 data class Award(
     val id: String,
@@ -93,6 +94,10 @@ object Awards {
         a("shiny_1", C, S, "Třpytka", "Chyť svého prvního shiny Makromona.", 1, AwardSymbol.SHINY) { it.shinyCaught },
         a("shiny_100", C, P, "Shiny lovec", "Chyť 100 shiny Makromonů.", 100, AwardSymbol.SHINY) { it.shinyCaught },
         a("team_6", C, Gd, "Plná parta", "Měj v týmu šest Makromonů.", 6, AwardSymbol.TEAM) { it.teamSize },
+        // hmyz v Dolech (docs/adr/0049)
+        a("spark_100", C, B, "Světluška", "Chyť síťkou 100 jiskřivek.", 100, AwardSymbol.BUG_SPARK) { it.got(Resource.BUG_SPARK) },
+        a("crystal_50", C, S, "Duhová křídla", "Chyť síťkou 50 krystalových mušek.", 50, AwardSymbol.BUG_CRYSTAL) { it.got(Resource.BUG_CRYSTAL) },
+        a("magma_25", C, Gd, "Ohnivý tanec", "Chyť síťkou 25 magmových mušek.", 25, AwardSymbol.BUG_MAGMA) { it.got(Resource.BUG_MAGMA) },
 
         // ── Výroba ──
         a("craft_10", CR, B, "Učeň", "Vyrob 10 Makroballů.", 10, AwardSymbol.BALL) { it.crafted },
@@ -203,6 +208,9 @@ object AwardArt {
         AwardSymbol.LOG_OAK -> GearArt.log(Resource.LOG_OAK)
         AwardSymbol.LOG_BIRCH -> GearArt.log(Resource.LOG_BIRCH)
         AwardSymbol.LOG_MAPLE -> GearArt.log(Resource.LOG_MAPLE)
+        AwardSymbol.BUG_SPARK -> GearArt.bug(Resource.BUG_SPARK)
+        AwardSymbol.BUG_CRYSTAL -> GearArt.bug(Resource.BUG_CRYSTAL)
+        AwardSymbol.BUG_MAGMA -> GearArt.bug(Resource.BUG_MAGMA)
         else -> {
             val rows = GLYPHS.getValue(s)
             IntArray(12 * 12) { i -> val ch = rows.getOrNull(i / 12)?.getOrNull(i % 12) ?: '.'; GLYPH_COLORS[ch] ?: 0 }

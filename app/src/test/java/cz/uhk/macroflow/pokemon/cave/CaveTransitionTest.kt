@@ -45,3 +45,36 @@ class CaveTransitionTest {
         assertEquals(0, a.count { (it ushr 24) != 0xFF })
     }
 }
+
+class MineDescentTest {
+    private fun frame(s: MineDescentScene, t: Long) = IntArray(s.w * s.h).also { s.render(t, it) }
+    private fun mean(px: IntArray, shift: Int) = px.map { (it shr shift) and 0xFF }.average()
+
+    @Test
+    fun descentIsOpaqueFromTheFirstFrame() {
+        val s = MineDescentScene(120, 260)
+        for (t in listOf(0L, MineDescent.COVERED_AT, MineDescent.END)) assertEquals(0, frame(s, t).count { (it ushr 24) != 0xFF })
+        assertTrue(MineDescent.COVERED_AT < MineDescent.END)
+    }
+
+    @Test
+    fun heatGrowsWithDepth() {
+        val s = MineDescentScene(120, 260)
+        val early = frame(s, 100); val late = frame(s, MineDescent.END - 400)
+        // žár z hloubky: červená roste víc než modrá
+        assertTrue(mean(late, 16) - mean(late, 0) > mean(early, 16) - mean(early, 0))
+        assertTrue(s.travelled(1000) > s.travelled(500))
+    }
+
+    @Test
+    fun shaftHasTimberRailsAndCrystals() {
+        val px = frame(MineDescentScene(120, 260), 500)
+        fun rgb(c: Int) = Triple((c shr 16) and 0xFF, (c shr 8) and 0xFF, c and 0xFF)
+        val rails = px.count { val (r, g, b) = rgb(it); r > 110 && b > 130 && kotlin.math.abs(r - g) < 24 }
+        val timber = px.count { val (r, g, b) = rgb(it); r > 80 && r > g + 25 && g > b + 15 }
+        val crystals = px.count { val (r, g, b) = rgb(it); b > 150 && r > 90 && g < r }
+        assertTrue("rails=$rails", rails > 200)
+        assertTrue("timber=$timber", timber > 1000)
+        assertTrue("crystals=$crystals", crystals > 0)
+    }
+}

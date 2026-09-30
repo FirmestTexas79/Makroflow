@@ -42,6 +42,7 @@ import cz.uhk.macroflow.pokemon.ui.StepProgressBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import cz.uhk.macroflow.pokemon.cave.SkyPass
+import cz.uhk.macroflow.pokemon.cave.MinesMap
 import cz.uhk.macroflow.pokemon.story.StoryFlags
 import cz.uhk.macroflow.pokemon.story.ForestHeart
 import cz.uhk.macroflow.pokemon.story.SecretGrove
@@ -92,10 +93,13 @@ class MakromonMapActivity : AppCompatActivity() {
     /** Uzly, kde může vyskočit divoký Makromon (90 % šance). Jeskyně mají vlastní (CaveMap.encounterNodes). */
     private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2") +
         cz.uhk.macroflow.pokemon.cave.CaveMaps.ALL.flatMap { it.encounterNodes } +
-        cz.uhk.macroflow.pokemon.cave.ForestMap.MAP.encounterNodes
+        cz.uhk.macroflow.pokemon.cave.ForestMap.MAP.encounterNodes +
+        cz.uhk.macroflow.pokemon.cave.MinesMap.MAP.encounterNodes
 
     /** Přechod mezi mapami. */
-    private enum class MapTransition { NONE, FADE, CAVE_IN, CAVE_OUT }
+    private enum class MapTransition { NONE, FADE, CAVE_IN, CAVE_OUT,
+        /** Sestup ze Starého dolu do Dolů (docs/adr/0049). */
+        MINE_DESCENT }
 
     companion object {
         private const val DOUBLE_CLICK_TIME = 300L
@@ -112,7 +116,8 @@ class MakromonMapActivity : AppCompatActivity() {
             // těžba a kácení v jeskyních a Hvozdu (docs/adr/0035)
             "zila_stribro", "zila_zlato", "strom_briza", "strom_javor"
         ) + cz.uhk.macroflow.pokemon.cave.SkyPass.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka"
+            cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
+            cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         private const val TAG_GROVE_GHOST = "grove_ghost"
@@ -599,13 +604,20 @@ class MakromonMapActivity : AppCompatActivity() {
                     val entry = BiomeRegistry.definition(cave)?.cave?.exitNode ?: return@let
                     enterBiomeAtNode(cave, entry, MapTransition.CAVE_IN)
                 }
+                // Doly (docs/adr/0049): zabedněná štola ve Starém dole → sestup; zpět tunelem do dolu
+                MinesMap.MAZE_NODE -> enterBiomeAtNode(BiomeType.MINES, MinesMap.EXIT_NODE, MapTransition.MINE_DESCENT)
+                MinesMap.EXIT_NODE -> enterBiomeAtNode(BiomeType.CAVE_MAZE, MinesMap.MAZE_NODE, MapTransition.CAVE_IN)
+                MinesMap.NET_NODE -> onOldNet()
+                MinesMap.DOOR_NODE -> showMapToast("🚪 " + MinesMap.DOOR_TEXT +
+                    if (Insight.level(StoryFlags.all(this)) >= 3) MinesMap.DOOR_TEXT_INSIGHT else "")
                 "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
                     enterBiomeAtNode(BiomeType.valueOf(it.parentBiome), it.mountainNode,
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
                 "tezba" -> scanInMine()
                 cz.uhk.macroflow.pokemon.skills.MeadowLayout.TABLE_NODE -> openCraftingTable()
-                "strom_dub", "strom_briza", "strom_javor", "zila_med", "zila_stribro", "zila_zlato" ->
+                "strom_dub", "strom_briza", "strom_javor", "zila_med", "zila_stribro", "zila_zlato",
+                MinesMap.SPARK_NODE, MinesMap.CRYSTAL_NODE, MinesMap.MAGMA_NODE ->
                     cz.uhk.macroflow.pokemon.skills.GatherSpot.fromNode(nodeName)?.let { openGatherSpot(it) }
                 "zahon_1", "zahon_2", "zahon_3", "zahon_4" ->
                     cz.uhk.macroflow.pokemon.skills.MeadowLayout.plotIndex(nodeName)?.let { onPlot(it) }
@@ -706,6 +718,9 @@ class MakromonMapActivity : AppCompatActivity() {
         "netopyri" -> "Netopýři se rozletěli, ale nic dalšího se nehnulo. Zkus to znovu."
         "slepa_chodba" -> "Slepá chodba… jen kape voda. Zkus to znovu."
         "hlubina" -> "Z hlubiny zafoukal studený vzduch. Zkus to znovu."
+        "rumpal" -> "Rumpál zaskřípal, lano se zhouplo… nic. Zkus to znovu."
+        "puklina" -> "V puklině jen zacinkaly krystaly. Zkus to znovu."
+        "popel" -> "Žhnoucí mech se rozpadl na popel. Zkus to znovu."
         "trava_1", "trava_2", "trava_3", "houstina" -> "Vysoká tráva se jen zavlnila ve větru. Zkus to znovu."
         "jezirko_1", "jezirko_2" -> "Po hladině přeběhla vážka, víc nic. Zkus to znovu."
         "stary_dub" -> "Ve starém dubu to zašustilo… jen veverka. Zkus to znovu."
@@ -820,6 +835,10 @@ class MakromonMapActivity : AppCompatActivity() {
             val def = BiomeRegistry.definition(newBiome)
             if (newBiome == BiomeType.FOREST) lastForestStage = null   // po načtení questu se dekorace obnoví
             if (newBiome == BiomeType.TOWN) maybeStationFlicker()
+            if (newBiome == BiomeType.MINES && !StoryFlags.isSet(this, MinesMap.VISITED_KEY)) {
+                StoryFlags.set(this, MinesMap.VISITED_KEY)
+                mapWorld.postDelayed({ if (!isFinishing) showMapToast("🔥 " + MinesMap.FIRST_VISIT_TEXT) }, 1900)
+            }
             // První příchod do háje: ozve se šepot (úvod tajného questu)
             if (newBiome == BiomeType.HIDDEN_GROVE && !StoryFlags.isSet(this, SecretGrove.FOUND_KEY)) {
                 StoryFlags.set(this, SecretGrove.FOUND_KEY)
@@ -879,6 +898,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 }.start()
             MapTransition.CAVE_IN, MapTransition.CAVE_OUT ->
                 playCaveTransition(exiting = transition == MapTransition.CAVE_OUT, onCovered = transitionAction)
+            MapTransition.MINE_DESCENT -> playCaveTransition(exiting = false, onCovered = transitionAction, descent = true)
         }
     }
 
@@ -983,11 +1003,11 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     /** Tmavě modrý mechový přechod: pod plně zakrytou obrazovkou se vymění mapa, pak se překryv rozplyne. */
-    private fun playCaveTransition(exiting: Boolean, onCovered: () -> Unit) {
+    private fun playCaveTransition(exiting: Boolean, onCovered: () -> Unit, descent: Boolean = false) {
         val root = findViewById<FrameLayout>(R.id.mapRootContainer)
         movementEngine.cancel()
         transitionRunning = true
-        val overlay = CaveTransitionView(this, exiting).apply {
+        val overlay = CaveTransitionView(this, exiting, descent).apply {
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             elevation = 200f
         }
@@ -1023,7 +1043,11 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.SKY_PASS -> placeSkyPassDecor()
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
                 currentBiome == BiomeType.HIDDEN_GROVE -> placeGroveDecor()
-                cave != null -> { placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots() }
+                currentBiome == BiomeType.MINES -> { placeMinesDecor(); placeEncounterGlows(cave!!); placeGatherSpots() }
+                cave != null -> {
+                    placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots()
+                    if (currentBiome == BiomeType.CAVE_MAZE) placeMineDoorGlow()
+                }
                 currentBiome == BiomeType.MOUNTAINS -> { placeShrineDecor(progress); placeGatherSpots() }
                 currentBiome == BiomeType.MEADOW -> { placeMeadowWorkshop(); placeGatherSpots() }
                 else -> {}
@@ -1230,7 +1254,8 @@ class MakromonMapActivity : AppCompatActivity() {
         val size = (30 * scale).toInt()
         cave.encounterNodes.forEachIndexed { i, id ->
             val n = cave.node(id) ?: return@forEachIndexed
-            val glow = glowView(size, 0xFF8CF0D2.toInt(), 0x66).apply {
+            // Doly: žhnoucí mech (oranžová záře), jeskyně: svítící kapradiny
+            val glow = glowView(size, if (currentBiome == BiomeType.MINES) 0xFFFF8A3A.toInt() else 0xFF8CF0D2.toInt(), 0x66).apply {
                 layoutParams = FrameLayout.LayoutParams(size, (size * 0.6f).toInt())
                 x = n.x * scale - size / 2f
                 y = (n.y - 3) * scale - size * 0.3f
@@ -1242,6 +1267,68 @@ class MakromonMapActivity : AppCompatActivity() {
                 duration = 2600; startDelay = i * 450L
                 repeatCount = android.animation.ValueAnimator.INFINITE; start()
             }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DOLY (docs/adr/0049): láva, mušky, stará síťka, vchod ze Starého dolu
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Tekoucí láva a mušky přes celou mapu + stará síťka na háku (dokud ji hráč nesebere). */
+    private fun placeMinesDecor() {
+        if (worldScale <= 0) return
+        val s = worldScale.toFloat()
+        addGroundDecor(cz.uhk.macroflow.pokemon.cave.MinesFxView(this, worldScale).apply {
+            layoutParams = FrameLayout.LayoutParams(MinesMap.W * worldScale, MinesMap.H * worldScale)
+        })
+        if (!StoryFlags.isSet(this, MinesMap.NET_TAKEN_KEY)) {
+            val (hx, hy, _) = MinesMap.MAP.tapAreas.getValue(MinesMap.NET_NODE)
+            val size = (12 * s).toInt()
+            val glow = glowView((26 * s).toInt(), 0xFFFFF2B0.toInt(), 0x77).apply {
+                x = hx * s - 13 * s; y = hy * s - 13 * s; elevation = 2.5f
+            }
+            val net = pixelView(cz.uhk.macroflow.pokemon.skills.GearArt.gearIcon(cz.uhk.macroflow.pokemon.skills.Gear.OLD_NET),
+                16, 16, size, size).apply {
+                x = hx * s - size / 2f; y = hy * s - size / 2f; elevation = 2.6f; rotation = 18f; pivotY = 0f
+            }
+            addDecor(glow); addDecor(net)
+            // síťka se na háku lehce houpe
+            crystalAnimators += android.animation.ObjectAnimator.ofFloat(net, "rotation", 10f, 26f, 10f).apply {
+                duration = 2600; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+            }
+            crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.3f, 0.9f, 0.3f).apply {
+                duration = 1800; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+            }
+        }
+    }
+
+    /** Ve Starém dole u zabedněné štoly do Dolů zdola prosvítá rudý žár. */
+    private fun placeMineDoorGlow() {
+        if (worldScale <= 0) return
+        val s = worldScale.toFloat()
+        val (x0, y0, _) = MinesMap.MAZE_DOOR
+        val glow = glowView((22 * s).toInt(), 0xFFFF6A1E.toInt(), 0x88).apply {
+            x = x0 * s - 11 * s; y = (y0 + 3) * s - 11 * s; elevation = 1.2f
+        }
+        addDecor(glow)
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.35f, 0.95f, 0.5f, 0.85f, 0.35f).apply {
+            duration = 2400; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+    }
+
+    /** Stará síťka na háku: poprvé se sebere a nasadí, potom je hák prázdný. */
+    private fun onOldNet() {
+        if (StoryFlags.isSet(this, MinesMap.NET_TAKEN_KEY)) { showMapToast(MinesMap.NET_GONE_TEXT); return }
+        val ctx = applicationContext
+        lifecycleScope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.skills.SkillStore.grantItemOnce(ctx, cz.uhk.macroflow.pokemon.skills.Gear.OLD_NET.id)
+            }
+            StoryFlags.set(this@MakromonMapActivity, MinesMap.NET_TAKEN_KEY)
+            showMapToast("🪰 " + MinesMap.NET_TEXT + "
+
+Získal jsi: Stará síťka (nasazená v deníku → Postava → TOOLS).")
+            refreshStoryDecor()
         }
     }
 
@@ -1373,10 +1460,15 @@ class MakromonMapActivity : AppCompatActivity() {
         val geo = cz.uhk.macroflow.pokemon.walk.MapGeometry(iw, ih, mapWorld.width, mapWorld.height)
         cz.uhk.macroflow.pokemon.skills.GatherSpot.entries.filter { it.biome == currentBiome.name }.forEach { spot ->
             val place = cz.uhk.macroflow.pokemon.skills.GatherLayout.PLACES[spot] ?: return@forEach
-            val (px, w, h) = cz.uhk.macroflow.pokemon.skills.GearArt.spot(spot)
-            val vw = (w * place.artScale * geo.scale).toInt(); val vh = (h * place.artScale * geo.scale).toInt()
+            val art = cz.uhk.macroflow.pokemon.skills.GearArt.spot(spot)
             val base = geo.toWorld(cz.uhk.macroflow.pokemon.walk.Pt(place.baseX.toFloat(), place.baseY.toFloat()))
-            addGroundDecor(pixelView(px, w, h, vw, vh).apply { x = base.x - vw / 2f; y = base.y - vh })
+            // mušky (Chytání) nemají obrázek – poletují v MinesFxView; cedulka visí nad hejnem
+            val vh = if (art == null) (10 * geo.scale).toInt() else (art.third * place.artScale * geo.scale).toInt()
+            if (art != null) {
+                val (px, w, h) = art
+                val vw = (w * place.artScale * geo.scale).toInt()
+                addGroundDecor(pixelView(px, w, h, vw, vh).apply { x = base.x - vw / 2f; y = base.y - vh })
+            }
             // cedulka nad místem (vidět jen když se tu zrovna těží)
             val plaque = cz.uhk.macroflow.pokemon.skills.ui.GatherPlaqueView(this, place.artScale * geo.scale * 0.55f).apply {
                 layoutParams = FrameLayout.LayoutParams(wantedWidth, wantedHeight)
@@ -1427,7 +1519,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     cz.uhk.macroflow.pokemon.skills.Gathering.pending(active, System.currentTimeMillis() / 1000, sec, st.afkCapHours(spot.skill)) else 0
                 cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.GatherInfo(
                     spot, SS.equipped(ctx, spot.toolSlot), eff, sec, st.gain(spot.skill, spot.xp.toDouble()),
-                    st.passive(spot.skill) + st.gearMulti(spot.skill), st.afkCapHours(spot.skill), active, pending)
+                    st.multiChance(spot.skill), st.afkCapHours(spot.skill), active, pending)
             }
             movementEngine.face(1)
             cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.gatherMenu(findViewById(R.id.mapRootContainer), info,
@@ -1440,7 +1532,7 @@ class MakromonMapActivity : AppCompatActivity() {
                             r
                         }
                         val got = prev?.takeIf { it.claim.amount > 0 }?.let { "\nZ ${it.spot.label}: ${it.claim.amount}× ${it.spot.resource.label}." } ?: ""
-                        showMapToast("${if (spot.skill == cz.uhk.macroflow.pokemon.skills.Skill.MINING) "⛏️ Těžíš" else "🪓 Kácíš"}: ${spot.label}. Běží dál, i když Makrosvět zavřeš.$got")
+                        showMapToast("${spot.emoji} ${spot.doing.replaceFirstChar { it.uppercase() }}: ${spot.label}. Běží dál, i když Makrosvět zavřeš.$got")
                         refreshGatherPlaque()
                     }
                 },

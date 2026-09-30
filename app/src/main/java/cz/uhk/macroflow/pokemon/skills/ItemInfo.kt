@@ -54,7 +54,7 @@ object ItemInfo {
                     )
                 }
                 else -> GatherSpot.entries.filter { it.resource == r }.map { s ->
-                    Source("${s.placeLabel} – ${s.label} (${if (s.skill == Skill.MINING) "krumpáč" else "sekera"})",
+                    Source("${s.placeLabel} – ${s.label} (${s.toolSlot.label.lowercase()})",
                         "efektivita ${s.required}+, 1 ks za ${growText(s.baseSeconds)} (rychleji s vyšší efektivitou)")
                 }
             }
@@ -68,6 +68,7 @@ object ItemInfo {
         }
         Gear.from(itemId)?.let { g ->
             if (g.legendary) return listOf(Source("Poražený Gudwin – legendární artefakt, padá jen jednou", pct(Drops.ARTIFACT_CHANCE)))
+            if (g == Gear.OLD_NET) return listOf(Source("Doly – visí na rezavém háku nad převráceným vozíkem u vstupu", "jednou"))
             val recipe = GearCrafting.recipe(g) ?: return listOf(Source("Startovní vybavení", "dostaneš na začátku"))
             val parts = recipe.entries.joinToString(" + ") { (id, n) -> "$n× ${Resource.from(id)?.label ?: id}" }
             return listOf(Source("Pracovní stůl na louce – Dobrodruhův set (uzel „Základní vybavení“ ve stromu Výroby)", parts))

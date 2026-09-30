@@ -19,6 +19,8 @@ object WildLevels {
         BiomeType.FOREST, BiomeType.HIDDEN_GROVE -> (3..6).associateWith { 1 }
         BiomeType.MOUNTAINS, BiomeType.SKY_PASS -> (4..8).associateWith { 1 }
         BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE -> (6..12).associateWith { 1 }
+        // Doly jsou hlouběji než jeskyně (docs/adr/0049)
+        BiomeType.MINES -> (8..14).associateWith { 1 }
     }
 
     fun range(biome: BiomeType): IntRange = weights(biome).keys.let { it.min()..it.max() }

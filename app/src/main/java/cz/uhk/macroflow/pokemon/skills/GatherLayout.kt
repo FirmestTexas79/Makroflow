@@ -16,7 +16,11 @@ object GatherLayout {
         GatherSpot.SILVER to Place(100, 338, 1f),         // Starý důl – ve stěně nad štolou
         GatherSpot.GOLD to Place(118, 262, 1f),           // Mechová jeskyně – prostřední síň vpravo
         GatherSpot.BIRCH to Place(ForestSpots.BIRCH_X, ForestSpots.BIRCH_Y, 1f),
-        GatherSpot.MAPLE to Place(ForestSpots.MAPLE_X, ForestSpots.MAPLE_Y, 1f)
+        GatherSpot.MAPLE to Place(ForestSpots.MAPLE_X, ForestSpots.MAPLE_Y, 1f),
+        // Doly (docs/adr/0049): střed hejna mušek
+        GatherSpot.SPARK_FLIES to Place(cz.uhk.macroflow.pokemon.cave.MinesMap.SPARK_X, cz.uhk.macroflow.pokemon.cave.MinesMap.SPARK_Y, 1f),
+        GatherSpot.CRYSTAL_FLIES to Place(cz.uhk.macroflow.pokemon.cave.MinesMap.CRYSTAL_X, cz.uhk.macroflow.pokemon.cave.MinesMap.CRYSTAL_Y, 1f),
+        GatherSpot.MAGMA_FLIES to Place(cz.uhk.macroflow.pokemon.cave.MinesMap.MAGMA_X, cz.uhk.macroflow.pokemon.cave.MinesMap.MAGMA_Y, 1f)
     )
 
     /** Rozměr obrázku mapy lokace, ve kterém jsou souřadnice [PLACES]. */
@@ -24,6 +28,7 @@ object GatherLayout {
         "CAVE_MAZE" -> 150 to 480
         "CAVE_OPEN" -> 150 to 440
         "FOREST" -> ForestSpots.W to ForestSpots.H
+        "MINES" -> cz.uhk.macroflow.pokemon.cave.MinesMap.W to cz.uhk.macroflow.pokemon.cave.MinesMap.H
         else -> 688 to 1536
     }
 }

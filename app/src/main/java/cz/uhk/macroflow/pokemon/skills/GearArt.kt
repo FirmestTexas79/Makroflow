@@ -72,13 +72,22 @@ object GearArt {
         return p.data
     }
 
-    fun net(): IntArray {
+    /** Síťka: obruč z kovu, násada ze dřeva, oka ze sítě. Stará má potrhaná oka a rezavou obruč. */
+    fun net(old: Boolean = true, metal: Metal? = null): IntArray {
         val p = px(ICON, ICON)
-        line(p, 2, 14, 7, 9, WOOD_L, WOOD_D)
+        line(p, 2, 14, 7, 9, metal?.woodL ?: WOOD_L, metal?.woodD ?: WOOD_D)
+        val mesh = if (metal == GOLD) c(0xFFFFF6D8) else c(0xFFE8E0C8)
         for (y in 0 until ICON) for (x in 0 until ICON) {
             val d = hypot(x - 10.5f, y - 5.5f)
-            if (d in 4.2f..5.2f) p[x, y] = STEEL
-            else if (d < 4.2f && ((x + y) % 3 == 0 || (x - y + 30) % 3 == 0)) p[x, y] = c(0xFFE8E0C8)
+            if (d in 4.2f..5.2f) p[x, y] = when {
+                metal != null -> if (y < 5) metal.l else if (x > 11) metal.d else metal.m
+                old && (x + y) % 4 == 0 -> RUST
+                else -> STEEL
+            }
+            else if (d < 4.2f && ((x + y) % 3 == 0 || (x - y + 30) % 3 == 0)) {
+                if (old && x in 11..12 && y in 6..8) continue          // díra v sítí
+                p[x, y] = mesh
+            }
         }
         p.outline(K)
         return p.data
@@ -95,6 +104,8 @@ object GearArt {
         Gear.COPPER_AXE -> axe(false, COPPER); Gear.COPPER_PICKAXE -> pickaxe(false, COPPER)
         Gear.SILVER_AXE -> axe(false, SILVER); Gear.SILVER_PICKAXE -> pickaxe(false, SILVER)
         Gear.GOLD_AXE -> axe(false, GOLD); Gear.GOLD_PICKAXE -> pickaxe(false, GOLD)
+        Gear.OLD_NET -> net()
+        Gear.COPPER_NET -> net(false, COPPER); Gear.SILVER_NET -> net(false, SILVER); Gear.GOLD_NET -> net(false, GOLD)
         Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL -> MaterialArt.accessory(g)!!
     }
 
@@ -275,7 +286,27 @@ object GearArt {
         return p.data
     }
 
+    /** Muška ve sklenici na hmyz (docs/adr/0049): 12 × 12. */
+    fun bug(r: Resource): IntArray {
+        val p = px(ITEM, ITEM)
+        val glass = c(0x66CFE8F0); val rim = c(0xFFB8C8D0); val cork = c(0xFFB08050)
+        for (y in 3 until ITEM - 1) for (x in 2 until ITEM - 2) p[x, y] = if (x == 2 || x == ITEM - 3 || y == ITEM - 2) rim else glass
+        for (x in 3 until ITEM - 3) { p[x, 1] = cork; p[x, 2] = cork }
+        p[4, 5] = c(0xFFFFFFFF)                                    // odlesk
+        val (body, light, wing) = when (r) {
+            Resource.BUG_CRYSTAL -> Triple(c(0xFF4A2A7A), c(0xFFB8F4FF), c(0xFF9AF0FF))
+            Resource.BUG_MAGMA -> Triple(c(0xFF141010), c(0xFFFF5A1E), c(0xFF8A8078))
+            else -> Triple(c(0xFF3A2414), c(0xFFFFD050), c(0xFFF4ECDC))
+        }
+        p[5, 5] = wing; p[7, 5] = wing; p[4, 6] = wing; p[8, 6] = wing
+        p[6, 5] = body; p[6, 6] = body; p[6, 7] = light; p[6, 8] = light
+        if (r == Resource.BUG_SPARK || r == Resource.BUG_MAGMA) { p[5, 8] = light; p[7, 8] = light }
+        p.outline(K)
+        return p.data
+    }
+
     fun resourceIcon(r: Resource): IntArray? = when (r) {
+        Resource.BUG_SPARK, Resource.BUG_CRYSTAL, Resource.BUG_MAGMA -> bug(r)
         Resource.ORE_COPPER, Resource.ORE_SILVER, Resource.ORE_GOLD -> ore(r)
         Resource.LOG_OAK, Resource.LOG_BIRCH, Resource.LOG_MAPLE -> log(r)
         else -> MaterialArt.icon(r)
@@ -333,6 +364,10 @@ object GearArt {
         return p.data
     }
 
-    fun spot(spot: GatherSpot): Triple<IntArray, Int, Int> =
-        if (spot.skill == Skill.MINING) Triple(rock(spot), ROCK_W, ROCK_H) else Triple(tree(spot), TREE_W, TREE_H)
+    /** Obrázek místa na mapě; mušky (Chytání) žádný nemají – poletují živě (MinesFxView). */
+    fun spot(spot: GatherSpot): Triple<IntArray, Int, Int>? = when (spot.skill) {
+        Skill.MINING -> Triple(rock(spot), ROCK_W, ROCK_H)
+        Skill.CATCHING -> null
+        else -> Triple(tree(spot), TREE_W, TREE_H)
+    }
 }

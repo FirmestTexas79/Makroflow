@@ -126,7 +126,9 @@ object CaveMaps {
             CaveNode("sin_krystalu", 75, 140),
             CaveNode("krystal_cerveny", 75, 76),
             // Stříbrná žíla (docs/adr/0035) – ve stěně nad štolou mezi žebříkem a těžbou
-            CaveNode("zila_stribro", 100, 346)
+            CaveNode("zila_stribro", 100, 346),
+            // Zabedněná štola do Dolů v zatáčce (docs/adr/0049) – souřadnice = MinesMap.MAZE_NODE_X/Y
+            CaveNode("vstup_doly", 26, 269)
         ),
         edges = listOf(
             "vychod_dolu" to "stola_vstup", "stola_vstup" to "stola_kriz", "stola_kriz" to "vozik",
@@ -135,14 +137,15 @@ object CaveMaps {
             "chodba_sever" to "rozcesti_dul", "rozcesti_dul" to "netopyri",
             "rozcesti_dul" to "zebrik2",
             "zebrik2" to "slepa_chodba", "zebrik2" to "horni_stola", "horni_stola" to "hlubina",
-            "hlubina" to "sin_krystalu", "sin_krystalu" to "krystal_cerveny", "zebrik1" to "zila_stribro"
+            "hlubina" to "sin_krystalu", "sin_krystalu" to "krystal_cerveny", "zebrik1" to "zila_stribro",
+            "chodba_sever" to "vstup_doly"
         ),
         exitNode = "vychod_dolu",
         mountainNode = "mine",
         crystalNode = "krystal_cerveny",
         crystal = CrystalColor.RED,
         encounterNodes = setOf("vozik", "netopyri", "slepa_chodba", "hlubina"),
-        tapAreas = mapOf("zila_stribro" to Triple(100, 332, 13))
+        tapAreas = mapOf("zila_stribro" to Triple(100, 332, 13), "vstup_doly" to Triple(26, 261, 9))
     )
 
     val ALL = listOf(OPEN, MAZE)

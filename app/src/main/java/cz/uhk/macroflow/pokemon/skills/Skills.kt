@@ -10,7 +10,7 @@ import kotlin.random.Random
  * Chytání, Výrobu a Pěstování. Čistý Kotlin, pokryto testy.
  */
 enum class Skill(val id: String, val label: String, val verb: String) {
-    CATCHING("catching", "Chytání", "chytáním Makromonů"),
+    CATCHING("catching", "Chytání", "chytáním Makromonů a hmyzu síťkou v Dolech"),
     CRAFTING("crafting", "Výroba", "výrobou u pracovního stolu"),
     HARVESTING("harvesting", "Pěstování", "sklizní bobulí ze záhonů"),
     /** docs/adr/0035 – těží se krumpáčem v horách, i když jsi pryč (AFK). */
@@ -111,6 +111,8 @@ object SkillTree {
         data class Efficiency(val add: Double) : Effect()
         /** Delší AFK – kolik hodin navíc se počítá, když jsi pryč. */
         data class AfkHours(val hours: Int) : Effect()
+        /** Šance na dvojitý kus navíc (0,1 = +10 %), docs/adr/0049 – dvojitý úlovek hmyzu. */
+        data class MultiChance(val add: Double) : Effect()
     }
 
     data class Node(
@@ -132,6 +134,11 @@ object SkillTree {
         Node("team_4", Skill.CATCHING, "Čtveřice", "Můžeš mít v týmu až ČTYŘI Makromony.", 2, "team_3", Effect.TeamSlot),
         Node("team_5", Skill.CATCHING, "Pětice", "Můžeš mít v týmu až PĚT Makromonů.", 2, "team_4", Effect.TeamSlot),
         Node("team_6", Skill.CATCHING, "Plný tým", "Můžeš mít v týmu až ŠEST Makromonů.", 3, "team_5", Effect.TeamSlot),
+        // Chytání hmyzu síťkou v Dolech (docs/adr/0049)
+        Node("net_eff", Skill.CATCHING, "Lehká ruka", "+20 % efektivita síťky.", 1, effect = Effect.Efficiency(0.20)),
+        Node("net_xp", Skill.CATCHING, "Entomolog", "+10 % XP za chytání (Makromoni i hmyz).", 1, "net_eff", Effect.XpBonus(0.10)),
+        Node("net_multi", Skill.CATCHING, "Plná síťka", "+10 % šance na dvojitý úlovek hmyzu.", 2, "net_eff", Effect.MultiChance(0.10)),
+        Node("net_afk", Skill.CATCHING, "Noční lov", "Když jsi pryč, chytá se o 12 h déle.", 2, "net_eff", Effect.AfkHours(12)),
 
         Node("basic_gear", Skill.CRAFTING, "Základní vybavení", "Můžeš vyrábět dobrodruhův set u pracovního stolu na louce.", 1, effect = Effect.BasicEquipment),
         Node("craft_xp", Skill.CRAFTING, "Zručné ruce", "+15 % XP za výrobu.", 1, "basic_gear", Effect.XpBonus(0.15)),
@@ -215,6 +222,12 @@ data class SkillState(
     /** Kolik hodin AFK se nejvýš započítá (základ 12 h + strom). */
     fun afkCapHours(skill: Skill): Int = 12 + effectsOf(skill).filterIsInstance<SkillTree.Effect.AfkHours>().sumOf { it.hours } +
         gear.sumOf { it.afkHours[skill] ?: 0 }
+
+    /** Šance na dvojitý kus ze stromu (Plná síťka). */
+    fun treeMulti(skill: Skill): Double = effectsOf(skill).filterIsInstance<SkillTree.Effect.MultiChance>().sumOf { it.add }
+
+    /** Celková šance na dvojitý kus při těžbě / kácení / chytání: pasivní bonus + vybavení + strom. */
+    fun multiChance(skill: Skill): Double = passive(skill) + gearMulti(skill) + treeMulti(skill)
 
     fun xpMultiplier(skill: Skill): Double = SkillMath.xpMultiplier(xpAdditive(skill))
 

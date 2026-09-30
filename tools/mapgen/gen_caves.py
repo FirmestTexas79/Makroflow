@@ -485,6 +485,29 @@ def gen_open():
     return c
 
 
+def mine_door(c, x, y_top):
+    """Vchod do Dolů v čele stěny: výdřeva, tma, zdola rudá záře, přes vchod rozbitá prkna."""
+    for k in range(WALL_FH):
+        yy = y_top + k
+        for xx in range(x - 6, x + 7):
+            d = abs(xx - x)
+            if d >= 5:
+                c.px(xx, yy, WOOD[1] if d == 6 else WOOD[0])
+            else:
+                g = (k / (WALL_FH - 1)) ** 1.6
+                col = tuple(int(a * (1 - g) + b * g) for a, b in zip((8, 6, 12), (170, 58, 24)))
+                if k == WALL_FH - 1 and (xx + k) % 3 == 0: col = (255, 150, 60)
+                c.px(xx, yy, col)
+    for xx in range(x - 7, x + 8):
+        c.px(xx, y_top, WOOD[2]); c.px(xx, y_top + 1, WOOD[1])
+    for k in range(9):                                     # jedno prkno přes vchod
+        c.px(x - 4 + k, y_top + 3 + k // 4, WOOD[2]); c.px(x - 4 + k, y_top + 4 + k // 4, WOOD[1])
+    for k in range(4):                                     # utržené visí
+        c.px(x + 3, y_top + 2 + k, WOOD[2])
+    c.px(x - 2, y_top + 6, (200, 60, 70)); c.px(x + 1, y_top + 7, (255, 130, 120))   # rudý záblesk krystalu
+    c.lights.append((x, y_top + WALL_FH + 1, 14, 0.4, (255, 110, 40)))
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 2) STARÝ DŮL (uzavřené bludiště, žebříky, červený krystal)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -598,6 +621,9 @@ def gen_maze():
         c.lights.append((x, y - 3, 12, 0.24, CAP[1]))
     for n in ("vozik", "netopyri", "slepa_chodba", "hlubina"):
         c.encounter_patch(*nodes[n])
+
+    # zabedněná štola do Dolů v zatáčce u chodba_sever (docs/adr/0049, uzel vstup_doly v CaveMaps.kt)
+    mine_door(c, L, 276 - 9 - WALL_FH)
 
     ax, ay = nodes["krystal_cerveny"]
     c.altar(ax, ay - ALTAR_ABOVE, CRY_R)

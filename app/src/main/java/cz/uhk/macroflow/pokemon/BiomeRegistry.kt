@@ -16,7 +16,9 @@ enum class BiomeType {
     /** Nebeský průsmyk za svatyní (docs/adr/0044) – serpentina k Bráně světů. */
     SKY_PASS,
     /** Zapomenutý háj za trním ve Hvozdu (docs/adr/0046) – tajná linka příběhu. */
-    HIDDEN_GROVE
+    HIDDEN_GROVE,
+    /** Doly za Starým dolem (docs/adr/0049) – láva, koleje a chytání hmyzu. */
+    MINES
 }
 
 object BiomeRegistry {
@@ -118,7 +120,9 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.SKY_PASS, R.drawable.sky_pass, graphOf(cz.uhk.macroflow.pokemon.cave.SkyPass.MAP), questId = null,
                 cave = cz.uhk.macroflow.pokemon.cave.SkyPass.MAP),
             BiomeDefinition(BiomeType.HIDDEN_GROVE, R.drawable.hidden_grove, graphOf(cz.uhk.macroflow.pokemon.cave.GroveMap.MAP),
-                questId = QuestRegistry.SECRET_GROVE_QUEST.id, cave = cz.uhk.macroflow.pokemon.cave.GroveMap.MAP)
+                questId = QuestRegistry.SECRET_GROVE_QUEST.id, cave = cz.uhk.macroflow.pokemon.cave.GroveMap.MAP),
+            BiomeDefinition(BiomeType.MINES, R.drawable.mines, graphOf(cz.uhk.macroflow.pokemon.cave.MinesMap.MAP), questId = null,
+                cave = cz.uhk.macroflow.pokemon.cave.MinesMap.MAP)
         ).associateBy { it.type }
     }
 

@@ -190,7 +190,8 @@ object WorkshopMenus {
         val spot = info.spot
         val activeHere = info.active?.spot == spot
         val (px, w, h) = cz.uhk.macroflow.pokemon.skills.GearArt.spot(spot)
-        show(root, spot.label, if (activeHere) "Právě tu ${if (spot.skill == Skill.MINING) "těžíš" else "kácíš"} – pokračuje i když odejdeš z Makrosvěta." else null) { ui, body, close ->
+            ?: Triple(cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(spot.resource), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM, cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM)
+        show(root, spot.label, if (activeHere) "Právě tu ${spot.doing} – pokračuje i když odejdeš z Makrosvěta." else null) { ui, body, close ->
             val top = ui.row()
             top.addView(ui.icon(px, w, h, 56f))
             val col = ui.column().apply { setPadding(ui.px(12f), 0, 0, 0) }
@@ -227,7 +228,7 @@ object WorkshopMenus {
                 }
                 else -> {
                     info.active?.let { a ->
-                        body.addView(ui.text("Teď ${if (a.spot.skill == Skill.MINING) "těžíš" else "kácíš"}: ${a.spot.label}. Začátkem tady to ukončíš a hotové kusy se vyberou.", 15f, ui.inkSoft))
+                        body.addView(ui.text("Teď ${a.spot.doing}: ${a.spot.label}. Začátkem tady to ukončíš a hotové kusy se vyberou.", 15f, ui.inkSoft))
                         body.addView(ui.spacer(6f))
                     }
                     body.addView(ui.button("${spot.verb} (1 kus za ${Garden.clock(info.secPerUnit)})") { close(); onStart() })
@@ -253,7 +254,7 @@ object WorkshopMenus {
             c.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             body.addView(c)
             if (res.claim.capped) body.addView(ui.text("Počítá se nejvýš ${res.claim.countedSeconds / 3600} h AFK – delší směnu odemkneš ve stromu.", 15f, ui.inkSoft))
-            body.addView(ui.text("${if (spot.skill == Skill.MINING) "Těžba" else "Kácení"} pokračuje dál.", 15f, ui.inkSoft))
+            body.addView(ui.text("${spot.skill.label} pokračuje dál.", 15f, ui.inkSoft))
             body.addView(ui.button("Pokračovat") { close(); onClose() }.apply {
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) }
             })

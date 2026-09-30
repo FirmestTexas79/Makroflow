@@ -196,6 +196,10 @@ object JournalPages {
             Skill.CATCHING -> {
                 stat("Šance na útěk z ballu", "−${pct(state.catchReduction)}")
                 stat("Míst v týmu", "${state.teamSlots} / ${Team.MAX}")
+                // chytání hmyzu síťkou v Dolech (docs/adr/0049)
+                stat("Šance na dvojitý úlovek", pct(state.multiChance(s)))
+                if (state.efficiencyBonus(s) > 0) stat("Efektivita síťky", "+" + pct(state.efficiencyBonus(s)))
+                stat("AFK nejvýš", "${state.afkCapHours(s)} h")
             }
             Skill.CRAFTING -> stat("Šance na dvojitou výrobu", pct(passive))
             Skill.MINING -> {
@@ -287,6 +291,7 @@ object JournalPages {
             "Semínka" to listOf(res(Resource.SEED_GREEN), res(Resource.SEED_BLUE), res(Resource.SEED_BLACK)),
             "Z dolů" to listOf(res(Resource.ORE_COPPER), res(Resource.ORE_SILVER), res(Resource.ORE_GOLD)),
             "Ze stromů" to listOf(res(Resource.LOG_OAK), res(Resource.LOG_BIRCH), res(Resource.LOG_MAPLE)),
+            "Hmyz z Dolů" to listOf(res(Resource.BUG_SPARK), res(Resource.BUG_CRYSTAL), res(Resource.BUG_MAGMA)),
             "Vyrobené" to Makroball.entries.map { Entry(it.id, it.label, it.description, it.pixels, Makroball.SIZE) }
         )
         sections.forEach { (title, entries) ->
