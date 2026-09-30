@@ -268,7 +268,9 @@ class PokemonBattleView @JvmOverloads constructor(
         arenaExtra = extra
         val theme = arenaTheme; val seed = arenaSeed
         Thread {
+            val t0 = android.os.SystemClock.uptimeMillis()
             val px = runCatching { A.render(theme, seed, extra) }.getOrNull() ?: return@Thread
+            android.util.Log.d("Arena", "render $theme extra=$extra threads=${cz.uhk.macroflow.pokemon.arena.VoxelRenderer.threads} ${android.os.SystemClock.uptimeMillis() - t0} ms")
             val bmp = Bitmap.createBitmap(px, A.W, A.H + extra, Bitmap.Config.ARGB_8888)
             handler.post {
                 if (extra == arenaExtra) {
