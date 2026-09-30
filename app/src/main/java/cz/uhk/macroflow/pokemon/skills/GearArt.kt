@@ -108,6 +108,8 @@ object GearArt {
         Gear.MINER_LAMP -> minerLamp()
         Gear.COPPER_NET -> net(false, COPPER); Gear.SILVER_NET -> net(false, SILVER); Gear.GOLD_NET -> net(false, GOLD)
         Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL -> MaterialArt.accessory(g)!!
+        Gear.SPARK_HELM, Gear.SPARK_CUIRASS, Gear.SPARK_GREAVES, Gear.SPARK_BOOTS,
+        Gear.PRISM_HELM, Gear.PRISM_CUIRASS, Gear.PRISM_GREAVES, Gear.MAGMA_BOOTS -> fromRows(ARMOR.getValue(g), ARMOR_COLORS)
     }
 
     /** Šichtovní kniha 12 × 12: okované tmavé desky s razítkem (docs/adr/0050). */
@@ -212,10 +214,151 @@ object GearArt {
         ".HHHHHHHHHHHHHHH",
         ".OOOOOOOOOOOOOO.")
 
-    private fun fromRows(rows: List<String>): IntArray {
+    // ── Jiskřivý a Duhový set 16 × 16 (docs/adr/0053) ───────────────────────
+    // stříbro W S d x, kůže l L, jiskra o y, krystal c C p v, zlato H G g z, magma k K m M
+
+    private val ARMOR_COLORS = mapOf(
+        'W' to c(0xFFE8EEF4),
+        'S' to c(0xFFB4BCC8),
+        'd' to c(0xFF76808F),
+        'x' to c(0xFF3E4656),
+        'l' to c(0xFF6B4A2E),
+        'L' to c(0xFF8E6640),
+        'o' to c(0xFFFFA630),
+        'y' to c(0xFFFFEC8A),
+        'c' to c(0xFF8CF0F4),
+        'C' to c(0xFF38A8D0),
+        'p' to c(0xFFF0A0F4),
+        'v' to c(0xFF9A5AE0),
+        'H' to c(0xFFFFEE9A),
+        'G' to c(0xFFE8B838),
+        'g' to c(0xFFB07A1C),
+        'z' to c(0xFF6A4410),
+        'k' to c(0xFF2A1C1E),
+        'K' to c(0xFF4A3034),
+        'm' to c(0xFFFF6A20),
+        'M' to c(0xFFFFC848)
+    )
+
+    private val ARMOR: Map<Gear, List<String>> = mapOf(
+        Gear.SPARK_HELM to listOf(
+            ".......oy.......",
+            "......oyyo......",
+            ".......oo.......",
+            ".....WWSSSd.....",
+            "....WSSSSSSd....",
+            "...WSSSSSSSSd...",
+            "...SSSSSSSSSd...",
+            "..WSxxxxxxxxSd..",
+            "..SSxoxxxxoxSd..",
+            "..SSxxxxxxxxSd..",
+            "..SSSSSdSSSSSd..",
+            "..dSSSSdSSSSdd..",
+            "...ddSSdSSSdd...",
+            ".....dddddd....."),
+        Gear.SPARK_CUIRASS to listOf(
+            "................",
+            "..WSSd....WSSd..",
+            ".WSSSSd..WSSSSd.",
+            ".SSSSSSSSSSSSSd.",
+            ".SSSWWSSSSSSSSd.",
+            ".SSdWSSoooSSdSd.",
+            ".SSdSSoyyyoSdSd.",
+            ".ddd.SSoooSS.dd.",
+            ".....SSSdSSS....",
+            ".....SdSSSdS....",
+            ".....lLLoLLl....",
+            ".....SSSSSSd....",
+            "......dSSSd....."),
+        Gear.SPARK_GREAVES to listOf(
+            "................",
+            "....lLLLLLLl....",
+            "....lLLoyLLl....",
+            "...WSSSSSSSSd...",
+            "...WSSSddSSSd...",
+            "...WSSd..WSSd...",
+            "...SSSd..SSSd...",
+            "...SoSd..SoSd...",
+            "...SyS...SyS....",
+            "...SSSd..SSSd...",
+            "...SSSd..SSSd...",
+            "...dSSd..dSSd...",
+            "...xxxx..xxxx..."),
+        Gear.SPARK_BOOTS to listOf(
+            "................",
+            ".....WSSd.......",
+            ".....SSSd.......",
+            ".....ScSd.......",
+            ".....CcCd.......",
+            ".....SCSd.......",
+            ".....SSSd.......",
+            ".....SSSSSSd....",
+            "....WSSSSSSSSd..",
+            "....SSSSSScSSSd.",
+            "....SSSSSSSSSSd.",
+            "....xxxxxxxxxxx."),
+        Gear.PRISM_HELM to listOf(
+            ".......pc.......",
+            "......pccv......",
+            ".......Cv.......",
+            ".....HHGGGg.....",
+            "....HGGGGGGg....",
+            "...HGGGGGGGGg...",
+            "...GGGGGGGGGg...",
+            "..HGzzzzzzzzGg..",
+            "..GGzczzzzczGg..",
+            "..GGzzzzzzzzGg..",
+            "..GGGGGgGGGGGg..",
+            "..gGGGGgGGGGgg..",
+            "...ggGGgGGGgg...",
+            ".....gggggg....."),
+        Gear.PRISM_CUIRASS to listOf(
+            "................",
+            "..HGGg....HGGg..",
+            ".HGGGGg..HGGGGg.",
+            ".GGGGGGGGGGGGGg.",
+            ".GGGHHGGpcGGGGg.",
+            ".GGgHGGpccvGgGg.",
+            ".GGgGGGCccvGgGg.",
+            ".ggg.GGGCvGG.gg.",
+            ".....GGGgGGG....",
+            ".....GgGGGgG....",
+            ".....zzzczzz....",
+            ".....GGGGGGg....",
+            "......gGGGg....."),
+        Gear.PRISM_GREAVES to listOf(
+            "................",
+            "....zzzzzzzz....",
+            "....zzzpczzz....",
+            "...HGGGGGGGGg...",
+            "...HGGGggGGGg...",
+            "...HGGg..HGGg...",
+            "...GGGg..GGGg...",
+            "...GcGg..GcGg...",
+            "...GpG...GpG....",
+            "...GGGg..GGGg...",
+            "...GGGg..GGGg...",
+            "...gGGg..gGGg...",
+            "...zzzz..zzzz..."),
+        Gear.MAGMA_BOOTS to listOf(
+            "................",
+            ".....HGGg.......",
+            ".....kmKk.......",
+            ".....kMmk.......",
+            ".....KkmK.......",
+            ".....kmMk.......",
+            ".....kkmk.......",
+            ".....kKkmkKk....",
+            "....kkmMkkkmKk..",
+            "....KmkkmmkMmkk.",
+            "....kkkmKkkkkmk.",
+            "....gGGGGGGGGGg.")
+    )
+
+    private fun fromRows(rows: List<String>, colors: Map<Char, Int> = SET_COLORS): IntArray {
         val p = px(ICON, ICON)
         val off = (ICON - rows.size) / 2 + 1
-        rows.forEachIndexed { y, r -> r.forEachIndexed { x, ch -> SET_COLORS[ch]?.let { p[x, y + off] = it } } }
+        rows.forEachIndexed { y, r -> r.forEachIndexed { x, ch -> colors[ch]?.let { p[x, y + off] = it } } }
         p.outline(K)
         return p.data
     }

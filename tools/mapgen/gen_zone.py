@@ -79,7 +79,7 @@ LABEL = {
     "MOUNTAINS": (700, 352), "CAVE_MAZE": (460, 702), "MINES": (453, 32), "CAVE_OPEN": (832, 432),
     "SKY_PASS": (822, 110),
 }
-LABEL_SIZE = 30
+LABEL_SIZE = 46
 # název zóny s větrnou růžicí (střed růžice) – na moři vpravo dole
 TITLE = (745, 1110)
 

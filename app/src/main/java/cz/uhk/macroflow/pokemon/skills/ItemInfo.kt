@@ -72,7 +72,12 @@ object ItemInfo {
             if (g == Gear.MINER_LAMP) return listOf(Source("Doly – havíř Vendelín za podpis šichtovní knihy", "jednou"))
             val recipe = GearCrafting.recipe(g) ?: return listOf(Source("Startovní vybavení", "dostaneš na začátku"))
             val parts = recipe.entries.joinToString(" + ") { (id, n) -> "$n× ${Resource.from(id)?.label ?: id}" }
-            return listOf(Source("Pracovní stůl na louce – Dobrodruhův set (uzel „Základní vybavení“ ve stromu Výroby)", parts))
+            val group = GearSet.of(g)?.label ?: when (g) {
+                in GearCrafting.ACCESSORIES -> "Doplňky"
+                in GearCrafting.TOOLS -> "Nástroje"
+                else -> "Vybavení"
+            }
+            return listOf(Source("Pracovní stůl na louce – $group (uzel „Základní vybavení“ ve stromu Výroby)", parts))
         }
         return emptyList()
     }

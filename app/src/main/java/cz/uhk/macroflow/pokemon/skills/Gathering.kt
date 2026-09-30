@@ -126,7 +126,37 @@ enum class Gear(
     MINER_LAMP("acc_trinket_miner_lamp", 23, GearSlot.TRINKET, "Havířský kahan",
         "Vendelínův kahan, ve kterém místo oleje svítí jiskřivky. +10 % XP za těžbu, kácení a chytání hmyzu a každá z nich běží o 2 h déle bez tebe.", 0,
         xpBonus = mapOf(Skill.MINING to 0.10, Skill.LOGGING to 0.10, Skill.BUG_CATCHING to 0.10),
-        afkHours = mapOf(Skill.MINING to 2, Skill.LOGGING to 2, Skill.BUG_CATCHING to 2));
+        afkHours = mapOf(Skill.MINING to 2, Skill.LOGGING to 2, Skill.BUG_CATCHING to 2)),
+
+    // ── Jiskřivý set (docs/adr/0053): stříbro, jiskřivky a kořist z Makromonů; boty i s krystalovými muškami ──
+    SPARK_HELM("gear_spark_helm", 24, GearSlot.HELMET, "Jiskřivá přilba",
+        "Stříbrná přilba s hledím, za kterým svítí dvě jiskřivky. +15 % XP za těžbu, +40 k efektivitě těžby.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.15), efficiencyBonus = mapOf(Skill.MINING to 40)),
+    SPARK_CUIRASS("gear_spark_cuirass", 25, GearSlot.CHEST, "Jiskřivý kyrys",
+        "Stříbrný kyrys s lucernou na prsou – hejno jiskřivek se k ní samo slétá. +15 % XP za chytání hmyzu, +5 % šance na dvojitý úlovek.", 0,
+        xpBonus = mapOf(Skill.BUG_CATCHING to 0.15), multiBonus = mapOf(Skill.BUG_CATCHING to 0.05)),
+    SPARK_GREAVES("gear_spark_greaves", 26, GearSlot.LEGS, "Jiskřivé nohavice",
+        "Stříbrné nohavice s jiskrou na kolenou. +15 % XP za kácení, +40 k efektivitě kácení.", 0,
+        xpBonus = mapOf(Skill.LOGGING to 0.15), efficiencyBonus = mapOf(Skill.LOGGING to 40)),
+    SPARK_BOOTS("gear_spark_boots", 27, GearSlot.BOOTS, "Jiskřivé boty",
+        "Stříbrné boty s krystalem v holeni. +80 k efektivitě těžby, kácení i chytání hmyzu a +10 % XP za všechny tři.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.10, Skill.LOGGING to 0.10, Skill.BUG_CATCHING to 0.10),
+        efficiencyBonus = mapOf(Skill.MINING to 80, Skill.LOGGING to 80, Skill.BUG_CATCHING to 80)),
+
+    // ── Duhový set (docs/adr/0053): zlato a krystalové mušky; boty z magmových mušek ──
+    PRISM_HELM("gear_prism_helm", 28, GearSlot.HELMET, "Duhová přilba",
+        "Zlatá přilba s duhovým krystalem v čele. +25 % XP za těžbu, +6 % dvojitá ruda, těží o 2 h déle bez tebe.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.25), multiBonus = mapOf(Skill.MINING to 0.06), afkHours = mapOf(Skill.MINING to 2)),
+    PRISM_CUIRASS("gear_prism_cuirass", 29, GearSlot.CHEST, "Duhový kyrys",
+        "Zlatý kyrys se zasazeným krystalem, který láme světlo jako křídla krystalových mušek. +25 % XP za chytání hmyzu, +8 % dvojitý úlovek, chytá o 2 h déle bez tebe.", 0,
+        xpBonus = mapOf(Skill.BUG_CATCHING to 0.25), multiBonus = mapOf(Skill.BUG_CATCHING to 0.08), afkHours = mapOf(Skill.BUG_CATCHING to 2)),
+    PRISM_GREAVES("gear_prism_greaves", 30, GearSlot.LEGS, "Duhové nohavice",
+        "Zlaté nohavice s krystaly na kolenou. +25 % XP za kácení, +6 % dvojitá polena, kácí o 2 h déle bez tebe.", 0,
+        xpBonus = mapOf(Skill.LOGGING to 0.25), multiBonus = mapOf(Skill.LOGGING to 0.06), afkHours = mapOf(Skill.LOGGING to 2)),
+    MAGMA_BOOTS("gear_magma_boots", 31, GearSlot.BOOTS, "Magmové boty",
+        "Černý krunýř magmových mušek se zlatým lemem, pod ním pořád prosvítá oheň. +150 k efektivitě těžby, kácení i chytání hmyzu, +15 % XP za všechny tři a kořist z Makromonů padá o 10 % častěji.", 0,
+        xpBonus = mapOf(Skill.MINING to 0.15, Skill.LOGGING to 0.15, Skill.BUG_CATCHING to 0.15),
+        efficiencyBonus = mapOf(Skill.MINING to 150, Skill.LOGGING to 150, Skill.BUG_CATCHING to 150), dropRate = 0.10);
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null
@@ -280,9 +310,45 @@ object Gathering {
     }
 }
 
+/**
+ * Sady brnění (docs/adr/0053). Kdo má nasazené všechny čtyři kusy sady, dostane navíc bonus sady.
+ * Dobrodruhův set bonus sady nemá.
+ */
+enum class GearSet(
+    val label: String,
+    val pieces: List<Gear>,
+    val xp: Map<Skill, Double> = emptyMap(),
+    val multi: Map<Skill, Double> = emptyMap(),
+    val afkHours: Map<Skill, Int> = emptyMap()
+) {
+    ADVENTURER("Dobrodruhův set", listOf(Gear.ADV_CAP, Gear.ADV_TUNIC, Gear.ADV_PANTS, Gear.ADV_SLIPPERS)),
+    SPARK("Jiskřivý set", listOf(Gear.SPARK_HELM, Gear.SPARK_CUIRASS, Gear.SPARK_GREAVES, Gear.SPARK_BOOTS),
+        afkHours = mapOf(Skill.MINING to 1, Skill.LOGGING to 1, Skill.BUG_CATCHING to 1)),
+    PRISM("Duhový set", listOf(Gear.PRISM_HELM, Gear.PRISM_CUIRASS, Gear.PRISM_GREAVES, Gear.MAGMA_BOOTS),
+        xp = mapOf(Skill.MINING to 0.10, Skill.LOGGING to 0.10, Skill.BUG_CATCHING to 0.10),
+        multi = mapOf(Skill.MINING to 0.05, Skill.LOGGING to 0.05, Skill.BUG_CATCHING to 0.05));
+
+    val hasBonus: Boolean get() = xp.isNotEmpty() || multi.isNotEmpty() || afkHours.isNotEmpty()
+
+    /** Bonus sady jednou větou (do dílny). */
+    val bonusText: String get() = buildList {
+        xp.values.firstOrNull()?.let { add("+${Math.round(it * 100)} % XP za těžbu, kácení i chytání hmyzu") }
+        multi.values.firstOrNull()?.let { add("+${Math.round(it * 100)} % dvojitý kus") }
+        afkHours.values.firstOrNull()?.let { add("všechno běží o $it h déle bez tebe") }
+    }.joinToString(", ")
+
+    companion object {
+        fun of(g: Gear): GearSet? = entries.firstOrNull { g in it.pieces }
+        /** Sady, které má hráč nasazené celé. */
+        fun complete(gear: Set<Gear>): List<GearSet> = entries.filter { gear.containsAll(it.pieces) }
+    }
+}
+
 /** Recepty na vybavení u pracovního stolu (docs/adr/0039). */
 object GearCrafting {
-    val SET = listOf(Gear.ADV_CAP, Gear.ADV_TUNIC, Gear.ADV_PANTS, Gear.ADV_SLIPPERS)
+    val SET = GearSet.ADVENTURER.pieces
+    val SPARK_SET = GearSet.SPARK.pieces
+    val PRISM_SET = GearSet.PRISM.pieces
     val ACCESSORIES = listOf(Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL)
     val TOOLS = listOf(Gear.COPPER_AXE, Gear.COPPER_PICKAXE, Gear.COPPER_NET, Gear.SILVER_AXE, Gear.SILVER_PICKAXE, Gear.SILVER_NET,
         Gear.GOLD_AXE, Gear.GOLD_PICKAXE, Gear.GOLD_NET)
@@ -309,6 +375,16 @@ object GearCrafting {
         Gear.COPPER_NET -> linkedMapOf(Resource.ORE_COPPER.itemId to 12, Resource.LOG_OAK.itemId to 15, Resource.BUG_SPARK.itemId to 8, Resource.BERRY_GREEN.itemId to 5)
         Gear.SILVER_NET -> linkedMapOf(Resource.ORE_SILVER.itemId to 18, Resource.LOG_BIRCH.itemId to 18, Resource.BUG_CRYSTAL.itemId to 10, Resource.BERRY_BLUE.itemId to 5)
         Gear.GOLD_NET -> linkedMapOf(Resource.ORE_GOLD.itemId to 22, Resource.LOG_MAPLE.itemId to 22, Resource.BUG_MAGMA.itemId to 10, Resource.BERRY_BLACK.itemId to 3)
+        // Jiskřivý set (docs/adr/0053): stříbro + jiskřivky + kořist z Makromonů, boty i krystalové mušky
+        Gear.SPARK_HELM -> linkedMapOf(Resource.ORE_SILVER.itemId to 20, Resource.BUG_SPARK.itemId to 12, Resource.EMBER.itemId to 4)
+        Gear.SPARK_CUIRASS -> linkedMapOf(Resource.ORE_SILVER.itemId to 30, Resource.BUG_SPARK.itemId to 16, Resource.SOUL_WISP.itemId to 5)
+        Gear.SPARK_GREAVES -> linkedMapOf(Resource.ORE_SILVER.itemId to 25, Resource.BUG_SPARK.itemId to 12, Resource.WATER_PEARL.itemId to 5, Resource.LOG_BIRCH.itemId to 10)
+        Gear.SPARK_BOOTS -> linkedMapOf(Resource.ORE_SILVER.itemId to 20, Resource.BUG_SPARK.itemId to 10, Resource.BUG_CRYSTAL.itemId to 8, Resource.LEAF_DRY.itemId to 6)
+        // Duhový set: zlato + krystalové mušky, boty z magmových mušek, koulí magmatu a dračích šupin
+        Gear.PRISM_HELM -> linkedMapOf(Resource.ORE_GOLD.itemId to 25, Resource.BUG_CRYSTAL.itemId to 14, Resource.PIXIE_DUST.itemId to 4)
+        Gear.PRISM_CUIRASS -> linkedMapOf(Resource.ORE_GOLD.itemId to 35, Resource.BUG_CRYSTAL.itemId to 18, Resource.SOUL_WISP.itemId to 6)
+        Gear.PRISM_GREAVES -> linkedMapOf(Resource.ORE_GOLD.itemId to 30, Resource.BUG_CRYSTAL.itemId to 14, Resource.WATER_PEARL.itemId to 6, Resource.LOG_MAPLE.itemId to 15)
+        Gear.MAGMA_BOOTS -> linkedMapOf(Resource.ORE_GOLD.itemId to 20, Resource.BUG_MAGMA.itemId to 12, Resource.MAGMA_ORB.itemId to 2, Resource.DRAGON_SCALE.itemId to 2)
         else -> null
     }
 
@@ -319,6 +395,8 @@ object GearCrafting {
         Gear.COPPER_AXE, Gear.COPPER_PICKAXE, Gear.COPPER_NET -> 80
         Gear.SILVER_AXE, Gear.SILVER_PICKAXE, Gear.SILVER_NET -> 180
         Gear.GOLD_AXE, Gear.GOLD_PICKAXE, Gear.GOLD_NET -> 360
+        Gear.SPARK_HELM, Gear.SPARK_GREAVES -> 220; Gear.SPARK_CUIRASS -> 260; Gear.SPARK_BOOTS -> 300
+        Gear.PRISM_HELM, Gear.PRISM_GREAVES -> 420; Gear.PRISM_CUIRASS -> 480; Gear.MAGMA_BOOTS -> 560
         else -> 0
     }
 

@@ -139,10 +139,16 @@ object WorkshopMenus {
                 body.addView(lock)
             }
             val sections = listOf("Dobrodruhův set" to cz.uhk.macroflow.pokemon.skills.GearCrafting.SET,
+                "Jiskřivý set" to cz.uhk.macroflow.pokemon.skills.GearCrafting.SPARK_SET,
+                "Duhový set" to cz.uhk.macroflow.pokemon.skills.GearCrafting.PRISM_SET,
                 "Doplňky" to cz.uhk.macroflow.pokemon.skills.GearCrafting.ACCESSORIES,
                 "Nástroje" to cz.uhk.macroflow.pokemon.skills.GearCrafting.TOOLS)
             for ((title, items) in sections) {
             body.addView(ui.text(title, 21f, ui.rust).apply { setPadding(ui.px(2f), ui.px(10f), 0, ui.px(4f)) })
+            // bonus celé sady (docs/adr/0053)
+            items.firstOrNull()?.let { cz.uhk.macroflow.pokemon.skills.GearSet.of(it) }?.takeIf { it.hasBonus }?.let { set ->
+                body.addView(ui.text("Celá sada: ${set.bonusText}", 14f, ui.olive).apply { setPadding(ui.px(2f), 0, 0, ui.px(6f)) })
+            }
             items.forEach { g ->
                 val recipe = cz.uhk.macroflow.pokemon.skills.GearCrafting.recipe(g) ?: return@forEach
                 val have = (owned[g.id] ?: 0) > 0

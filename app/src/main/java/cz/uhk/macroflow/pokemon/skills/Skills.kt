@@ -203,7 +203,8 @@ data class SkillState(
     fun xpAdditive(skill: Skill): List<Double> =
         SkillTree.NODES.filter { it.id in unlocked && it.skill == skill }.map { it.effect }
             .filterIsInstance<SkillTree.Effect.XpBonus>().map { it.add } +
-            gear.mapNotNull { it.xpBonus[skill] }
+            gear.mapNotNull { it.xpBonus[skill] } +
+            GearSet.complete(gear).mapNotNull { it.xp[skill] }          // bonus celé sady (docs/adr/0053)
 
     /** Násobitel šance na kořist z Makromonů (Dobrodruhův náhrdelník ×1,1). */
     val dropRate: Double get() = 1.0 + gear.sumOf { it.dropRate }
@@ -212,7 +213,8 @@ data class SkillState(
     val catchReduction: Double get() = (passive(Skill.CATCHING) + gear.sumOf { it.catchBonus }).coerceAtMost(0.9)
 
     /** Bonus vybavení k šanci na dvojitý kus (Makromonova sekera / krumpáč). */
-    fun gearMulti(skill: Skill): Double = gear.sumOf { it.multiBonus[skill] ?: 0.0 }
+    fun gearMulti(skill: Skill): Double = gear.sumOf { it.multiBonus[skill] ?: 0.0 } +
+        GearSet.complete(gear).sumOf { it.multi[skill] ?: 0.0 }
 
     /** Plochý bonus k efektivitě z vybavení (pantofle +50). */
     fun gearEfficiency(skill: Skill): Int = gear.sumOf { it.efficiencyBonus[skill] ?: 0 }
@@ -224,7 +226,7 @@ data class SkillState(
 
     /** Kolik hodin AFK se nejvýš započítá (základ 12 h + strom). */
     fun afkCapHours(skill: Skill): Int = 12 + effectsOf(skill).filterIsInstance<SkillTree.Effect.AfkHours>().sumOf { it.hours } +
-        gear.sumOf { it.afkHours[skill] ?: 0 }
+        gear.sumOf { it.afkHours[skill] ?: 0 } + GearSet.complete(gear).sumOf { it.afkHours[skill] ?: 0 }
 
     /** Šance na dvojitý kus ze stromu (Plná síťka). */
     fun treeMulti(skill: Skill): Double = effectsOf(skill).filterIsInstance<SkillTree.Effect.MultiChance>().sumOf { it.add }
