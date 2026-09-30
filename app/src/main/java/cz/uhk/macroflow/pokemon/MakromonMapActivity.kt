@@ -1283,9 +1283,9 @@ class MakromonMapActivity : AppCompatActivity() {
         })
         if (!StoryFlags.isSet(this, MinesMap.NET_TAKEN_KEY)) {
             val (hx, hy, _) = MinesMap.MAP.tapAreas.getValue(MinesMap.NET_NODE)
-            val size = (12 * s).toInt()
-            val glow = glowView((26 * s).toInt(), 0xFFFFF2B0.toInt(), 0x77).apply {
-                x = hx * s - 13 * s; y = hy * s - 13 * s; elevation = 2.5f
+            val size = (8 * s).toInt()
+            val glow = glowView((18 * s).toInt(), 0xFFFFF2B0.toInt(), 0x77).apply {
+                x = hx * s - 9 * s; y = hy * s - 9 * s; elevation = 2.5f
             }
             val net = pixelView(cz.uhk.macroflow.pokemon.skills.GearArt.gearIcon(cz.uhk.macroflow.pokemon.skills.Gear.OLD_NET),
                 16, 16, size, size).apply {
