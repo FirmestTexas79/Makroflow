@@ -110,6 +110,7 @@ object VoxelRenderer {
      */
     private inline fun raster(
         w: Int, h: Int, n: Int, sx: FloatArray, sy: FloatArray, q: FloatArray, attr: Array<FloatArray>,
+        yLo: Int = 0, yHi: Int = h - 1,
         px: (Int, Float, Float, Float, Float) -> Unit
     ) {
         for (t in 1 until n - 1) {
@@ -118,8 +119,8 @@ object VoxelRenderer {
             if (abs(area) < 1e-6f) continue
             val minX = max(0, floor(min(sx[a], min(sx[b], sx[c]))).toInt())
             val maxX = min(w - 1, floor(max(sx[a], max(sx[b], sx[c]))).toInt())
-            val minY = max(0, floor(min(sy[a], min(sy[b], sy[c]))).toInt())
-            val maxY = min(h - 1, floor(max(sy[a], max(sy[b], sy[c]))).toInt())
+            val minY = max(yLo, floor(min(sy[a], min(sy[b], sy[c]))).toInt())
+            val maxY = min(yHi, floor(max(sy[a], max(sy[b], sy[c]))).toInt())
             if (minX > maxX || minY > maxY) continue
             val inv = 1f / area
             for (y in minY..maxY) {
@@ -142,6 +143,24 @@ object VoxelRenderer {
         }
     }
 
+    /** Promítnutý polygon (až 8 vrcholů po ořezu) připravený k rasterizaci. */
+    private class Poly(val n: Int, val sx: FloatArray, val sy: FloatArray, val q: FloatArray, val attr: Array<FloatArray>, val face: Int)
+
+    /** Kolik vláken použít – obraz se dělí na vodorovné pásy, každé vlákno kreslí svůj pás. */
+    var threads: Int = Runtime.getRuntime().availableProcessors().coerceIn(1, 8)
+
+    /** Spustí [band] pro pásy řádků 0 until [h] paralelně (na jednom jádře přímo). */
+    private fun parallelRows(h: Int, band: (Int, Int) -> Unit) {
+        val n = threads.coerceAtMost(h).coerceAtLeast(1)
+        if (n == 1) { band(0, h - 1); return }
+        val step = (h + n - 1) / n
+        val workers = (0 until n).mapNotNull { i ->
+            val y0 = i * step; val y1 = min(h - 1, y0 + step - 1)
+            if (y0 > y1) null else Thread { band(y0, y1) }.apply { start() }
+        }
+        workers.forEach { it.join() }
+    }
+
     // ── Stínová mapa (ortogonální pohled ze slunce) ──
 
     private class ShadowMap(val sun: V3, boxes: List<Box>) {
@@ -156,14 +175,18 @@ object VoxelRenderer {
             for (b in casters) for (f in faces(b)) for (v in f.v) {
                 minA = min(minA, v.dot(r)); maxA = max(maxA, v.dot(r)); minB = min(minB, v.dot(u)); maxB = max(maxB, v.dot(u))
             }
-            val sx = FloatArray(8); val sy = FloatArray(8); val q = FloatArray(8) { 1f }
-            val attr = Array(8) { FloatArray(4) }
+            val q = FloatArray(4) { 1f }
+            val polys = ArrayList<Poly>()
             for (b in casters) for (f in faces(b)) {
+                val sx = FloatArray(4); val sy = FloatArray(4); val attr = Array(4) { FloatArray(4) }
                 for (i in 0 until 4) {
                     val (x, y) = toMap(f.v[i]); sx[i] = x; sy[i] = y
                     attr[i][3] = -f.v[i].dot(sun)
                 }
-                raster(size, size, 4, sx, sy, q, attr) { idx, _, _, _, d -> if (d < depth[idx]) depth[idx] = d }
+                polys.add(Poly(4, sx, sy, q, attr, 0))
+            }
+            parallelRows(size) { y0, y1 ->
+                for (p in polys) raster(size, size, 4, p.sx, p.sy, p.q, p.attr, y0, y1) { idx, _, _, _, d -> if (d < depth[idx]) depth[idx] = d }
             }
         }
 
@@ -193,8 +216,7 @@ object VoxelRenderer {
         val near = 0.1f
         val f = (w / 2f) / cam.fovTan
 
-        val sx = FloatArray(8); val sy = FloatArray(8); val q = FloatArray(8)
-        val attr = Array(8) { FloatArray(4) }
+        val polys = ArrayList<Poly>()
         for (b in scene.boxes) for (face in faces(b)) {
             val n = NORMALS[face.n]
             val center = (face.v[0] + face.v[2]) * 0.5f
@@ -213,6 +235,8 @@ object VoxelRenderer {
             }
             if (out.size < 3) continue
             val fi = allFaces.size; allFaces.add(face)
+            val sx = FloatArray(out.size); val sy = FloatArray(out.size); val q = FloatArray(out.size)
+            val attr = Array(out.size) { FloatArray(4) }
             for (i in out.indices) {
                 val (p, zv) = out[i]; val d = p - cam.pos
                 sx[i] = w / 2f + d.dot(cam.right) / zv * f
@@ -220,23 +244,31 @@ object VoxelRenderer {
                 q[i] = 1f / zv
                 attr[i][0] = p.x * q[i]; attr[i][1] = p.y * q[i]; attr[i][2] = p.z * q[i]; attr[i][3] = 1f
             }
-            raster(w, h, out.size, sx, sy, q, attr) { idx, x, y, z, _ ->
-                val dx = x - cam.pos.x; val dy = y - cam.pos.y; val dz = z - cam.pos.z
-                val dd = dx * dx + dy * dy + dz * dz
-                if (dd < depth[idx]) { depth[idx] = dd; faceAt[idx] = fi; wx[idx] = x; wy[idx] = y; wz[idx] = z }
-            }
+            polys.add(Poly(out.size, sx, sy, q, attr, fi))
         }
 
-        val out = IntArray(w * h)
-        for (py in 0 until h) for (pxi in 0 until w) {
-            val idx = py * w + pxi
-            val fi = faceAt[idx]
-            if (fi < 0) { out[idx] = sky(atm, cam.ray(pxi + 0.5f, py + 0.5f, w, h, cy), pxi, py, scene.seed); continue }
-            val face = allFaces[fi]
-            val p = V3(wx[idx], wy[idx], wz[idx])
-            out[idx] = shade(scene, face, p, sqrt(depth[idx]), sun, shadow)
+        // Každé vlákno rasterizuje všechny polygony jen do svého pásu řádků a hned ho vystínuje
+        // (pásy se nepřekrývají → bez zámků; výsledek je stejný jako v jednom vlákně)
+        val img = IntArray(w * h)
+        parallelRows(h) { y0, y1 ->
+            for (pl in polys) {
+                val fi = pl.face
+                raster(w, h, pl.n, pl.sx, pl.sy, pl.q, pl.attr, y0, y1) { idx, x, y, z, _ ->
+                    val dx = x - cam.pos.x; val dy = y - cam.pos.y; val dz = z - cam.pos.z
+                    val dd = dx * dx + dy * dy + dz * dz
+                    if (dd < depth[idx]) { depth[idx] = dd; faceAt[idx] = fi; wx[idx] = x; wy[idx] = y; wz[idx] = z }
+                }
+            }
+            for (py in y0..y1) for (pxi in 0 until w) {
+                val idx = py * w + pxi
+                val fi = faceAt[idx]
+                if (fi < 0) { img[idx] = sky(atm, cam.ray(pxi + 0.5f, py + 0.5f, w, h, cy), pxi, py, scene.seed); continue }
+                val face = allFaces[fi]
+                val p = V3(wx[idx], wy[idx], wz[idx])
+                img[idx] = shade(scene, face, p, sqrt(depth[idx]), sun, shadow)
+            }
         }
-        return out
+        return img
     }
 
     private fun shade(scene: Scene, face: Face, p: V3, dist: Float, sun: V3, shadow: ShadowMap): Int {

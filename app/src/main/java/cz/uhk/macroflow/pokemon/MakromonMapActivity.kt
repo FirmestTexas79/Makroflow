@@ -1028,6 +1028,50 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.MEADOW -> { placeMeadowWorkshop(); placeGatherSpots() }
                 else -> {}
             }
+            placePageSparkles()
+        }
+    }
+
+    /**
+     * Roztržený list, který tu čeká, je vidět: kousek papíru s třpytkami a občasným zábleskem
+     * (docs/adr/0048). U místa s oblastí klepnutí sedí na objektu, jinak kousek nad uzlem.
+     */
+    private fun placePageSparkles() {
+        if (mapWorld.width <= 0) return
+        val flags = StoryFlags.all(this)
+        val def = BiomeRegistry.definition(currentBiome) ?: return
+        val d = resources.displayMetrics.density
+        Insight.PAGES.filter { Insight.pageAt(currentBiome.name, it.node, flags) == it }.forEachIndexed { i, page ->
+            val cave = def.cave
+            val (cx, cy) = cave?.tapAreas?.get(page.node)?.let { (x, y, _) ->
+                x * mapWorld.width.toFloat() / cave.artW to y * mapWorld.height.toFloat() / cave.artH
+            } ?: BiomeRegistry.nodePos(def.graph, page.node)?.let { it.x * mapWorld.width to it.y * mapWorld.height - 18 * d }
+            ?: return@forEachIndexed
+            val paperSize = (14 * d).toInt()
+            val glow = glowView((46 * d).toInt(), 0xFFFFF2B0.toInt(), 0xAA).apply {
+                x = cx - 23 * d; y = cy - 23 * d; elevation = 2.5f
+            }
+            val paper = pixelView(Insight.pageIcon(), Insight.ICON, Insight.ICON, paperSize, paperSize).apply {
+                x = cx - paperSize / 2f; y = cy - paperSize / 2f; elevation = 2.6f; rotation = -12f
+            }
+            addDecor(glow); addDecor(paper)
+            bob(paper, 3 * d, 2400)
+            crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.25f, 0.9f, 0.25f).apply {
+                duration = 1800; repeatCount = android.animation.ValueAnimator.INFINITE; startDelay = i * 300L; start()
+            }
+            // třpytky: malé hvězdičky, které se střídavě rozsvěcují kolem papíru
+            repeat(4) { k ->
+                val ang = k * 1.57f + 0.4f
+                val star = pixelView(intArrayOf(0, 0xFFFFFFFF.toInt(), 0, 0xFFFFFFFF.toInt(), 0xFFFFF6C0.toInt(), 0xFFFFFFFF.toInt(),
+                    0, 0xFFFFFFFF.toInt(), 0), 3, 3, (7 * d).toInt(), (7 * d).toInt()).apply {
+                    x = cx + kotlin.math.cos(ang) * 14 * d - 3.5f * d; y = cy + kotlin.math.sin(ang) * 11 * d - 3.5f * d
+                    elevation = 2.7f; alpha = 0f
+                }
+                addDecor(star)
+                crystalAnimators += android.animation.ObjectAnimator.ofFloat(star, "alpha", 0f, 1f, 0f, 0f).apply {
+                    duration = 1600; repeatCount = android.animation.ValueAnimator.INFINITE; startDelay = k * 400L; start()
+                }
+            }
         }
     }
 
@@ -1767,6 +1811,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     private fun findTornPage(page: Insight.Page) {
         StoryFlags.set(this, page.key)
+        refreshStoryDecor()     // třpytky zmizí
         val ctx = applicationContext
         lifecycleScope.launch(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.add(ctx, Insight.PAGES_ITEM, 1) }
         showTornPage(page, page.found)

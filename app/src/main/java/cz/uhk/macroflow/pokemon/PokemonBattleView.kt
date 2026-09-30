@@ -249,6 +249,9 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     private var arenaSeed = 0
+    /** Kdy se aréna dopočítala – 250 ms se prolíná přes náhradní barvy. */
+    private var arenaShownAt = 0L
+    private val arenaFadePaint = Paint().apply { isFilterBitmap = false }
     private var arenaExtra = -1
 
     /** Aréna se kreslí, až je známá lokace i velikost pohledu (kolik se má prodloužit nahoru). */
@@ -263,7 +266,7 @@ class PokemonBattleView @JvmOverloads constructor(
         Thread {
             val px = runCatching { A.render(theme, seed, extra) }.getOrNull() ?: return@Thread
             val bmp = Bitmap.createBitmap(px, A.W, A.H + extra, Bitmap.Config.ARGB_8888)
-            handler.post { if (extra == arenaExtra) { arenaBmp = bmp; invalidate() } }
+            handler.post { if (extra == arenaExtra) { arenaBmp = bmp; arenaShownAt = now(); invalidate() } }
         }.start()
     }
 
@@ -312,21 +315,32 @@ class PokemonBattleView @JvmOverloads constructor(
         renderFrame()
         // aréna pod herním plátnem (horních 96 řádků), plátno má nahoře průhledno
         arenaDst.set(dstR.left, 0f, dstR.right, gbY(96f))
+        val mf = moveFrame
+        val shaking = mf != null && (mf.screenDx != 0f || mf.screenDy != 0f)
+        if (shaking) { canvas.save(); canvas.translate(mf!!.screenDx * scale, mf.screenDy * scale) }
         val arena = arenaBmp
-        if (arena != null) canvas.drawBitmap(arena, null, arenaDst, sp)
-        else {
+        val fadeIn = if (arena == null) 0f else ((now() - arenaShownAt) / 250f).coerceIn(0f, 1f)
+        if (fadeIn < 1f) {
             val (sky, ground) = arenaFallback()
             fp.color = sky; canvas.drawRect(arenaDst.left, arenaDst.top, arenaDst.right, gbY(40f), fp)
             // (dopočítává se na pozadí během intra)
             fp.color = ground; canvas.drawRect(arenaDst.left, gbY(40f), arenaDst.right, arenaDst.bottom, fp)
         }
+        if (arena != null) {
+            arenaFadePaint.alpha = (fadeIn * 255).toInt()
+            canvas.drawBitmap(arena, null, arenaDst, if (fadeIn >= 1f) sp else arenaFadePaint)
+            if (fadeIn < 1f) postInvalidateOnAnimation()
+        }
         canvas.save()
         canvas.clipRect(arenaDst)
         drawSpritesOverlay(canvas)
+        mf?.let { f -> if (f.tintAlpha > 0f) { fp.color = f.tint; fp.alpha = (f.tintAlpha * 255).toInt(); canvas.drawRect(arenaDst, fp); fp.alpha = 255 } }
+        drawMoveParticles(canvas)
         canvas.restore()
+        if (shaking) canvas.restore()
         canvas.drawBitmap(gbBmp, srcR, dstR, sp)
         // záblesk útoku přes celou arénu i herní plátno
-        if (flashOn) canvas.drawColor(0xBBFFFFFF.toInt())
+        if (flashOn) canvas.drawColor(if (moveAnim != null) 0x66FFFFFF else 0xBBFFFFFF.toInt())
     }
 
     private fun drawSpritesOverlay(canvas: Canvas) {
@@ -334,12 +348,19 @@ class PokemonBattleView @JvmOverloads constructor(
         if (sc <= 0f || !::gs.isInitialized) return
         val animOffset = (gs.introOffset * 100f) * sc
 
-        if (gs.enemyVisible) {
+        val mf = moveFrame; val ma = moveAnim
+        // výpad / zmizení útočníka a otřes cíle (docs/adr/0048)
+        val enemyAtk = ma != null && !ma.attackerIsPlayer
+        val eDx = if (mf == null) 0f else if (enemyAtk) mf.attackerDx else mf.targetDx
+        val eDy = if (mf == null || !enemyAtk) 0f else mf.attackerDy
+        val eAlpha = if (mf != null && enemyAtk) mf.attackerAlpha else 1f
+        if (gs.enemyVisible && !hiddenByBlink(false) && eAlpha > 0.02f) {
             enemyBitmap?.let { bmp ->
                 val targetH = enemySpriteHeight() * sc
                 val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
-                val sx = gbX(112f) - targetW / 2f + animOffset
-                val sy = gbY(54f) - targetH
+                val sx = gbX(112f) - targetW / 2f + animOffset + eDx * sc
+                val sy = gbY(54f) - targetH + eDy * sc
+                spSmooth.alpha = (eAlpha * 255).toInt()
                 if (enemyAbsorb <= 0f) {
                     val sw = targetW * 0.42f
                     canvas.drawOval(sx + targetW / 2f - sw, gbY(52.6f), sx + targetW / 2f + sw, gbY(55.4f), shadowPaint)
@@ -368,15 +389,22 @@ class PokemonBattleView @JvmOverloads constructor(
         drawBallOverlay(canvas)
         drawStatusFx(canvas)
 
-        playerBitmap?.let { bmp ->
+        spSmooth.alpha = 255
+        val playerAtk = ma != null && ma.attackerIsPlayer
+        val pDx = if (mf == null) 0f else if (playerAtk) mf.attackerDx else mf.targetDx
+        val pDy = if (mf == null || !playerAtk) 0f else mf.attackerDy
+        val pAlpha = if (mf != null && playerAtk) mf.attackerAlpha else 1f
+        if (!hiddenByBlink(true) && pAlpha > 0.02f) playerBitmap?.let { bmp ->
+            spSmooth.alpha = (pAlpha * 255).toInt()
             val targetH = PLAYER_H * sc
             val targetW = targetH * bmp.width.toFloat() / bmp.height.toFloat()
-            val cx = gbX(48f) - animOffset
-            val sy = gbY(PLAYER_FOOT_Y) - targetH
+            val cx = gbX(48f) - animOffset + pDx * sc
+            val sy = gbY(PLAYER_FOOT_Y) - targetH + pDy * sc
             canvas.save()
             canvas.scale(-1f, 1f, cx, 0f)
             canvas.drawBitmap(bmp, null, RectF(cx - targetW / 2f, sy, cx + targetW / 2f, sy + targetH), spSmooth)
             canvas.restore()
+            spSmooth.alpha = 255
         }
     }
 
@@ -952,7 +980,7 @@ class PokemonBattleView @JvmOverloads constructor(
                         cz.uhk.macroflow.pokemon.status.StatusRules.attackMultiplier(condOf(isPlayer))).toInt().coerceAtLeast(1)
                     val defStat = (def.defense * cz.uhk.macroflow.pokemon.status.StatStages.multiplier(defCond.defStage)).toInt().coerceAtLeast(1)
                     val dmg = BattleEngine.calcDamage(atk.level, power, atkStat, defStat, mv.type, typeOf(def))
-                    doFlash {
+                    playMoveAnim(isPlayer, mv) {
                         hurt(!isPlayer, dmg); invalidate()
                         handler.postDelayed({
                             if (def.currentHp <= 0) { if (isPlayer) enemyFainted() else playerFainted() }
@@ -960,9 +988,9 @@ class PokemonBattleView @JvmOverloads constructor(
                         }, 400)
                     }
                 }
-                else -> applyMoveEffect(isPlayer, mv, statusOnly = true)
+                else -> playMoveAnim(isPlayer, mv) { handler.postDelayed({ applyMoveEffect(isPlayer, mv, statusOnly = true) }, 350) }
             }
-        }, 1200)
+        }, 800)
     }
 
     private fun applyMoveEffect(isPlayer: Boolean, mv: Move, statusOnly: Boolean) {
@@ -1690,6 +1718,112 @@ class PokemonBattleView @JvmOverloads constructor(
                 (context as? MainActivity)?.updateMakromonVisibility()
             }
         }.start()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ANIMACE ÚTOKŮ (docs/adr/0048): částice podle MoveAnims, výpad útočníka, otřes cíle
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private class MoveAnim(val spec: cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Spec, val attackerIsPlayer: Boolean,
+                           val start: Long, val seed: Int, val onHit: () -> Unit) {
+        var hitFired = false
+    }
+    private var moveAnim: MoveAnim? = null
+    private var moveFrame: cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Frame? = null
+    /** Cíl po zásahu krátce bliká (do tohoto času). */
+    private var hitBlinkUntil = 0L
+    private var hitBlinkOnPlayer = false
+    private val fxPaint = Paint().apply { isAntiAlias = true }
+    private val fxPath = android.graphics.Path()
+
+    /** Přehraje animaci útoku; [onHit] přijde v okamžiku zásahu (záblesk, zranění). */
+    private fun playMoveAnim(isPlayer: Boolean, mv: Move, onHit: () -> Unit) {
+        val spec = cz.uhk.macroflow.pokemon.battlefx.MoveAnims.spec(mv.name, mv.type.name, mv.power)
+        moveAnim = MoveAnim(spec, isPlayer, now(), Random.nextInt(1000), onHit)
+        handler.post(moveTick)
+    }
+
+    private val moveTick = object : Runnable {
+        override fun run() {
+            val a = moveAnim ?: return
+            val t = ((now() - a.start) / a.spec.durationMs.toFloat()).coerceIn(0f, 1f)
+            if (!::gs.isInitialized) return
+            val from = centerGb(a.attackerIsPlayer); val to = centerGb(!a.attackerIsPlayer)
+            moveFrame = cz.uhk.macroflow.pokemon.battlefx.MoveAnims.frame(a.spec, t, from.x, from.y, to.x, to.y, a.seed)
+            if (!a.hitFired && t >= a.spec.hitAt) {
+                a.hitFired = true
+                // záblesk při zásahu a cíl chvíli bliká
+                flashOn = true
+                hitBlinkUntil = now() + 420; hitBlinkOnPlayer = !a.attackerIsPlayer
+                handler.postDelayed({ flashOn = false; invalidate() }, 90)
+                a.onHit()
+            }
+            invalidate()
+            if (t < 1f) handler.postDelayed(this, 16) else { moveAnim = null; moveFrame = null; invalidate() }
+        }
+    }
+
+    /** Je Makromon právě „bliknutý“ (po zásahu se na chvíli schová)? */
+    private fun hiddenByBlink(onPlayer: Boolean): Boolean =
+        onPlayer == hitBlinkOnPlayer && now() < hitBlinkUntil && ((hitBlinkUntil - now()) / 70) % 2 == 0L
+
+    private fun drawMoveParticles(canvas: Canvas) {
+        val f = moveFrame ?: return
+        val sc = scale
+        for (p in f.particles) {
+            val x = gbX(p.x); val y = gbY(p.y); val r = (p.r * sc).coerceAtLeast(1f)
+            fxPaint.color = p.color; fxPaint.alpha = (p.alpha * 255).toInt().coerceIn(0, 255)
+            fxPaint.style = Paint.Style.FILL
+            when (p.shape) {
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.CIRCLE -> {
+                    if (p.r > 8f) {
+                        // velká záře: měkký kruhový přechod
+                        fxPaint.shader = android.graphics.RadialGradient(x, y, r, p.color and 0x00FFFFFF or (fxPaint.alpha shl 24),
+                            p.color and 0x00FFFFFF, android.graphics.Shader.TileMode.CLAMP)
+                        canvas.drawCircle(x, y, r, fxPaint); fxPaint.shader = null
+                    } else canvas.drawCircle(x, y, r, fxPaint)
+                }
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.SQUARE -> canvas.drawRect(x - r, y - r, x + r, y + r, fxPaint)
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.LINE -> {
+                    fxPaint.style = Paint.Style.STROKE; fxPaint.strokeWidth = r; fxPaint.strokeCap = Paint.Cap.ROUND
+                    canvas.drawLine(x, y, gbX(p.x2), gbY(p.y2), fxPaint)
+                }
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.RING -> {
+                    fxPaint.style = Paint.Style.STROKE; fxPaint.strokeWidth = 1.2f * sc
+                    canvas.drawCircle(x, y, r, fxPaint)
+                }
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.STAR -> drawStar(canvas, x, y, r, p.rot, p.color, fxPaint.alpha)
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.LEAF -> {
+                    canvas.save(); canvas.rotate(p.rot, x, y)
+                    canvas.drawOval(x - r, y - r * 0.45f, x + r, y + r * 0.45f, fxPaint)
+                    canvas.restore()
+                }
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.HEART -> {
+                    canvas.drawCircle(x - r * 0.45f, y - r * 0.2f, r * 0.55f, fxPaint)
+                    canvas.drawCircle(x + r * 0.45f, y - r * 0.2f, r * 0.55f, fxPaint)
+                    fxPath.reset(); fxPath.moveTo(x - r, y); fxPath.lineTo(x + r, y); fxPath.lineTo(x, y + r * 1.1f); fxPath.close()
+                    canvas.drawPath(fxPath, fxPaint)
+                }
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.NOTE -> {
+                    canvas.drawOval(x - r * 0.7f, y - r * 0.45f, x + r * 0.5f, y + r * 0.45f, fxPaint)
+                    fxPaint.style = Paint.Style.STROKE; fxPaint.strokeWidth = 0.8f * sc
+                    canvas.drawLine(x + r * 0.45f, y, x + r * 0.45f, y - r * 2f, fxPaint)
+                    canvas.drawLine(x + r * 0.45f, y - r * 2f, x + r * 1.2f, y - r * 1.4f, fxPaint)
+                }
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.FLAME -> {
+                    fxPath.reset(); fxPath.moveTo(x, y - r * 1.8f)
+                    fxPath.quadTo(x + r * 1.1f, y - r * 0.2f, x, y + r); fxPath.quadTo(x - r * 1.1f, y - r * 0.2f, x, y - r * 1.8f)
+                    canvas.drawPath(fxPath, fxPaint)
+                    fxPaint.color = 0xFFFFF4B0.toInt(); fxPaint.alpha = (p.alpha * 200).toInt()
+                    canvas.drawCircle(x, y + r * 0.2f, r * 0.4f, fxPaint)
+                }
+                cz.uhk.macroflow.pokemon.battlefx.MoveAnims.Shape.TOOTH -> {
+                    val dir = if (p.rot > 90f) 1f else -1f        // 180° = zub dolů (horní čelist)
+                    fxPath.reset(); fxPath.moveTo(x - r, y - dir * r); fxPath.lineTo(x + r, y - dir * r); fxPath.lineTo(x, y + dir * r * 1.2f); fxPath.close()
+                    canvas.drawPath(fxPath, fxPaint)
+                }
+            }
+        }
     }
 
     private fun doFlash(after: () -> Unit) {

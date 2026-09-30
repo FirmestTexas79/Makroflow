@@ -48,4 +48,17 @@ class ArenaTest {
             assertTrue(t.name, foot != px[0] || t == ArenaTheme.CAVE_MAZE)
         }
     }
+
+    @Test
+    fun parallelRenderIsIdenticalToSingleThread() {
+        // docs/adr/0048: aréna se kreslí po pásech ve více vláknech – výsledek musí být stejný
+        val before = VoxelRenderer.threads
+        try {
+            for (t in ArenaTheme.entries) {
+                VoxelRenderer.threads = 1; val a = Arenas.render(t, 5, 120)
+                VoxelRenderer.threads = 4; val b = Arenas.render(t, 5, 120)
+                org.junit.Assert.assertTrue(t.name, a.contentEquals(b))
+            }
+        } finally { VoxelRenderer.threads = before }
+    }
 }
