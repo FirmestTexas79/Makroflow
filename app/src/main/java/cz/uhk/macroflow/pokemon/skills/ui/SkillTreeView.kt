@@ -52,7 +52,9 @@ class SkillTreeView(ctx: Context) : View(ctx) {
 
     private val icons = HashMap<String, Bitmap>()
 
-    private val rowH = 104 * dp
+    private val rowH = 132 * dp
+    /** Pod uzlem jsou kosočtverečky ceny a název – spoj začíná až pod nimi. */
+    private val labelSpace = 40 * dp
     private val topPad = 26 * dp
     private val node = 58 * dp
     private val u = 3 * dp            // art pixel uzlu
@@ -162,7 +164,9 @@ class SkillTreeView(ctx: Context) : View(ctx) {
             fromNode?.id in state.unlocked -> Color.parseColor("#8A6A3A")
             else -> Color.parseColor("#3A3328")
         }
-        val midY = a.second + node / 2f + (b.second - node / 2f - (a.second + node / 2f)) / 2f
+        val startY = a.second + node / 2f + labelSpace
+        val endY = b.second - node / 2f - 4 * dp
+        val midY = startY + (endY - startY) / 2f
         val w = 3 * dp; val o = 5 * dp
         fun seg(x0: Float, y0: Float, x1: Float, y1: Float) {
             val l = minOf(x0, x1); val r = maxOf(x0, x1); val t = minOf(y0, y1); val bt = maxOf(y0, y1)
@@ -172,8 +176,8 @@ class SkillTreeView(ctx: Context) : View(ctx) {
             val l = minOf(x0, x1); val r = maxOf(x0, x1); val t = minOf(y0, y1); val bt = maxOf(y0, y1)
             rect(c, l - w / 2, t - w / 2, r + w / 2, bt + w / 2, inner)
         }
-        val y0 = a.second + node / 2f
-        val y1 = y0 + (b.second - node / 2f - y0) * vis
+        val y0 = startY
+        val y1 = y0 + (endY - y0) * vis
         // lomená čára: dolů, do strany, dolů
         val pts = if (abs(a.first - b.first) < 1f) listOf(a.first to y0, b.first to y1)
                   else if (y1 < midY) listOf(a.first to y0, a.first to y1)
