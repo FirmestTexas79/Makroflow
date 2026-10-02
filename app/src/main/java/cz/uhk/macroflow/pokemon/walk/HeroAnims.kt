@@ -65,16 +65,23 @@ object HeroAnims {
         return durations.lastIndex
     }
 
-    /** Popis pásů z hero.json. */
-    data class Spec(val frameW: Int, val frameH: Int, val footY: Int, val anims: Map<String, List<Int>>)
+    /** Popis pásů z hero.json; [heights] = pásy s vyšším snímkem (rybaření, docs/adr/0054). */
+    data class Spec(val frameW: Int, val frameH: Int, val footY: Int, val anims: Map<String, List<Int>>,
+                    val heights: Map<String, Int> = emptyMap()) {
+        fun height(key: String): Int = heights[key] ?: frameH
+    }
 
     /** Minimalistický parser hero.json (bez závislosti na Androidu). */
     fun parseSpec(json: String): Spec {
         fun int(name: String) = Regex("\"$name\"\\s*:\\s*(\\d+)").find(json)!!.groupValues[1].toInt()
         val anims = LinkedHashMap<String, List<Int>>()
-        Regex("\"([a-z]+_[a-z]+)\"\\s*:\\s*\\{[^}]*?\"durations\"\\s*:\\s*\\[([^\\]]*)\\]").findAll(json).forEach { m ->
-            anims[m.groupValues[1]] = m.groupValues[2].split(",").mapNotNull { it.trim().toIntOrNull() }
+        val heights = HashMap<String, Int>()
+        Regex("\"([a-z]+_[a-z]+)\"\\s*:\\s*\\{([^}]*)\\}").findAll(json).forEach { m ->
+            val body = m.groupValues[2]
+            val durs = Regex("\"durations\"\\s*:\\s*\\[([^\\]]*)\\]").find(body) ?: return@forEach
+            anims[m.groupValues[1]] = durs.groupValues[1].split(",").mapNotNull { it.trim().toIntOrNull() }
+            Regex("\"h\"\\s*:\\s*(\\d+)").find(body)?.let { heights[m.groupValues[1]] = it.groupValues[1].toInt() }
         }
-        return Spec(int("frameW"), int("frameH"), int("footY"), anims)
+        return Spec(int("frameW"), int("frameH"), int("footY"), anims, heights)
     }
 }

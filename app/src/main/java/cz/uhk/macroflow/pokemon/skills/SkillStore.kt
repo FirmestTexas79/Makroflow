@@ -92,7 +92,24 @@ object SkillStore {
     fun plant(ctx: Context, index: Int, berry: Berry, nowEpochSec: Long): Boolean {
         if (!consume(ctx, berry.seedItemId, 1)) return false
         set(ctx, Garden.itemId(index), Garden.encode(berry, nowEpochSec))
+        set(ctx, Garden.waterItemId(index), Garden.encodeTime(nowEpochSec))
         return true
+    }
+
+    /** Časy posledního zalití záhonů (s, 0 = nikdy). */
+    fun waterTimes(ctx: Context): List<Long> = (0 until Garden.PLOTS).map { Garden.decodeTime(count(ctx, Garden.waterItemId(it))) }
+
+    /** Zalití záhonu (docs/adr/0054): vrátí, o kolik sekund se růst zrychlil, nebo null, když zalít nejde. */
+    fun water(ctx: Context, index: Int, nowEpochSec: Long): Long? {
+        val st = state(ctx)
+        val plot = Garden.decode(count(ctx, Garden.itemId(index)))
+        val berry = plot.berry ?: return null
+        val last = Garden.decodeTime(count(ctx, Garden.waterItemId(index)))
+        if (!Garden.canWater(plot, last, nowEpochSec, st.growthSpeedup)) return null
+        val w = Garden.watered(plot, st.growthSpeedup)
+        set(ctx, Garden.itemId(index), Garden.encode(berry, w.plantedAt))
+        set(ctx, Garden.waterItemId(index), Garden.encodeTime(nowEpochSec))
+        return plot.plantedAt - w.plantedAt
     }
 
     /** Sklizeň: vrátí počet bobulí (1–2) a výsledek XP, nebo null, když ještě neroste nic hotového. */

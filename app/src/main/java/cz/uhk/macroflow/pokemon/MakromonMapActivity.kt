@@ -694,11 +694,11 @@ class MakromonMapActivity : AppCompatActivity() {
                         // Jeskyně ukládají svůj biom (vlastní intro); Makromoni a questy jsou horské (wildBiome)
                         // Jezírka ve Hvozdu jsou vodní setkání
                         val encounterBiome = if (nodeName == "voda" || nodeName.startsWith("jezirko_")) BiomeType.WATER else currentBiome
-                        getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
-                            .putString("LAST_BIOME", encounterBiome.name)
-                            .remove("FORCE_ENCOUNTER_ID")
-                            .apply()
-                        replaceMapContent(PokemonBattleFragment())
+                        // U vody se nejdřív rybaří: nahození, „!“, záběr a pak vodní souboj (docs/adr/0054)
+                        if (encounterBiome == BiomeType.WATER) fishForEncounter(nodeName, bite = true)
+                        else startWildEncounter(encounterBiome)
+                    } else if (nodeName == "voda" || nodeName.startsWith("jezirko_")) {
+                        fishForEncounter(nodeName, bite = false)
                     } else {
                         // Dřív se v 10 % nestalo nic a bod působil rozbitě
                         showMapToast(emptyEncounterText(nodeName))
@@ -1452,6 +1452,8 @@ class MakromonMapActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────────────────────────
 
     private var gardenView: cz.uhk.macroflow.pokemon.skills.ui.GardenView? = null
+    /** Pracovní stůl na louce – z něj vyskočí vykovaný předmět (docs/adr/0054). */
+    private var craftTableView: View? = null
 
     /** Dekorace „na zemi“ – pod postavou (hned za pozadím mapy). */
     private fun addGroundDecor(v: View) { mapWorld.addView(v, 1); decorViews += v }
@@ -1470,6 +1472,7 @@ class MakromonMapActivity : AppCompatActivity() {
             x = tl.x; y = tl.y
         }
         addGroundDecor(table)
+        craftTableView = table
         // zahrada
         val garden = cz.uhk.macroflow.pokemon.skills.ui.GardenView(this, geo.scale)
         val g = ML.GARDEN
@@ -1488,7 +1491,8 @@ class MakromonMapActivity : AppCompatActivity() {
             val (plots, state) = kotlinx.coroutines.withContext(Dispatchers.IO) {
                 cz.uhk.macroflow.pokemon.skills.SkillStore.plots(ctx) to cz.uhk.macroflow.pokemon.skills.SkillStore.state(ctx)
             }
-            gv.plots = plots; gv.plotsOpen = state.plotsOpen; gv.speedup = state.growthSpeedup
+            val waters = kotlinx.coroutines.withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.waterTimes(ctx) }
+            gv.plots = plots; gv.plotsOpen = state.plotsOpen; gv.speedup = state.growthSpeedup; gv.waterTimes = waters
         }
     }
 
@@ -1526,7 +1530,14 @@ class MakromonMapActivity : AppCompatActivity() {
                     refreshGarden()
                     checkAwards()
                 }
-                else -> showMapToast("⏳ Roste ${plot.berry!!.label} – zbývá ${G.clock(G.remaining(plot, now, state.growthSpeedup))}.")
+                else -> {
+                    // Zalévání (docs/adr/0054): žíznivý záhon zalij, jinak ukaž, kdy to půjde
+                    val last = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.waterTimes(ctx) }[i]
+                    val wait = G.waterIn(plot, last, now, state.growthSpeedup)
+                    if (wait == 0L) waterPlot(i)
+                    else showMapToast("⏳ Roste ${plot.berry!!.label} – zbývá ${G.clock(G.remaining(plot, now, state.growthSpeedup))}." +
+                        (wait?.let { "\n💧 Zalít půjde za ${G.clock(it)}." } ?: ""))
+                }
             }
         }
     }
@@ -1542,9 +1553,11 @@ class MakromonMapActivity : AppCompatActivity() {
                         val res = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.craft(ctx, ball, times) }
                         if (res == null) { showMapToast("Chybí suroviny."); return@launch }
                         val (made, xp) = res
-                        showMapToast("🔨 Vyrobeno: ${made}× ${ball.label}" + (if (made > times) " (dvojitá výroba!)" else "") +
-                            "\n+${xp.gained} XP Výroba" + skillLevelText(xp))
-                        checkAwards()
+                        forgeAnimation(ball.pixels, cz.uhk.macroflow.pokemon.balls.Makroball.SIZE) {
+                            showMapToast("🔨 Vyrobeno: ${made}× ${ball.label}" + (if (made > times) " (dvojitá výroba!)" else "") +
+                                "\n+${xp.gained} XP Výroba" + skillLevelText(xp))
+                            checkAwards()
+                        }
                     }
                 },
                 onCraftGear = { g -> craftGear(g) })
@@ -1558,8 +1571,10 @@ class MakromonMapActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val xp = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.craftGear(ctx, g) }
             if (xp == null) { showMapToast("Tohle teď vyrobit nejde – chybí suroviny."); return@launch }
-            showMapToast("🧵 Vyrobeno: ${g.label}! Nasadíš ho v deníku → Postava (do prázdného slotu už je nasazený).\n+${xp.gained} XP Výroba" + skillLevelText(xp))
-            checkAwards()
+            forgeAnimation(cz.uhk.macroflow.pokemon.skills.GearArt.gearIcon(g), cz.uhk.macroflow.pokemon.skills.SkillArt.ICON) {
+                showMapToast("🧵 Vyrobeno: ${g.label}! Nasadíš ho v deníku → Postava (do prázdného slotu už je nasazený).\n+${xp.gained} XP Výroba" + skillLevelText(xp))
+                checkAwards()
+            }
         }
     }
 
@@ -1717,6 +1732,7 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun clearDecor() {
         gatherPlaques.clear()
         gardenView = null
+        craftTableView = null
         crystalAnimators.forEach { it.cancel() }
         crystalAnimators.clear()
         decorViews.forEach { mapWorld.removeView(it) }
@@ -2749,6 +2765,283 @@ class MakromonMapActivity : AppCompatActivity() {
                 ashView.scaleY = 0.82f
                 ashView.animate().scaleY(1f).setDuration(220).withEndAction { endCinematic() }.start()
             }.start()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RYBAŘENÍ, ZALÉVÁNÍ A KOVÁNÍ (docs/adr/0054)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Divoké setkání: uloží biom pro souboj a otevře ho (vodní má vlastní úvodní scénu). */
+    private fun startWildEncounter(biome: BiomeType) {
+        getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
+            .putString("LAST_BIOME", biome.name)
+            .remove("FORCE_ENCOUNTER_ID")
+            .apply()
+        replaceMapContent(PokemonBattleFragment())
+    }
+
+    /** Jeden pixel spritu postavy v px světa. */
+    private fun spritePx(): Float = ashView.width / movementEngine.hero.spec.frameW.toFloat()
+
+    /**
+     * Leží voda vpravo od postavy? Spočítá modré pixely obrázku mapy vlevo a vpravo od nohou
+     * (u jezírek ve Hvozdu i u louky, bez ručně zadaných stran).
+     */
+    private fun waterOnRight(): Boolean {
+        val d = mapBackground.drawable as? android.graphics.drawable.BitmapDrawable ?: return true
+        val bmp = d.bitmap ?: return true
+        if (mapBackground.width == 0 || d.intrinsicWidth <= 0) return true
+        val inv = android.graphics.Matrix()
+        val fit = mapBackground.scaleType == ImageView.ScaleType.FIT_XY
+        if (!fit && !mapBackground.imageMatrix.invert(inv)) return true
+        val pt = FloatArray(2)
+        fun blue(x: Float, y: Float): Boolean {
+            val bx: Int; val by: Int
+            if (fit) { bx = (x / mapBackground.width * bmp.width).toInt(); by = (y / mapBackground.height * bmp.height).toInt() }
+            else {
+                pt[0] = x; pt[1] = y; inv.mapPoints(pt)
+                bx = (pt[0] * bmp.width / d.intrinsicWidth).toInt(); by = (pt[1] * bmp.height / d.intrinsicHeight).toInt()
+            }
+            if (bx !in 0 until bmp.width || by !in 0 until bmp.height) return false
+            val c = bmp.getPixel(bx, by)
+            val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255
+            return b > r + 40 && b > 110 && b >= g - 10
+        }
+        val p = spritePx()
+        val cx = ashView.x + ashView.width / 2f
+        val foot = ashView.y + 38.5f * p
+        var left = 0; var right = 0
+        val step = maxOf(1f, 2 * p)
+        var dy = -12 * p
+        while (dy <= 14 * p) {
+            var dx = 4 * p
+            while (dx <= 40 * p) {
+                if (blue(cx + dx, foot + dy)) right++
+                if (blue(cx - dx, foot + dy)) left++
+                dx += step
+            }
+            dy += step
+        }
+        return right >= left
+    }
+
+    /** Bublina s vykřičníkem nad hlavou – záběr! */
+    private fun exclaim(then: () -> Unit) {
+        val p = spritePx()
+        val rows = listOf(
+            ".KKKKKKK.",
+            "KWWWWWWWK",
+            "KWWWRWWWK",
+            "KWWWRWWWK",
+            "KWWWRWWWK",
+            "KWWWRWWWK",
+            "KWWWWWWWK",
+            "KWWWRWWWK",
+            "KWWWWWWWK",
+            ".KKKWKKK.",
+            "...KWK...",
+            "....K....")
+        val col = mapOf('K' to 0xFF1A1410.toInt(), 'W' to 0xFFFFFBEA.toInt(), 'R' to 0xFFE0402A.toInt())
+        val px = IntArray(9 * 12) { i -> col[rows[i / 9][i % 9]] ?: 0 }
+        val w = (9 * p).toInt(); val h = (12 * p).toInt()
+        val bubble = pixelView(px, 9, 12, w, h).apply {
+            x = ashView.x + ashView.width / 2f - w / 2f
+            y = ashView.y + 13 * p - h
+            pivotX = w / 2f; pivotY = h.toFloat()
+            scaleX = 0.2f; scaleY = 0.2f
+            elevation = ashView.elevation + 2f
+        }
+        mapWorld.addView(bubble)
+        mapWorld.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+        bubble.animate().scaleX(1.15f).scaleY(1.15f).setDuration(140).withEndAction {
+            bubble.animate().scaleX(1f).scaleY(1f).setDuration(90).withEndAction {
+                mapWorld.postDelayed({
+                    bubble.animate().alpha(0f).setDuration(150).withEndAction { mapWorld.removeView(bubble) }.start()
+                    if (!isFinishing) then()
+                }, 520)
+            }.start()
+        }.start()
+    }
+
+    /**
+     * Setkání u vody: postava nahodí a párkrát zatáhne za prut. Při záběru vyskočí „!“,
+     * postava zabere a teprve pak naskočí vodní souboj. Bez záběru se jen nic nechytí.
+     */
+    private fun fishForEncounter(nodeName: String, bite: Boolean) {
+        if (cinematic) return
+        startCinematic()
+        val right = waterOnRight()
+        val dir = if (right) "e" else "w"
+        movementEngine.playAction("reeling", right)
+        val loops = if (bite) 2 + (0..1).random() else 3
+        val reel = movementEngine.durationOf("reeling", dir).coerceAtLeast(300)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            if (!bite) {
+                movementEngine.stopAction(); endCinematic()
+                showMapToast("🎣 Nic nezabralo. " + emptyEncounterText(nodeName))
+                return@postDelayed
+            }
+            exclaim {
+                val t = movementEngine.playOnce("caught", dir = dir)
+                mapWorld.postDelayed({
+                    if (isFinishing) return@postDelayed
+                    endCinematic()
+                    startWildEncounter(BiomeType.WATER)
+                    mapWorld.postDelayed({ movementEngine.resetIdle() }, 500)
+                }, t + 120)
+            }
+        }, reel * loops)
+    }
+
+    /** Zalití záhonu: postava zalévá konvičkou, pak se růst posune dopředu. */
+    private fun waterPlot(i: Int) {
+        if (cinematic || mapWorld.width == 0) return
+        val r = cz.uhk.macroflow.pokemon.skills.MeadowLayout.PLOTS[i]
+        val c = meadowGeometry().toWorld(cz.uhk.macroflow.pokemon.walk.Pt((r.x0 + r.x1) / 2f, (r.y0 + r.y1) / 2f))
+        startCinematic()
+        movementEngine.playAction("watering", c.x >= ashView.x + ashView.width / 2f)
+        val ctx = applicationContext
+        val G = cz.uhk.macroflow.pokemon.skills.Garden
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            lifecycleScope.launch {
+                val now = System.currentTimeMillis() / 1000
+                val (boost, st, plot) = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+                    Triple(SS.water(ctx, i, now), SS.state(ctx), SS.plots(ctx)[i])
+                }
+                movementEngine.stopAction(); endCinematic()
+                refreshGarden()
+                val berry = plot.berry
+                if (boost == null || berry == null) return@launch
+                val left = G.remaining(plot, now, st.growthSpeedup)
+                showMapToast("💧 Zalito! ${berry.label} poroste o ${G.clock(boost)} rychleji" +
+                    (if (left > 0) " – zbývá ${G.clock(left)}. Znovu zalít půjde za ${G.clock(G.waterInterval(berry, st.growthSpeedup))}." else " a je hotová!"))
+            }
+        }, maxOf(1100L, movementEngine.durationOf("watering") * 3))
+    }
+
+    /** Jiskry od úderu kladivem (žluté a oranžové pixely do stran a nahoru). */
+    private fun sparkBurst(x: Float, y: Float) {
+        val p = spritePx()
+        repeat(9) { k ->
+            val size = (p * (1 + k % 2)).toInt().coerceAtLeast(1)
+            val spark = View(this).apply {
+                setBackgroundColor(if (k % 3 == 0) 0xFFFFF4B0.toInt() else if (k % 3 == 1) 0xFFFFC23A.toInt() else 0xFFFF7A1C.toInt())
+                elevation = ashView.elevation + 2f
+            }
+            mapWorld.addView(spark, FrameLayout.LayoutParams(size, size))
+            spark.x = x; spark.y = y
+            val a = Math.toRadians(200.0 + k * 17.0)
+            val dist = p * (6 + (k * 7) % 9)
+            spark.animate().x(x + (Math.cos(a) * dist).toFloat()).y(y + (Math.sin(a) * dist).toFloat() - p * 2)
+                .alpha(0f).setDuration(320L + (k % 3) * 70L).setInterpolator(android.view.animation.DecelerateInterpolator())
+                .withEndAction { mapWorld.removeView(spark) }.start()
+        }
+    }
+
+    /** Záře za vykovaným předmětem: paprsky, které se pomalu točí. */
+    private fun raysView(size: Int): View = object : View(this) {
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        override fun onDraw(c: android.graphics.Canvas) {
+            val cx = width / 2f; val cy = height / 2f; val r = width / 2f
+            paint.shader = android.graphics.RadialGradient(cx, cy, r, intArrayOf(0xEEFFF6C8.toInt(), 0x88FFD45A.toInt(), 0x00FFB020),
+                floatArrayOf(0f, 0.45f, 1f), android.graphics.Shader.TileMode.CLAMP)
+            val path = android.graphics.Path()
+            for (k in 0 until 10) {
+                val a0 = Math.PI * 2 * k / 10; val a1 = a0 + Math.PI / 18
+                path.moveTo(cx, cy)
+                path.lineTo(cx + (Math.cos(a0) * r).toFloat(), cy + (Math.sin(a0) * r).toFloat())
+                path.lineTo(cx + (Math.cos(a1) * r).toFloat(), cy + (Math.sin(a1) * r).toFloat())
+                path.close()
+            }
+            c.drawPath(path, paint)
+            c.drawCircle(cx, cy, r * 0.42f, paint)
+        }
+    }.apply { layoutParams = FrameLayout.LayoutParams(size, size) }
+
+    /**
+     * Kování u pracovního stolu: postava třikrát udeří kladivem, po každém úderu se kamera
+     * přiblíží, pak ze stolu vyskočí vyrobený předmět se září za sebou a kamera se vrátí.
+     */
+    private fun forgeAnimation(icon: IntArray, iconSize: Int, then: () -> Unit) {
+        val table = craftTableView
+        if (cinematic || table == null || mapWorld.width == 0) { then(); return }
+        startCinematic()
+        val vp = findViewById<View>(R.id.mapMainContent)
+        val tableCx = table.x + table.width / 2f
+        val tableTop = table.y + table.height * 0.25f
+        val faceRight = tableCx >= ashView.x + ashView.width / 2f
+        val dir = if (faceRight) "e" else "w"
+        // střed záběru mezi postavou a stolem
+        val cx = (tableCx + ashView.x + ashView.width / 2f) / 2f
+        val cy = (tableTop + ashView.y + ashView.height * 0.7f) / 2f
+        val tx0 = mapWorld.translationX; val ty0 = mapWorld.translationY
+        mapWorld.animate().cancel()
+        cameraOverride = true
+        mapWorld.pivotX = cx; mapWorld.pivotY = cy
+        fun zoom(scale: Float, ms: Long, end: (() -> Unit)? = null) {
+            // bod (cx, cy) má na obrazovce polohu tx + pivot → doprostřed výřezu
+            mapWorld.animate().scaleX(scale).scaleY(scale)
+                .translationX(if (scale == 1f) tx0 else vp.width / 2f - cx).translationY(if (scale == 1f) ty0 else vp.height * 0.5f - cy)
+                .setDuration(ms).setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
+                .withEndAction { if (!isFinishing) end?.invoke() }.start()
+        }
+        val reveal: () -> Unit = {
+            val p = spritePx()
+            val itemSize = (iconSize * p * 0.9f).toInt()
+            val raySize = itemSize * 3
+            val rays = raysView(raySize).apply {
+                x = tableCx - raySize / 2f; y = tableTop - raySize / 2f
+                alpha = 0f; scaleX = 0.3f; scaleY = 0.3f; elevation = ashView.elevation + 3f
+            }
+            val item = pixelView(icon, iconSize, iconSize, itemSize, itemSize).apply {
+                x = tableCx - itemSize / 2f; y = tableTop - itemSize / 2f
+                scaleX = 0.2f; scaleY = 0.2f; elevation = ashView.elevation + 4f
+            }
+            mapWorld.addView(rays); mapWorld.addView(item)
+            movementEngine.resetIdle()
+            val lift = itemSize * 1.1f
+            rays.animate().alpha(1f).scaleX(1f).scaleY(1f).translationYBy(-lift).setDuration(420).start()
+            android.animation.ObjectAnimator.ofFloat(rays, View.ROTATION, 0f, 120f).apply {
+                duration = 2000; interpolator = android.view.animation.LinearInterpolator()
+            }.start()
+            item.animate().scaleX(1.2f).scaleY(1.2f).translationYBy(-lift).setDuration(380)
+                .setInterpolator(android.view.animation.OvershootInterpolator(2f)).withEndAction {
+                    item.animate().scaleX(1f).scaleY(1f).setDuration(160).start()
+                }.start()
+            mapWorld.postDelayed({
+                if (isFinishing) return@postDelayed
+                zoom(1f, 650) {
+                    mapWorld.pivotX = mapWorld.width / 2f; mapWorld.pivotY = mapWorld.height / 2f
+                    cameraOverride = false
+                    endCinematic()
+                    then()
+                }
+                // předmět odletí k postavě a zmizí, záře pohasne
+                item.animate().x(ashView.x + ashView.width / 2f - itemSize / 2f).y(ashView.y + ashView.height * 0.4f)
+                    .scaleX(0.3f).scaleY(0.3f).alpha(0f).setDuration(520).withEndAction { mapWorld.removeView(item) }.start()
+                rays.animate().alpha(0f).setDuration(420).withEndAction { mapWorld.removeView(rays) }.start()
+            }, 1500)
+        }
+        val hammerMs = movementEngine.durationOf("hammer", dir).coerceAtLeast(300)
+        val impactMs = 3 * 75L                                    // náraz je 4. snímek úderu
+        val zooms = listOf(1.35f, 1.75f, 2.2f)
+        fun strike(n: Int) {
+            movementEngine.playOnce("hammer", dir = dir)
+            mapWorld.postDelayed({
+                if (isFinishing) return@postDelayed
+                sparkBurst(tableCx - (if (faceRight) table.width * 0.2f else -table.width * 0.2f), tableTop)
+                mapWorld.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                zoom(zooms[n], 260)
+            }, impactMs)
+            mapWorld.postDelayed({
+                if (isFinishing) return@postDelayed
+                if (n < zooms.lastIndex) strike(n + 1) else reveal()
+            }, hammerMs + 140)
+        }
+        strike(0)
     }
 
     private fun replaceMapContent(fragment: Fragment, tag: String? = null) {

@@ -30,7 +30,17 @@ FOOT_Y = 38                      # poslední řádek chodidel (v ořezu)
 MOVE = {"idle": "idle", "walk": "walk", "run": "run"}
 # pozor: tag „ne“ v souboru ve skutečnosti kouká nahoru DOLEVA (je vidět levá tvář) → nw
 DIRS = {"s": "s", "se": "se", "ne": "nw", "n": "n"}
-ACTIONS = {"axe": 2, "mining": 1, "casting": 1, "doing": 1, "watering": 1, "dig": 1}
+# práce: (kolikátý tag toho jména, kam postava v souboru kouká, výřez snímků, výška snímku)
+# Rybaření (reeling, caught) má vlasec a šplouchnutí pod nohama → vyšší snímek 64 px.
+# „hammer“ = jen úder kladivem z tagu „hamering“ (snímky 15–21, náraz na 4. snímku) – docs/adr/0054.
+ACTIONS = {
+    "axe": (2, "w", None, FRAME_H), "mining": (1, "w", None, FRAME_H), "casting": (1, "w", None, FRAME_H),
+    "doing": (1, "w", None, FRAME_H), "dig": (1, "w", None, FRAME_H),
+    "watering": (1, "e", None, FRAME_H),
+    "reeling": (1, "e", None, 64), "caught": (1, "e", None, 64),
+    "hammer": (1, "e", (15, 21), FRAME_H),
+}
+TAG_FOR = {"hammer": "hamering"}
 MIRROR = {"se": "sw", "e": "w", "nw": "ne", "w": "e"}
 # jednorázové animace čelem k hráči (smrt, skok při teleportu, zásah) – jen směr „s“ (docs/adr/0052)
 ONCE = {"death": 1, "jump": 1, "hurt": 1}
@@ -40,9 +50,9 @@ def main(hair=None):
     ase = A.parse(SRC)
     ase["hair"] = hair.lower() if hair else None
     frames = {}
-    def render(i):
-        if i not in frames: frames[i] = A.render_frame(ase, i).crop(CROP)
-        return frames[i]
+    def render(i, h=FRAME_H):
+        if (i, h) not in frames: frames[(i, h)] = A.render_frame(ase, i).crop((CROP[0], CROP[1], CROP[2], CROP[1] + h))
+        return frames[(i, h)]
 
     seen = {}
     wanted = []                                         # (animace, směr, [snímky], [ms])
@@ -53,26 +63,29 @@ def main(hair=None):
         durs = [ase["frames"][i]["duration"] for i in idx]
         if "-" in name:
             base, d = name.split("-", 1)
-            if base in MOVE and d in DIRS: wanted.append((MOVE[base], DIRS[d], idx, durs))
+            if base in MOVE and d in DIRS: wanted.append((MOVE[base], DIRS[d], idx, durs, FRAME_H))
         elif name in MOVE:
-            wanted.append((MOVE[name], "e", idx, durs))     # boční pohled = doprava
+            wanted.append((MOVE[name], "e", idx, durs, FRAME_H))     # boční pohled = doprava
         elif name in ONCE and seen[name] == ONCE[name]:
-            wanted.append((name, "s", idx, durs))           # nakreslené zepředu, bez zrcadlení
-        elif name in ACTIONS and seen[name] == ACTIONS[name]:
-            wanted.append((name, "w", idx, durs))           # práce je nakreslená čelem doleva
+            wanted.append((name, "s", idx, durs, FRAME_H))           # nakreslené zepředu, bez zrcadlení
+        else:
+            for act, (nth, base, sub, h) in ACTIONS.items():
+                if TAG_FOR.get(act, act) == name and seen[name] == nth:
+                    ii, dd = (idx, durs) if sub is None else (idx[sub[0]:sub[1] + 1], durs[sub[0]:sub[1] + 1])
+                    wanted.append((act, base, ii, dd, h))
 
     os.makedirs(OUT, exist_ok=True)
     index = dict(frameW=FRAME_W, frameH=FRAME_H, footY=FOOT_Y, anims={})
-    for anim, d, idx, durs in wanted:
-        imgs = [render(i) for i in idx]
+    for anim, d, idx, durs, fh in wanted:
+        imgs = [render(i, fh) for i in idx]
         for dd, flip in ((d, False), (MIRROR.get(d), True)):
             if dd is None: continue
-            strip = Image.new("RGBA", (FRAME_W * len(imgs), FRAME_H))
+            strip = Image.new("RGBA", (FRAME_W * len(imgs), fh))
             for k, im in enumerate(imgs):
                 strip.paste(ImageOps.mirror(im) if flip else im, (k * FRAME_W, 0))
             key = f"{anim}_{dd}"
             strip.save(os.path.join(OUT, key + ".png"), optimize=True)
-            index["anims"][key] = dict(frames=len(imgs), durations=durs)
+            index["anims"][key] = dict(frames=len(imgs), durations=durs, **({"h": fh} if fh != FRAME_H else {}))
     json.dump(index, open(os.path.join(OUT, "hero.json"), "w"), indent=1)
     print(f"{len(index['anims'])} pásů do {OUT}")
     for k in sorted(index["anims"]): print(" ", k, index["anims"][k]["frames"])

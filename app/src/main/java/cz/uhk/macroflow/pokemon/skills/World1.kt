@@ -230,6 +230,37 @@ object Garden {
         return ((nowEpochSec - plot.plantedAt).toFloat() / total).coerceIn(0f, 1f)
     }
 
+    // ── Zalévání (docs/adr/0054) ──
+    /** Zalít jde jednou za čtvrtinu doby růstu (od zasazení nebo od posledního zalití). */
+    const val WATER_EVERY = 0.25
+    /** Jedno zalití posune růst o 15 % celé doby – kdo zalévá pokaždé, sklízí zhruba o třetinu dřív. */
+    const val WATER_BOOST = 0.15
+
+    /** user_items „garden_water_<i>“ = čas posledního zalití (s od [EPOCH]). */
+    fun waterItemId(index: Int) = "garden_water_$index"
+
+    fun encodeTime(epochSec: Long): Int = (epochSec - EPOCH).coerceAtLeast(0).toInt()
+    fun decodeTime(q: Int): Long = if (q <= 0) 0L else EPOCH + q
+
+    fun waterInterval(berry: Berry, speedup: Double): Long = (growSeconds(berry, speedup) * WATER_EVERY).roundToLong().coerceAtLeast(60)
+    fun waterBoost(berry: Berry, speedup: Double): Long = (growSeconds(berry, speedup) * WATER_BOOST).roundToLong()
+
+    /** Za kolik sekund půjde záhon zalít (0 = teď, null = není co zalévat). */
+    fun waterIn(plot: Plot, lastWater: Long, nowEpochSec: Long, speedup: Double): Long? {
+        val b = plot.berry ?: return null
+        if (isReady(plot, nowEpochSec, speedup)) return null
+        val since = nowEpochSec - maxOf(lastWater, plot.plantedAt)
+        return (waterInterval(b, speedup) - since).coerceAtLeast(0)
+    }
+
+    fun canWater(plot: Plot, lastWater: Long, nowEpochSec: Long, speedup: Double) = waterIn(plot, lastWater, nowEpochSec, speedup) == 0L
+
+    /** Zalitý záhon: růst se posune dopředu (zasazení „o kus dřív“). */
+    fun watered(plot: Plot, speedup: Double): Plot {
+        val b = plot.berry ?: return plot
+        return Plot(b, plot.plantedAt - waterBoost(b, speedup))
+    }
+
     /** Záhony 0 a 1 jsou otevřené od začátku, 2 a 3 až po uzlu „Nové záhony“. */
     fun isOpen(index: Int, plotsOpen: Int) = index < plotsOpen
 

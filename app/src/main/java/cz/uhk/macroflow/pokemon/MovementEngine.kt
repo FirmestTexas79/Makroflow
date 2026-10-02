@@ -50,6 +50,7 @@ class MovementEngine(
     private fun setAnim(a: String, d: String = dir8) {
         if (a == anim && d == dir8) return
         anim = a; dir8 = d
+        onceMode = false
         animStart = android.os.SystemClock.uptimeMillis()
         drawHero()
     }
@@ -61,10 +62,20 @@ class MovementEngine(
         val frames = hero.frames(key)
         if (frames.isEmpty()) return
         val t = android.os.SystemClock.uptimeMillis() - animStart
-        val i = if (a in cz.uhk.macroflow.pokemon.walk.HeroAnims.ONCE) cz.uhk.macroflow.pokemon.walk.HeroAnims.frameOnce(hero.durations(key), (t / onceSlow).toLong())
+        val i = if (a in cz.uhk.macroflow.pokemon.walk.HeroAnims.ONCE || (onceMode && !isWalking)) cz.uhk.macroflow.pokemon.walk.HeroAnims.frameOnce(hero.durations(key), (t / onceSlow).toLong())
                 else cz.uhk.macroflow.pokemon.walk.HeroAnims.frameAt(hero.durations(key), t)
         val f = frames[i.coerceIn(0, frames.lastIndex)]
-        if (f !== shownFrame) { shownFrame = f; ashView.setImageDrawable(f) }
+        if (f !== shownFrame) {
+            shownFrame = f
+            // rybaření má vyšší snímek (vlasec pod nohama) – view se prodlouží dolů, hlava zůstane na místě
+            val fh = f.bitmap.height
+            if (fh != shownH && ashView.width > 0) {
+                val p = ashView.width.toFloat() / hero.spec.frameW
+                ashView.layoutParams = ashView.layoutParams.apply { height = Math.round(fh * p) }
+                shownH = fh
+            }
+            ashView.setImageDrawable(f)
+        }
     }
 
     /** Práce u sběrného místa (sekání, kopání, chytání) – běží ve smyčce, dokud postava nevyrazí. */
@@ -79,23 +90,32 @@ class MovementEngine(
     }
 
     private var onceSlow = 1f
+    /** Právě běží jednorázová animace (i boční, např. „caught“) – drží poslední snímek. */
+    private var onceMode = false
+    /** Výška právě zobrazeného snímku (px spritu). */
+    private var shownH = 40
     private val HeroAnimsOnce get() = cz.uhk.macroflow.pokemon.walk.HeroAnims.ONCE
 
     /**
      * Jednorázová animace zepředu (smrt, skok – docs/adr/0052). Po doběhnutí zůstane poslední snímek,
      * dokud se nezavolá [resetIdle]; [slow] = zpomalení (2 = poloviční rychlost). Vrací délku v ms.
      */
-    fun playOnce(action: String, slow: Float = 1f, onEnd: (() -> Unit)? = null): Long {
+    fun playOnce(action: String, slow: Float = 1f, dir: String = "s", onEnd: (() -> Unit)? = null): Long {
         cancel()
         onceSlow = slow.coerceAtLeast(0.1f)
-        anim = ""; setAnim(action, "s")
-        val total = (hero.durations(cz.uhk.macroflow.pokemon.walk.HeroAnims.key(action, "s")).sum() * onceSlow).toLong()
+        anim = ""; setAnim(action, dir)
+        onceMode = true
+        val total = (hero.durations(cz.uhk.macroflow.pokemon.walk.HeroAnims.key(action, dir)).sum() * onceSlow).toLong()
         if (onEnd != null) animHandler.postDelayed({ onEnd() }, total)
         return total
     }
 
     /** Konec jednorázové animace – postava zase stojí čelem dolů. */
     fun resetIdle() { anim = ""; setAnim("idle", "s") }
+
+    /** Délka jednoho průchodu animací [action] (ms). */
+    fun durationOf(action: String, dir: String = "e"): Long =
+        hero.durations(cz.uhk.macroflow.pokemon.walk.HeroAnims.key(action, dir)).sum().toLong()
 
     /** Uvolní časovač animace (při zničení mapy). */
     fun release() { animHandler.removeCallbacksAndMessages(null) }

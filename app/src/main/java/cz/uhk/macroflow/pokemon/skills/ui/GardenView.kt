@@ -37,6 +37,9 @@ class GardenView(context: Context, private val scale: Float) : View(context) {
         set(v) { field = v; invalidate() }
     var speedup = 0.0
         set(v) { field = v; invalidate() }
+    /** Časy posledního zalití (docs/adr/0054) – žíznivý záhon má nad cedulkou kapku. */
+    var waterTimes: List<Long> = List(Garden.PLOTS) { 0L }
+        set(v) { field = v; invalidate() }
 
     private val g = MeadowLayout.GARDEN
     private val px = Paint().apply { isFilterBitmap = false; isAntiAlias = false }
@@ -82,7 +85,10 @@ class GardenView(context: Context, private val scale: Float) : View(context) {
             canvas.drawBitmap(bmp("plant${berry.id}$stage", SkillArt.PLANT, SkillArt.PLANT) { SkillArt.plant(berry, stage) },
                 null, RectF(pl, pt, pl + pw, pt + pw), px)
             if (ready) { anyReady = true; drawCheck(canvas, dst) }
-            else { anyGrowing = true; drawTimer(canvas, dst, Garden.remaining(plot, now, speedup), f) }
+            else {
+                anyGrowing = true; drawTimer(canvas, dst, Garden.remaining(plot, now, speedup), f)
+                if (Garden.canWater(plot, waterTimes.getOrElse(i) { 0L }, now, speedup)) { anyReady = true; drawDrop(canvas, dst) }
+            }
         }
         when {
             anyReady -> postInvalidateOnAnimation()
@@ -134,6 +140,31 @@ class GardenView(context: Context, private val scale: Float) : View(context) {
         r(l + u, t + u, l + w - u, t + h - u, 0xFF93602C)
         r(l + u, t + u, l + w - u, t + 2 * u, 0xFFC48A4A)
         r(l + u, t + h - 2 * u, l + w - u, t + h - u, 0xFF4F3016)
+    }
+
+    /** Žíznivý záhon: modrá kapka vlevo nad cedulkou, jemně poskakuje (docs/adr/0054). */
+    private fun drawDrop(c: Canvas, plot: RectF) {
+        val u = plot.width() / SkillArt.PLOT_W * 0.55f
+        val w = 7 * u; val h = 9 * u
+        val bob = sin(SystemClock.uptimeMillis() / 220.0).toFloat() * u * 0.8f
+        val left = plot.left - w * 0.35f
+        val top = plot.top - 12 * u - 2 * u - h * 0.8f + bob
+        c.drawBitmap(bmp("drop", 7, 9) { DROP }, null, RectF(left, top, left + w, top + h), px)
+    }
+
+    private val DROP: IntArray by lazy {
+        val rows = listOf(
+            "...K...",
+            "..KBK..",
+            ".KBBBK.",
+            ".KBWBK.",
+            "KBBWBBK",
+            "KBBBBBK",
+            "KBBBBDK",
+            ".KBBDK.",
+            "..KKK..")
+        val col = mapOf('K' to 0xFF14243A.toInt(), 'B' to 0xFF4AA8F0.toInt(), 'W' to 0xFFD8F2FF.toInt(), 'D' to 0xFF2A6CB8.toInt())
+        IntArray(7 * 9) { i -> col[rows[i / 7][i % 7]] ?: 0 }
     }
 
     /** Hotovo: dřevěný čtvereček se zelenou fajfkou, jemně poskakuje. */
