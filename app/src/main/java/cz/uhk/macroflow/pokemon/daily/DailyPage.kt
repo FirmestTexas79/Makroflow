@@ -86,7 +86,8 @@ object DailyPage {
                 background = BevelDrawable(1.5f * ui.dp, col, Shade.lighten(col), Shade.darken(col), Color.parseColor("#1E140C"))
             }, LinearLayout.LayoutParams(ui.px(16f), ui.px(16f)).apply { marginStart = ui.px(4f) })
         }
-        box.addView(plaque, full())
+        // vpravo nahoře je v knize zavírací křížek – cedule mu uhne
+        box.addView(plaque, full().apply { marginEnd = ui.px(34f) })
 
         val now = java.time.LocalDateTime.now()
         val midnight = now.toLocalDate().plusDays(1).atStartOfDay()
