@@ -295,42 +295,9 @@ class QuestJournalFragment : Fragment() {
     // ── Spisy: roztržené listy a hlášení o snech (docs/adr/0057) ──────────────
 
     private fun renderFiles() {
-        val ctx = requireContext()
-        val ll = rootView.findViewById<LinearLayout>(R.id.llFiles)
-        ll.removeAllViews()
-        val flags = cz.uhk.macroflow.pokemon.story.StoryFlags.all(ctx)
-        val insight = cz.uhk.macroflow.pokemon.story.Insight.level(flags)
-        val ink = androidx.core.content.ContextCompat.getColor(ctx, R.color.journal_ink)
-        val font = androidx.core.content.res.ResourcesCompat.getFont(ctx, R.font.jersey_15)
-        val dp = resources.displayMetrics.density
-        fun heading(t: String) = ll.addView(TextView(ctx).apply {
-            text = t; textSize = 22f; typeface = font; setTextColor(0xFF8A3A1A.toInt())
-            setPadding(0, (10 * dp).toInt(), 0, (4 * dp).toInt())
-        })
-        fun entry(title: String, body: String) {
-            ll.addView(TextView(ctx).apply { text = title; textSize = 17f; typeface = font; setTextColor(ink) })
-            ll.addView(TextView(ctx).apply {
-                text = body; textSize = 14f; typeface = android.graphics.Typeface.MONOSPACE; setTextColor(ink)
-                setBackgroundColor(0x22BC6C25)
-                setPadding((8 * dp).toInt(), (8 * dp).toInt(), (8 * dp).toInt(), (8 * dp).toInt())
-                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { topMargin = (2 * dp).toInt(); bottomMargin = (12 * dp).toInt() }
-            })
-        }
-        val pages = cz.uhk.macroflow.pokemon.story.Insight.foundPages(flags)
-        if (pages.isNotEmpty()) {
-            heading("Roztržené listy")
-            pages.forEach { entry("List ${it.id}", cz.uhk.macroflow.pokemon.story.Insight.render(it.text, insight)) }
-        }
-        val dreams = cz.uhk.macroflow.pokemon.story.Dreams.dreamed(flags)
-        if (dreams.isNotEmpty()) {
-            heading("Hlášení o snech")
-            dreams.forEach { entry(it.who, "„" + cz.uhk.macroflow.pokemon.story.Insight.render(it.text, insight) + "“") }
-        }
-        ll.addView(TextView(ctx).apply {
-            text = "Začerněná místa se časem odkrývají. Čím víc toho víš, tím víc čteš."
-            textSize = 13f; setTextColor(ink); alpha = 0.6f
-        })
+        // vzhled archivu: složky, razítka, začerněná místa (docs/adr/0062)
+        cz.uhk.macroflow.pokemon.skills.ui.ArchivePages.files(rootView.findViewById(R.id.llFiles),
+            cz.uhk.macroflow.pokemon.story.StoryFlags.all(requireContext()))
     }
 
     // ── Zóna 1: mapa lokací a teleport (docs/adr/0052) ───────────────────────

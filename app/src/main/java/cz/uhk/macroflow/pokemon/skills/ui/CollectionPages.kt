@@ -32,7 +32,7 @@ object CollectionPages {
     private fun outlined(t: TextView): TextView = t.apply { setShadowLayer(3f, 0f, 1.5f, Color.parseColor("#101828")) }
 
     /** Dřevěná cedule s ikonou, názvem a údajem vpravo (stejná jako u Denních úkolů). */
-    private fun plaque(ui: WoodUi, icon: IntArray, iconSize: Int, title: String, right: String?): View {
+    internal fun plaque(ui: WoodUi, icon: IntArray, iconSize: Int, title: String, right: String?): View {
         val p = ui.row().apply {
             background = WoodPanelDrawable(2.5f * ui.dp, parchment = false)
             setPadding(ui.px(14f), ui.px(11f), ui.px(14f), ui.px(13f))
@@ -44,7 +44,7 @@ object CollectionPages {
         return p
     }
 
-    private fun header(container: LinearLayout, ui: WoodUi, icon: IntArray, iconSize: Int, title: String, right: String?, hint: String?) {
+    internal fun header(container: LinearLayout, ui: WoodUi, icon: IntArray, iconSize: Int, title: String, right: String?, hint: String?) {
         // vpravo nahoře je v knize zavírací křížek – cedule mu uhne
         container.addView(plaque(ui, icon, iconSize, title, right), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             .apply { marginEnd = ui.px(34f) })
@@ -70,7 +70,7 @@ object CollectionPages {
     }
 
     /** Řádky po [perRow] dlaždicích stejné šířky. */
-    private fun grid(container: LinearLayout, ui: WoodUi, tiles: List<View>, perRow: Int) {
+    internal fun grid(container: LinearLayout, ui: WoodUi, tiles: List<View>, perRow: Int) {
         tiles.chunked(perRow).forEach { chunk ->
             val row = ui.row().apply { gravity = Gravity.TOP }
             chunk.forEach { row.addView(it, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = ui.px(6f); bottomMargin = ui.px(6f) }) }

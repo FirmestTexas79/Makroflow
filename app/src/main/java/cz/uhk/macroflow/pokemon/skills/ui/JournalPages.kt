@@ -313,36 +313,62 @@ object JournalPages {
 
     private data class Entry(val id: String, val label: String, val description: String, val pixels: IntArray, val size: Int)
 
+    /**
+     * Suroviny (docs/adr/0062): dřevěná cedule s počtem kusů, každý zdroj v pergamenovém rámu
+     * s barevnou stužkou, ikonou a „máš 3 / 7 druhů“; políčka s názvem pod sebou, prázdná ztlumená.
+     */
     fun resources(container: LinearLayout, counts: Map<String, Int>, menuRoot: FrameLayout) {
         container.removeAllViews()
         val ui = WoodUi(container.context)
-        container.addView(ui.text("Suroviny", 27f, container.context.getColor(R.color.journal_chapter_title_ink), Gravity.CENTER).apply {
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        })
-        container.addView(ui.text("Klepni na políčko – kde to získat a jak často to padá.", 15f, ui.inkSoft, Gravity.CENTER).apply {
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                .apply { bottomMargin = ui.px(8f) }
-        })
 
         fun res(r: Resource) = Entry(r.itemId, r.label, r.description, SkillArt.resourceIcon(r), SkillArt.ITEM)
+        // název, barva stužky, ikona stužky, položky
+        data class Section(val title: String, val color: String, val icon: Entry, val entries: List<Entry>)
         val sections = listOf(
-            "Z Makromonů" to (listOf(res(Resource.ENERGY)) + Resource.entries.filter { it.isMonsterMaterial }.map { res(it) }),
-            "Ze záhonů" to listOf(res(Resource.BERRY_GREEN), res(Resource.BERRY_BLUE), res(Resource.BERRY_BLACK)),
-            "Semínka" to listOf(res(Resource.SEED_GREEN), res(Resource.SEED_BLUE), res(Resource.SEED_BLACK)),
-            "Z dolů" to listOf(res(Resource.ORE_COPPER), res(Resource.ORE_SILVER), res(Resource.ORE_GOLD)),
-            "Ze stromů" to listOf(res(Resource.LOG_OAK), res(Resource.LOG_BIRCH), res(Resource.LOG_MAPLE)),
-            "Hmyz z Dolů" to listOf(res(Resource.BUG_SPARK), res(Resource.BUG_CRYSTAL), res(Resource.BUG_MAGMA)),
-            "Vyrobené" to Makroball.entries.map { Entry(it.id, it.label, it.description, it.pixels, Makroball.SIZE) }
+            Section("Z Makromonů", "#8E3B2E", res(Resource.ENERGY), listOf(res(Resource.ENERGY)) + Resource.entries.filter { it.isMonsterMaterial }.map { res(it) }),
+            Section("Ze záhonů", "#4E6B2A", res(Resource.BERRY_GREEN), listOf(res(Resource.BERRY_GREEN), res(Resource.BERRY_BLUE), res(Resource.BERRY_BLACK))),
+            Section("Semínka", "#6B7A2A", res(Resource.SEED_GREEN), listOf(res(Resource.SEED_GREEN), res(Resource.SEED_BLUE), res(Resource.SEED_BLACK))),
+            Section("Z dolů", "#5A5F6B", res(Resource.ORE_SILVER), listOf(res(Resource.ORE_COPPER), res(Resource.ORE_SILVER), res(Resource.ORE_GOLD))),
+            Section("Ze stromů", "#7A5428", res(Resource.LOG_OAK), listOf(res(Resource.LOG_OAK), res(Resource.LOG_BIRCH), res(Resource.LOG_MAPLE))),
+            Section("Hmyz z Dolů", "#2E5A8A", res(Resource.BUG_CRYSTAL), listOf(res(Resource.BUG_SPARK), res(Resource.BUG_CRYSTAL), res(Resource.BUG_MAGMA))),
+            Section("Vyrobené", "#6B4A8A", Makroball.entries.first().let { Entry(it.id, it.label, it.description, it.pixels, Makroball.SIZE) },
+                Makroball.entries.map { Entry(it.id, it.label, it.description, it.pixels, Makroball.SIZE) })
         )
-        sections.forEach { (title, entries) ->
-            container.addView(ui.text(title, 20f, ui.rust).apply { setPadding(ui.px(2f), ui.px(6f), 0, ui.px(4f)) })
-            entries.chunked(4).forEach { chunk ->
-                // Gravity.TOP: se svislým centrováním a spodním okrajem vyjel čtverec o 4 dp nahoru
-                // a řádek mu ořízl horní obrys (hnědé políčko bez horní hrany)
-                val row = ui.row().apply { gravity = Gravity.TOP }
-                chunk.forEach { e -> row.addView(slot(ui, e, counts[e.id] ?: 0) { showInfo(menuRoot, e, counts[e.id] ?: 0) }) }
-                container.addView(row)
+        val allIds = sections.flatMap { it.entries }.map { it.id }.toSet()
+        val pieces = allIds.sumOf { counts[it] ?: 0 }
+        val kinds = allIds.count { (counts[it] ?: 0) > 0 }
+        CollectionPages.header(container, ui, SkillArt.resourceIcon(Resource.LOG_OAK), SkillArt.ITEM, "Suroviny",
+            "${if (pieces > 9999) "9999+" else "$pieces"} ks", "Máš $kinds z ${allIds.size} druhů. Klepni na políčko – kde to získat a jak často to padá.")
+
+        sections.forEach { sec ->
+            val col = Color.parseColor(sec.color)
+            val have = sec.entries.count { (counts[it.id] ?: 0) > 0 }
+            val panel = ui.column().apply {
+                background = WoodPanelDrawable(2f * ui.dp)
+                setPadding(ui.px(12f), ui.px(12f), ui.px(12f), ui.px(8f))
             }
+            // stužka: barevný pruh s ikonou, názvem a počtem druhů
+            val ribbon = ui.row().apply {
+                background = BevelDrawable(1.5f * ui.dp, col, SkillTreeView.blend(col, Color.WHITE, 0.3f), SkillTreeView.blend(col, Color.BLACK, 0.35f), Color.parseColor("#1E140C"))
+                setPadding(ui.px(6f), ui.px(3f), ui.px(8f), ui.px(4f))
+            }
+            ribbon.addView(ui.icon(sec.icon.pixels, sec.icon.size, sec.icon.size, 18f))
+            ribbon.addView(outlined(ui.text(sec.title, 18f, WHITE)).apply { setPadding(ui.px(6f), 0, 0, ui.px(1f)) }, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            ribbon.addView(outlined(ui.text("$have / ${sec.entries.size}", 15f, if (have == sec.entries.size) GOLD else Color.parseColor("#E8D8C8"))))
+            panel.addView(ribbon, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = ui.px(8f) })
+
+            val tiles = sec.entries.map { e ->
+                val n = counts[e.id] ?: 0
+                ui.column().apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    addView(slot(ui, e, n) { showInfo(menuRoot, e, n) }, LinearLayout.LayoutParams(ui.px(58f), ui.px(58f)))
+                    addView(ui.text(e.label, 12f, if (n > 0) ui.ink else ui.inkSoft, Gravity.CENTER).apply {
+                        maxLines = 2; setPadding(0, ui.px(2f), 0, 0); alpha = if (n > 0) 1f else 0.6f
+                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                }
+            }
+            CollectionPages.grid(panel, ui, tiles, 4)
+            container.addView(panel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) })
         }
     }
 
@@ -381,7 +407,6 @@ object JournalPages {
         f.addView(ui.icon(e.pixels, e.size, e.size, 40f), FrameLayout.LayoutParams(ui.px(40f), ui.px(40f), Gravity.CENTER))
         f.addView(outlined(ui.text(if (n > 999) "999+" else "$n", 16f, WHITE)).apply { setPadding(0, 0, ui.px(5f), ui.px(2f)) },
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.END or Gravity.BOTTOM))
-        f.layoutParams = LinearLayout.LayoutParams(ui.px(62f), ui.px(62f)).apply { marginEnd = ui.px(8f); bottomMargin = ui.px(8f) }
         return f
     }
 
