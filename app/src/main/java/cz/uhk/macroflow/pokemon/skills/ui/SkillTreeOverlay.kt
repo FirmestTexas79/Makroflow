@@ -13,6 +13,7 @@ import cz.uhk.macroflow.pokemon.skills.Skill
 import cz.uhk.macroflow.pokemon.skills.SkillArt
 import cz.uhk.macroflow.pokemon.skills.SkillMath
 import cz.uhk.macroflow.pokemon.skills.SkillState
+import cz.uhk.macroflow.pokemon.skills.SkillState.NodeStatus
 import cz.uhk.macroflow.pokemon.skills.SkillTree
 import cz.uhk.macroflow.pokemon.skills.TreeArt
 
@@ -120,7 +121,6 @@ object SkillTreeOverlay {
             val n = SkillTree.of(skill).firstOrNull { it.id == tree.selectedId } ?: return
             val st = state.status(n)
             val rank = state.rank(n.id).coerceAtMost(n.maxRank)
-            val S = SkillState.NodeStatus
             val top = ui.row()
             top.addView(ui.text(n.title, 23f).apply { layoutParams = ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
             top.addView(outlined(ui.text("$rank / ${n.maxRank}", 16f, WHITE, Gravity.CENTER)).apply {
@@ -140,8 +140,8 @@ object SkillTreeOverlay {
             val gap = ui.spacer(6f); card.addView(gap)
             val prog = state.progress(skill)
             when (st) {
-                S.MAXED -> card.addView(ui.text("✓ Na maximu", 18f, ui.olive))
-                S.AVAILABLE -> card.addView(ui.button(if (rank == 0) "Odemknout" else "Vylepšit na ${rank + 1}/${n.maxRank}") {
+                NodeStatus.MAXED -> card.addView(ui.text("✓ Na maximu", 18f, ui.olive))
+                NodeStatus.AVAILABLE -> card.addView(ui.button(if (rank == 0) "Odemknout" else "Vylepšit na ${rank + 1}/${n.maxRank}") {
                     unlock(n) { newState ->
                         if (newState != null) {
                             state = newState
@@ -152,10 +152,10 @@ object SkillTreeOverlay {
                         renderCard()
                     }
                 }.apply { layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) })
-                S.NO_POINTS -> card.addView(ui.text(SkillMath.nextSkillPointLevel(prog.level)?.let { "Chybí body – další přijde na Lv $it." }
+                NodeStatus.NO_POINTS -> card.addView(ui.text(SkillMath.nextSkillPointLevel(prog.level)?.let { "Chybí body – další přijde na Lv $it." }
                     ?: "Všechny body už máš. Jiné rozdělení: Přeučit.", 16f, ui.rust))
-                S.LOW_LEVEL -> card.addView(ui.text("🔒 Potřebuješ ${skill.label} Lv ${n.minLevel} (teď Lv ${prog.level}).", 16f, ui.rust))
-                S.LOCKED -> {
+                NodeStatus.LOW_LEVEL -> card.addView(ui.text("🔒 Potřebuješ ${skill.label} Lv ${n.minLevel} (teď Lv ${prog.level}).", 16f, ui.rust))
+                NodeStatus.LOCKED -> {
                     val req = SkillTree.node(n.requires!!)
                     card.addView(ui.text("🔒 Nejdřív: ${req?.title} na ${state.needed(n)}/${req?.maxRank}" +
                         (if (n.minLevel > prog.level) " a Lv ${n.minLevel}" else "") + ".", 16f, ui.inkSoft))

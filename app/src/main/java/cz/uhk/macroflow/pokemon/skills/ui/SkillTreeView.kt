@@ -18,6 +18,7 @@ import cz.uhk.macroflow.pokemon.balls.Makroball
 import cz.uhk.macroflow.pokemon.skills.Skill
 import cz.uhk.macroflow.pokemon.skills.SkillArt
 import cz.uhk.macroflow.pokemon.skills.SkillState
+import cz.uhk.macroflow.pokemon.skills.SkillState.NodeStatus
 import cz.uhk.macroflow.pokemon.skills.SkillTree
 import cz.uhk.macroflow.pokemon.skills.SkillTreeLayout
 import cz.uhk.macroflow.pokemon.skills.TreeArt
@@ -224,16 +225,15 @@ class SkillTreeView(ctx: Context) : View(ctx) {
         val l = cx - half; val t = cy - half; val r = cx + half; val b = cy + half
 
         val rank = state.rank(n.id).coerceAtMost(n.maxRank)
-        val S = SkillState.NodeStatus
 
         // záře za uzlem
         val glow = when (st) {
-            S.MAXED -> Color.argb(70, 255, 213, 79)
-            S.AVAILABLE -> Color.argb((60 + 110 * pulse).toInt(), 255, 236, 160)
+            NodeStatus.MAXED -> Color.argb(70, 255, 213, 79)
+            NodeStatus.AVAILABLE -> Color.argb((60 + 110 * pulse).toInt(), 255, 236, 160)
             else -> 0
         }
         if (glow != 0) {
-            val g = (if (st == S.AVAILABLE) 8 + 5 * pulse else 7f) * dp * (node / (58 * dp))
+            val g = (if (st == NodeStatus.AVAILABLE) 8 + 5 * pulse else 7f) * dp * (node / (58 * dp))
             rect(c, l - g + u, t - g, r + g - u, b + g, glow)
             rect(c, l - g, t - g + u, r + g, b + g - u, glow)
         }
@@ -242,11 +242,11 @@ class SkillTreeView(ctx: Context) : View(ctx) {
         // šedomodrá = chybí body nebo level, tmavá = zamčeno
         val green = listOf("#3E6B3A", "#7FB069", "#24401F")
         val (base, light, dark, outline) = when {
-            st == S.MAXED -> green + "#FFD54F"
-            rank > 0 && st == S.AVAILABLE -> green + (if (pulse > 0.5f) "#FFF3B0" else "#FFD54F")
+            st == NodeStatus.MAXED -> green + "#FFD54F"
+            rank > 0 && st == NodeStatus.AVAILABLE -> green + (if (pulse > 0.5f) "#FFF3B0" else "#FFD54F")
             rank > 0 -> green + "#0B0E14"
-            st == S.AVAILABLE -> listOf("#7A5428", "#C48A4A", "#4F3016", if (pulse > 0.5f) "#FFF3B0" else "#FFD54F")
-            st == S.LOCKED -> listOf("#25272C", "#34373E", "#17181C", "#0B0C0F")
+            st == NodeStatus.AVAILABLE -> listOf("#7A5428", "#C48A4A", "#4F3016", if (pulse > 0.5f) "#FFF3B0" else "#FFD54F")
+            st == NodeStatus.LOCKED -> listOf("#25272C", "#34373E", "#17181C", "#0B0C0F")
             else -> listOf("#3A4150", "#5C6578", "#232833", "#0B0E14")
         }.map { Color.parseColor(it) }
         // osmiúhelník po art pixelech: obrys, vnitřní rámeček, vybroušená plocha
@@ -273,12 +273,12 @@ class SkillTreeView(ctx: Context) : View(ctx) {
         // ikona efektu
         val bmp = icon(n)
         val box = node * 0.52f
-        p.alpha = when (st) { S.LOCKED -> 90; S.NO_POINTS, S.LOW_LEVEL -> if (rank > 0) 255 else 170; else -> 255 }
+        p.alpha = when (st) { NodeStatus.LOCKED -> 90; NodeStatus.NO_POINTS, NodeStatus.LOW_LEVEL -> if (rank > 0) 255 else 170; else -> 255 }
         val ratio = bmp.height.toFloat() / bmp.width
         val iw = if (ratio <= 1f) box else box / ratio; val ih = iw * ratio
         c.drawBitmap(bmp, null, RectF(cx - iw / 2, cy - ih / 2, cx + iw / 2, cy + ih / 2), p)
         p.alpha = 255
-        if (st == S.LOCKED || (st == S.LOW_LEVEL && rank == 0)) {
+        if (st == NodeStatus.LOCKED || (st == NodeStatus.LOW_LEVEL && rank == 0)) {
             val lk = icon("lock") { TreeArt.LOCK }
             val ls = node * 0.31f
             c.drawBitmap(lk, null, RectF(r - ls + 2 * dp, b - ls + 2 * dp, r + 2 * dp, b + 2 * dp), p)
@@ -320,8 +320,8 @@ class SkillTreeView(ctx: Context) : View(ctx) {
         var ls = lines()
         while (ls.maxOf { text.measureText(it) } > maxW && text.textSize > 9 * dp) { text.textSize -= 1 * dp; ls = lines() }
         text.color = when {
-            st == S.MAXED -> Color.parseColor("#FFE9A0")
-            st == S.AVAILABLE || rank > 0 -> Color.parseColor("#FEFAE0")
+            st == NodeStatus.MAXED -> Color.parseColor("#FFE9A0")
+            st == NodeStatus.AVAILABLE || rank > 0 -> Color.parseColor("#FEFAE0")
             else -> Color.parseColor("#A9A396")
         }
         ls.forEachIndexed { k, line -> c.drawText(line, cx, py + pip + 15 * dp + k * (text.textSize + 1 * dp), text) }
