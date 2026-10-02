@@ -68,4 +68,39 @@ class SpirraEvolutionTest {
         assertEquals(d, SpirraEvolution.decode(SpirraEvolution.encode(d)))
         assertEquals(null, SpirraEvolution.decode("rozbité"))
     }
+
+    // ── Level 12 a první splněná cesta (docs/adr/0055) ──
+
+    @Test
+    fun evolvesOnlyFromLevelTwelve() {
+        val days = (0 until 3).map { Day(d0.plusDays(it.toLong()), waterMl = 10_000) }   // 30 l → Aquirra
+        assertEquals(null, SpirraEvolution.evolveInto(days, 11))
+        assertEquals(Branch.AQUIRRA, SpirraEvolution.evolveInto(days, 12))
+        assertEquals(null, SpirraEvolution.evolveInto(emptyList(), 30))
+    }
+
+    @Test
+    fun firstReachedGoalWinsEvenIfAnotherHasMoreReserve() {
+        // den 0–1: 25 l vody (Aquirra splněna 2. den); den 2–9: 100 000 kroků a 50 000 kcal (víc „rezervy“, ale později)
+        val days = (0 until 10).map { i ->
+            Day(d0.plusDays(i.toLong()), waterMl = if (i < 2) 12_500 else 0, steps = if (i >= 2) 20_000 else 0, burnedKcal = if (i >= 2) 6_000 else 0)
+        }
+        val reached = SpirraEvolution.reachedOn(days)
+        assertEquals(d0.plusDays(1), reached[Branch.AQUIRRA])
+        assertEquals(d0.plusDays(2), reached[Branch.FLAMIRRA])
+        assertEquals(Branch.AQUIRRA, SpirraEvolution.evolveInto(days, 15))
+        assertEquals(Branch.FLAMIRRA, SpirraEvolution.ready(SpirraEvolution.progress(days)))   // „největší rezerva“ by vybrala jinak
+    }
+
+    @Test
+    fun sameDayTieGoesToBiggerReserve() {
+        val days = listOf(Day(d0, waterMl = 25_000, steps = 300_000))
+        assertEquals(Branch.CHARMIRRA, SpirraEvolution.evolveInto(days, 12))
+    }
+
+    @Test
+    fun fiberStreakCountsWhenTheThirdDayIsReached() {
+        val days = (0 until 4).map { day(it, fiber = 30.0) }
+        assertEquals(d0.plusDays(2), SpirraEvolution.reachedOn(days)[Branch.VERDIRRA])
+    }
 }

@@ -163,37 +163,9 @@ class MainActivity : AppCompatActivity() {
         checkSpirraEvolution()
     }
 
-    private var spirraDialogShown = false
-
+    /** Větvený vývoj Spirry: od levelu 12 do cesty, kterou splnila první (docs/adr/0031, 0055). */
     private fun checkSpirraEvolution() {
-        val app = applicationContext
-        lifecycleScope.launch {
-            val found = withContext(Dispatchers.IO) {
-                runCatching {
-                    val sp = cz.uhk.macroflow.pokemon.evolution.SpirraBond.activeSpirra(app) ?: return@runCatching null
-                    cz.uhk.macroflow.pokemon.evolution.SpirraBond.markToday(app, sp.id)
-                    val branch = cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.ready(
-                        cz.uhk.macroflow.pokemon.evolution.SpirraBond.progress(app, sp.id)
-                    ) ?: return@runCatching null
-                    sp to branch
-                }.getOrNull()
-            } ?: return@launch
-            if (spirraDialogShown || isFinishing || isDestroyed) return@launch
-            spirraDialogShown = true
-            val (spirra, branch) = found
-            val move = cz.uhk.macroflow.pokemon.MakromonGrowthManager.getNewMoveForLevel(branch.id, 1)
-            cz.uhk.macroflow.pokemon.EvolutionDialog(
-                context = this@MainActivity,
-                capturedMakromonId = spirra.id,
-                oldId = cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.SPIRRA_ID,
-                newId = branch.id,
-                newMoveToLearn = move
-            ) {
-                lifecycleScope.launch(Dispatchers.IO) { cz.uhk.macroflow.pokemon.evolution.SpirraBond.clear(app, spirra.id) }
-                spirraDialogShown = false
-                updateMakromonVisibility()
-            }.show()
-        }
+        cz.uhk.macroflow.pokemon.evolution.SpirraEvolutionFlow.check(this) { updateMakromonVisibility() }
     }
 
     override fun onStop() {

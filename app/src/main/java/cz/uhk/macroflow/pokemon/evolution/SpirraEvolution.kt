@@ -7,12 +7,15 @@ import kotlin.math.roundToInt
  * Větvený vývoj Spirry (docs/adr/0031), bez Androidu – pokryto testy.
  *
  * Spirra se vyvine podle toho, co s ní jako aktivním parťákem děláš. Počítají se jen dny,
- * kdy byla Spirra aktivní (na liště); cíl, který splníš první, rozhodne o vývoji.
+ * kdy byla Spirra aktivní (na liště). V pozadí běží všechny cesty najednou; vývoj nastane
+ * od levelu [LEVEL] a rozhodne cíl, který Spirra splnila PRVNÍ (docs/adr/0055).
  * Drakirra je tajná – jen k ulovení.
  */
 object SpirraEvolution {
 
     const val SPIRRA_ID = "012"
+    /** Od tohoto levelu se Spirra může vyvinout (docs/adr/0055). */
+    const val LEVEL = 12
     const val DRAKIRRA_ID = "019"
 
     /** Vláknina „v rozmezí“: 90–140 % osobního cíle. */
@@ -74,9 +77,36 @@ object SpirraEvolution {
 
     fun fraction(b: Branch, value: Int): Float = (value.toFloat() / b.goal).coerceIn(0f, 1f)
 
-    /** Větev, do které se Spirra vyvine (splněná; při více splněných ta s největší rezervou). */
+    /** Splněná větev s největší rezervou (bez ohledu na pořadí a level) – jen pro přehled. */
     fun ready(progress: Map<Branch, Int>): Branch? =
         progress.filter { (b, v) -> v >= b.goal }.maxByOrNull { (b, v) -> v.toDouble() / b.goal }?.key
+
+    /**
+     * Kdy byl který cíl splněn: dny se projdou v pořadí a postup se sčítá den po dni.
+     * Vrací jen splněné větve.
+     */
+    fun reachedOn(days: List<Day>): Map<Branch, LocalDate> {
+        val out = LinkedHashMap<Branch, LocalDate>()
+        val sorted = days.distinctBy { it.date }.sortedBy { it.date }
+        for (i in sorted.indices) {
+            val p = progress(sorted.subList(0, i + 1))
+            p.forEach { (b, v) -> if (v >= b.goal && b !in out) out[b] = sorted[i].date }
+        }
+        return out
+    }
+
+    /**
+     * Do čeho se Spirra vyvine: až od levelu [LEVEL]; z větví vyhrává ta, která byla
+     * splněná nejdřív (stejný den → ta s větší rezervou). Null = zatím nic.
+     */
+    fun evolveInto(days: List<Day>, level: Int): Branch? {
+        if (level < LEVEL) return null
+        val reached = reachedOn(days)
+        if (reached.isEmpty()) return null
+        val prog = progress(days)
+        return reached.entries.sortedWith(compareBy<Map.Entry<Branch, LocalDate>> { it.value }
+            .thenByDescending { (prog[it.key] ?: 0).toDouble() / it.key.goal }).first().key
+    }
 
     /** „1 250 / 5 000 kcal“, „12,5 / 25 l“. */
     fun progressText(b: Branch, value: Int): String {

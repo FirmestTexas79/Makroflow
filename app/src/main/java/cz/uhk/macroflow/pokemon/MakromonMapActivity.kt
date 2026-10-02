@@ -313,6 +313,12 @@ class MakromonMapActivity : AppCompatActivity() {
                 questManager.recheck()  // boss Hvozdu nastavil příznak → fáze questu se splní
                 checkAwards()           // chycení, denní úkoly… (docs/adr/0037)
                 maybeWhiteout()         // padl celý tým → smrt postavy (docs/adr/0052)
+                // Spirra mohla v souboji dosáhnout levelu 12 → vývoj podle splněné cesty (docs/adr/0055)
+                if (!gamePrefs.getBoolean(cz.uhk.macroflow.pokemon.zone.Whiteout.PENDING_KEY, false) && !cinematic)
+                    mapWorld.postDelayed({
+                        if (!isFinishing && !cinematic && supportFragmentManager.backStackEntryCount == 0)
+                            cz.uhk.macroflow.pokemon.evolution.SpirraEvolutionFlow.check(this) { companionManager.refresh() }
+                    }, 600)
             }
         }
 

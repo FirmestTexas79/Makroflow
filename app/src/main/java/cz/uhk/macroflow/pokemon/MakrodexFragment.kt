@@ -295,19 +295,29 @@ class MakrodexFragment : Fragment() {
     private fun showSpirraPaths() {
         val ctx = requireContext().applicationContext
         lifecycleScope.launch {
-            val (active, progress) = withContext(Dispatchers.IO) {
+            val (active, days) = withContext(Dispatchers.IO) {
                 val sp = cz.uhk.macroflow.pokemon.evolution.SpirraBond.activeSpirra(ctx)
-                sp to sp?.let { cz.uhk.macroflow.pokemon.evolution.SpirraBond.progress(ctx, it.id) }
+                sp to sp?.let { cz.uhk.macroflow.pokemon.evolution.SpirraBond.days(ctx, it.id) }
             }
             if (!isAdded) return@launch
             val SE = cz.uhk.macroflow.pokemon.evolution.SpirraEvolution
+            val progress = days?.let { SE.progress(it) }
+            val reached = days?.let { SE.reachedOn(it) }.orEmpty()
+            val first = days?.let { SE.evolveInto(it, SE.LEVEL) }          // stejné pravidlo jako vývoj
+            val fmt = java.time.format.DateTimeFormatter.ofPattern("d. M.")
             val text = buildString {
-                append(if (active == null) "Počítá se, jen když je Spirra tvým aktivním parťákem na liště. Nastav ji v inventáři.\n\n"
-                       else "Spirra se vyvine podle toho, který cíl splníš první:\n\n")
-                cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.Branch.entries.forEach { b ->
+                if (active == null) append("Počítá se, jen když je Spirra tvým aktivním parťákem na liště. Nastav ji v inventáři.\n\n")
+                else {
+                    append("Všechny cesty se počítají najednou. Od levelu ${SE.LEVEL} se Spirra vyvine do té, kterou splní PRVNÍ.\n")
+                    append("Teď: Lv ${active.level}" + (if (active.level < SE.LEVEL) " – do vývoje chybí ${SE.LEVEL - active.level} lv." else " – vývoj je odemčený.") + "\n")
+                    first?.let { append("První splněná cesta: ${it.displayName} (${reached[it]?.format(fmt)})\n") }
+                    append("\n")
+                }
+                SE.Branch.entries.forEach { b ->
                     val v = progress?.get(b) ?: 0
                     val pct = (SE.fraction(b, v) * 100).toInt()
-                    append("${b.displayName.uppercase()}\n${b.task}\n")
+                    val mark = when { b == first -> "★ "; b in reached -> "✓ "; else -> "" }
+                    append("$mark${b.displayName.uppercase()}\n${b.task}\n")
                     append(if (progress != null) "${SE.progressText(b, v)}  ($pct %)\n\n" else "\n")
                 }
                 append("DRAKIRRA\n??? – tajná, zatím jen k ulovení")
