@@ -658,7 +658,7 @@ object BattleFactory {
             "ignar", "ignaroc", "ignaroth", "aqulin", "flori", "florind", "umbex", "spirra",
             "flamirra", "aquirra", "verdirra", "shadirra",
             "charmirra", "drakirra", "finlet", "serpfin", "mycit", "mydrus", "soulu", "soulex", "soulord",
-            "gudwin", "axlu"
+            "gudwin", "axlu", "ignileo"
         )
 
         // Pokud ho máš v seznamu, složíme název: makromon_18_drakirra
