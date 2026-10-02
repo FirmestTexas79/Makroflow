@@ -7,13 +7,14 @@ import org.junit.Test
 /** Rozložení grafického stromu dovedností a pixelové ikony (docs/adr/0058). */
 class SkillTreeLayoutTest {
 
-    @Test fun catchingTreeHasBranchAndLongChain() {
+    @Test fun catchingTreeHasThreeRootsAndBranches() {
         val l = SkillTreeLayout.of(SkillTree.of(Skill.CATCHING))
-        assertEquals(SkillTreeLayout.Pos(0.5f, 0), l.pos["team_2"])          // kořen mezi dvěma větvemi
-        assertEquals(SkillTreeLayout.Pos(0f, 1), l.pos["catch_xp"])
-        assertEquals(SkillTreeLayout.Pos(1f, 1), l.pos["team_3"])
-        assertEquals(SkillTreeLayout.Pos(1f, 4), l.pos["team_6"])
-        assertEquals(2, l.columns)
+        assertEquals(SkillTreeLayout.Pos(0f, 0), l.pos["team_2"])
+        assertEquals(SkillTreeLayout.Pos(0f, 4), l.pos["team_6"])
+        assertEquals(SkillTreeLayout.Pos(1.5f, 0), l.pos["catch_grip"])         // nad Mistrovským hodem a kořistí
+        assertEquals(SkillTreeLayout.Pos(2f, 3), l.pos["catch_master"])
+        assertEquals(SkillTreeLayout.Pos(3f, 2), l.pos["catch_xp3"])
+        assertEquals(4, l.columns)
         assertEquals(5, l.rows)
     }
 
@@ -30,9 +31,10 @@ class SkillTreeLayoutTest {
     }
 
     @Test fun parentIsCenteredAboveChildren() {
-        val l = SkillTreeLayout.of(SkillTree.of(Skill.BUG_CATCHING))   // kořen se třemi dětmi
+        val l = SkillTreeLayout.of(SkillTree.of(Skill.BUG_CATCHING))   // efektivita se třemi větvemi + zkušenosti
         assertEquals(SkillTreeLayout.Pos(1f, 0), l.pos["net_eff"])
-        assertEquals(3, l.columns)
+        assertEquals(SkillTreeLayout.Pos(3.5f, 0), l.pos["net_xp"])
+        assertEquals(5, l.columns)
     }
 
     @Test fun iconsAreFullTwelveByTwelve() {

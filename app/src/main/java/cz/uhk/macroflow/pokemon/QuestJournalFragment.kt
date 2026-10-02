@@ -301,6 +301,22 @@ class QuestJournalFragment : Fragment() {
                         renderCharacter()
                     }
                 },
+                reset = { skill, done ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val (r, fresh) = withContext(Dispatchers.IO) { SS.reset(ctx, skill).let { it to SS.state(ctx) } }
+                        if (!isAdded) return@launch
+                        when (r) {
+                            is cz.uhk.macroflow.pokemon.skills.SkillStore.ResetResult.Done -> {
+                                rootView.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                                done(fresh, "🔄 Strom ${skill.label} přeučen – body jsou zpět.")
+                            }
+                            is cz.uhk.macroflow.pokemon.skills.SkillStore.ResetResult.NoCoins ->
+                                done(null, "Na přeučení potřebuješ ${cz.uhk.macroflow.pokemon.skills.SkillTree.RESET_COINS} 🪙 (máš ${r.have}).")
+                            else -> done(null, "Není co přeučit.")
+                        }
+                        renderCharacter()
+                    }
+                },
                 onSkill = { selectedSkill = it; renderCharacter() })
         }
     }

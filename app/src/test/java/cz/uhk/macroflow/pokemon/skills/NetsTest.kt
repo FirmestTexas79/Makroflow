@@ -53,7 +53,7 @@ class NetsTest {
     @Test fun catchingTreeHasANetBranch() {
         val ids = SkillTree.of(Skill.BUG_CATCHING).map { it.id }
         assertTrue(ids.containsAll(listOf("net_eff", "net_xp", "net_multi", "net_afk")))
-        val s = SkillState(unlocked = setOf("net_eff", "net_multi", "net_afk"), gear = setOf(Gear.SILVER_NET))
+        val s = SkillState(ranks = mapOf("net_eff" to 2, "net_multi" to 5, "net_afk" to 4), gear = setOf(Gear.SILVER_NET))
         assertEquals(0.2, s.efficiencyBonus(Skill.BUG_CATCHING), 1e-9)
         assertEquals(0.10, s.treeMulti(Skill.BUG_CATCHING), 1e-9)
         assertEquals(0.15, s.multiChance(Skill.BUG_CATCHING), 1e-9)       // level 1: pasiv 0 + síťka 5 % + strom 10 %

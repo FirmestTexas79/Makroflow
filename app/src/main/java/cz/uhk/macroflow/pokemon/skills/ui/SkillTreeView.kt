@@ -15,6 +15,7 @@ import android.view.animation.OvershootInterpolator
 import androidx.core.content.res.ResourcesCompat
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.pokemon.balls.Makroball
+import cz.uhk.macroflow.pokemon.skills.Skill
 import cz.uhk.macroflow.pokemon.skills.SkillArt
 import cz.uhk.macroflow.pokemon.skills.SkillState
 import cz.uhk.macroflow.pokemon.skills.SkillTree
@@ -52,12 +53,13 @@ class SkillTreeView(ctx: Context) : View(ctx) {
 
     private val icons = HashMap<String, Bitmap>()
 
-    private val rowH = 132 * dp
-    /** Pod uzlem jsou kosočtverečky ceny a název – spoj začíná až pod nimi. */
-    private val labelSpace = 40 * dp
+    private val rowH = 138 * dp
+    /** Pod uzlem je úroveň a název (až na dva řádky) – spoj začíná až pod nimi. */
+    private val labelSpace = 50 * dp
     private val topPad = 26 * dp
-    private val node = 58 * dp
-    private val u = 3 * dp            // art pixel uzlu
+    /** Velikost uzlu: 58 dp, u širokých stromů (víc sloupců) menší, aby se vešly názvy. */
+    private var node = 58 * dp
+    private val u get() = node / 19.33f            // art pixel uzlu
 
     // animace
     private var appear = 0f
@@ -106,6 +108,7 @@ class SkillTreeView(ctx: Context) : View(ctx) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
+        node = minOf(58 * dp, minOf(w / layout.columns.toFloat(), 150 * dp) * 0.62f)
         val content = contentH().toInt()
         // ScrollView s fillViewport dá nízkému stromu celou výšku desky – strom se pak vycentruje
         val h = if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) maxOf(content, MeasureSpec.getSize(heightMeasureSpec)) else content
@@ -163,12 +166,14 @@ class SkillTreeView(ctx: Context) : View(ctx) {
         val vis = ((appear * (layout.rows + 1) - toRow + 0.3f)).coerceIn(0f, 1f)
         if (vis <= 0f) return
         val fromNode = SkillTree.node(from); val toNode = SkillTree.node(to)
-        val bothOn = fromNode?.id in state.unlocked && toNode?.id in state.unlocked
-        val open = fromNode?.id in state.unlocked && toNode != null && state.canUnlock(toNode)
+        // cesta je „průchozí“, když má předchozí uzel potřebnou úroveň
+        val through = toNode != null && fromNode != null && state.rank(fromNode.id) >= state.needed(toNode)
+        val bothOn = through && toNode != null && state.rank(toNode.id) > 0
+        val open = through && toNode != null && state.canUnlock(toNode)
         val inner = when {
             bothOn -> Color.parseColor("#FFD54F")
             open -> blend(Color.parseColor("#8A6A3A"), Color.parseColor("#FFF3B0"), pulse)
-            fromNode?.id in state.unlocked -> Color.parseColor("#8A6A3A")
+            through -> Color.parseColor("#8A6A3A")
             else -> Color.parseColor("#3A3328")
         }
         val startY = a.second + node / 2f + labelSpace
@@ -218,24 +223,31 @@ class SkillTreeView(ctx: Context) : View(ctx) {
         val half = node / 2f
         val l = cx - half; val t = cy - half; val r = cx + half; val b = cy + half
 
+        val rank = state.rank(n.id).coerceAtMost(n.maxRank)
+        val S = SkillState.NodeStatus
+
         // záře za uzlem
         val glow = when (st) {
-            SkillState.NodeStatus.UNLOCKED -> Color.argb(70, 255, 213, 79)
-            SkillState.NodeStatus.AVAILABLE -> Color.argb((60 + 110 * pulse).toInt(), 255, 236, 160)
+            S.MAXED -> Color.argb(70, 255, 213, 79)
+            S.AVAILABLE -> Color.argb((60 + 110 * pulse).toInt(), 255, 236, 160)
             else -> 0
         }
         if (glow != 0) {
-            val g = (if (st == SkillState.NodeStatus.AVAILABLE) 8 + 5 * pulse else 7f) * dp
+            val g = (if (st == S.AVAILABLE) 8 + 5 * pulse else 7f) * dp * (node / (58 * dp))
             rect(c, l - g + u, t - g, r + g - u, b + g, glow)
             rect(c, l - g, t - g + u, r + g, b + g - u, glow)
         }
 
-        // barvy podle stavu: základ, světlo, stín, obrys
-        val (base, light, dark, outline) = when (st) {
-            SkillState.NodeStatus.UNLOCKED -> listOf("#3E6B3A", "#7FB069", "#24401F", "#FFD54F")
-            SkillState.NodeStatus.AVAILABLE -> listOf("#7A5428", "#C48A4A", "#4F3016", if (pulse > 0.5f) "#FFF3B0" else "#FFD54F")
-            SkillState.NodeStatus.NO_POINTS -> listOf("#3A4150", "#5C6578", "#232833", "#0B0E14")
-            SkillState.NodeStatus.LOCKED -> listOf("#25272C", "#34373E", "#17181C", "#0B0C0F")
+        // barvy: zelená = má úrovně (zlatý obrys, když je na maximu), dřevo = jde vylepšit,
+        // šedomodrá = chybí body nebo level, tmavá = zamčeno
+        val green = listOf("#3E6B3A", "#7FB069", "#24401F")
+        val (base, light, dark, outline) = when {
+            st == S.MAXED -> green + "#FFD54F"
+            rank > 0 && st == S.AVAILABLE -> green + (if (pulse > 0.5f) "#FFF3B0" else "#FFD54F")
+            rank > 0 -> green + "#0B0E14"
+            st == S.AVAILABLE -> listOf("#7A5428", "#C48A4A", "#4F3016", if (pulse > 0.5f) "#FFF3B0" else "#FFD54F")
+            st == S.LOCKED -> listOf("#25272C", "#34373E", "#17181C", "#0B0C0F")
+            else -> listOf("#3A4150", "#5C6578", "#232833", "#0B0E14")
         }.map { Color.parseColor(it) }
         // osmiúhelník po art pixelech: obrys, vnitřní rámeček, vybroušená plocha
         rect(c, l + 2 * u, t, r - 2 * u, b, outline)
@@ -250,18 +262,25 @@ class SkillTreeView(ctx: Context) : View(ctx) {
         rect(c, l + 2 * i + u, t + 2 * i, r - 2 * i - u, t + 2 * i + u, light)       // odlesk nahoře
         rect(c, l + 2 * i, t + 2 * i + u, l + 2 * i + u, cy, light)                  // odlesk vlevo
         rect(c, l + 3 * u, t + 3 * u, l + 4 * u, t + 4 * u, Color.argb(160, 255, 255, 255))
+        // vrcholný uzel: zlatá korunka nad uzlem
+        if (n.effect is SkillTree.Effect.Many) {
+            val cw = 3 * u; val ch = 2 * u
+            rect(c, cx - 2 * cw, t - ch - u, cx + 2 * cw, t - u, Color.parseColor("#0B0805"))
+            rect(c, cx - 2 * cw + u, t - ch, cx + 2 * cw - u, t - u, Color.parseColor("#FFD54F"))
+            for (k in -1..1) rect(c, cx + k * cw * 1.5f - u, t - ch - 2 * u, cx + k * cw * 1.5f + u, t - ch, Color.parseColor("#FFD54F"))
+        }
 
         // ikona efektu
         val bmp = icon(n)
-        val box = 30 * dp
-        p.alpha = if (st == SkillState.NodeStatus.LOCKED) 90 else if (st == SkillState.NodeStatus.NO_POINTS) 170 else 255
+        val box = node * 0.52f
+        p.alpha = when (st) { S.LOCKED -> 90; S.NO_POINTS, S.LOW_LEVEL -> if (rank > 0) 255 else 170; else -> 255 }
         val ratio = bmp.height.toFloat() / bmp.width
         val iw = if (ratio <= 1f) box else box / ratio; val ih = iw * ratio
         c.drawBitmap(bmp, null, RectF(cx - iw / 2, cy - ih / 2, cx + iw / 2, cy + ih / 2), p)
         p.alpha = 255
-        if (st == SkillState.NodeStatus.LOCKED) {
+        if (st == S.LOCKED || (st == S.LOW_LEVEL && rank == 0)) {
             val lk = icon("lock") { TreeArt.LOCK }
-            val ls = 18 * dp
+            val ls = node * 0.31f
             c.drawBitmap(lk, null, RectF(r - ls + 2 * dp, b - ls + 2 * dp, r + 2 * dp, b + 2 * dp), p)
         }
 
@@ -276,28 +295,36 @@ class SkillTreeView(ctx: Context) : View(ctx) {
             }
         }
 
-        // cena v bodech: kosočtverečky pod uzlem
-        val pip = 5 * dp; val gap = 3 * dp
-        val totalW = n.cost * pip + (n.cost - 1) * gap
+        // úroveň: dílky pod uzlem (zlaté = koupené), u jednorázových uzlů jen jeden
+        val pips = n.maxRank
+        val pip = 5 * dp; val gap = 2 * dp
+        val totalW = pips * pip + (pips - 1) * gap
         var px = cx - totalW / 2
         val py = b + 5 * dp
-        repeat(n.cost) {
-            val on = st == SkillState.NodeStatus.UNLOCKED
+        repeat(pips) { k ->
             rect(c, px - 1 * dp, py - 1 * dp, px + pip + 1 * dp, py + pip + 1 * dp, Color.parseColor("#0B0805"))
-            rect(c, px, py, px + pip, py + pip, if (on) Color.parseColor("#FFD54F") else Color.parseColor("#8A7A60"))
+            rect(c, px, py, px + pip, py + pip, if (k < rank) Color.parseColor("#FFD54F") else Color.parseColor("#5A5040"))
             px += pip + gap
         }
 
-        // název pod uzlem (zmenší se, aby se vešel do sloupce)
-        val maxW = colW() - 8 * dp
-        text.textSize = 15f * dp * resources.configuration.fontScale
-        while (text.measureText(n.title) > maxW && text.textSize > 9 * dp) text.textSize -= 1 * dp
-        text.color = when (st) {
-            SkillState.NodeStatus.UNLOCKED -> Color.parseColor("#FFE9A0")
-            SkillState.NodeStatus.AVAILABLE -> Color.parseColor("#FEFAE0")
+        // název pod uzlem: zmenší se a případně zalomí na dva řádky, aby se vešel do sloupce
+        val maxW = colW() - 6 * dp
+        text.textSize = 14f * dp * resources.configuration.fontScale
+        val words = n.title.split(" ")
+        fun lines(): List<String> {
+            if (text.measureText(n.title) <= maxW || words.size == 1) return listOf(n.title)
+            // nejlepší zlom: co nejvyrovnanější řádky
+            return (1 until words.size).map { k -> listOf(words.take(k).joinToString(" "), words.drop(k).joinToString(" ")) }
+                .minByOrNull { ls -> ls.maxOf { text.measureText(it) } }!!
+        }
+        var ls = lines()
+        while (ls.maxOf { text.measureText(it) } > maxW && text.textSize > 9 * dp) { text.textSize -= 1 * dp; ls = lines() }
+        text.color = when {
+            st == S.MAXED -> Color.parseColor("#FFE9A0")
+            st == S.AVAILABLE || rank > 0 -> Color.parseColor("#FEFAE0")
             else -> Color.parseColor("#A9A396")
         }
-        c.drawText(n.title, cx, py + pip + 16 * dp, text)
+        ls.forEachIndexed { k, line -> c.drawText(line, cx, py + pip + 15 * dp + k * (text.textSize + 1 * dp), text) }
         c.restore()
     }
 
@@ -326,15 +353,24 @@ class SkillTreeView(ctx: Context) : View(ctx) {
     private fun icon(key: String, w: Int = TreeArt.SIZE, h: Int = TreeArt.SIZE, pixels: () -> IntArray): Bitmap =
         icons.getOrPut(key) { Bitmap.createBitmap(pixels(), w, h, Bitmap.Config.ARGB_8888) }
 
-    private fun icon(n: SkillTree.Node): Bitmap = when (n.effect) {
+    private fun icon(n: SkillTree.Node): Bitmap = icon(n, n.effect)
+
+    /** Ikona podle efektu; vrcholné uzly mají ikonu prvního efektu. */
+    private fun icon(n: SkillTree.Node, e: SkillTree.Effect): Bitmap = when (e) {
         is SkillTree.Effect.TeamSlot -> icon("ball") { Makroball.entries.first().pixels }
         is SkillTree.Effect.XpBonus -> icon("star") { TreeArt.STAR }
+        is SkillTree.Effect.XpOthers -> icon("star") { TreeArt.STAR }
+        is SkillTree.Effect.XpFor -> icon("skill_${e.skill.id}", SkillArt.ICON, SkillArt.ICON) { SkillArt.skillIcon(e.skill) }
         is SkillTree.Effect.MorePlots -> icon("plot", SkillArt.PLOT_W, SkillArt.PLOT_H) { SkillArt.plot(false) }
         is SkillTree.Effect.BasicEquipment -> icon("table", SkillArt.TABLE_W, SkillArt.TABLE_H) { SkillArt.craftingTable() }
         is SkillTree.Effect.FasterGrowth -> icon("leaf") { TreeArt.LEAF }
         is SkillTree.Effect.Efficiency -> icon("skill_${n.skill.id}", SkillArt.ICON, SkillArt.ICON) { SkillArt.skillIcon(n.skill) }
+        is SkillTree.Effect.EfficiencyAll -> icon("skill_${Skill.MINING.id}", SkillArt.ICON, SkillArt.ICON) { SkillArt.skillIcon(Skill.MINING) }
         is SkillTree.Effect.AfkHours -> icon("moon") { TreeArt.MOON }
         is SkillTree.Effect.MultiChance -> icon("double") { TreeArt.DOUBLE }
+        is SkillTree.Effect.DropRate -> icon("coin") { TreeArt.COIN }
+        is SkillTree.Effect.CatchBonus -> icon("ball2") { Makroball.entries.last().pixels }
+        is SkillTree.Effect.Many -> icon(n, e.list.first())
     }
 
     // ── dotyk ───────────────────────────────────────────────────────────────

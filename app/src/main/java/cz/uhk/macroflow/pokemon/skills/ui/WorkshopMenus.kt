@@ -106,7 +106,7 @@ object WorkshopMenus {
     fun craftMenu(root: FrameLayout, owned: Map<String, Int>, state: SkillState, onCraft: (Makroball, Int) -> Unit,
                   onCraftGear: (cz.uhk.macroflow.pokemon.skills.Gear) -> Unit = {}) {
         val frags = owned[Resource.ENERGY.itemId] ?: 0
-        val multi = (state.passive(Skill.CRAFTING) * 100).toInt()
+        val multi = (state.multiChance(Skill.CRAFTING) * 100).toInt()
         show(root, "Pracovní stůl", "Fragmenty energie: $frags · šance na dvojitou výrobu $multi %") { ui, body, close ->
             Makroball.entries.forEach { ball ->
                 val berry = Berry.forBall(ball)

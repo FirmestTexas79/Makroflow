@@ -79,7 +79,7 @@ class GatheringTest {
     }
 
     @Test fun treeNodesForNewSkills() {
-        val s = SkillState(unlocked = setOf("mine_eff", "mine_afk"))
+        val s = SkillState(ranks = mapOf("mine_eff" to 2, "mine_afk" to 4))
         assertEquals(0.2, s.efficiencyBonus(Skill.MINING), 1e-9)
         assertEquals(0.0, s.efficiencyBonus(Skill.LOGGING), 1e-9)
         assertEquals(24, s.afkCapHours(Skill.MINING))

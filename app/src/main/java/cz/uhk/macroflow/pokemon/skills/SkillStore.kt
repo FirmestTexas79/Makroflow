@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 /**
  * Úložiště dovedností, surovin, záhonů a týmu (docs/adr/0034). Vše kromě týmu leží v tabulce
  * user_items (stejně jako Makrobally), takže se to samo zálohuje do Firebase:
- * `skill_xp_<dovednost>` = celkové XP, `skill_node_<uzel>` = 1, suroviny pod svým ID,
+ * `skill_xp_<dovednost>` = celkové XP, `skill_node_<uzel>` = úroveň uzlu (docs/adr/0059), suroviny pod svým ID,
  * `garden_<i>` = zakódovaný záhon. Volat mimo hlavní vlákno.
  */
 object SkillStore {
@@ -57,7 +57,7 @@ object SkillStore {
         val all = counts(ctx)
         return SkillState(
             xp = Skill.entries.associateWith { (all[it.xpItemId] ?: 0).toLong() },
-            unlocked = SkillTree.NODES.filter { (all[it.itemId] ?: 0) > 0 }.map { it.id }.toSet(),
+            ranks = SkillTree.NODES.mapNotNull { n -> (all[n.itemId] ?: 0).takeIf { it > 0 }?.let { n.id to it } }.toMap(),
             gear = GearSlot.entries.mapNotNull { Gear.fromCode(all[it.itemId] ?: 0) }.toSet()
         )
     }
@@ -77,12 +77,34 @@ object SkillStore {
         return XpResult(skill, amount, old, after.level(skill), after)
     }
 
-    /** Odemkne uzel stromu, pokud na něj jsou body. */
+    /** Přidá uzlu stromu jednu úroveň, pokud na ni jsou body (docs/adr/0059). */
     fun unlock(ctx: Context, nodeId: String): Boolean {
         val node = SkillTree.node(nodeId) ?: return false
-        if (!state(ctx).canUnlock(node)) return false
-        set(ctx, node.itemId, 1)
+        val st = state(ctx)
+        if (!st.canUnlock(node)) return false
+        set(ctx, node.itemId, st.rank(node.id) + 1)
         return true
+    }
+
+    sealed class ResetResult {
+        object Done : ResetResult()
+        object NothingToReset : ResetResult()
+        data class NoCoins(val have: Int) : ResetResult()
+    }
+
+    /**
+     * Přeučení stromu jedné dovednosti za [SkillTree.RESET_COINS] mincí: vrátí body ze všech uzlů
+     * kromě týmu, záhonů a vybavení (to by rozbilo tým nebo zasazené záhony).
+     */
+    fun reset(ctx: Context, skill: Skill): ResetResult {
+        val st = state(ctx)
+        val nodes = SkillTree.of(skill).filter { !it.keepOnReset && st.rank(it.id) > 0 }
+        if (nodes.isEmpty()) return ResetResult.NothingToReset
+        val coins = AppDatabase.getDatabase(ctx).coinDao()
+        if (!coins.spendCoins(SkillTree.RESET_COINS)) return ResetResult.NoCoins(coins.getBalance()?.balance ?: 0)
+        if (FirebaseRepository.isLoggedIn) coins.getBalance()?.let { b -> scope.launch { runCatching { FirebaseRepository.uploadCoins(b) } } }
+        nodes.forEach { set(ctx, it.itemId, 0) }
+        return ResetResult.Done
     }
 
     // ── Záhony ──
@@ -119,7 +141,7 @@ object SkillStore {
         val berry = plot.berry ?: return null
         if (!Garden.isReady(plot, nowEpochSec, st.growthSpeedup)) return null
         set(ctx, Garden.itemId(index), 0)
-        val n = SkillMath.rollDouble(st.passive(Skill.HARVESTING))
+        val n = SkillMath.rollDouble(st.multiChance(Skill.HARVESTING))
         add(ctx, berry.berryItemId, n)
         add(ctx, AwardStore.HARVESTED, n)
         if (berry == Berry.BLACK) add(ctx, AwardStore.HARVESTED_BLACK, n)
@@ -136,7 +158,7 @@ object SkillStore {
         if (n <= 0) return null
         val st = state(ctx)
         Crafting.recipe(ball).forEach { (id, per) -> consume(ctx, id, per * n) }
-        val made = (1..n).sumOf { Crafting.roll(st.passive(Skill.CRAFTING)) }
+        val made = (1..n).sumOf { Crafting.roll(st.multiChance(Skill.CRAFTING)) }
         add(ctx, ball.id, made)
         add(ctx, AwardStore.CRAFTED, made)
         val xp = addXp(ctx, Skill.CRAFTING, st.gain(Skill.CRAFTING, Crafting.baseXp(ball).toDouble() * n))

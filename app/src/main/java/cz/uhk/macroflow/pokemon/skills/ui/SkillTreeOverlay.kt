@@ -27,7 +27,8 @@ object SkillTreeOverlay {
     private val GOLD = Color.parseColor("#FFD54F")
 
     /**
-     * [unlock] odemkne uzel a zavolá zpět nový stav (null = nepovedlo se),
+     * [unlock] přidá uzlu úroveň a zavolá zpět nový stav (null = nepovedlo se),
+     * [reset] přeučí strom dovednosti za mince (nový stav, nebo null a důvod),
      * [onSkill] dá vědět, kterou dovednost hráč právě prohlíží.
      */
     fun show(
@@ -35,6 +36,7 @@ object SkillTreeOverlay {
         initial: Skill,
         initialState: SkillState,
         unlock: (SkillTree.Node, (SkillState?) -> Unit) -> Unit,
+        reset: (Skill, (SkillState?, String) -> Unit) -> Unit = { _, done -> done(null, "") },
         onSkill: (Skill) -> Unit = {}
     ) {
         WorkshopMenus.close(root)
@@ -77,9 +79,17 @@ object SkillTreeOverlay {
         // záložky dovedností
         val tabs = ui.row().apply { gravity = Gravity.CENTER; setPadding(0, ui.px(8f), 0, ui.px(6f)) }
         panel.addView(tabs, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        val info = outlined(ui.text("", 17f, Color.parseColor("#E8D8C8"), Gravity.CENTER))
-        panel.addView(info, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            .apply { bottomMargin = ui.px(6f) })
+        // řádek s body a tlačítko Přeučit (za mince, potvrzuje se druhým klepnutím)
+        val infoRow = ui.row()
+        val info = outlined(ui.text("", 16f, Color.parseColor("#E8D8C8")))
+        infoRow.addView(info, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val resetBtn = outlined(ui.text("", 15f, WHITE, Gravity.CENTER)).apply {
+            background = BevelDrawable(1.5f * ui.dp, Color.parseColor("#7A3B2E"), Color.parseColor("#A85848"), Color.parseColor("#4A2019"), Color.parseColor("#1E140C"))
+            setPadding(ui.px(8f), ui.px(3f), ui.px(8f), ui.px(5f))
+        }
+        infoRow.addView(resetBtn)
+        panel.addView(infoRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            .apply { bottomMargin = ui.px(6f); marginStart = ui.px(2f); marginEnd = ui.px(2f) })
 
         // deska se stromem
         val board = FrameLayout(root.context).apply { background = TreeBackdropDrawable(u) }
@@ -109,15 +119,29 @@ object SkillTreeOverlay {
             card.removeAllViews()
             val n = SkillTree.of(skill).firstOrNull { it.id == tree.selectedId } ?: return
             val st = state.status(n)
+            val rank = state.rank(n.id).coerceAtMost(n.maxRank)
+            val S = SkillState.NodeStatus
             val top = ui.row()
             top.addView(ui.text(n.title, 23f).apply { layoutParams = ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
-            top.addView(ui.text(if (n.cost == 1) "1 bod" else "${n.cost} body", 17f, ui.rust))
+            top.addView(outlined(ui.text("$rank / ${n.maxRank}", 16f, WHITE, Gravity.CENTER)).apply {
+                background = BevelDrawable(1.5f * ui.dp,
+                    if (rank >= n.maxRank) Color.parseColor("#C9961A") else Color.parseColor("#5A3E32"),
+                    if (rank >= n.maxRank) GOLD else Color.parseColor("#7A5646"),
+                    if (rank >= n.maxRank) Color.parseColor("#8A6410") else Color.parseColor("#3B281F"), Color.parseColor("#1E140C"))
+                setPadding(ui.px(7f), ui.px(2f), ui.px(7f), ui.px(4f))
+            })
             card.addView(top)
-            card.addView(ui.text(n.description, 16f, ui.inkSoft).apply { setPadding(0, ui.px(3f), 0, ui.px(6f)) })
+            card.addView(ui.text(n.description, 15f, ui.inkSoft).apply { setPadding(0, ui.px(2f), 0, ui.px(4f)) })
+            // co uzel dává teď a co přidá další úroveň
+            if (rank > 0) card.addView(ui.text("Teď: " + SkillTree.effectText(n.effect, rank, n.skill), 16f, ui.olive))
+            if (rank < n.maxRank) card.addView(ui.text(
+                (if (rank == 0) "Dá: " else "Další úroveň: ") + SkillTree.effectText(n.effect, rank + 1, n.skill) +
+                    "  ·  ${n.cost} ${if (n.cost == 1) "bod" else if (n.cost < 5) "body" else "bodů"}", 16f, ui.ink))
+            val gap = ui.spacer(6f); card.addView(gap)
             val prog = state.progress(skill)
             when (st) {
-                SkillState.NodeStatus.UNLOCKED -> card.addView(ui.text("✓ Odemčeno", 18f, ui.olive))
-                SkillState.NodeStatus.AVAILABLE -> card.addView(ui.button("Odemknout za ${n.cost} ${if (n.cost == 1) "bod" else "body"}") {
+                S.MAXED -> card.addView(ui.text("✓ Na maximu", 18f, ui.olive))
+                S.AVAILABLE -> card.addView(ui.button(if (rank == 0) "Odemknout" else "Vylepšit na ${rank + 1}/${n.maxRank}") {
                     unlock(n) { newState ->
                         if (newState != null) {
                             state = newState
@@ -128,8 +152,14 @@ object SkillTreeOverlay {
                         renderCard()
                     }
                 }.apply { layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) })
-                SkillState.NodeStatus.NO_POINTS -> card.addView(ui.text("Chybí body – další přijde na Lv ${SkillMath.nextSkillPointLevel(prog.level)}.", 16f, ui.rust))
-                SkillState.NodeStatus.LOCKED -> card.addView(ui.text("🔒 Nejdřív odemkni: ${SkillTree.node(n.requires!!)?.title}", 16f, ui.inkSoft))
+                S.NO_POINTS -> card.addView(ui.text(SkillMath.nextSkillPointLevel(prog.level)?.let { "Chybí body – další přijde na Lv $it." }
+                    ?: "Všechny body už máš. Jiné rozdělení: Přeučit.", 16f, ui.rust))
+                S.LOW_LEVEL -> card.addView(ui.text("🔒 Potřebuješ ${skill.label} Lv ${n.minLevel} (teď Lv ${prog.level}).", 16f, ui.rust))
+                S.LOCKED -> {
+                    val req = SkillTree.node(n.requires!!)
+                    card.addView(ui.text("🔒 Nejdřív: ${req?.title} na ${state.needed(n)}/${req?.maxRank}" +
+                        (if (n.minLevel > prog.level) " a Lv ${n.minLevel}" else "") + ".", 16f, ui.inkSoft))
+                }
             }
         }
         tree.onSelect = { renderCard() }
@@ -152,10 +182,34 @@ object SkillTreeOverlay {
                 tabs.addView(f, LinearLayout.LayoutParams(0, ui.px(48f), 1f).apply { marginStart = ui.px(2f); marginEnd = ui.px(2f) })
             }
             val pts = state.availablePoints(skill)
-            info.text = "${skill.label} · Lv ${state.level(skill)} · " + when (pts) {
-                0 -> "žádné volné body"; 1 -> "1 volný bod"; in 2..4 -> "$pts volné body"; else -> "$pts volných bodů"
-            }
+            val spent = state.spentPoints(skill)
+            info.text = "${skill.label} Lv ${state.level(skill)} · " + when (pts) {
+                0 -> "0 volných"; 1 -> "1 volný bod"; in 2..4 -> "$pts volné body"; else -> "$pts volných bodů"
+            } + " · ve stromu $spent"
             info.setTextColor(if (pts > 0) GOLD else Color.parseColor("#E8D8C8"))
+            val canReset = SkillTree.of(skill).any { !it.keepOnReset && state.rank(it.id) > 0 }
+            resetBtn.text = "Přeučit"
+            resetBtn.alpha = if (canReset) 1f else 0.45f
+            resetBtn.tag = null
+            resetBtn.setOnClickListener {
+                if (!canReset) return@setOnClickListener
+                if (resetBtn.tag != "confirm") {
+                    // první klepnutí: cena a potvrzení, za 3 s se vrátí
+                    resetBtn.tag = "confirm"
+                    resetBtn.text = "Za ${SkillTree.RESET_COINS} 🪙?"
+                    resetBtn.postDelayed({ if (resetBtn.tag == "confirm") { resetBtn.tag = null; resetBtn.text = "Přeučit" } }, 3000)
+                    return@setOnClickListener
+                }
+                resetBtn.tag = null
+                reset(skill) { newState, msg ->
+                    if (newState != null) {
+                        state = newState
+                        tree.updateState(newState)
+                        renderTabsAndInfoImpl(); renderCard()
+                    }
+                    if (msg.isNotEmpty()) android.widget.Toast.makeText(root.context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
         }
         renderTabs = ::renderTabsAndInfoImpl
         selectSkill = { s ->

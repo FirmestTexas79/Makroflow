@@ -259,8 +259,9 @@ object JournalPages {
             }
         }
         stat("XP multiplikátor", "×" + String.format(Locale("cs"), "%.2f", state.xpMultiplier(s)))
-        stat("Další bod na", "Lv ${SkillMath.nextSkillPointLevel(prog.level)}")
-        card.addView(ui.text("XP získáváš ${s.verb}. Každý level přidá +1 % k pasivnímu bonusu.", 14f, ui.inkSoft).apply {
+        stat("Body ve stromu", "${state.spentPoints(s)} / ${SkillMath.skillPointsEarned(prog.level)}")
+        stat("Další bod na", SkillMath.nextSkillPointLevel(prog.level)?.let { "Lv $it" } ?: "všechny")
+        card.addView(ui.text("XP získáváš ${s.verb}. Každý level přidá +1 % k pasivnímu bonusu a do Lv ${SkillMath.POINT_CAP} i bod do stromu.", 14f, ui.inkSoft).apply {
             setPadding(ui.px(2f), ui.px(4f), 0, ui.px(10f))
         })
 
