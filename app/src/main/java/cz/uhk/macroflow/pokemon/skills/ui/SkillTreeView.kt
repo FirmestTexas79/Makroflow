@@ -106,9 +106,16 @@ class SkillTreeView(ctx: Context) : View(ctx) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
-        val h = (topPad + layout.rows * rowH + 6 * dp).toInt()
+        val content = contentH().toInt()
+        // ScrollView s fillViewport dá nízkému stromu celou výšku desky – strom se pak vycentruje
+        val h = if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) maxOf(content, MeasureSpec.getSize(heightMeasureSpec)) else content
         setMeasuredDimension(w, h)
     }
+
+    private fun contentH(): Float = topPad + layout.rows * rowH - (rowH - node - labelSpace) + 10 * dp
+
+    /** Svislý posun, aby nízký strom stál uprostřed desky. */
+    private fun offsetY(): Float = maxOf(0f, (height - contentH()) / 2f)
 
     private fun colW(): Float = minOf(width / layout.columns.toFloat(), 150 * dp)
 
@@ -116,7 +123,7 @@ class SkillTreeView(ctx: Context) : View(ctx) {
         val pos = layout.pos[id] ?: return null
         val cw = colW()
         val left = (width - cw * layout.columns) / 2f
-        return (left + cw * (pos.col + 0.5f)) to (topPad + pos.row * rowH + node / 2f)
+        return (left + cw * (pos.col + 0.5f)) to (offsetY() + topPad + pos.row * rowH + node / 2f)
     }
 
     // ── kreslení ────────────────────────────────────────────────────────────

@@ -85,7 +85,7 @@ object SkillTreeOverlay {
         val board = FrameLayout(root.context).apply { background = TreeBackdropDrawable(u) }
         val tree = SkillTreeView(root.context)
         val scroll = ScrollView(root.context).apply {
-            isVerticalScrollBarEnabled = false; overScrollMode = View.OVER_SCROLL_NEVER
+            isVerticalScrollBarEnabled = false; overScrollMode = View.OVER_SCROLL_NEVER; isFillViewport = true
             addView(tree, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         board.addView(scroll, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
