@@ -606,6 +606,7 @@ object BattleFactory {
         "IGNAR"     -> "001"
         "IGNAROC"   -> "002"
         "IGNAROTH"  -> "003"
+        "IGNILEO"   -> "003"   // ohnivý lev, strážce rudého krystalu (docs/adr/0056) – statistiky Ignarotha
         "AQULIN"    -> "004"
         "AQULIND"   -> "005"
         "AQULINOX"  -> "006"

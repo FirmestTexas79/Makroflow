@@ -22,10 +22,13 @@ enum class SpecialBattle(
     /** Drawable spritu (strážce stojí na mapě před oltářem). */
     val spriteName: String,
     /** Příznak příběhu, který výhra nastaví (StoryFlags) – krystaly mají vlastní bossKey. */
-    val winKey: String? = null
+    val winKey: String? = null,
+    /** Vlastní jméno strážce (jinak jméno Makromona [makromonId]); sprite je makromon_NN_<jméno>. */
+    val displayName: String? = null
 ) {
     BOSS_BLUE("boss_blue", "021", 12, Kind.BOSS, CrystalColor.BLUE, "makromon_21_serpfin"),     // had z podzemního jezírka
-    BOSS_RED("boss_red", "003", 12, Kind.BOSS, CrystalColor.RED, "makromon_03_ignaroth"),       // oheň v hlubinách dolu
+    // ohnivý lev s korunou v hlubinách dolu (docs/adr/0056) – statistiky a útoky Ignarotha, vlastní sprite
+    BOSS_RED("boss_red", "003", 12, Kind.BOSS, CrystalColor.RED, "makromon_03_ignileo", displayName = "IGNILEO"),
     LEGEND_PEAK("legend_peak", "019", 80, Kind.LEGEND, null, "makromon_19_drakirra"),           // drak z vrcholu
     // pán Rudé hniloby v kořenech Starého dubu (docs/adr/0045)
     FOREST_ROT("forest_rot", "026", 14, Kind.BOSS, null, "makromon_26_soulord",

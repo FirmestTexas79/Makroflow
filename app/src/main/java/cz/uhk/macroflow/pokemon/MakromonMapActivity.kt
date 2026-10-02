@@ -336,6 +336,10 @@ class MakromonMapActivity : AppCompatActivity() {
             loadZoneSeen()
             // aplikace se zavřela po prohraném souboji dřív, než mapa smrt přehrála
             mapWorld.postDelayed({ if (!isFinishing) maybeWhiteout() }, 900)
+            // Debug: rovnou souboj se strážcem / legendou (adb … --es debug_special boss_red)
+            if (BuildConfig.DEBUG) intent.getStringExtra("debug_special")?.let { SpecialBattle.from(it) }?.let { sp ->
+                mapWorld.postDelayed({ if (!isFinishing) startSpecialBattle(sp, currentBiome) }, 1200)
+            }
             // Debug: splnit N fází aktivního questu (adb … --ei debug_quest_complete 5)
             if (BuildConfig.DEBUG) intent.getIntExtra("debug_quest_complete", 0).takeIf { it > 0 }?.let { n ->
                 (1..n).forEach { i -> mapWorld.postDelayed({ if (!isFinishing) questManager.debugCompleteStage() }, 1500L + i * 600L) }
@@ -2580,10 +2584,25 @@ class MakromonMapActivity : AppCompatActivity() {
         cameraOverride = true
         // při měřítku 1 posun pivotu nic nepohne; poloha hráče na obrazovce = translace + pivot
         mapWorld.pivotX = hx; mapWorld.pivotY = hy
+        val (tx, ty) = clampZoom(scale, vp.width / 2f - hx, vp.height * 0.55f - hy)
         mapWorld.animate().scaleX(scale).scaleY(scale)
-            .translationX(vp.width / 2f - hx).translationY(vp.height * 0.55f - hy)
+            .translationX(tx).translationY(ty)
             .setDuration(ms).setInterpolator(android.view.animation.DecelerateInterpolator(1.6f))
             .withEndAction { if (!isFinishing) end() }.start()
+    }
+
+    /**
+     * Translace přiblíženého světa omezená tak, aby u okrajů obrazovky nezůstal černý pruh
+     * (svět zvětšený [scale]× kolem aktuálního pivotu musí pořád pokrýt celý výřez).
+     */
+    private fun clampZoom(scale: Float, tx: Float, ty: Float): Pair<Float, Float> {
+        val vp = findViewById<View>(R.id.mapMainContent)
+        fun clamp(t: Float, pivot: Float, size: Int, view: Int): Float {
+            val hi = -pivot * (1 - scale)                       // levý / horní okraj světa na 0
+            val lo = view - pivot * (1 - scale) - scale * size  // pravý / dolní okraj na kraji výřezu
+            return if (lo > hi) (lo + hi) / 2f else t.coerceIn(lo, hi)
+        }
+        return clamp(tx, mapWorld.pivotX, mapWorld.width, vp.width) to clamp(ty, mapWorld.pivotY, mapWorld.height, vp.height)
     }
 
     /** Zpět na běžnou kameru (translaci srovná layoutWorld / kamera při změně lokace). */
@@ -2989,8 +3008,9 @@ class MakromonMapActivity : AppCompatActivity() {
         mapWorld.pivotX = cx; mapWorld.pivotY = cy
         fun zoom(scale: Float, ms: Long, end: (() -> Unit)? = null) {
             // bod (cx, cy) má na obrazovce polohu tx + pivot → doprostřed výřezu
+            val (tx, ty) = if (scale == 1f) tx0 to ty0 else clampZoom(scale, vp.width / 2f - cx, vp.height * 0.5f - cy)
             mapWorld.animate().scaleX(scale).scaleY(scale)
-                .translationX(if (scale == 1f) tx0 else vp.width / 2f - cx).translationY(if (scale == 1f) ty0 else vp.height * 0.5f - cy)
+                .translationX(tx).translationY(ty)
                 .setDuration(ms).setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
                 .withEndAction { if (!isFinishing) end?.invoke() }.start()
         }

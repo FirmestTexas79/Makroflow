@@ -111,7 +111,7 @@ object Drops {
     data class Drop(val itemId: String, val amount: Int)
 
     private val FAMILY: Map<String, DropFamily> = buildMap {
-        listOf("IGNAR", "IGNAROC", "IGNAROTH", "FLAMIRRA").forEach { put(it, DropFamily.FIRE) }
+        listOf("IGNAR", "IGNAROC", "IGNAROTH", "FLAMIRRA", "IGNILEO").forEach { put(it, DropFamily.FIRE) }
         listOf("AQULIN", "AQULIND", "AQULINOX", "AQUIRRA", "FINLET", "SERPFIN", "GLACIRRA").forEach { put(it, DropFamily.WATER) }
         listOf("FLORI", "FLORIND", "FLORINDRA", "VERDIRRA").forEach { put(it, DropFamily.GRASS) }
         listOf("UMBEX", "LUMEX", "SOULU", "SOULEX", "SOULORD", "PHANTIL", "PHANTIUS", "PHANTIAX", "SHADIRRA").forEach { put(it, DropFamily.GHOST) }

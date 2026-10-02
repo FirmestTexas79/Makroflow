@@ -49,4 +49,12 @@ class SpecialBattleTest {
         assertEquals(SpecialBattle.BOSS_BLUE, SpecialBattle.from("boss_blue"))
         assertNull(SpecialBattle.from(null))
     }
+
+    @Test
+    fun fireGuardianIsTheNewLion() {
+        val red = SpecialBattle.guardianOf(CrystalColor.RED)
+        assertEquals("IGNILEO", red.displayName)
+        assertEquals("makromon_03_" + red.displayName!!.lowercase(), red.spriteName)    // battle i mapa najdou stejný sprite
+        assertNull(SpecialBattle.BOSS_BLUE.displayName)
+    }
 }

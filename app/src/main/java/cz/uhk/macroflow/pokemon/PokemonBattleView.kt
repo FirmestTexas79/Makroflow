@@ -155,6 +155,7 @@ class PokemonBattleView @JvmOverloads constructor(
             val enemyWithStats = if (special != null) {
                 // Strážce / legenda: pevný Makromon s pevným levelem
                 createPlayerMakromon(special.makromonId, special.level)
+                    .let { m -> special.displayName?.let { m.copy(name = it) } ?: m }
             } else {
                 // Level podle lokality (docs/adr/0029) – jeskyně mají vlastní rozpětí, i když
                 // druhy Makromonů sdílí s Horami; útoky náhodně z poolu druhu podle levelu
@@ -441,6 +442,7 @@ class PokemonBattleView @JvmOverloads constructor(
         "SOULORD"   -> 38f
         "PHANTIAX"  -> 36f
         "IGNAROTH"  -> 40f
+        "IGNILEO"   -> 42f
         "AQULINOX"  -> 38f
         "FLORINDRA" -> 36f
         "DRAKIRRA"  -> 34f
