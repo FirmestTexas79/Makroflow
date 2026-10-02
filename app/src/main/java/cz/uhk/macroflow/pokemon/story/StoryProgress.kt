@@ -41,5 +41,6 @@ object StoryProgress {
     fun isStoryKey(key: String): Boolean =
         key.startsWith("boss_defeated_") || key.startsWith("crystal_") ||
             key.startsWith(cz.uhk.macroflow.pokemon.zone.ZoneOne.SEEN_PREFIX) ||   // objevené lokace (docs/adr/0052)
+            key.startsWith(Dreams.PREFIX) ||                                     // zdálo se (docs/adr/0057)
             key.startsWith(Insight.PAGE_PREFIX) || key in STORY_KEYS
 }

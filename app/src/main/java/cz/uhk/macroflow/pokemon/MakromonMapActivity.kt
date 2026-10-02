@@ -121,12 +121,19 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
+        // Mydrus zapomíná (docs/adr/0057)
+        private const val MYDRUS_REMEMBERED = "mydrus_remembered_day"
+        private const val MYDRUS_TIMES = "mydrus_forgot_times"
+        private const val MYDRUS_FORGOT = "mydrus_forgot"
+        private const val MYDRUS_RECALLED = "mydrus_recalled"
         private const val TAG_GROVE_GHOST = "grove_ghost"
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // kdy byl poutník naposledy na mapě – pro ranní sny (docs/adr/0057); onPause to přepíše
+        launchLastSeen = getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).getLong("map_last_seen", 0L)
         setContentView(R.layout.activity_pokemon_map)
 
         mapBackground = findViewById(R.id.mapBackground)
@@ -334,6 +341,7 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             intent.getStringExtra("TARGET_LOCATION")?.let { triggerHotspotAction(it.lowercase()) }
             loadZoneSeen()
+            mapWorld.postDelayed({ maybeDream(0) }, 2500)          // ranní hlášení o snu (docs/adr/0057)
             // aplikace se zavřela po prohraném souboji dřív, než mapa smrt přehrála
             mapWorld.postDelayed({ if (!isFinishing) maybeWhiteout() }, 900)
             // Debug: rovnou souboj se strážcem / legendou (adb … --es debug_special boss_red)
@@ -628,6 +636,17 @@ class MakromonMapActivity : AppCompatActivity() {
                 return@action
             }
             // Roztržený list Kustodiátu (docs/adr/0047) – najde se jednou, místo běžné akce místa
+            // Mydrus zapomněl – poutník mu u jezírka, v houštině a u dubu připomíná, co spolu zažili (docs/adr/0057)
+            if (currentBiome == BiomeType.FOREST && nodeName in cz.uhk.macroflow.pokemon.story.MydrusMemory.PLACES && gamePrefs.getBoolean(MYDRUS_FORGOT, false)) {
+                val recalled = gamePrefs.getStringSet(MYDRUS_RECALLED, emptySet()).orEmpty()
+                if (nodeName !in recalled) {
+                    val now = recalled + nodeName
+                    gamePrefs.edit().putStringSet(MYDRUS_RECALLED, now).apply()
+                    showMapToast("🍂 " + cz.uhk.macroflow.pokemon.story.MydrusMemory.fragment(nodeName) +
+                        if (now.containsAll(cz.uhk.macroflow.pokemon.story.MydrusMemory.PLACES)) "\n\nVrať se s ním na mýtinu." else "")
+                    return@action
+                }
+            }
             Insight.pageAt(currentBiome.name, nodeName, StoryFlags.all(this))?.let { findTornPage(it); return@action }
 
             when (nodeName) {
@@ -2047,6 +2066,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 text = SecretGrove.MYDRUS_CLOSURE, totalSteps = 1, currentStepIndex = 0)
             return
         }
+        if (mydrusForgets()) return
         if (questManager.getActiveQuestId() != ForestHeart.QUEST_ID) {
             // quest se právě odemkl (legenda porazila hráče, když byl Hvozd už načtený)
             questManager.loadQuest(ForestHeart.QUEST_ID)
@@ -2657,7 +2677,13 @@ class MakromonMapActivity : AppCompatActivity() {
                         mapWorld.postDelayed({
                             curtain.animate().alpha(0f).setDuration(800).withEndAction {
                                 endCinematic()
-                                showMapToast(cz.uhk.macroflow.pokemon.zone.Whiteout.TEXT)
+                                // Gudwin vítá poutníka na prahu – a počítá to (docs/adr/0057)
+                                val n = gamePrefs.getInt(cz.uhk.macroflow.pokemon.story.Wakeups.COUNT_KEY, 0) + 1
+                                gamePrefs.edit().putInt(cz.uhk.macroflow.pokemon.story.Wakeups.COUNT_KEY, n).apply()
+                                questDialogManager.showQuestDialog(
+                                    speakerResource = R.drawable.gudwin_oliver, speakerName = "Gudwin Oliver", stageName = "Probuzení",
+                                    text = cz.uhk.macroflow.pokemon.story.Wakeups.gudwin(n, StoryFlags.insight(this), (0..99).random()),
+                                    totalSteps = 1, currentStepIndex = 0)
                             }.start()
                         }, 450)
                     }.start()
@@ -3068,6 +3094,74 @@ class MakromonMapActivity : AppCompatActivity() {
             }, hammerMs + 140)
         }
         strike(0)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // KUSTODIÁT: SNY, MYDRUS ZAPOMÍNÁ, PROBUZENÍ (docs/adr/0057)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private var launchLastSeen = 0L
+
+    /**
+     * Mydrus po vyhnání hniloby čas od času zapomene i poutníka. Vrací true, když se o mýtinu
+     * postaral (nepoznal / znovu poznal) a běžný dialog už se nemá ukázat.
+     */
+    private fun mydrusForgets(): Boolean {
+        val M = cz.uhk.macroflow.pokemon.story.MydrusMemory
+        if (!StoryFlags.isSet(this, ForestHeart.ROT_DEFEATED_KEY)) return false
+        val today = java.time.LocalDate.now().toEpochDay()
+        var remembered = gamePrefs.getLong(MYDRUS_REMEMBERED, 0L)
+        if (remembered == 0L) { remembered = today; gamePrefs.edit().putLong(MYDRUS_REMEMBERED, today).apply() }
+        val times = gamePrefs.getInt(MYDRUS_TIMES, 0)
+        var forgot = gamePrefs.getBoolean(MYDRUS_FORGOT, false)
+        if (!forgot && M.forgets(true, today, remembered, times)) {
+            forgot = true
+            gamePrefs.edit().putBoolean(MYDRUS_FORGOT, true).putStringSet(MYDRUS_RECALLED, emptySet()).apply()
+        }
+        if (!forgot) return false
+        val recalled = gamePrefs.getStringSet(MYDRUS_RECALLED, emptySet()).orEmpty()
+        val (stage, text) = if (recalled.containsAll(M.PLACES)) {
+            gamePrefs.edit().putBoolean(MYDRUS_FORGOT, false).putLong(MYDRUS_REMEMBERED, today).putInt(MYDRUS_TIMES, times + 1)
+                .putStringSet(MYDRUS_RECALLED, emptySet()).apply()
+            "Vzpomínka" to M.remembered(times)
+        } else "Zapomnění" to M.stranger(times)
+        questDialogManager.showQuestDialog(
+            speakerResource = R.drawable.makromon_23_mydrus, speakerName = "Mydrus", stageName = stage,
+            text = text, totalSteps = 1, currentStepIndex = 0)
+        return true
+    }
+
+    /** Ráno po spánku se občas objeví hlášení o snu personálu – pak je k přečtení v deníku (Spisy). */
+    private fun maybeDream(attempt: Int) {
+        if (isFinishing || attempt > 8) return
+        val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+        // nepřekrývat cedulku „Vítej zpět“, souboj ani scénu
+        if (cinematic || supportFragmentManager.backStackEntryCount > 0 || cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.isOpen(root)) {
+            mapWorld.postDelayed({ maybeDream(attempt + 1) }, 3000); return
+        }
+        val D = cz.uhk.macroflow.pokemon.story.Dreams
+        val flags = StoryFlags.all(this)
+        val insight = Insight.level(flags)
+        val now = System.currentTimeMillis() / 1000
+        val away = if (launchLastSeen > 0) now - launchLastSeen else 0L
+        val hour = java.time.LocalTime.now().hour
+        val today = java.time.LocalDate.now().toEpochDay()
+        val already = gamePrefs.getLong("dream_last_day", -1L) == today
+        if (!D.eligible(insight, hour, away, already)) return
+        gamePrefs.edit().putLong("dream_last_day", today).apply()        // jedna šance za ráno
+        val dream = D.next(flags, insight, hour, away, false, (0..99).random()) ?: return
+        StoryFlags.set(this, dream.key)
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, "Hlášení o snu", "Ráno ti pod dveřmi někdo nechal přeložený list.") { ui, body, close ->
+            body.addView(ui.text(dream.who + ":\n„" + Insight.render(dream.text, insight) + "“", 16f).apply {
+                typeface = android.graphics.Typeface.MONOSPACE
+                setBackgroundColor(0x22BC6C25)
+                setPadding(ui.px(10f), ui.px(10f), ui.px(10f), ui.px(10f))
+            })
+            body.addView(ui.spacer(10f))
+            body.addView(ui.text("List najdeš v deníku pod záložkou Spisy.", 14f, ui.inkSoft))
+            body.addView(ui.spacer(8f))
+            body.addView(ui.button("Odložit") { close() })
+        }
     }
 
     private fun replaceMapContent(fragment: Fragment, tag: String? = null) {

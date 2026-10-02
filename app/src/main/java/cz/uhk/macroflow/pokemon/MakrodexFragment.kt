@@ -33,6 +33,7 @@ class MakrodexFragment : Fragment() {
     private lateinit var tvDetailType: TextView
     private lateinit var tvDetailMacro: TextView
     private lateinit var btnTestEvo: Button
+    private lateinit var btnDossier: Button
 
     private var isFirstLoad = true
     private lateinit var makrodexAdapter: MakrodexAdapter
@@ -65,6 +66,7 @@ class MakrodexFragment : Fragment() {
         tvDetailType   = view.findViewById(R.id.tvDetailType)
         tvDetailMacro  = view.findViewById(R.id.tvDetailMacro)
         btnTestEvo     = view.findViewById(R.id.btnTestEvo)
+        btnDossier     = view.findViewById(R.id.btnDossier)
 
         rvMakrodex = view.findViewById(R.id.rvPokedex)
         rvMakrodex.layoutManager = GridLayoutManager(requireContext(), 3)
@@ -241,6 +243,27 @@ class MakrodexFragment : Fragment() {
             ivDetailSprite.clearColorFilter()
             ivDetailSprite.alpha = 1.0f
         }
+
+        // Spis Kustodiátu u chyceného druhu – jen s Vhledem (docs/adr/0057)
+        val flags = cz.uhk.macroflow.pokemon.story.StoryFlags.all(requireContext())
+        val insight = cz.uhk.macroflow.pokemon.story.Insight.level(flags)
+        if (isUnlocked && catchCount > 0 && mode == Mode.DEX && cz.uhk.macroflow.pokemon.story.Dossiers.visible(insight)) {
+            btnDossier.visibility = View.VISIBLE
+            btnDossier.text = "Spis S-7/${entry.makrodexId}"
+            btnDossier.setOnClickListener {
+                val text = cz.uhk.macroflow.pokemon.story.Insight.render(
+                    cz.uhk.macroflow.pokemon.story.Dossiers.text(entry.makrodexId, entry.displayName, catchCount), insight)
+                val tv = TextView(requireContext()).apply {
+                    this.text = text; typeface = android.graphics.Typeface.MONOSPACE; textSize = 13f
+                    setTextColor(0xFF1E1E1E.toInt()); setBackgroundColor(0xFFF2EAD6.toInt())
+                    val p = (18 * resources.displayMetrics.density).toInt(); setPadding(p, p, p, p)
+                }
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setView(android.widget.ScrollView(requireContext()).apply { addView(tv) })
+                    .setPositiveButton("Zavřít", null)
+                    .show()
+            }
+        } else btnDossier.visibility = View.GONE
 
         // Evoluce tlačítko
         if (isInInventory && entry.makrodexId == cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.SPIRRA_ID) {

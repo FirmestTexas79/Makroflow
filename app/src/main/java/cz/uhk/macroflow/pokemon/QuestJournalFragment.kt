@@ -95,6 +95,13 @@ class QuestJournalFragment : Fragment() {
         rootView.findViewById<View>(R.id.tabResources).setOnClickListener { showTab(Tab.RESOURCES) }
         rootView.findViewById<View>(R.id.tabAwards).setOnClickListener { showTab(Tab.AWARDS) }
         rootView.findViewById<View>(R.id.tabZone).setOnClickListener { showTab(Tab.ZONE) }
+        rootView.findViewById<View>(R.id.tabFiles).apply {
+            setOnClickListener { showTab(Tab.FILES) }
+            // Spisy jsou vidět až s prvním roztrženým listem nebo snem (docs/adr/0057)
+            val flags = cz.uhk.macroflow.pokemon.story.StoryFlags.all(requireContext())
+            visibility = if (cz.uhk.macroflow.pokemon.story.Insight.foundPages(flags).isNotEmpty() ||
+                cz.uhk.macroflow.pokemon.story.Dreams.dreamed(flags).isNotEmpty()) View.VISIBLE else View.GONE
+        }
         showTab(if (showDailyFirst) Tab.DAILY else Tab.CHARACTER)
         return rootView
     }
@@ -108,13 +115,14 @@ class QuestJournalFragment : Fragment() {
             Tab.RESOURCES -> renderResources()
             Tab.AWARDS -> renderAwards()
             Tab.ZONE -> renderZone()
+            Tab.FILES -> renderFiles()
             Tab.STORY -> {}
         }
     }
 
     // ── Denní úkoly ─────────────────────────────────────────────────────────
 
-    private enum class Tab { CHARACTER, STORY, DAILY, RESOURCES, AWARDS, ZONE }
+    private enum class Tab { CHARACTER, STORY, DAILY, RESOURCES, AWARDS, ZONE, FILES }
     private var tab = Tab.CHARACTER
     /** Nastaví se před zobrazením, když má deník otevřít rovnou denní úkoly. */
     var showDailyFirst = false
@@ -130,8 +138,9 @@ class QuestJournalFragment : Fragment() {
         rootView.findViewById<View>(R.id.resourcesPage).visibility = if (t == Tab.RESOURCES) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.awardsPage).visibility = if (t == Tab.AWARDS) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.zonePage).visibility = if (t == Tab.ZONE) View.VISIBLE else View.GONE
+        rootView.findViewById<View>(R.id.filesPage).visibility = if (t == Tab.FILES) View.VISIBLE else View.GONE
         mapOf(Tab.CHARACTER to R.id.tabCharacter, Tab.STORY to R.id.tabStory, Tab.DAILY to R.id.tabDaily, Tab.RESOURCES to R.id.tabResources,
-            Tab.AWARDS to R.id.tabAwards, Tab.ZONE to R.id.tabZone)
+            Tab.AWARDS to R.id.tabAwards, Tab.ZONE to R.id.tabZone, Tab.FILES to R.id.tabFiles)
             .forEach { (k, id) -> rootView.findViewById<View>(id).alpha = if (k == t) 1f else 0.55f }
         when (t) {
             Tab.DAILY -> renderDaily()
@@ -139,8 +148,50 @@ class QuestJournalFragment : Fragment() {
             Tab.RESOURCES -> renderResources()
             Tab.AWARDS -> renderAwards()
             Tab.ZONE -> renderZone()
+            Tab.FILES -> renderFiles()
             Tab.STORY -> {}
         }
+    }
+
+    // ── Spisy: roztržené listy a hlášení o snech (docs/adr/0057) ──────────────
+
+    private fun renderFiles() {
+        val ctx = requireContext()
+        val ll = rootView.findViewById<LinearLayout>(R.id.llFiles)
+        ll.removeAllViews()
+        val flags = cz.uhk.macroflow.pokemon.story.StoryFlags.all(ctx)
+        val insight = cz.uhk.macroflow.pokemon.story.Insight.level(flags)
+        val ink = androidx.core.content.ContextCompat.getColor(ctx, R.color.journal_ink)
+        val font = androidx.core.content.res.ResourcesCompat.getFont(ctx, R.font.jersey_15)
+        val dp = resources.displayMetrics.density
+        fun heading(t: String) = ll.addView(TextView(ctx).apply {
+            text = t; textSize = 22f; typeface = font; setTextColor(0xFF8A3A1A.toInt())
+            setPadding(0, (10 * dp).toInt(), 0, (4 * dp).toInt())
+        })
+        fun entry(title: String, body: String) {
+            ll.addView(TextView(ctx).apply { text = title; textSize = 17f; typeface = font; setTextColor(ink) })
+            ll.addView(TextView(ctx).apply {
+                text = body; textSize = 14f; typeface = android.graphics.Typeface.MONOSPACE; setTextColor(ink)
+                setBackgroundColor(0x22BC6C25)
+                setPadding((8 * dp).toInt(), (8 * dp).toInt(), (8 * dp).toInt(), (8 * dp).toInt())
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = (2 * dp).toInt(); bottomMargin = (12 * dp).toInt() }
+            })
+        }
+        val pages = cz.uhk.macroflow.pokemon.story.Insight.foundPages(flags)
+        if (pages.isNotEmpty()) {
+            heading("Roztržené listy")
+            pages.forEach { entry("List ${it.id}", cz.uhk.macroflow.pokemon.story.Insight.render(it.text, insight)) }
+        }
+        val dreams = cz.uhk.macroflow.pokemon.story.Dreams.dreamed(flags)
+        if (dreams.isNotEmpty()) {
+            heading("Hlášení o snech")
+            dreams.forEach { entry(it.who, "„" + cz.uhk.macroflow.pokemon.story.Insight.render(it.text, insight) + "“") }
+        }
+        ll.addView(TextView(ctx).apply {
+            text = "Začerněná místa se časem odkrývají. Čím víc toho víš, tím víc čteš."
+            textSize = 13f; setTextColor(ink); alpha = 0.6f
+        })
     }
 
     // ── Zóna 1: mapa lokací a teleport (docs/adr/0052) ───────────────────────

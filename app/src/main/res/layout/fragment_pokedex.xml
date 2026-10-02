@@ -165,6 +165,19 @@
                         app:backgroundTint="@color/brand_accent_warm"
                         app:cornerRadius="12dp" />
 
+                    <!-- Spis Kustodiátu (docs/adr/0057) – jen s Vhledem -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDossier"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Spis S-7"
+                        android:visibility="gone"
+                        android:textColor="#E8E2D0"
+                        android:fontFamily="monospace"
+                        app:backgroundTint="#2B2B2B"
+                        app:cornerRadius="4dp" />
+
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
