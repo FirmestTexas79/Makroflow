@@ -447,6 +447,22 @@ abstract class AppDatabase : RoomDatabase() {
                 desc = "Růžový axolotl, tvář Makroflow. Vzácný, roztomilý a neuvěřitelně odolný.",
                 hint = "Axlu je extrémně vzácný. Říká se, že se zjeví jen těm nejdisciplinovanějším – 50 check-inů!",
                 evolveLevel = 0, evolveToId = ""
+            ),
+
+            // ── NOVÍ (docs/adr/0061) ──────────────────────────────────
+            MakromonEntry(
+                id = "032", drawableName = "makromon_ignileo", displayName = "Ignileo",
+                type = "OHEŇ / STRÁŽCE",
+                desc = "Ohnivý lev s korunou z plamenů. Strážce rudého krystalu v hlubinách Starého dolu. Nevzdává se a chytit nejde.",
+                hint = "Hlídá rudý krystal v hlubinách Starého dolu. Do Makrodexu se zapíše, až ho porazíš.",
+                evolveLevel = 0, evolveToId = ""
+            ),
+            MakromonEntry(
+                id = "033", drawableName = "makromon_mysnic", displayName = "Mysnic",
+                type = "ZEMĚ / OBRANA",
+                desc = "Horská myška, která na zádech nosí plochý kámen jako štít. Když se lekne, schová se pod něj. Vytrvalost nad rychlost.",
+                hint = "Mysnic pobíhá po kamenitých stezkách v Horách. Je tam nejčastější.",
+                evolveLevel = 0, evolveToId = ""
             )
         )
     }

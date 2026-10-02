@@ -91,7 +91,9 @@ class MakrodexFragment : Fragment() {
                 val caught   = db.capturedMakromonDao().getAllCaught()
                 val inv      = caught.map { it.makromonId }.toSet()
                 val status   = db.makrodexStatusDao().getUnlockedIds()
-                val unlocked = (status + inv).distinct()
+                // poražení strážci (Ignileo) jsou v Makrodexu vidět, i když chytit nejdou (docs/adr/0061)
+                val guardians = cz.uhk.macroflow.pokemon.dex.DexText.defeatedGuardians(cz.uhk.macroflow.pokemon.story.StoryFlags.all(requireContext()))
+                val unlocked = (status + inv + guardians).distinct()
                 val stats    = caught.groupBy { it.makromonId }.mapValues { it.value.size }
                 shinyCaught  = caught.filter { it.isShiny }.map { it.makromonId }.toSet()
                 Triple(inv.toList(), unlocked, stats)
@@ -101,7 +103,7 @@ class MakrodexFragment : Fragment() {
                 .getStringSet(cz.uhk.macroflow.pokemon.shiny.ShinyDex.SEEN_KEY, emptySet()).orEmpty() + shinyCaught
 
             val filteredList = withContext(Dispatchers.IO) {
-                val definedIds = SpawnManager.allEntries.map { it.id }
+                val definedIds = cz.uhk.macroflow.pokemon.dex.DexText.dexIds(SpawnManager.allEntries.map { it.id })
                 val allFromDb  = db.makrodexEntryDao().getAllEntries()
                 allFromDb.filter { entry -> definedIds.contains(entry.makrodexId) }
                     .sortedBy { it.makrodexId }

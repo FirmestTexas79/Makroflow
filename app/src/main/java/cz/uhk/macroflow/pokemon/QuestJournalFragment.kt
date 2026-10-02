@@ -241,14 +241,15 @@ class QuestJournalFragment : Fragment() {
             val data = withContext(Dispatchers.IO) {
                 val db = AppDatabase.getDatabase(ctx)
                 val caught = db.capturedMakromonDao().getAllCaught()
-                val defined = SpawnManager.allEntries.map { it.id }.toSet()
+                val defined = cz.uhk.macroflow.pokemon.dex.DexText.dexIds(SpawnManager.allEntries.map { it.id })
+                val guardians = cz.uhk.macroflow.pokemon.dex.DexText.defeatedGuardians(cz.uhk.macroflow.pokemon.story.StoryFlags.all(ctx))
                 val entries = db.makrodexEntryDao().getAllEntries().filter { it.makrodexId in defined }.sortedBy { it.makrodexId }
                 val inv = caught.map { it.makromonId }.toSet()
                 val shinyCaught = caught.filter { it.isShiny }.map { it.makromonId }.toSet()
                 val seen = ctx.getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE)
                     .getStringSet(cz.uhk.macroflow.pokemon.shiny.ShinyDex.SEEN_KEY, emptySet()).orEmpty() + shinyCaught
                 cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.DexData(entries,
-                    (db.makrodexStatusDao().getUnlockedIds() + inv).toSet(),
+                    (db.makrodexStatusDao().getUnlockedIds() + inv + guardians).toSet(),
                     caught.groupBy { it.makromonId }.mapValues { it.value.size }, seen, shinyCaught)
             }
             if (!isAdded) return@launch

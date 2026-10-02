@@ -270,6 +270,22 @@ object MakromonGrowthManager {
             )
         ),
 
+        // ── MYSNIC (033) – horská myška se štítem, docs/adr/0061 ──────
+        "033" to MakromonGrowthProfile(
+            makrodexId = "033",
+            evolutionLevel = 0,
+            evolutionToId = "",
+            movesLearnedAt = listOf(
+                LearnableMove(1,  Move("STONE TOSS", MakromonType.GROUND, 40, 95, 30)),
+                LearnableMove(1,  BattleFactory.attackHarden()),
+                LearnableMove(3,  BattleFactory.attackSandAttack()),
+                LearnableMove(5,  BattleFactory.attackMudSlap()),
+                LearnableMove(9,  Move("SHELL SLAM",    MakromonType.GROUND, 60, 95, 20)),
+                LearnableMove(12, Move("BOULDER GUARD", MakromonType.GROUND,  0, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))),
+                LearnableMove(16, Move("ROCK SLIDE",    MakromonType.GROUND, 75, 90, 10))
+            )
+        ),
+
         // ── MYCIT / MYDRUS (022 -> 023) ───────────────────────────────
         "022" to MakromonGrowthProfile(
             makrodexId = "022",

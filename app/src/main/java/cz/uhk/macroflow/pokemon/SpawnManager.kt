@@ -83,6 +83,8 @@ object SpawnManager {
         SpawnPool("002", "IGNAROC",   Rarity.RARE,   listOf(BiomeType.MOUNTAINS), listOf(Conditions.ALWAYS))       { BattleFactory.createIgnaroc() },
         SpawnPool("010", "UMBEX",     Rarity.EPIC,   listOf(BiomeType.MOUNTAINS), listOf(Conditions.NIGHT_ONLY))   { BattleFactory.createUmbex() },
         SpawnPool("011", "LUMEX",     Rarity.LEGENDARY, listOf(BiomeType.MOUNTAINS), listOf(Conditions.NIGHT_ONLY)) { BattleFactory.createLumex() },
+        // horská myška s kamenným štítem (docs/adr/0061) – Hory do teď neměly žádného běžného Makromona
+        SpawnPool("033", "MYSNIC",    Rarity.COMMON, listOf(BiomeType.MOUNTAINS), listOf(Conditions.ALWAYS))       { BattleFactory.createMysnic() },
 
         // ── MEADOW (Les/Louka) ─────────────────────────────────────────
         SpawnPool("022", "MYCIT",    Rarity.COMMON, listOf(BiomeType.MEADOW), listOf(Conditions.ALWAYS))      { BattleFactory.createMycit() },

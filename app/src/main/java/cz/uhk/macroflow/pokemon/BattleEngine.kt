@@ -470,6 +470,17 @@ object BattleFactory {
         )
     )
 
+    // 33 - Mysnic (horská myška s kamenným štítem na zádech, docs/adr/0061)
+    fun createMysnic() = Makromon(
+        name = "MYSNIC", level = 1,
+        maxHp = 42, attack = 30, defense = 55, speed = 32,
+        moves = listOf(
+            Move("STONE TOSS", MakromonType.GROUND, 40, 95, 30),
+            attackHarden(),
+            attackSandAttack()
+        )
+    )
+
     // 23 - Mydrus (druidský vůdce, pozřený jedem) – sprite zatím chybí, placeholder
     fun createMydrus() = Makromon(
         name = "MYDRUS", level = 1,
@@ -599,6 +610,7 @@ object BattleFactory {
             "029" -> BattleFactory.createPhantiax()
             "030" -> BattleFactory.createGudwin()
             "031" -> BattleFactory.createAxlu()
+            "033" -> BattleFactory.createMysnic()
             else  -> BattleFactory.createSpirra() // Spirra jako bezpečný fallback
         }
 
@@ -635,6 +647,7 @@ object BattleFactory {
         "PHANTIAX"  -> "029"
         "GUDWIN"    -> "030"
         "AXLU"      -> "031"
+        "MYSNIC"    -> "033"
         else        -> "000"
     }
 
@@ -658,7 +671,7 @@ object BattleFactory {
             "ignar", "ignaroc", "ignaroth", "aqulin", "flori", "florind", "umbex", "spirra",
             "flamirra", "aquirra", "verdirra", "shadirra",
             "charmirra", "drakirra", "finlet", "serpfin", "mycit", "mydrus", "soulu", "soulex", "soulord",
-            "gudwin", "axlu", "ignileo"
+            "gudwin", "axlu", "ignileo", "mysnic"
         )
 
         // Pokud ho máš v seznamu, složíme název: makromon_18_drakirra
