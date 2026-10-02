@@ -29,14 +29,14 @@ import cz.uhk.macroflow.pokemon.skills.Skill
 import cz.uhk.macroflow.pokemon.skills.SkillArt
 import cz.uhk.macroflow.pokemon.skills.SkillMath
 import cz.uhk.macroflow.pokemon.skills.SkillState
-import cz.uhk.macroflow.pokemon.skills.SkillTree
 import cz.uhk.macroflow.pokemon.skills.Team
+import cz.uhk.macroflow.pokemon.skills.TreeArt
 import java.util.Locale
 
 /**
  * Stránky deníku (docs/adr/0034) po vzoru Legends of IdleOn:
  * **Postava** – tři dovednosti pod sebou, po klepnutí rozpis (XP, pasivní bonus, násobitel XP,
- * body a strom dovedností); **Suroviny** – sklad v políčkách s počty.
+ * body; strom dovedností má vlastní okno – docs/adr/0058); **Suroviny** – sklad v políčkách s počty.
  */
 object JournalPages {
 
@@ -53,7 +53,7 @@ object JournalPages {
         equipped: Map<GearSlot, Gear>,
         gearTab: GearTab,
         onSelect: (Skill) -> Unit,
-        onUnlock: (SkillTree.Node) -> Unit,
+        onTree: () -> Unit,
         onGearTab: (GearTab) -> Unit,
         onSlot: (GearSlot) -> Unit
     ) {
@@ -113,7 +113,7 @@ object JournalPages {
 
         // Pravý sloupec: rozpis vybrané dovednosti
         val detail = ui.column().apply { setPadding(0, ui.px(10f), 0, ui.px(6f)) }
-        skillDetail(ui, detail, state, selected, onUnlock)
+        skillDetail(ui, detail, state, selected, onTree)
         body.addView(detail, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
@@ -166,29 +166,68 @@ object JournalPages {
         return panel
     }
 
-    private fun skillDetail(ui: WoodUi, box: LinearLayout, state: SkillState, s: Skill, onUnlock: (SkillTree.Node) -> Unit) {
+    /**
+     * Karta vybrané dovednosti (docs/adr/0058): pergamen v dřevěném rámu, hlavička s ikonou
+     * a levelem, XP pruh, bonusy v políčkách a tlačítko, které otevře grafický strom.
+     */
+    private fun skillDetail(ui: WoodUi, box: LinearLayout, state: SkillState, s: Skill, onTree: () -> Unit) {
+        val u = 2f * ui.dp
         val prog = state.progress(s)
+        val card = ui.column().apply {
+            background = WoodPanelDrawable(2f * ui.dp)
+            setPadding(ui.px(14f), ui.px(14f), ui.px(14f), ui.px(14f))
+        }
+        box.addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        // hlavička: ikona v modré dlaždici, název, štítek s levelem
         val titleRow = ui.row()
-        titleRow.addView(ui.text(s.label, 26f).apply { layoutParams = ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
-        titleRow.addView(ui.text("Lv ${prog.level}", 24f, ui.rust))
-        box.addView(titleRow)
+        titleRow.addView(FrameLayout(box.context).apply {
+            background = BevelDrawable.navy(u)
+            addView(ui.icon(SkillArt.skillIcon(s), SkillArt.ICON, SkillArt.ICON, 26f),
+                FrameLayout.LayoutParams(ui.px(28f), ui.px(28f), Gravity.CENTER))
+        }, LinearLayout.LayoutParams(ui.px(38f), ui.px(38f)))
+        titleRow.addView(ui.text(s.label, 23f).apply {
+            setPadding(ui.px(8f), 0, ui.px(4f), 0)
+            layoutParams = ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        titleRow.addView(outlined(ui.text("Lv ${prog.level}", 18f, WHITE, Gravity.CENTER)).apply {
+            background = BevelDrawable(1.5f * ui.dp, Color.parseColor("#BC6C25"), Color.parseColor("#E09A50"), Color.parseColor("#7A4416"), Color.parseColor("#3B2A1A"))
+            setPadding(ui.px(8f), ui.px(3f), ui.px(8f), ui.px(5f))
+        })
+        card.addView(titleRow)
 
         // XP pruh
         val bar = FrameLayout(box.context).apply { background = BevelDrawable(1.5f * ui.dp, Color.parseColor("#2A1C11"), Color.parseColor("#1A110A"), Color.parseColor("#4F3016")) }
         val fill = View(box.context).apply { setBackgroundColor(Color.parseColor("#7F9148")) }
+        val shine = View(box.context).apply { setBackgroundColor(Color.parseColor("#A9BC6A")) }
         bar.addView(fill, FrameLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(ui.px(3f), ui.px(3f), ui.px(3f), ui.px(3f)) })
+        bar.addView(shine, FrameLayout.LayoutParams(0, ui.px(3f)).apply { setMargins(ui.px(3f), ui.px(3f), ui.px(3f), 0) })
         val xpText = if (prog.xpNeeded > 0) "${prog.xpInLevel} / ${prog.xpNeeded} XP" else "MAX"
         bar.addView(outlined(ui.text(xpText, 15f, WHITE, Gravity.CENTER)), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        box.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ui.px(24f)).apply { topMargin = ui.px(6f); bottomMargin = ui.px(8f) })
+        card.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ui.px(26f)).apply { topMargin = ui.px(10f); bottomMargin = ui.px(10f) })
         bar.post {
-            fill.layoutParams = (fill.layoutParams as FrameLayout.LayoutParams).apply { width = ((bar.width - ui.px(6f)) * prog.fraction).toInt() }
+            val w = ((bar.width - ui.px(6f)) * prog.fraction).toInt()
+            fill.layoutParams = (fill.layoutParams as FrameLayout.LayoutParams).apply { width = w }
+            shine.layoutParams = (shine.layoutParams as FrameLayout.LayoutParams).apply { width = w }
+            fill.pivotX = 0f; shine.pivotX = 0f
+            fill.scaleX = 0f; shine.scaleX = 0f
+            fill.animate().scaleX(1f).setDuration(450).start(); shine.animate().scaleX(1f).setDuration(450).start()
         }
 
+        // bonusy: každý v pergamenovém políčku, hodnota v tmavém štítku
+        card.addView(ui.text("Bonusy", 18f, ui.rust).apply { setPadding(0, 0, 0, ui.px(4f)) })
         fun stat(label: String, value: String) {
-            val r = ui.row().apply { setPadding(0, ui.px(2f), 0, ui.px(2f)) }
-            r.addView(ui.text(label, 16f, ui.inkSoft).apply { layoutParams = ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
-            r.addView(ui.text(value, 17f, ui.ink))
-            box.addView(r)
+            val r = ui.row().apply {
+                background = BevelDrawable(1.5f * ui.dp, Color.parseColor("#EAD6AE"), Color.parseColor("#F8EBCF"), Color.parseColor("#CDB083"), Color.parseColor("#9C7A4E"))
+                setPadding(ui.px(9f), ui.px(5f), ui.px(5f), ui.px(5f))
+            }
+            r.addView(ui.text(label, 15f, ui.inkSoft).apply { layoutParams = ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
+            r.addView(outlined(ui.text(value, 16f, WHITE, Gravity.CENTER)).apply {
+                background = BevelDrawable(1.5f * ui.dp, Color.parseColor("#5A3E32"), Color.parseColor("#7A5646"), Color.parseColor("#3B281F"), Color.parseColor("#1E140C"))
+                setPadding(ui.px(7f), ui.px(2f), ui.px(7f), ui.px(4f))
+                minWidth = ui.px(48f)
+            })
+            card.addView(r, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = ui.px(4f) })
         }
         val passive = state.passive(s)
         fun pct(v: Double) = String.format(Locale.US, "%.0f %%", v * 100)
@@ -197,62 +236,66 @@ object JournalPages {
                 stat("Šance na útěk z ballu", "−${pct(state.catchReduction)}")
                 stat("Míst v týmu", "${state.teamSlots} / ${Team.MAX}")
             }
-            Skill.CRAFTING -> stat("Šance na dvojitou výrobu", pct(passive))
+            Skill.CRAFTING -> stat("Dvojitá výroba", pct(passive))
             Skill.MINING -> {
-                stat("Šance na dvojitou rudu (multiore)", pct(passive))
+                stat("Dvojitá ruda", pct(passive))
                 if (state.efficiencyBonus(s) > 0) stat("Efektivita krumpáče", "+" + pct(state.efficiencyBonus(s)))
                 stat("AFK nejvýš", "${state.afkCapHours(s)} h")
             }
             Skill.BUG_CATCHING -> {
-                stat("Šance na dvojitý úlovek", pct(state.multiChance(s)))
+                stat("Dvojitý úlovek", pct(state.multiChance(s)))
                 if (state.efficiencyBonus(s) > 0) stat("Efektivita síťky", "+" + pct(state.efficiencyBonus(s)))
                 stat("AFK nejvýš", "${state.afkCapHours(s)} h")
             }
             Skill.LOGGING -> {
-                stat("Šance na dvojité poleno (multilog)", pct(passive))
+                stat("Dvojité poleno", pct(passive))
                 if (state.efficiencyBonus(s) > 0) stat("Efektivita sekery", "+" + pct(state.efficiencyBonus(s)))
                 stat("AFK nejvýš", "${state.afkCapHours(s)} h")
             }
             Skill.HARVESTING -> {
-                stat("Šance na dvojitou sklizeň", pct(passive))
+                stat("Dvojitá sklizeň", pct(passive))
                 stat("Otevřené záhony", "${state.plotsOpen} / 4")
                 if (state.growthSpeedup > 0) stat("Rychlejší růst", pct(state.growthSpeedup))
             }
         }
         stat("XP multiplikátor", "×" + String.format(Locale("cs"), "%.2f", state.xpMultiplier(s)))
-        stat("Dovednostní body", "${state.availablePoints(s)} volné")
         stat("Další bod na", "Lv ${SkillMath.nextSkillPointLevel(prog.level)}")
-        box.addView(ui.text("XP získáváš ${s.verb}. Každý level přidá +1 % k pasivnímu bonusu.", 15f, ui.inkSoft).apply {
-            setPadding(0, ui.px(6f), 0, ui.px(10f))
+        card.addView(ui.text("XP získáváš ${s.verb}. Každý level přidá +1 % k pasivnímu bonusu.", 14f, ui.inkSoft).apply {
+            setPadding(ui.px(2f), ui.px(4f), 0, ui.px(10f))
         })
 
-        box.addView(ui.text("Strom dovedností", 22f, ui.rust))
-        SkillTree.of(s).forEach { n ->
-            val st = state.status(n)
-            val card = ui.column().apply {
-                setPadding(ui.px(10f), ui.px(8f), ui.px(10f), ui.px(8f))
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = 4 * ui.dp
-                    setColor(if (st == SkillState.NodeStatus.UNLOCKED) Color.parseColor("#26606C38") else Color.parseColor("#1FBC6C25"))
-                    setStroke((1.5f * ui.dp).toInt(), if (st == SkillState.NodeStatus.UNLOCKED) Color.parseColor("#606C38") else Color.parseColor("#55BC6C25"))
-                }
-                alpha = if (st == SkillState.NodeStatus.LOCKED) 0.55f else 1f
+        // tlačítko stromu: dřevo, ikona stromu, zlatý štítek s volnými body (ten pulzuje)
+        val pts = state.availablePoints(s)
+        val btn = FrameLayout(box.context).apply {
+            background = WoodPanelDrawable(2f * ui.dp, parchment = false)
+            contentDescription = "Strom dovedností"
+            isClickable = true
+            setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); onTree() }
+        }
+        val inner = ui.row().apply { gravity = Gravity.CENTER; setPadding(0, ui.px(2f), 0, ui.px(4f)) }
+        inner.addView(ui.icon(TreeArt.TREE, TreeArt.SIZE, TreeArt.SIZE, 24f))
+        inner.addView(outlined(ui.text("Strom dovedností", 20f, WHITE)).apply { setPadding(ui.px(8f), 0, 0, ui.px(2f)) })
+        btn.addView(inner, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        card.addView(btn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ui.px(56f)))
+        if (pts > 0) {
+            val badge = outlined(ui.text("+$pts", 16f, WHITE, Gravity.CENTER)).apply {
+                background = BevelDrawable(1.5f * ui.dp, Color.parseColor("#C9961A"), GOLD, Color.parseColor("#8A6410"), Color.parseColor("#3B2A1A"))
+                setPadding(ui.px(6f), ui.px(1f), ui.px(6f), ui.px(3f))
             }
-            val top = ui.row()
-            top.addView(ui.text(n.title, 19f).apply { layoutParams = ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
-            top.addView(ui.text(if (n.cost == 1) "1 bod" else "${n.cost} body", 16f, ui.inkSoft))
-            card.addView(top)
-            card.addView(ui.text(n.description, 15f, ui.inkSoft))
-            when (st) {
-                SkillState.NodeStatus.UNLOCKED -> card.addView(ui.text("✓ Odemčeno", 16f, ui.olive))
-                SkillState.NodeStatus.AVAILABLE -> card.addView(ui.button("Odemknout") { onUnlock(n) }.apply {
-                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                        .apply { topMargin = ui.px(6f) }
+            btn.addView(badge, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.END or Gravity.TOP)
+                .apply { topMargin = -ui.px(2f); marginEnd = -ui.px(2f) })
+            btn.clipChildren = false
+            android.animation.ObjectAnimator.ofPropertyValuesHolder(badge,
+                android.animation.PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.18f),
+                android.animation.PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.18f)).apply {
+                duration = 520; repeatCount = android.animation.ValueAnimator.INFINITE; repeatMode = android.animation.ValueAnimator.REVERSE
+            }.also { anim ->
+                // pulz běží jen, dokud je štítek na obrazovce (stránka se při změně překresluje)
+                badge.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(v: View) { anim.start() }
+                    override fun onViewDetachedFromWindow(v: View) { anim.cancel() }
                 })
-                SkillState.NodeStatus.NO_POINTS -> card.addView(ui.text("Chybí body – další na Lv ${SkillMath.nextSkillPointLevel(prog.level)}", 15f, ui.rust))
-                SkillState.NodeStatus.LOCKED -> card.addView(ui.text("🔒 Nejdřív: ${SkillTree.node(n.requires!!)?.title}", 15f, ui.inkSoft))
             }
-            box.addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(8f) })
         }
     }
 

@@ -19,11 +19,13 @@ import cz.uhk.macroflow.pokemon.skills.SkillState
 /** Dřevěná menu dílny na louce: výběr semínka pro záhon a pracovní stůl (docs/adr/0034). */
 object WorkshopMenus {
 
-    private const val TAG = "wood_menu"
+    /** Značka každého překryvného menu (i stromu dovedností) – zpět ho zavře. */
+    const val TAG = "wood_menu"
 
     fun isOpen(root: ViewGroup) = root.findViewWithTag<View>(TAG) != null
 
-    fun close(root: ViewGroup) { root.findViewWithTag<View>(TAG)?.let { root.removeView(it) } }
+    /** Menu může ležet i hlouběji (v deníku) – odebere se z vlastního rodiče. */
+    fun close(root: ViewGroup) { root.findViewWithTag<View>(TAG)?.let { (it.parent as? ViewGroup)?.removeView(it) } }
 
     /** Ztmavené pozadí + dřevěný panel uprostřed; klepnutí mimo panel menu zavře. */
     fun show(root: FrameLayout, title: String, subtitle: String?, build: (WoodUi, LinearLayout, () -> Unit) -> Unit) {
