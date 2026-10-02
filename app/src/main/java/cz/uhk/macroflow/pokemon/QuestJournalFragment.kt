@@ -3,11 +3,6 @@ package cz.uhk.macroflow.pokemon
 import android.graphics.*
 import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.TextPaint
-import android.text.method.LinkMovementMethod
-import android.text.style.ClickableSpan
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -95,6 +90,9 @@ class QuestJournalFragment : Fragment() {
         rootView.findViewById<View>(R.id.tabResources).setOnClickListener { showTab(Tab.RESOURCES) }
         rootView.findViewById<View>(R.id.tabAwards).setOnClickListener { showTab(Tab.AWARDS) }
         rootView.findViewById<View>(R.id.tabZone).setOnClickListener { showTab(Tab.ZONE) }
+        rootView.findViewById<View>(R.id.tabPocket).setOnClickListener { showTab(Tab.POCKET) }
+        rootView.findViewById<View>(R.id.tabBag).setOnClickListener { showTab(Tab.BAG) }
+        rootView.findViewById<View>(R.id.tabDex).setOnClickListener { showTab(Tab.DEX) }
         rootView.findViewById<View>(R.id.tabFiles).apply {
             setOnClickListener { showTab(Tab.FILES) }
             // Spisy jsou vidět až s prvním roztrženým listem nebo snem (docs/adr/0057)
@@ -116,13 +114,16 @@ class QuestJournalFragment : Fragment() {
             Tab.AWARDS -> renderAwards()
             Tab.ZONE -> renderZone()
             Tab.FILES -> renderFiles()
+            Tab.POCKET -> renderPocket()
+            Tab.BAG -> renderBag()
+            Tab.DEX -> renderDex()
             Tab.STORY -> {}
         }
     }
 
     // ── Denní úkoly ─────────────────────────────────────────────────────────
 
-    private enum class Tab { CHARACTER, STORY, DAILY, RESOURCES, AWARDS, ZONE, FILES }
+    private enum class Tab { CHARACTER, STORY, DAILY, RESOURCES, AWARDS, ZONE, FILES, POCKET, BAG, DEX }
     private var tab = Tab.CHARACTER
     /** Nastaví se před zobrazením, když má deník otevřít rovnou denní úkoly. */
     var showDailyFirst = false
@@ -139,8 +140,12 @@ class QuestJournalFragment : Fragment() {
         rootView.findViewById<View>(R.id.awardsPage).visibility = if (t == Tab.AWARDS) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.zonePage).visibility = if (t == Tab.ZONE) View.VISIBLE else View.GONE
         rootView.findViewById<View>(R.id.filesPage).visibility = if (t == Tab.FILES) View.VISIBLE else View.GONE
+        rootView.findViewById<View>(R.id.pocketPage).visibility = if (t == Tab.POCKET) View.VISIBLE else View.GONE
+        rootView.findViewById<View>(R.id.bagPage).visibility = if (t == Tab.BAG) View.VISIBLE else View.GONE
+        rootView.findViewById<View>(R.id.dexPage).visibility = if (t == Tab.DEX) View.VISIBLE else View.GONE
         mapOf(Tab.CHARACTER to R.id.tabCharacter, Tab.STORY to R.id.tabStory, Tab.DAILY to R.id.tabDaily, Tab.RESOURCES to R.id.tabResources,
-            Tab.AWARDS to R.id.tabAwards, Tab.ZONE to R.id.tabZone, Tab.FILES to R.id.tabFiles)
+            Tab.AWARDS to R.id.tabAwards, Tab.ZONE to R.id.tabZone, Tab.FILES to R.id.tabFiles,
+            Tab.POCKET to R.id.tabPocket, Tab.BAG to R.id.tabBag, Tab.DEX to R.id.tabDex)
             .forEach { (k, id) -> rootView.findViewById<View>(id).alpha = if (k == t) 1f else 0.55f }
         when (t) {
             Tab.DAILY -> renderDaily()
@@ -149,7 +154,140 @@ class QuestJournalFragment : Fragment() {
             Tab.AWARDS -> renderAwards()
             Tab.ZONE -> renderZone()
             Tab.FILES -> renderFiles()
+            Tab.POCKET -> renderPocket()
+            Tab.BAG -> renderBag()
+            Tab.DEX -> renderDex()
             Tab.STORY -> {}
+        }
+    }
+
+    // ── Kapsa, Batoh, Makrodex (docs/adr/0060) ───────────────────────────────
+
+    private fun toast(msg: String) = android.widget.Toast.makeText(requireContext(), msg, android.widget.Toast.LENGTH_SHORT).show()
+
+    private fun renderPocket() {
+        val ctx = context?.applicationContext ?: return
+        val PA = cz.uhk.macroflow.pokemon.bag.PocketActions
+        val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
+        viewLifecycleOwner.lifecycleScope.launch {
+            data class P(val mons: List<CapturedMakromonEntity>, val team: List<Int>, val slots: Int, val active: Long)
+            val d = withContext(Dispatchers.IO) {
+                P(AppDatabase.getDatabase(ctx).capturedMakromonDao().getAllCaught(), SS.team(ctx), SS.state(ctx).teamSlots, PA.activeCaughtDate(ctx))
+            }
+            if (!isAdded) return@launch
+            // akce běží mimo hlavní vlákno, pak se stránka překreslí
+            fun act(block: () -> String?) = viewLifecycleOwner.lifecycleScope.launch {
+                val msg = withContext(Dispatchers.IO) { block() }
+                if (!isAdded) return@launch
+                msg?.let { toast(it) }
+                renderPocket()
+            }
+            cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.pocket(rootView.findViewById(R.id.llPocket), rootView as FrameLayout,
+                d.mons, d.team, d.slots, d.active, object : cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.PocketCallbacks {
+                    override fun toggleTeam(m: CapturedMakromonEntity) = act {
+                        when (val r = PA.toggleTeam(ctx, m, d.mons)) {
+                            is cz.uhk.macroflow.pokemon.bag.PocketActions.TeamResult.Added -> "${m.name} je v týmu (${r.size}/${r.slots})."
+                            cz.uhk.macroflow.pokemon.bag.PocketActions.TeamResult.Removed -> "${m.name} odešel z týmu."
+                            is cz.uhk.macroflow.pokemon.bag.PocketActions.TeamResult.Full ->
+                                "Tým je plný (${r.slots}/${r.slots}). Další místo odemkneš ve stromu Chytání."
+                        }
+                    }.let { }
+                    override fun makeActive(m: CapturedMakromonEntity) = act { PA.makeActive(ctx, m); "★ ${m.name} je parťák na liště." }.let { }
+                    override fun toggleLock(m: CapturedMakromonEntity) = act { PA.toggleLock(ctx, m); if (m.isLocked) "🔒 ${m.name} zamčen." else "${m.name} odemčen." }.let { }
+                    override fun release(m: CapturedMakromonEntity) = act { if (PA.release(ctx, m)) "${m.name} se vrátil do divočiny." else "Zamčeného Makromona pustit nejde." }.let { }
+                })
+        }
+    }
+
+    private fun renderBag() {
+        val ctx = context?.applicationContext ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val counts = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.counts(ctx) }
+            if (!isAdded) return@launch
+            cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.bag(rootView.findViewById(R.id.llBag), rootView as FrameLayout, counts,
+                readText = { item -> bagReadText(item.id) },
+                onUse = { item ->
+                    if (item.id == cz.uhk.macroflow.pokemon.bag.BagItems.LURE_LAMP) viewLifecycleOwner.lifecycleScope.launch {
+                        val ok = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.bag.PocketActions.useLureLamp(ctx) }
+                        if (!isAdded) return@launch
+                        toast(if (ok) "👻 Spooky Plate aktivován!" else "Spooky Plate už je aktivní.")
+                        renderBag()
+                    }
+                })
+        }
+    }
+
+    /** Text čitelných předmětů (stejný jako v inventáři). */
+    private fun bagReadText(id: String): String {
+        return when (id) {
+            cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_ID ->
+                cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_PAGES.joinToString("\n\n") { (title, body) -> "$title\n$body" }
+            cz.uhk.macroflow.pokemon.story.Insight.PAGES_ITEM -> {
+                val flags = cz.uhk.macroflow.pokemon.story.StoryFlags.all(requireContext())
+                val insight = cz.uhk.macroflow.pokemon.story.Insight.level(flags)
+                cz.uhk.macroflow.pokemon.story.Insight.foundPages(flags)
+                    .joinToString("\n\n────────\n\n") { cz.uhk.macroflow.pokemon.story.Insight.render(it.text, insight) }
+                    .ifEmpty { "Listy jsou prázdné." }
+            }
+            else -> ""
+        }
+    }
+
+    private var dexMode = cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.DexMode.DEX
+
+    private fun renderDex() {
+        val ctx = context?.applicationContext ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val data = withContext(Dispatchers.IO) {
+                val db = AppDatabase.getDatabase(ctx)
+                val caught = db.capturedMakromonDao().getAllCaught()
+                val defined = SpawnManager.allEntries.map { it.id }.toSet()
+                val entries = db.makrodexEntryDao().getAllEntries().filter { it.makrodexId in defined }.sortedBy { it.makrodexId }
+                val inv = caught.map { it.makromonId }.toSet()
+                val shinyCaught = caught.filter { it.isShiny }.map { it.makromonId }.toSet()
+                val seen = ctx.getSharedPreferences("GamePrefs", android.content.Context.MODE_PRIVATE)
+                    .getStringSet(cz.uhk.macroflow.pokemon.shiny.ShinyDex.SEEN_KEY, emptySet()).orEmpty() + shinyCaught
+                cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.DexData(entries,
+                    (db.makrodexStatusDao().getUnlockedIds() + inv).toSet(),
+                    caught.groupBy { it.makromonId }.mapValues { it.value.size }, seen, shinyCaught)
+            }
+            if (!isAdded) return@launch
+            cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.dex(rootView.findViewById(R.id.llDex), rootView as FrameLayout, data, dexMode,
+                onMode = { dexMode = it; renderDex() },
+                cb = object : cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.DexCallbacks {
+                    override fun dossier(e: MakrodexEntryEntity, caught: Int): String? {
+                        val flags = cz.uhk.macroflow.pokemon.story.StoryFlags.all(requireContext())
+                        val insight = cz.uhk.macroflow.pokemon.story.Insight.level(flags)
+                        if (!cz.uhk.macroflow.pokemon.story.Dossiers.visible(insight)) return null
+                        return cz.uhk.macroflow.pokemon.story.Insight.render(
+                            cz.uhk.macroflow.pokemon.story.Dossiers.text(e.makrodexId, e.displayName, caught), insight)
+                    }
+                    override fun spirraPaths(show: (String) -> Unit) {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            val text = withContext(Dispatchers.IO) {
+                                val sp = cz.uhk.macroflow.pokemon.evolution.SpirraBond.activeSpirra(ctx)
+                                cz.uhk.macroflow.pokemon.dex.DexText.spirraPaths(sp, sp?.let { cz.uhk.macroflow.pokemon.evolution.SpirraBond.days(ctx, it.id) })
+                            }
+                            if (isAdded) show(text)
+                        }
+                    }
+                    override fun evoTest(e: MakrodexEntryEntity): (() -> Unit)? {
+                        if (!cz.uhk.macroflow.BuildConfig.DEBUG) return null
+                        val profile = MakromonGrowthManager.getProfile(e.makrodexId) ?: return null
+                        if (profile.evolutionToId.isEmpty() || e.makrodexId == cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.SPIRRA_ID) return null
+                        return {
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                val last = withContext(Dispatchers.IO) {
+                                    AppDatabase.getDatabase(ctx).capturedMakromonDao().getAllCaught().find { it.makromonId == e.makrodexId }
+                                } ?: return@launch
+                                if (!isAdded) return@launch
+                                val move = MakromonGrowthManager.getNewMoveForLevel(profile.evolutionToId, profile.evolutionLevel)
+                                    ?: MakromonGrowthManager.getNewMoveForLevel(profile.evolutionToId, 1)
+                                EvolutionDialog(requireContext(), last.id, e.makrodexId, profile.evolutionToId, move) { renderDex() }.show()
+                            }
+                        }
+                    }
+                })
         }
     }
 
@@ -618,6 +756,11 @@ class QuestJournalFragment : Fragment() {
                 else -> if (viewingIndex < currentIndex || isAllDone) "Cíl: Splněno" else "Cíl: Aktivní"
             }
             rootView.findViewById<TextView>(R.id.taskListText).text = brief
+            // dřevěný vzhled stránky (docs/adr/0060)
+            cz.uhk.macroflow.pokemon.skills.ui.StoryPage.style(
+                rootView.findViewById(R.id.npcPortrait), rootView.findViewById(R.id.taskListText), rootView.findViewById(R.id.storyScroll),
+                rootView.findViewById(R.id.chapterLabel), rootView.findViewById(R.id.btnPrevPage), rootView.findViewById(R.id.btnNextPage),
+                objectiveDone = viewingIndex < currentIndex || isAllDone, secret = quest.secret)
         }
 
         renderStagesList(quest, currentIndex, isAllDone)
@@ -625,112 +768,13 @@ class QuestJournalFragment : Fragment() {
     }
 
     private fun renderStagesList(quest: QuestDefinition, currentIdx: Int, allDone: Boolean) {
-        val listTextView = rootView.findViewById<TextView>(R.id.tvQuestStagesList)
-        val builder = SpannableStringBuilder()
-
-        quest.stages.forEachIndexed { index, stage ->
-            val isKnown = allDone || index <= currentIdx
-            if (isKnown) {
-                val prefix = when {
-                    allDone || index < currentIdx -> "[X] "
-                    index == currentIdx -> "[>] "
-                    else -> "[ ] "
-                }
-                val start = builder.length
-                builder.append("$prefix${index + 1}. ${stage.title}\n")
-                val end = builder.length
-
-                builder.setSpan(object : ClickableSpan() {
-                    override fun onClick(widget: View) {
-                        selectedStageIndex = index
-                        renderCurrentPage()
-                    }
-                    override fun updateDrawState(ds: TextPaint) {
-                        // splněné zeleně, aktuální a vybraná oranžově
-                        ds.color = when {
-                            selectedStageIndex == index || (!allDone && index == currentIdx) -> Color.parseColor("#BC6C25")
-                            else -> Color.parseColor("#606C38")
-                        }
-                        ds.isUnderlineText = selectedStageIndex == index
-                    }
-                }, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            } else {
-                val st = builder.length
-                builder.append("[ ] ???\n")
-                builder.setSpan(android.text.style.ForegroundColorSpan(Color.parseColor("#80283618")), st, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-        }
-
-        listTextView.text = builder
-        listTextView.movementMethod = LinkMovementMethod.getInstance()
-        listTextView.highlightColor = Color.TRANSPARENT
-    }
-
-    private fun drawTracker(container: LinearLayout, total: Int, activeIndex: Int) {
-        container.removeAllViews()
-        val dp = resources.displayMetrics.density
-        val dotSize = (8 * dp).toInt()
-        val ringSize = (16 * dp).toInt()
-
-        val colorDone = Color.parseColor("#606C38")
-        val colorActive = Color.parseColor("#BC6C25")
-        val colorPending = Color.parseColor("#DDA15E")
-
-        for (i in 0 until total) {
-            val isActive = i == activeIndex
-            val isCompleted = i < activeIndex
-
-            if (isActive) {
-                val ringWrapper = FrameLayout(requireContext()).apply {
-                    layoutParams = LinearLayout.LayoutParams(ringSize, ringSize)
-                }
-                ringWrapper.addView(View(requireContext()).apply {
-                    layoutParams = FrameLayout.LayoutParams(ringSize, ringSize)
-                    background = circleOutline(colorActive, 2f * dp)
-                })
-                ringWrapper.addView(View(requireContext()).apply {
-                    layoutParams = FrameLayout.LayoutParams(dotSize, dotSize, Gravity.CENTER)
-                    background = circleFill(colorActive)
-                })
-                container.addView(ringWrapper)
-            } else {
-                container.addView(View(requireContext()).apply {
-                    layoutParams = LinearLayout.LayoutParams(dotSize, dotSize).apply {
-                        setMargins(0, (ringSize - dotSize) / 2, 0, (ringSize - dotSize) / 2)
-                    }
-                    background = circleFill(if (isCompleted) colorDone else colorPending)
-                    alpha = if (isCompleted) 1.0f else 0.5f
-                })
-            }
-
-            if (i < total - 1) {
-                container.addView(View(requireContext()).apply {
-                    layoutParams = LinearLayout.LayoutParams((15 * dp).toInt(), (2 * dp).toInt()).apply {
-                        gravity = Gravity.CENTER_VERTICAL
-                    }
-                    setBackgroundColor(if (i < activeIndex) colorDone else colorPending)
-                    alpha = if (i < activeIndex) 1.0f else 0.5f
-                })
-            }
+        cz.uhk.macroflow.pokemon.skills.ui.StoryPage.stages(rootView.findViewById(R.id.llQuestStages),
+            quest.stages.map { it.title }, currentIdx, allDone, selectedStageIndex) { i ->
+            selectedStageIndex = i
+            renderCurrentPage()
         }
     }
 
-    private fun circleFill(color: Int): Drawable = object : Drawable() {
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
-        override fun draw(c: Canvas) { c.drawOval(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), paint) }
-        override fun setAlpha(a: Int) { paint.alpha = a }
-        override fun setColorFilter(cf: ColorFilter?) { paint.colorFilter = cf }
-        override fun getOpacity() = PixelFormat.TRANSLUCENT
-    }
-
-    private fun circleOutline(color: Int, strokeWidth: Float): Drawable = object : Drawable() {
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color; style = Paint.Style.STROKE; this.strokeWidth = strokeWidth }
-        override fun draw(c: Canvas) {
-            val inset = strokeWidth / 2f
-            c.drawOval(bounds.left + inset, bounds.top + inset, bounds.right - inset, bounds.bottom - inset, paint)
-        }
-        override fun setAlpha(a: Int) { paint.alpha = a }
-        override fun setColorFilter(cf: ColorFilter?) { paint.colorFilter = cf }
-        override fun getOpacity() = PixelFormat.TRANSLUCENT
-    }
+    private fun drawTracker(container: LinearLayout, total: Int, activeIndex: Int) =
+        cz.uhk.macroflow.pokemon.skills.ui.StoryPage.tracker(container, total, activeIndex)
 }

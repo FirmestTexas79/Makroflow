@@ -28,7 +28,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="-8dp"
-        android:paddingStart="34dp"
+        android:paddingStart="24dp"
         android:paddingEnd="14dp"
         android:orientation="horizontal">
 
@@ -44,6 +44,49 @@
             android:paddingHorizontal="8dp"
             android:paddingBottom="6dp"
             android:text="Mapa"
+            android:textColor="#FEFAE0"
+            android:textSize="17sp" />
+        <!-- Sbírky (docs/adr/0060): chycení Makromoni, předměty, Makrodex -->
+        <TextView
+            android:id="@+id/tabPocket"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/bg_journal_tab"
+            android:backgroundTint="#6B4A8A"
+            android:fontFamily="@font/jersey_15"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="6dp"
+            android:text="Kapsa"
+            android:textColor="#FEFAE0"
+            android:textSize="17sp" />
+        <TextView
+            android:id="@+id/tabBag"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/bg_journal_tab"
+            android:backgroundTint="#7A5428"
+            android:fontFamily="@font/jersey_15"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="6dp"
+            android:text="Batoh"
+            android:textColor="#FEFAE0"
+            android:textSize="17sp" />
+        <TextView
+            android:id="@+id/tabDex"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/bg_journal_tab"
+            android:backgroundTint="#A23B3B"
+            android:fontFamily="@font/jersey_15"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="6dp"
+            android:text="Makrodex"
             android:textColor="#FEFAE0"
             android:textSize="17sp" />
         <!-- Spisy (docs/adr/0057): roztržené listy a hlášení o snech – záložka se ukáže až s prvním nálezem -->
@@ -315,14 +358,13 @@
                     android:layout_height="match_parent"
                     android:scrollbars="none">
 
-                    <TextView
-                        android:id="@+id/tvQuestStagesList"
+                    <!-- fáze jako dřevěné řádky (docs/adr/0060), plní QuestJournalFragment -->
+                    <LinearLayout
+                        android:id="@+id/llQuestStages"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/jersey_15"
-                        android:lineSpacingExtra="9dp"
-                        android:textColor="@color/journal_ink"
-                        android:textSize="17sp" />
+                        android:orientation="vertical"
+                        android:paddingBottom="8dp" />
                 </ScrollView>
             </LinearLayout>
 
@@ -386,6 +428,75 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <!-- KAPSA (docs/adr/0060) -->
+            <ScrollView
+                android:id="@+id/pocketPage"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:fadingEdgeLength="16dp"
+                android:requiresFadingEdge="vertical"
+                android:scrollbars="none"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <LinearLayout
+                    android:id="@+id/llPocket"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="18dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="24dp" />
+            </ScrollView>
+            <!-- BATOH (docs/adr/0060) -->
+            <ScrollView
+                android:id="@+id/bagPage"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:fadingEdgeLength="16dp"
+                android:requiresFadingEdge="vertical"
+                android:scrollbars="none"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <LinearLayout
+                    android:id="@+id/llBag"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="18dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="24dp" />
+            </ScrollView>
+            <!-- MAKRODEX (docs/adr/0060) -->
+            <ScrollView
+                android:id="@+id/dexPage"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:fadingEdgeLength="16dp"
+                android:requiresFadingEdge="vertical"
+                android:scrollbars="none"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <LinearLayout
+                    android:id="@+id/llDex"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="18dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="24dp" />
+            </ScrollView>
             <!-- SUROVINY (docs/adr/0034) -->
             <ScrollView
                 android:id="@+id/resourcesPage"

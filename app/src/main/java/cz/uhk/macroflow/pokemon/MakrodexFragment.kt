@@ -168,31 +168,6 @@ class MakrodexFragment : Fragment() {
         }
     }
 
-    private fun getFallbackHint(id: String): String = when (id) {
-        "001", "002", "003" -> "Ignar se probouzí teplem tvého tréninku. Zapiš dnešní cvičení!"
-        "004", "005", "006" -> "Aqulin připluje jen tehdy, když splníš svůj denní vodní cíl."
-        "007", "008", "009" -> "Flori roste tam, kde je zdravá strava. Zapiš dnešní jídla!"
-        "010"               -> "Umbex se toulá v noci. Zkus večerní trénink po 19:00."
-        "011"               -> "Lumex je velmi vzácný a toulá se pouze v noci."
-        "012"               -> "Spirra je nejčastější Makromon. Hledej ji všude kolem sebe!"
-        "013"               -> "Vyvine se ze Spirry, která s tebou pořádně zapotí. Má ráda, když spálíš hodně kalorií pohybem."
-        "014"               -> "Vyvine se ze Spirry, se kterou se pořádně napiješ. Má ráda, když ti nikdy nedojde voda."
-        "015"               -> "Vyvine se ze Spirry, se kterou jíš zeleninu den co den. Má ráda, když má vláknina svou míru."
-        "016"               -> "Vyvine se ze Spirry, se kterou si večer zdravě zamlsáš. Má ráda noční svačinky."
-        "017"               -> "Vyvine se ze Spirry, se kterou nachodíš spoustu kilometrů. Má ráda dlouhé procházky."
-        "018"               -> "Vyvine se ze Spirry, se kterou poctivě dřeš v posilovně. Má ráda každou zapsanou sérii."
-        "019"               -> "Tajná evoluce Spirry. Ani Spirra neví, jak se jí stát – zatím ji jde jen ulovit."
-        "020"               -> "Finlet je velmi běžný. Hledej ho všude kolem sebe."
-        "021"               -> "Serpfin se vyvine z Finleta na levelu 8. Věř procesu!"
-        "022"               -> "Mycit žije na okrajích lesů a luk."
-        "023"               -> "Mydrus se vyvine z Mycita. Po 5 check-inech ho najdeš."
-        "024", "025", "026" -> "Soulu rodina se toulá pouze v noci."
-        "027", "028", "029" -> "Phantil rodina se toulá v noci u vodních ploch."
-        "030"               -> "Gudwin vychází ven až po 7 poctivých check-inech."
-        "031"               -> "Axlu se ukáže jen těm nejdisciplinovanějším – 50 check-inů!"
-        else                -> "Zapiš trénink a jídlo, Makromon se brzy objeví!"
-    }
-
     private fun showDetail(
         entry: MakrodexEntryEntity,
         isUnlocked: Boolean,
@@ -220,8 +195,7 @@ class MakrodexFragment : Fragment() {
             // docs/adr/0047 – u pár druhů drobná věta navíc
             cz.uhk.macroflow.pokemon.story.Insight.dexWhisper(entry.makrodexId)?.let { entry.macroDesc + "\n\n" + it } ?: entry.macroDesc
         } else {
-            val hint = getFallbackHint(entry.makrodexId)
-            if (hint.startsWith("Zapiš") && entry.unlockedHint.isNotEmpty()) entry.unlockedHint else hint
+            cz.uhk.macroflow.pokemon.dex.DexText.hint(entry.makrodexId, entry.unlockedHint)
         }
 
         // --- DYNAMICKÉ SESTAVENÍ NÁZVU OBRÁZKU ---
@@ -323,28 +297,7 @@ class MakrodexFragment : Fragment() {
                 sp to sp?.let { cz.uhk.macroflow.pokemon.evolution.SpirraBond.days(ctx, it.id) }
             }
             if (!isAdded) return@launch
-            val SE = cz.uhk.macroflow.pokemon.evolution.SpirraEvolution
-            val progress = days?.let { SE.progress(it) }
-            val reached = days?.let { SE.reachedOn(it) }.orEmpty()
-            val first = days?.let { SE.evolveInto(it, SE.LEVEL) }          // stejné pravidlo jako vývoj
-            val fmt = java.time.format.DateTimeFormatter.ofPattern("d. M.")
-            val text = buildString {
-                if (active == null) append("Počítá se, jen když je Spirra tvým aktivním parťákem na liště. Nastav ji v inventáři.\n\n")
-                else {
-                    append("Všechny cesty se počítají najednou. Od levelu ${SE.LEVEL} se Spirra vyvine do té, kterou splní PRVNÍ.\n")
-                    append("Teď: Lv ${active.level}" + (if (active.level < SE.LEVEL) " – do vývoje chybí ${SE.LEVEL - active.level} lv." else " – vývoj je odemčený.") + "\n")
-                    first?.let { append("První splněná cesta: ${it.displayName} (${reached[it]?.format(fmt)})\n") }
-                    append("\n")
-                }
-                cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.Branch.entries.forEach { b ->
-                    val v = progress?.get(b) ?: 0
-                    val pct = (SE.fraction(b, v) * 100).toInt()
-                    val mark = when { b == first -> "★ "; b in reached -> "✓ "; else -> "" }
-                    append("$mark${b.displayName.uppercase()}\n${b.task}\n")
-                    append(if (progress != null) "${SE.progressText(b, v)}  ($pct %)\n\n" else "\n")
-                }
-                append("DRAKIRRA\n??? – tajná, zatím jen k ulovení")
-            }
+            val text = cz.uhk.macroflow.pokemon.dex.DexText.spirraPaths(active, days)
             com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Cesty vývoje Spirry")
                 .setMessage(text)
