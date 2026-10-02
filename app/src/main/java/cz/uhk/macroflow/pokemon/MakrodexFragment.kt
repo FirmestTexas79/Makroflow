@@ -313,7 +313,7 @@ class MakrodexFragment : Fragment() {
                     first?.let { append("První splněná cesta: ${it.displayName} (${reached[it]?.format(fmt)})\n") }
                     append("\n")
                 }
-                SE.Branch.entries.forEach { b ->
+                cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.Branch.entries.forEach { b ->
                     val v = progress?.get(b) ?: 0
                     val pct = (SE.fraction(b, v) * 100).toInt()
                     val mark = when { b == first -> "★ "; b in reached -> "✓ "; else -> "" }
