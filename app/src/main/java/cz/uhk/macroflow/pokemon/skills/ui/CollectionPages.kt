@@ -91,7 +91,9 @@ object CollectionPages {
         ImageView(ui.ctx).apply {
             scaleType = ImageView.ScaleType.FIT_CENTER
             val res = spriteRes(this, id, name)
-            if (res != 0) ShinySprites.into(this, res, id, shiny) else setImageResource(R.drawable.ic_home)
+            // druh ještě nemá vlastní sprite: místo ikonky domečku stín Makroballu
+            if (res != 0) ShinySprites.into(this, res, id, shiny)
+            else setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.icon(Makroball.entries.first(), ui.px(sizeDp * 0.7f)))
             if (silhouette) {
                 // neznámý druh: černý stín
                 colorFilter = ColorMatrixColorFilter(ColorMatrix(floatArrayOf(0f, 0f, 0f, 0f, 20f, 0f, 0f, 0f, 0f, 16f, 0f, 0f, 0f, 0f, 12f, 0f, 0f, 0f, 0.85f, 0f)))
