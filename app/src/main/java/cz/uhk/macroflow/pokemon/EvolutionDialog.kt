@@ -207,13 +207,15 @@ class EvolutionDialog(
         mon.name = newEntry?.displayName?.uppercase() ?: newId
         save { updateBar() }
 
-        val level = mon.level.coerceAtLeast(1)
+        // stejné hodnoty jako v souboji: uložený level (nebo vyšší podle XP) a vzorec BattleEngine
+        val level = maxOf(mon.level, PokemonLevelCalc.levelFromXp(mon.xp)).coerceAtLeast(1)
         val before = BattleEngine.initializeStatsForLevel(BattleFactory.createById(oldId), level)
         val after = BattleEngine.initializeStatsForLevel(BattleFactory.createById(newId), level)
 
         show { p ->
             p.addView(outlined(ui.text("Gratulace!", 26f, GOLD)))
             p.addView(typed("Tvůj $oldName se vyvinul. Teď je to $newName!"))
+            p.addView(ui.text("Statistiky na Lv $level – stejné jako v souboji", 13f, ui.inkSoft).apply { setPadding(0, ui.px(6f), 0, 0) })
             // statistiky staré → nové
             val box = ui.column().apply {
                 background = BevelDrawable(1.5f * ui.dp, Color.parseColor("#EAD6AE"), Color.parseColor("#F8EBCF"), Color.parseColor("#CDB083"), Color.parseColor("#9C7A4E"))
@@ -223,7 +225,7 @@ class EvolutionDialog(
                 Triple("Obrana", before.defense, after.defense), Triple("Rychlost", before.speed, after.speed)).forEach { (label, a, b) ->
                 box.addView(statRow(label, a, b, maxOf(after.maxHp, after.attack, after.defense, after.speed, 1)))
             }
-            p.addView(box, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) })
+            p.addView(box, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(4f) })
             val pending = newMoveToLearn?.takeIf { MoveLearning.situation(currentMoves(), it.name) != MoveLearning.Situation.ALREADY_KNOWN }
             if (pending != null) p.addView(wide("Dál – nový útok") { offerMove(pending) })
             else p.addView(wide("Hotovo") { finish() })

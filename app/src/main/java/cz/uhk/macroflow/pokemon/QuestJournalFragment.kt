@@ -279,7 +279,7 @@ class QuestJournalFragment : Fragment() {
                         return {
                             viewLifecycleOwner.lifecycleScope.launch {
                                 val last = withContext(Dispatchers.IO) {
-                                    AppDatabase.getDatabase(ctx).capturedMakromonDao().getAllCaught().find { it.makromonId == e.makrodexId }
+                                    AppDatabase.getDatabase(ctx).capturedMakromonDao().getAllCaught().filter { it.makromonId == e.makrodexId }.maxByOrNull { it.level }
                                 } ?: return@launch
                                 if (!isAdded) return@launch
                                 val move = MakromonGrowthManager.getNewMoveForLevel(profile.evolutionToId, profile.evolutionLevel)

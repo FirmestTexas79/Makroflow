@@ -254,8 +254,9 @@ class MakrodexFragment : Fragment() {
                 btnTestEvo.visibility = View.VISIBLE
                 btnTestEvo.setOnClickListener {
                     lifecycleScope.launch(Dispatchers.IO) {
+                        // nejsilnější kus druhu (dřív naposledy chycený – často level 1)
                         val lastCaught = db.capturedMakromonDao().getAllCaught()
-                            .find { it.makromonId == entry.makrodexId }
+                            .filter { it.makromonId == entry.makrodexId }.maxByOrNull { it.level }
 
                         withContext(Dispatchers.Main) {
                             if (lastCaught != null) {

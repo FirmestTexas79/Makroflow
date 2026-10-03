@@ -37,6 +37,8 @@ class EvolutionStageView(ctx: Context) : View(ctx) {
 
     private val dp = resources.displayMetrics.density
     private val p = Paint().apply { isAntiAlias = false; isFilterBitmap = false }
+    /** Vlastní štětec spritu – [p] si nese průhlednost poslední světlušky a sprite by s ní blikal. */
+    private val spritePaint = Paint().apply { isAntiAlias = false; isFilterBitmap = false }
     private val soft = Paint(Paint.ANTI_ALIAS_FLAG)
     private val white = Paint().apply { isFilterBitmap = false; colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) }
 
@@ -234,7 +236,7 @@ class EvolutionStageView(ctx: Context) : View(ctx) {
         val s = size * scale
         val ratio = b.height.toFloat() / b.width
         val bw = if (ratio <= 1f) s else s / ratio; val bh = bw * ratio
-        c.drawBitmap(b, null, RectF(cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2), paint ?: p)
+        c.drawBitmap(b, null, RectF(cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2), paint ?: spritePaint)
     }
 
     private fun drawFlash(c: Canvas, w: Float, h: Float, now: Long) {
