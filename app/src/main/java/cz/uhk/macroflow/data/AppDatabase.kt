@@ -422,7 +422,7 @@ abstract class AppDatabase : RoomDatabase() {
                 evolveLevel = 0, evolveToId = ""
             ),
             MakromonEntry(
-                id = "027", drawableName = "ic_home", displayName = "Phantil",
+                id = "027", drawableName = "makromon_phantil", displayName = "Phantil",
                 type = "VODA / DUCH",
                 desc = "Malá průsvitná duch-ryba. Lehká jako pára nad hladinou.",
                 hint = "Phantil se toulá v noci u vodních ploch.",

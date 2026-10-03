@@ -47,7 +47,7 @@ class NewSpeciesTest {
     }
 
     @Test fun spritesExist() {
-        listOf("makromon_32_mysnic", "makromon_34_ignileo", "makromon_35_aquavulp", "makromon_05_aqulind", "makromon_09_florindra").forEach {
+        listOf("makromon_32_mysnic", "makromon_34_ignileo", "makromon_35_aquavulp", "makromon_05_aqulind", "makromon_09_florindra", "makromon_27_phantil").forEach {
             assertTrue(it, file("src/main/res/drawable/$it.png").exists())
         }
     }

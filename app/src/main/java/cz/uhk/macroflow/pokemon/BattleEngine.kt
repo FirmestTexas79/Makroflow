@@ -688,7 +688,7 @@ object BattleFactory {
             "ignar", "ignaroc", "ignaroth", "aqulin", "flori", "florind", "umbex", "spirra",
             "flamirra", "aquirra", "verdirra", "shadirra",
             "charmirra", "drakirra", "finlet", "serpfin", "mycit", "mydrus", "soulu", "soulex", "soulord",
-            "gudwin", "axlu", "ignileo", "mysnic", "aqulind", "florindra", "aquavulp"
+            "gudwin", "axlu", "ignileo", "mysnic", "aqulind", "florindra", "aquavulp", "phantil"
         )
 
         // Strážci mají statistiky jiného druhu, ale vlastní číslo Makrodexu i sprite (docs/adr/0063)
