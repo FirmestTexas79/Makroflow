@@ -176,8 +176,8 @@ class EvolutionDialog(
                     level = 12, moveListStr = "TACKLE,BITE,GROWL,WATER GUN") else null
                 if (mm == null) { Log.e("EVO", "Makromon $capturedMakromonId nenalezen"); finish(); return@launch }
                 mon = mm; oldEntry = o; newEntry = n
-                stage.oldSprite = bitmap(o, m.isShiny)
-                stage.newSprite = bitmap(n, m.isShiny)
+                stage.oldSprite = bitmap(o, mm.isShiny)
+                stage.newSprite = bitmap(n, mm.isShiny)
                 namesText.text = "$oldName  ➜  ???"
                 stage.onReveal = { reveal() }
                 show { p ->
