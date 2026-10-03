@@ -197,6 +197,12 @@ class MakromonMapActivity : AppCompatActivity() {
             }
         }
 
+        // Debug: náhled evoluce bez ukládání (adb … --es debug_evo 004:005) – docs/adr/0064
+        if (BuildConfig.DEBUG) intent.getStringExtra("debug_evo")?.split(':')?.takeIf { it.size == 2 }?.let { (from, to) ->
+            val move = MakromonGrowthManager.getNewMoveForLevel(to, 1) ?: BattleFactory.createById(to).moves.last()
+            mapBackground.postDelayed({ EvolutionDialog(this, -1, from, to, move, preview = true) {}.show() }, 1500)
+        }
+
         movementEngine = MovementEngine(this, ashView, mapBackground)
         movementEngine.onMoved = { updateCamera() }
 
