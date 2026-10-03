@@ -357,7 +357,7 @@ abstract class AppDatabase : RoomDatabase() {
                 evolveLevel = 0, evolveToId = ""
             ),
             MakromonEntry(
-                id = "018", drawableName = "ic_home", displayName = "Glacirra",
+                id = "018", drawableName = "makromon_glacirra", displayName = "Glacirra",
                 type = "LED / EVOLUCE",
                 desc = "Ledová evoluce Spirry. Chladná a precizní jako tvůj tréninkový plán. Má ráda, když poctivě dřeš v posilovně – Spirra se v ni promění po spoustě zapsaných sérií.",
                 hint = "Vyvine se ze Spirry, se kterou poctivě dřeš v posilovně.",
