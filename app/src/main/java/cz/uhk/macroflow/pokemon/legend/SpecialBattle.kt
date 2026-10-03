@@ -24,17 +24,23 @@ enum class SpecialBattle(
     /** Příznak příběhu, který výhra nastaví (StoryFlags) – krystaly mají vlastní bossKey. */
     val winKey: String? = null,
     /** Vlastní jméno strážce (jinak jméno Makromona [makromonId]); sprite je makromon_NN_<jméno>. */
-    val displayName: String? = null
+    val displayName: String? = null,
+    /** Druh, jehož statistiky a útoky strážce používá (null = [makromonId]). */
+    val statsFrom: String? = null
 ) {
-    BOSS_BLUE("boss_blue", "021", 12, Kind.BOSS, CrystalColor.BLUE, "makromon_21_serpfin"),     // had z podzemního jezírka
+    // vodní liška u podzemního jezírka (docs/adr/0063) – statistiky a útoky Serpfina, vlastní sprite
+    BOSS_BLUE("boss_blue", "035", 12, Kind.BOSS, CrystalColor.BLUE, "makromon_35_aquavulp", displayName = "AQUAVULP", statsFrom = "021"),
     // ohnivý lev s korunou v hlubinách dolu (docs/adr/0056) – statistiky a útoky Ignarotha, vlastní sprite
-    BOSS_RED("boss_red", "003", 12, Kind.BOSS, CrystalColor.RED, "makromon_03_ignileo", displayName = "IGNILEO"),
+    BOSS_RED("boss_red", "034", 12, Kind.BOSS, CrystalColor.RED, "makromon_34_ignileo", displayName = "IGNILEO", statsFrom = "003"),
     LEGEND_PEAK("legend_peak", "019", 80, Kind.LEGEND, null, "makromon_19_drakirra"),           // drak z vrcholu
     // pán Rudé hniloby v kořenech Starého dubu (docs/adr/0045)
     FOREST_ROT("forest_rot", "026", 14, Kind.BOSS, null, "makromon_26_soulord",
         winKey = cz.uhk.macroflow.pokemon.story.ForestHeart.ROT_DEFEATED_KEY);
 
     enum class Kind { BOSS, LEGEND }
+
+    /** Z jakého druhu se staví statistiky souboje. */
+    val statsId: String get() = statsFrom ?: makromonId
 
     val canCatch: Boolean get() = false
     val canRun: Boolean get() = false

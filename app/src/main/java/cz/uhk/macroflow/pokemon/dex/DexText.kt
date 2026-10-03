@@ -10,15 +10,19 @@ import cz.uhk.macroflow.pokemon.evolution.SpirraEvolution
 object DexText {
 
     /** Druhy v Makrodexu, které se nedají potkat v divočině (strážci) – číslo Makrodexu. */
-    const val IGNILEO = "032"
-    val EXTRA_IDS: Set<String> = setOf(IGNILEO)
+    const val IGNILEO = "034"
+    const val AQUAVULP = "035"
+    val EXTRA_IDS: Set<String> = setOf(IGNILEO, AQUAVULP)
 
     /** Všechna čísla Makrodexu: divocí z SpawnManageru + strážci. */
     fun dexIds(spawnIds: Collection<String>): Set<String> = spawnIds.toSet() + EXTRA_IDS
 
     /** Strážci, které hráč porazil – v Makrodexu jsou „viděni“ (chytit je nejde). */
     fun defeatedGuardians(flags: Set<String>): Set<String> =
-        if ("boss_defeated_RED" in flags || "crystal_RED" in flags) setOf(IGNILEO) else emptySet()
+        buildSet {
+            if ("boss_defeated_RED" in flags || "crystal_RED" in flags) add(IGNILEO)
+            if ("boss_defeated_BLUE" in flags || "crystal_BLUE" in flags) add(AQUAVULP)
+        }
 
     /** Nápověda k neobjevenému druhu; obecnou větu nahradí nápověda z databáze, pokud je. */
     fun hint(id: String, unlockedHint: String): String {
@@ -48,8 +52,10 @@ object DexText {
         "027", "028", "029" -> "Phantil rodina se toulá v noci u vodních ploch."
         "030"               -> "Gudwin vychází ven až po 7 poctivých check-inech."
         "031"               -> "Axlu se ukáže jen těm nejdisciplinovanějším – 50 check-inů!"
-        "032"               -> "Strážce rudého krystalu v hlubinách Starého dolu. Zapíše se, až ho porazíš."
-        "033"               -> "Mysnic pobíhá po kamenitých stezkách v Horách."
+        "032"               -> "Mysnic pobíhá po kamenitých stezkách v Horách."
+        "033"               -> "Mysnor se vyvine z Mysnica na levelu 10. Vzácně ho potkáš i v Horách."
+        "034"               -> "Strážce rudého krystalu v hlubinách Starého dolu. Zapíše se, až ho porazíš."
+        "035"               -> "Strážkyně modrého krystalu u podzemního jezírka. Zapíše se, až ji porazíš."
         else                -> "Zapiš trénink a jídlo, Makromon se brzy objeví!"
     }
 

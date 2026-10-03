@@ -185,12 +185,20 @@ abstract class AppDatabase : RoomDatabase() {
 
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)
-                            thread { fillMakrodexEntries(db) }
+                            thread { fillMakrodexEntries(db); renumberSpecies(db) }
                         }
                     })
                     .build()
                     .also { INSTANCE = it }
             }
+        }
+
+        /**
+         * Přečíslování druhů (docs/adr/0063): Mysnic byl chvíli #033, teď je #032 (#033 je jeho vývoj).
+         * Podle jména, takže to jde pouštět pořád dokola – opraví i Mysnica obnoveného ze staré zálohy v cloudu.
+         */
+        private fun renumberSpecies(db: SupportSQLiteDatabase) {
+            runCatching { db.execSQL("UPDATE captured_pokemon SET makromonId = '032' WHERE name = 'MYSNIC' AND makromonId <> '032'") }
         }
 
         private fun fillMakrodexEntries(db: SupportSQLiteDatabase) {
@@ -451,17 +459,31 @@ abstract class AppDatabase : RoomDatabase() {
 
             // ── NOVÍ (docs/adr/0061) ──────────────────────────────────
             MakromonEntry(
-                id = "032", drawableName = "makromon_ignileo", displayName = "Ignileo",
+                id = "032", drawableName = "makromon_mysnic", displayName = "Mysnic",
+                type = "ZEMĚ / OBRANA",
+                desc = "Horská myška, která na zádech nosí plochý kámen jako štít. Když se lekne, schová se pod něj. Vytrvalost nad rychlost.",
+                hint = "Mysnic pobíhá po kamenitých stezkách v Horách. Je tam nejčastější.",
+                evolveLevel = 10, evolveToId = "033"
+            ),
+            MakromonEntry(
+                id = "033", drawableName = "makromon_mysnor", displayName = "Mysnor",
+                type = "ZEMĚ / PEVNOST",
+                desc = "Kamenný štít mu srostl s hřbetem. Nehne se z místa, ani když do něj narazí lavina. Trpělivost je taky síla.",
+                hint = "Mysnor se vyvine z Mysnica na levelu 10. Vzácně ho potkáš i v Horách.",
+                evolveLevel = 0, evolveToId = ""
+            ),
+            MakromonEntry(
+                id = "034", drawableName = "makromon_ignileo", displayName = "Ignileo",
                 type = "OHEŇ / STRÁŽCE",
                 desc = "Ohnivý lev s korunou z plamenů. Strážce rudého krystalu v hlubinách Starého dolu. Nevzdává se a chytit nejde.",
                 hint = "Hlídá rudý krystal v hlubinách Starého dolu. Do Makrodexu se zapíše, až ho porazíš.",
                 evolveLevel = 0, evolveToId = ""
             ),
             MakromonEntry(
-                id = "033", drawableName = "makromon_mysnic", displayName = "Mysnic",
-                type = "ZEMĚ / OBRANA",
-                desc = "Horská myška, která na zádech nosí plochý kámen jako štít. Když se lekne, schová se pod něj. Vytrvalost nad rychlost.",
-                hint = "Mysnic pobíhá po kamenitých stezkách v Horách. Je tam nejčastější.",
+                id = "035", drawableName = "makromon_aquavulp", displayName = "Aquavulp",
+                type = "VODA / STRÁŽCE",
+                desc = "Liška z vodního víru. Hlídá modrý krystal u podzemního jezírka a voda kolem ní nikdy nepřestane kroužit. Chytit nejde.",
+                hint = "Hlídá modrý krystal u podzemního jezírka v Mechové jeskyni. Do Makrodexu se zapíše, až ji porazíš.",
                 evolveLevel = 0, evolveToId = ""
             )
         )

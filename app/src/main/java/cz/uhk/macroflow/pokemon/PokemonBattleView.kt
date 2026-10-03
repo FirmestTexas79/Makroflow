@@ -154,7 +154,7 @@ class PokemonBattleView @JvmOverloads constructor(
             // --- 🎲 OPRAVENÝ ROLL S BIOMEM ---
             val enemyWithStats = if (special != null) {
                 // Strážce / legenda: pevný Makromon s pevným levelem
-                createPlayerMakromon(special.makromonId, special.level)
+                createPlayerMakromon(special.statsId, special.level)
                     .let { m -> special.displayName?.let { m.copy(name = it) } ?: m }
             } else {
                 // Level podle lokality (docs/adr/0029) – jeskyně mají vlastní rozpětí, i když
@@ -443,6 +443,7 @@ class PokemonBattleView @JvmOverloads constructor(
         "PHANTIAX"  -> 36f
         "IGNAROTH"  -> 40f
         "IGNILEO"   -> 42f
+        "AQUAVULP"  -> 36f
         "AQULINOX"  -> 38f
         "FLORINDRA" -> 36f
         "DRAKIRRA"  -> 34f

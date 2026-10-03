@@ -470,7 +470,18 @@ object BattleFactory {
         )
     )
 
-    // 33 - Mysnic (horská myška s kamenným štítem na zádech, docs/adr/0061)
+    // 33 - Mysnor (vývoj Mysnica: kamenný štít mu srostl s hřbetem, docs/adr/0063) – sprite zatím chybí
+    fun createMysnor() = Makromon(
+        name = "MYSNOR", level = 1,
+        maxHp = 70, attack = 50, defense = 85, speed = 36,
+        moves = listOf(
+            Move("SHELL SLAM", MakromonType.GROUND, 60, 95, 20),
+            Move("BOULDER GUARD", MakromonType.GROUND, 0, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF)),
+            Move("ROCK SLIDE", MakromonType.GROUND, 75, 90, 10)
+        )
+    )
+
+    // 32 - Mysnic (horská myška s kamenným štítem na zádech, docs/adr/0061)
     fun createMysnic() = Makromon(
         name = "MYSNIC", level = 1,
         maxHp = 42, attack = 30, defense = 55, speed = 32,
@@ -610,9 +621,13 @@ object BattleFactory {
             "029" -> BattleFactory.createPhantiax()
             "030" -> BattleFactory.createGudwin()
             "031" -> BattleFactory.createAxlu()
-            "033" -> BattleFactory.createMysnic()
+            "032" -> BattleFactory.createMysnic()
+            "033" -> BattleFactory.createMysnor()
             else  -> BattleFactory.createSpirra() // Spirra jako bezpečný fallback
         }
+
+    /** Číslo Makrodexu strážců (makrodexId u nich vrací druh, z něhož berou statistiky). */
+    val GUARDIAN_DEX: Map<String, String> = mapOf("IGNILEO" to "034", "AQUAVULP" to "035")
 
     fun makrodexId(makromon: Makromon): String = when (makromon.name) {
         "IGNAR"     -> "001"
@@ -647,7 +662,9 @@ object BattleFactory {
         "PHANTIAX"  -> "029"
         "GUDWIN"    -> "030"
         "AXLU"      -> "031"
-        "MYSNIC"    -> "033"
+        "MYSNIC"    -> "032"
+        "MYSNOR"    -> "033"
+        "AQUAVULP"  -> "021"   // vodní liška, strážce modrého krystalu (docs/adr/0063) – statistiky Serpfina
         else        -> "000"
     }
 
@@ -671,12 +688,15 @@ object BattleFactory {
             "ignar", "ignaroc", "ignaroth", "aqulin", "flori", "florind", "umbex", "spirra",
             "flamirra", "aquirra", "verdirra", "shadirra",
             "charmirra", "drakirra", "finlet", "serpfin", "mycit", "mydrus", "soulu", "soulex", "soulord",
-            "gudwin", "axlu", "ignileo", "mysnic"
+            "gudwin", "axlu", "ignileo", "mysnic", "aqulind", "florindra", "aquavulp"
         )
+
+        // Strážci mají statistiky jiného druhu, ale vlastní číslo Makrodexu i sprite (docs/adr/0063)
+        val spriteShort = GUARDIAN_DEX[makromon.name]?.takeLast(2) ?: shortId
 
         // Pokud ho máš v seznamu, složíme název: makromon_18_drakirra
         return if (existingSprites.contains(namePart)) {
-            "makromon_${shortId}_${namePart}"
+            "makromon_${spriteShort}_${namePart}"
         } else {
             // Fallback, pokud sprite ještě neexistuje
             "ic_home"

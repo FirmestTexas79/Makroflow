@@ -44,10 +44,14 @@ object Dossiers {
             "{4|Divocí jedinci jsou jeho prázdné skořápky.} {5|Žádá o výjimky pro subjekty. Vždy zamítnuto.}"
         "031" -> "Nezařazen." to
             "{4|Objevuje se jen u subjektů s vysokou disciplínou.} {6|Řád ho neregistroval. Zapsal se sám.}"
-        "032" -> "Strážce. Hlídá rudý krystal. Neopouští hlubinu." to
-            "{4|Koruna z plamenů není jeho.} {5|Byla mu nasazena při Přání.} {99|Nosič čeká na vystřídání.}"
-        "033" -> "Horský druh. Kámen na zádech není součástí těla." to
+        "032" -> "Horský druh. Kámen na zádech není součástí těla." to
             "{4|Kámen si vybírá sám a nikdy ho nemění.} {5|Úlomky odpovídají zdivu u Brány světů.}"
+        "033" -> "Kámen srostl s hřbetem. Jedinec ho už nemůže odložit." to
+            "{4|Srůst nastává, když druh přestane utíkat.} {5|U subjektů pozorováno totéž.}"
+        "034" -> "Strážce. Hlídá rudý krystal. Neopouští hlubinu." to
+            "{4|Koruna z plamenů není jeho.} {5|Byla mu nasazena při Přání.} {99|Nosič čeká na vystřídání.}"
+        "035" -> "Strážkyně. Hlídá modrý krystal. Voda kolem ní neteče, krouží." to
+            "{4|Krouží stále stejným směrem jako Finleti v noci.} {5|Krystal pláče, když se k němu přiblíží.}"
         else -> "Bez záznamu." to "{4|Spis neúplný.}"
     }
 

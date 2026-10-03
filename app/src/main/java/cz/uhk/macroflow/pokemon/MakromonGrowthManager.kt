@@ -270,11 +270,11 @@ object MakromonGrowthManager {
             )
         ),
 
-        // ── MYSNIC (033) – horská myška se štítem, docs/adr/0061 ──────
-        "033" to MakromonGrowthProfile(
-            makrodexId = "033",
-            evolutionLevel = 0,
-            evolutionToId = "",
+        // ── MYSNIC / MYSNOR (032 -> 033) – horská myška se štítem, docs/adr/0061, 0063 ──
+        "032" to MakromonGrowthProfile(
+            makrodexId = "032",
+            evolutionLevel = 10,
+            evolutionToId = "033",
             movesLearnedAt = listOf(
                 LearnableMove(1,  Move("STONE TOSS", MakromonType.GROUND, 40, 95, 30)),
                 LearnableMove(1,  BattleFactory.attackHarden()),
@@ -283,6 +283,18 @@ object MakromonGrowthManager {
                 LearnableMove(9,  Move("SHELL SLAM",    MakromonType.GROUND, 60, 95, 20)),
                 LearnableMove(12, Move("BOULDER GUARD", MakromonType.GROUND,  0, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))),
                 LearnableMove(16, Move("ROCK SLIDE",    MakromonType.GROUND, 75, 90, 10))
+            )
+        ),
+        "033" to MakromonGrowthProfile(
+            makrodexId = "033",
+            evolutionLevel = 0,
+            evolutionToId = "",
+            movesLearnedAt = listOf(
+                LearnableMove(10, Move("SHELL SLAM",     MakromonType.GROUND, 60, 95, 20)),
+                LearnableMove(10, Move("BOULDER GUARD",  MakromonType.GROUND,  0, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))),
+                LearnableMove(12, Move("ROCK SLIDE",     MakromonType.GROUND, 75, 90, 10)),
+                LearnableMove(16, Move("STONE FORTRESS", MakromonType.GROUND,  0, 100, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))),
+                LearnableMove(22, Move("EARTHQUAKE",     MakromonType.GROUND, 100, 100, 10))
             )
         ),
 

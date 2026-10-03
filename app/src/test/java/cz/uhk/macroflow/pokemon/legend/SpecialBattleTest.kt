@@ -50,11 +50,20 @@ class SpecialBattleTest {
         assertNull(SpecialBattle.from(null))
     }
 
+    /** Strážci mají vlastní číslo Makrodexu a sprite, statistiky berou z jiného druhu (docs/adr/0063). */
     @Test
-    fun fireGuardianIsTheNewLion() {
+    fun guardiansHaveOwnDexNumbersAndBorrowedStats() {
         val red = SpecialBattle.guardianOf(CrystalColor.RED)
+        val blue = SpecialBattle.guardianOf(CrystalColor.BLUE)
         assertEquals("IGNILEO", red.displayName)
-        assertEquals("makromon_03_" + red.displayName!!.lowercase(), red.spriteName)    // battle i mapa najdou stejný sprite
-        assertNull(SpecialBattle.BOSS_BLUE.displayName)
+        assertEquals("AQUAVULP", blue.displayName)
+        assertEquals("034" to "003", red.makromonId to red.statsId)
+        assertEquals("035" to "021", blue.makromonId to blue.statsId)
+        listOf(red, blue).forEach { g ->
+            // battle (BattleFactory.drawableName) i mapa (spriteName) najdou stejný sprite
+            val m = cz.uhk.macroflow.pokemon.BattleFactory.createById(g.statsId).copy(name = g.displayName!!)
+            assertEquals(g.spriteName, cz.uhk.macroflow.pokemon.BattleFactory.drawableName(m))
+        }
+        assertEquals(SpecialBattle.LEGEND_PEAK.makromonId, SpecialBattle.LEGEND_PEAK.statsId)
     }
 }
