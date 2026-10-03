@@ -267,7 +267,7 @@ abstract class AppDatabase : RoomDatabase() {
                 evolveLevel = 10, evolveToId = "006"
             ),
             MakromonEntry(
-                id = "006", drawableName = "ic_home", displayName = "Aqulinox",
+                id = "006", drawableName = "makromon_aqulinox", displayName = "Aqulinox",
                 type = "VODA / SÍLA",
                 desc = "Finální forma. Hydro pumpa na maximum. Svaly nabyté vodou a silou.",
                 hint = "Aqulind se vyvine na levelu 10. Vytrvalost a hydratace jsou klíčem.",
