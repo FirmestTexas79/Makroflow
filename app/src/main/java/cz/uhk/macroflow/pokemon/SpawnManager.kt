@@ -86,6 +86,7 @@ object SpawnManager {
         // horská myška s kamenným štítem (docs/adr/0061) – Hory do teď neměly žádného běžného Makromona
         SpawnPool("032", "MYSNIC",    Rarity.COMMON, listOf(BiomeType.MOUNTAINS), listOf(Conditions.ALWAYS))       { BattleFactory.createMysnic() },
         SpawnPool("033", "MYSNOR",    Rarity.RARE,   listOf(BiomeType.MOUNTAINS), listOf(Conditions.ALWAYS))       { BattleFactory.createMysnor() },
+        SpawnPool("038", "JOHNSOVA",    Rarity.COMMON,   listOf(BiomeType.MOUNTAINS), listOf(Conditions.ALWAYS))       { BattleFactory.createJohnsova() },
 
         // ── MEADOW (Les/Louka) ─────────────────────────────────────────
         SpawnPool("022", "MYCIT",    Rarity.COMMON, listOf(BiomeType.MEADOW), listOf(Conditions.ALWAYS))      { BattleFactory.createMycit() },
@@ -119,8 +120,15 @@ object SpawnManager {
         SpawnPool("003", "IGNAROTH",  Rarity.EPIC,   listOf(BiomeType.MOUNTAINS), listOf(Conditions.MinCheckInCount(7)))  { BattleFactory.createIgnaroth() },
         SpawnPool("019", "DRAKIRRA",  Rarity.LEGENDARY, ALL_WILD_BIOMES, listOf(Conditions.MinCheckInCount(30)))     { BattleFactory.createDrakirra() },
         SpawnPool("029", "PHANTIAX",  Rarity.LEGENDARY, ALL_WILD_BIOMES, listOf(Conditions.MinCheckInCount(20)))     { BattleFactory.createPhantiax() },
-        SpawnPool("031", "AXLU",      Rarity.MYTHIC, ALL_WILD_BIOMES, listOf(Conditions.MinCheckInCount(50)))        { BattleFactory.createAxlu() }
-    )
+        SpawnPool("031", "AXLU",      Rarity.MYTHIC, ALL_WILD_BIOMES, listOf(Conditions.MinCheckInCount(50)))        { BattleFactory.createAxlu() },
+
+        SpawnPool("036", "TYNAFI",  Rarity.COMMON,   ALL_WILD_BIOMES, listOf(Conditions.ALWAYS))       { BattleFactory.createTynafi() },
+        SpawnPool("037", "TYNAFIOR",  Rarity.COMMON,   ALL_WILD_BIOMES, listOf(Conditions.ALWAYS))       { BattleFactory.createTynafior() },
+        SpawnPool("040", "HAPPINY",  Rarity.COMMON,   ALL_WILD_BIOMES, listOf(Conditions.ALWAYS))       { BattleFactory.createHappiny() }
+
+
+
+        )
 
     fun rollWildEncounter(context: Context, currentBiome: BiomeType): Makromon {
         val prefs = context.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)

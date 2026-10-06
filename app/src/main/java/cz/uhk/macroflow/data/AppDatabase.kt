@@ -39,7 +39,7 @@ import kotlin.concurrent.thread
         WorkoutTemplateEntity::class,
         MealTemplateEntity::class
     ],
-    version = 38,
+    version = 40,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -67,6 +67,18 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mealTemplateDao(): MealTemplateDao
 
     companion object {
+
+
+
+        /** v39-40: přechod z verze 38 na 40. */
+        val MIGRATION_38_40 = object : Migration(38, 40) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Pokud přibyly sloupce nebo tabulky, sem patří db.execSQL(...)
+                // Pokud se schéma DB neměnilo, může zůstat prázdné
+            }
+        }
+
+
         /** v34: log herních událostí + začátek fáze questu. */
         val MIGRATION_33_34 = object : Migration(33, 34) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -169,7 +181,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38)
+                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_40)
                     // Destruktivní fallback jen pro verze PŘED zavedením migrací.
                     // Od v33 se lokální data uživatelů už nikdy nesmažou potichu:
                     // chybějící migrace = pád při vývoji, ne ztráta dat v produkci.
@@ -484,6 +496,34 @@ abstract class AppDatabase : RoomDatabase() {
                 type = "VODA / STRÁŽCE",
                 desc = "Liška z vodního víru. Hlídá modrý krystal u podzemního jezírka a voda kolem ní nikdy nepřestane kroužit. Chytit nejde.",
                 hint = "Hlídá modrý krystal u podzemního jezírka v Mechové jeskyni. Do Makrodexu se zapíše, až ji porazíš.",
+                evolveLevel = 0, evolveToId = ""
+            ),
+            MakromonEntry(
+                id = "036", drawableName = "makromon_36_tynafi", displayName = "Tynafi",
+                type = "OHEŇ / KRASAVICE",
+                desc = "Malý ohnivý tvor plný energie, který bydlí někde v Příbrami i privilegovaný rodiny zrzků.",
+                hint = "Potkáš ho v divočině.",
+                evolveLevel = 8, evolveToId = "037"
+            ),
+            MakromonEntry(
+                id = "037", drawableName = "makromon_37_tynafior", displayName = "Tynafior",
+                type = "OHEŇ / SÍLA",
+                desc = "Vyvinutá forma Tynafiho chrlící žár.",
+                hint = "Vyvine se z Tynafiho na levelu 8.",
+                evolveLevel = 0, evolveToId = ""
+            ),
+            MakromonEntry(
+                id = "038", drawableName = "makromon_38_johnsova", displayName = "Johnsova",
+                type = "BLESK / HORY",
+                desc = "Horský bleskový sovička. Jakmile uslyšíš houknutí, můžeš očekávat, že tě brzy trefí blesk.",
+                hint = "Hledej v Horách.",
+                evolveLevel = 0, evolveToId = ""
+            ),
+            MakromonEntry(
+                id = "040", drawableName = "makromon_40_happiny", displayName = "Happiny",
+                type = "NORMÁLNÍ / FAIRY",
+                desc = "Veselý parťák na cesty.",
+                hint = "Potkáš ho v divočině.",
                 evolveLevel = 0, evolveToId = ""
             )
         )

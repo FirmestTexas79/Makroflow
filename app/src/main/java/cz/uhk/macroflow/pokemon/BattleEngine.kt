@@ -571,6 +571,49 @@ object BattleFactory {
         )
     )
 
+
+    fun createTynafi() = Makromon(
+        name = "TYNAFI", level = 1,32, attack = 14, defense = 8, speed = 15,
+        moves = listOf(
+            attackTackle(),
+            attackFireFang(),
+            attackFuryAttack(),
+            attackCharm()
+        )
+    )
+
+    fun createTynafior() = Makromon(
+        name = "TYNAFIOR", level = 8,60, attack = 20, defense = 30, speed = 20,
+        moves = listOf(
+            attackTackle(),
+            attackFlamethrower(),
+            attackFuryAttack(),
+            attackHeatWave()
+        )
+    )
+
+    fun createJohnsova() = Makromon(
+        name = "JOHNSOVA", level = 1,
+        maxHp = 35, attack = 12, defense = 12, speed = 15,
+        moves = listOf(
+            attackSandAttack(),
+            attackThunderbolt(),
+            attackScratch(),
+            attackConfuseRay()
+        )
+    )
+
+    fun createHappiny() = Makromon(
+        name = "HAPPINY", level = 1,
+        maxHp = 35, attack = 12, defense = 12, speed = 15,
+        moves = listOf(
+            attackTackle(),
+            attackCharm(),
+            attackBite()
+        )
+    )
+
+
     // ── POMOCNÉ FUNKCE ────────────────────────────────────────────────
 
     /** Vrátí catch multiplier – těžší Makromoni mají nižší hodnotu */
@@ -623,6 +666,10 @@ object BattleFactory {
             "031" -> BattleFactory.createAxlu()
             "032" -> BattleFactory.createMysnic()
             "033" -> BattleFactory.createMysnor()
+            "036" -> BattleFactory.createTynafi()
+            "037" -> BattleFactory.createTynafior()
+            "038" -> BattleFactory.createJohnsova()
+            "040" -> BattleFactory.createHappiny()
             else  -> BattleFactory.createSpirra() // Spirra jako bezpečný fallback
         }
 
@@ -664,6 +711,10 @@ object BattleFactory {
         "AXLU"      -> "031"
         "MYSNIC"    -> "032"
         "MYSNOR"    -> "033"
+        "TYNAFI"    -> "036"
+        "TYNAFIOR"  -> "037"
+        "JOHNSOVA"   -> "038"
+        "HAPPINY"   -> "040"
         "AQUAVULP"  -> "021"   // vodní liška, strážce modrého krystalu (docs/adr/0063) – statistiky Serpfina
         else        -> "000"
     }
@@ -688,7 +739,8 @@ object BattleFactory {
             "ignar", "ignaroc", "ignaroth", "aqulin", "flori", "florind", "umbex", "spirra",
             "flamirra", "aquirra", "verdirra", "shadirra",
             "charmirra", "drakirra", "finlet", "serpfin", "mycit", "mydrus", "soulu", "soulex", "soulord",
-            "gudwin", "axlu", "ignileo", "mysnic", "aqulind", "florindra", "aquavulp", "phantil", "aqulinox", "glacirra"
+            "gudwin", "axlu", "ignileo", "mysnic", "aqulind", "florindra", "aquavulp", "phantil", "aqulinox", "glacirra",
+            "tynafi", "tynafior", "johnsov", "happiny", "phantius", "phantiax", "mysnor"
         )
 
         // Strážci mají statistiky jiného druhu, ale vlastní číslo Makrodexu i sprite (docs/adr/0063)

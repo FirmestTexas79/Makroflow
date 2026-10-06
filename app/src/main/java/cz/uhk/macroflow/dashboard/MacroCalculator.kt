@@ -24,7 +24,7 @@ import java.util.*
  * Všechny obrazovky (dashboard, historie, achievementy, spawny, report) berou cíle
  * odsud, takže ukazují stejná čísla. Kroky jsou už započtené – nic dalšího nepřičítat.
  */
-object MacroCalculator {
+object    MacroCalculator {
 
     fun calculate(context: Context): MacroResult = calculateForDate(context, Date())
 
