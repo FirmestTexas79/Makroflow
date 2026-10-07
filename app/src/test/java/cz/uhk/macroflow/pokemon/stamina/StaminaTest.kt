@@ -53,7 +53,10 @@ class StaminaTest {
         assertEquals(15 + 20 + 5 + 10 + 10 + 20 + 30 + 15, Stamina.dayReward(max))
         assertEquals(5, Stamina.dayReward(Stamina.Day(waterMl = 1250, waterGoalMl = 2500)))
         assertEquals(10, Stamina.dayReward(Stamina.Day(sets = 5)))                      // bez dokončeného tréninku
-        assertEquals(10 + 2, Stamina.dayReward(Stamina.Day(steps = 4100, sets = 1)))         // 2 × 2000 kroků + série
+        assertEquals(10 + 2, Stamina.dayReward(Stamina.Day(steps = 4100, sets = 1)))
+        assertEquals(15, Stamina.dayReward(Stamina.Day(workoutDone = true, sets = 0)))
+        assertEquals(12 + 15, Stamina.dayReward(Stamina.Day(workoutDone = true, sets = 6)))   // trénink se nepočítá dvakrát
+        assertEquals(20, Stamina.dayReward(Stamina.Day(cardioDone = true, restDay = true)))         // 2 × 2000 kroků + série
     }
 
     @Test fun `makra jen v pasmu`() {
