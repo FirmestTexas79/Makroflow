@@ -46,4 +46,38 @@ class StaminaTest {
         s = Stamina.moved(s, from = "FOREST", cost = 0, now = 2000)                   // les → louka zdarma
         assertEquals(3, Stamina.transitionCost(s, "FOREST", 3000))                    // znovu do lesa už ne
     }
+
+    @Test fun `denni odmena respektuje stropy`() {
+        assertEquals(0, Stamina.dayReward(Stamina.Day()))
+        val max = Stamina.Day(checkIn = true, meals = 9, waterMl = 5000, waterGoalMl = 2500, macrosHit = true, steps = 30000, sets = 40)
+        assertEquals(15 + 20 + 5 + 10 + 10 + 20 + 30 + 15, Stamina.dayReward(max))
+        assertEquals(5, Stamina.dayReward(Stamina.Day(waterMl = 1250, waterGoalMl = 2500)))
+        assertEquals(10, Stamina.dayReward(Stamina.Day(sets = 5)))                      // bez dokončeného tréninku
+        assertEquals(10 + 2, Stamina.dayReward(Stamina.Day(steps = 4100, sets = 1)))         // 2 × 2000 kroků + série
+    }
+
+    @Test fun `makra jen v pasmu`() {
+        assert(Stamina.macrosHit(150.0, 160.0, 2600.0, 2500.0))
+        assert(!Stamina.macrosHit(200.0, 160.0, 2500.0, 2500.0))                       // přebytek bílkovin
+        assert(!Stamina.macrosHit(160.0, 160.0, 3000.0, 2500.0))
+        assert(!Stamina.macrosHit(0.0, 0.0, 0.0, 0.0))
+    }
+
+    @Test fun `odmena se dorovnava a neklesa`() {
+        var s = State(base = 90, over = 0, refillDay = "d1")
+        s = Stamina.reward(s, "d1", 15)
+        assertEquals(100, s.base); assertEquals(5, s.over)
+        assertEquals(s, Stamina.reward(s, "d1", 15))                                    // podruhé nic
+        assertEquals(s, Stamina.reward(s, "d1", 10))                                    // smazané jídlo nebere
+        s = Stamina.reward(s, "d1", 20)
+        assertEquals(10, s.over)
+        assertEquals(15, Stamina.reward(s, "d2", 5).over)                                // nový den počítá od nuly
+    }
+
+    @Test fun `doplneni pres noc maze pripsane odmeny`() {
+        val s = Stamina.reward(State(refillDay = "d1"), "d2", 30)                          // zápisy po půlnoci
+        val r = Stamina.refill(s.copy(lastExitAt = 0), "d2", 10)
+        assertEquals(100, r.base); assertEquals(0, r.over)
+        assertEquals(30, Stamina.reward(r, "d2", 30).over)                                // dnešní odměny znovu nad čistých 100
+    }
 }

@@ -409,8 +409,24 @@ class MakromonMapActivity : AppCompatActivity() {
         cz.uhk.macroflow.pokemon.audio.GameAudio.resume(this)
         // Energie: nový den po aspoň 4 h pauze doplní bar (docs/adr/0065)
         staminaBar.set(cz.uhk.macroflow.pokemon.stamina.StaminaStore.onEnter(this), animate = false)
+        collectStamina()
         // AFK těžba / kácení: po návratu ukázat, co se za tu dobu udělalo (docs/adr/0035)
         mapWorld.postDelayed({ reportAfk() }, 700)
+    }
+
+    /** Energie za dnešní zápisy ve funkční části (tabulka A, docs/adr/0065); připíše jen nové. */
+    private fun collectStamina() {
+        val store = cz.uhk.macroflow.pokemon.stamina.StaminaStore
+        lifecycleScope.launch {
+            val day = kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { store.dayFacts(this@MakromonMapActivity) }.getOrNull() }
+                ?: return@launch
+            val before = store.load(this@MakromonMapActivity).total
+            val s = store.collect(this@MakromonMapActivity, day)
+            if (s.total > before) {
+                staminaBar.set(s)
+                showMapToast("⚡ +${s.total - before} energie za dnešní zápisy")
+            }
+        }
     }
 
     override fun onPause() {

@@ -1,6 +1,6 @@
 # 0065 – Energie Makrosvěta, overstim a propojení s tréninkem
 
-**Stav:** schváleno, fáze 1 (jádro, bar, ceny akcí) implementována · **Datum:** 2026-10-07
+**Stav:** schváleno, fáze 1 (jádro, bar, ceny akcí) a fáze 2 (odměny za zápisy) implementovány · **Datum:** 2026-10-07
 
 ## Kontext
 Makrosvět je teď volně přístupný a dá se projít naráz. Obsah se tak spotřebuje příliš rychle
@@ -120,6 +120,15 @@ Posilovna: 20 pauz × 2 akce ≈ 128 energie. Před posilovnou přibude ~30 (rit
 během tréninku ~45 (série + dokončení). Po tréninku zbude ~47 a večerní zápisy přidají ~35.
 Disciplinovaný den tedy dá zhruba dvakrát víc hraní než den bez zápisů, ale ani prázdný den
 nehru nezablokuje.
+
+### Implementace odměn (fáze 2)
+Místo producentů v každé obrazovce se nárok počítá **přímo ze stávajících tabulek** (check-in, jídla,
+voda, kroky, série – stejná fakta jako denní úkoly, `DailyQuestStore.facts`). `Stamina.dayReward`
+spočítá celodenní nárok podle tabulky A a `Stamina.reward` připíše jen rozdíl proti už připsanému
+(`granted`, `grantedDay`). Je to idempotentní, smazaný zápis energii nevezme a doplnění přes noc
+připsané vynuluje, takže dnešní odměny jdou znovu nad čistých 100. `game_events` zůstává pro
+události, které v tabulkách nejsou (rychlý zápis tréninku, kardio, den volna – fáze 3).
+Dokud není fáze 3, série se odměňují i bez spuštěného „Jdu na trénink“ a dokončený trénink = ≥ 6 sérií.
 
 ## Fáze implementace
 1. `stamina` jádro: stav, doplnění přes noc, ceny akcí, bar v UI, zpracování `game_events` + unit testy.
