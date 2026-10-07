@@ -401,14 +401,17 @@ class PlanFragment : Fragment() {
     }
 
     private fun pickWorkout(history: List<cz.uhk.macroflow.training.log.LoggedSet>, todayDay: Int) {
-        val options = WorkoutTemplates.Kind.entries.flatMap { k -> WorkoutTemplates.VARIANTS.map { k to it } }
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Který trénink?")
-            .setItems(options.map { (k, v) ->
-                val next = WorkoutTemplates.variantFor(k, history, todayDay) == v
-                WorkoutTemplates.label(WorkoutTemplates.key(k, v)) + if (next) "  · na řadě" else ""
-            }.toTypedArray()) { _, i -> WorkoutSessionSheet.show(childFragmentManager, options[i].first, options[i].second) }
-            .show()
+        val ctx = requireContext().applicationContext
+        val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
+        val todayKind = WorkoutTemplates.Kind.fromPlanType(trainingPrefs.getString("type_$dayName", "rest"))
+        viewLifecycleOwner.lifecycleScope.launch {
+            val counts = WorkoutTemplates.Kind.entries.flatMap { k -> WorkoutTemplates.VARIANTS.map { WorkoutTemplates.key(k, it) } }
+                .associateWith { WorkoutRepository.templateIds(ctx, it).size }
+            if (!isAdded) return@launch
+            cz.uhk.macroflow.training.log.WorkoutPickerSheet.show(requireContext(), history, todayDay, counts, todayKind) { k, v ->
+                WorkoutSessionSheet.show(childFragmentManager, k, v)
+            }
+        }
     }
 
     /** Klepnutí na kartu otevře atlas svalů; klepnutí přímo na sval ho v atlasu rovnou vybere. */
