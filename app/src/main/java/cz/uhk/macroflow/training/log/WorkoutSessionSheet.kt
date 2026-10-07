@@ -39,15 +39,28 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
     companion object {
         private const val ARG_KIND = "kind"
         private const val ARG_VARIANT = "variant"
+        private const val ARG_IDS = "ids"
+        private const val ARG_TITLE = "title"
+        /** Šablona zapsaná u sérií z vlastního výběru cviků („Jiný trénink“). */
+        const val CUSTOM_TEMPLATE = "OTHER"
         private const val TAG = "WorkoutSessionSheet"
 
         fun show(fm: FragmentManager, kind: WorkoutTemplates.Kind, variant: Char) {
             if (fm.findFragmentByTag(TAG) != null) return
             WorkoutSessionSheet().apply { arguments = bundleOf(ARG_KIND to kind.name, ARG_VARIANT to variant.toString()) }.show(fm, TAG)
         }
+
+        /** Vlastní trénink z vybraných cviků (např. podle partií z „Jdu na trénink“), bez šablony A/B. */
+        fun showCustom(fm: FragmentManager, title: String, exerciseIds: List<String>) {
+            if (fm.findFragmentByTag(TAG) != null) return
+            WorkoutSessionSheet().apply { arguments = bundleOf(ARG_TITLE to title, ARG_IDS to ArrayList(exerciseIds)) }.show(fm, TAG)
+        }
     }
 
     private lateinit var kind: WorkoutTemplates.Kind
+    private var customIds: List<String>? = null
+    /** Počet dnešních sérií při posledním vykreslení – přírůstek = nová série → bublina do Makrosvěta. */
+    private var lastTodayCount: Int? = null
     private var variant = 'A'
     private var observeJob: Job? = null
 
@@ -55,7 +68,8 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         inflater.inflate(R.layout.sheet_workout_session, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        kind = WorkoutTemplates.Kind.valueOf(requireArguments().getString(ARG_KIND)!!)
+        customIds = requireArguments().getStringArrayList(ARG_IDS)
+        kind = WorkoutTemplates.Kind.valueOf(requireArguments().getString(ARG_KIND) ?: WorkoutTemplates.Kind.PUSH.name)
         variant = (savedInstanceState?.getString(ARG_VARIANT) ?: requireArguments().getString(ARG_VARIANT) ?: "A").first()
 
         view.findViewById<View>(R.id.btnCloseSession).setOnClickListener { dismiss() }
@@ -63,6 +77,10 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
             TemplateEditorSheet.show(childFragmentManager, key())
         }
         val toggle = view.findViewById<MaterialButtonToggleGroup>(R.id.toggleVariant)
+        if (customIds != null) {
+            toggle.visibility = View.GONE
+            view.findViewById<View>(R.id.btnEditTemplate).visibility = View.GONE
+        }
         toggle.check(if (variant == 'A') R.id.btnVariantA else R.id.btnVariantB)
         toggle.addOnButtonCheckedListener { _, id, checked ->
             if (!checked) return@addOnButtonCheckedListener
@@ -89,7 +107,7 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private fun key() = WorkoutTemplates.key(kind, variant)
+    private fun key() = if (customIds != null) CUSTOM_TEMPLATE else WorkoutTemplates.key(kind, variant)
 
     /** Série i šablona jako Flow – po zápisu, smazání nebo úpravě šablony se vše přepočítá. */
     private fun observe() {
@@ -97,7 +115,7 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         val dao = AppDatabase.getDatabase(requireContext()).workoutDao()
         observeJob = viewLifecycleOwner.lifecycleScope.launch {
             combine(dao.all(), dao.template(key())) { sets, rows -> sets to rows }.collect { (sets, rows) ->
-                val ids = rows.map { it.exerciseId }.ifEmpty { WorkoutTemplates.DEFAULTS[key()].orEmpty() }
+                val ids = customIds ?: rows.map { it.exerciseId }.ifEmpty { WorkoutTemplates.DEFAULTS[key()].orEmpty() }
                 render(sets, ids)
             }
         }
@@ -109,8 +127,13 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         val todayDay = today.toEpochDay().toInt()
         val all = WorkoutRepository.toLogged(entities)
 
-        v.findViewById<TextView>(R.id.tvSessionTitle).text = WorkoutTemplates.label(key())
-        val lastOther = all.filter { WorkoutTemplates.parse(it.template)?.first == kind && it.day < todayDay }.maxByOrNull { it.day }
+        val todayCount = entities.count { it.date == today.toString() }
+        lastTodayCount?.let { if (todayCount > it) MakrosvetBubble.show(v, todayCount) }
+        lastTodayCount = todayCount
+
+        v.findViewById<TextView>(R.id.tvSessionTitle).text = requireArguments().getString(ARG_TITLE) ?: WorkoutTemplates.label(key())
+        val lastOther = if (customIds != null) null
+            else all.filter { WorkoutTemplates.parse(it.template)?.first == kind && it.day < todayDay }.maxByOrNull { it.day }
         v.findViewById<TextView>(R.id.tvSessionSub).text = buildString {
             append("${today.dayOfMonth}. ${today.monthValue}. · ${ids.size} cviků")
             lastOther?.let { append(" · minule ${WorkoutTemplates.label(it.template!!)} (${date(it.day)})") }

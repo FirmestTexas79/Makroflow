@@ -5,6 +5,7 @@ import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.GameEventType
 import cz.uhk.macroflow.data.GameEvents
 import cz.uhk.macroflow.training.body.Muscle
+import cz.uhk.macroflow.training.exercises.ExerciseLibrary
 import cz.uhk.macroflow.training.body.TrainingMuscles
 import cz.uhk.macroflow.training.log.WorkoutTemplates
 import java.text.SimpleDateFormat
@@ -35,9 +36,14 @@ object QuickWorkout {
     private const val K_TIME = "quick_time"
     private const val K_STARTED = "quick_started"
     private const val K_FINISHED = "quick_finished"
+    private const val K_MUSCLES = "quick_muscles"
 
     /** [kind] = název [WorkoutTemplates.Kind], [CARDIO] nebo [OTHER]. [startedAt] 0 = zatím jen naplánováno. */
-    data class Entry(val kind: String, val variant: Char?, val time: String, val startedAt: Long, val finishedAt: Long) {
+    data class Entry(
+        val kind: String, val variant: Char?, val time: String, val startedAt: Long, val finishedAt: Long,
+        /** Vybrané partie u „Jiného“ tréninku – podle nich se skládají cviky. */
+        val muscles: Set<Muscle> = emptySet()
+    ) {
         val strength: WorkoutTemplates.Kind? get() = WorkoutTemplates.Kind.entries.firstOrNull { it.name == kind }
         val label: String get() = when {
             kind == CARDIO -> "Kardio"
@@ -55,13 +61,33 @@ object QuickWorkout {
         else -> TrainingMuscles.of(kind.lowercase()).filterValues { it >= TrainingMuscles.PRIMARY }.keys
     }
 
-    /** Silový trénink, který nejvíc pokrývá vybrané partie (hlavní 1, vedlejší 0,5); null = nic vybráno. */
+    /**
+     * Šablona, do které se vybrané partie celé vejdou (hlavní 1, vedlejší 0,5 – vyhraje nejlepší pokrytí).
+     * Když se nevejdou do žádné (třeba prsa + záda + stehna), je to [OTHER] s cviky podle [exercisesFor].
+     * null = nic vybráno.
+     */
     fun suggest(selected: Set<Muscle>): String? {
         if (selected.isEmpty()) return null
-        val (best, score) = WorkoutTemplates.Kind.entries
-            .map { k -> k.name to selected.sumOf { TrainingMuscles.of(k.planType)[it] ?: 0.0 } }
-            .maxBy { it.second }
-        return if (score > 0) best else OTHER
+        return WorkoutTemplates.Kind.entries
+            .map { k -> k to TrainingMuscles.of(k.planType) }
+            .filter { (_, m) -> selected.all { it in m } }
+            .maxByOrNull { (_, m) -> selected.sumOf { m.getValue(it) } }
+            ?.first?.name ?: OTHER
+    }
+
+    /**
+     * Cviky na vybrané partie: ke každé 2 cviky, kde je hlavní. Přednost mají cviky ze šablon
+     * (to, co uživatel v posilovně opravdu dělá), pak jednodušší. Nejvýš [max] cviků.
+     */
+    fun exercisesFor(selected: Collection<Muscle>, max: Int = 8): List<String> {
+        val known = WorkoutTemplates.DEFAULTS.values.flatten().toSet()
+        val out = linkedSetOf<String>()
+        selected.forEach { m ->
+            ExerciseLibrary.ALL.filter { m in it.primary && it.id !in out }
+                .sortedWith(compareBy({ it.id !in known }, { it.level }, { it.primary.size }))
+                .take(2).forEach { out += it.id }
+        }
+        return out.take(max)
     }
 
     private fun prefs(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -74,25 +100,28 @@ object QuickWorkout {
             variant = getString(K_VARIANT, null)?.singleOrNull(),
             time = getString(K_TIME, null) ?: return null,
             startedAt = getLong(K_STARTED, 0),
-            finishedAt = getLong(K_FINISHED, 0)
+            finishedAt = getLong(K_FINISHED, 0),
+            muscles = getString(K_MUSCLES, "").orEmpty().split(',').mapNotNull { n -> Muscle.entries.firstOrNull { it.name == n } }.toSet()
         )
     }
 
     fun active(ctx: Context): Entry? = today(ctx)?.takeIf { it.running() }
 
-    private fun save(ctx: Context, kind: String, variant: Char?, time: String, startedAt: Long) =
+    private fun save(ctx: Context, kind: String, variant: Char?, time: String, startedAt: Long, muscles: Set<Muscle>) =
         prefs(ctx).edit()
+            .putString(K_MUSCLES, muscles.joinToString(",") { it.name })
             .putString(K_DAY, today()).putString(K_KIND, kind).putString(K_VARIANT, variant?.toString())
             .putString(K_TIME, time).putLong(K_STARTED, startedAt).putLong(K_FINISHED, 0)
             .apply()
 
     /** „Za 15 min“ / „Vlastní čas“: jen naplánuje na dnešek. */
-    fun plan(ctx: Context, kind: String, variant: Char?, time: String) = save(ctx, kind, variant, time, 0)
+    fun plan(ctx: Context, kind: String, variant: Char?, time: String, muscles: Set<Muscle> = emptySet()) =
+        save(ctx, kind, variant, time, 0, muscles)
 
     /** „Teď“: trénink rovnou běží. */
-    fun start(ctx: Context, kind: String, variant: Char?) {
+    fun start(ctx: Context, kind: String, variant: Char?, muscles: Set<Muscle> = emptySet()) {
         val now = System.currentTimeMillis()
-        save(ctx, kind, variant, SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now)), now)
+        save(ctx, kind, variant, SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now)), now, muscles)
     }
 
     /**

@@ -61,6 +61,7 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
     private var custom: LocalTime = LocalTime.now().plusMinutes(15)
     private var history: List<LoggedSet> = emptyList()
     private var cancelArmed = false
+    private var confirmDone = false
     private val ticker = object : Runnable {
         override fun run() { renderRun(); view?.postDelayed(this, 1000) }
     }
@@ -86,10 +87,9 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
         view.findViewById<View>(R.id.btnQwDone).setOnClickListener { done() }
         view.findViewById<View>(R.id.btnQwCancel).setOnClickListener { cancel() }
         view.findViewById<View>(R.id.btnQwSets).setOnClickListener {
+            if (confirmDone) { confirmDone = false; renderRun(); return@setOnClickListener }
             val e = QuickWorkout.today(requireContext()) ?: return@setOnClickListener
-            val k = e.strength ?: return@setOnClickListener
-            WorkoutSessionSheet.show(parentFragmentManager, k, e.variant ?: 'A')
-            dismiss()
+            if (openSession(e)) dismiss()
         }
         val ctx = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
@@ -117,6 +117,17 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
     /** Dnešní trénink, který ještě není hotový (běží nebo čeká na start). */
     private fun pending(): QuickWorkout.Entry? =
         QuickWorkout.today(requireContext())?.takeIf { it.running() || (it.startedAt == 0L && it.finishedAt == 0L) }
+
+    /** Otevře zápis sérií: šablonu u Push/Pull/Legs, u „Jiného“ cviky na vybrané partie. */
+    private fun openSession(e: QuickWorkout.Entry): Boolean {
+        e.strength?.let { WorkoutSessionSheet.show(parentFragmentManager, it, e.variant ?: 'A'); return true }
+        val ids = QuickWorkout.exercisesFor(e.muscles)
+        if (ids.isEmpty()) return false
+        WorkoutSessionSheet.showCustom(parentFragmentManager, "Jiný trénink", ids)
+        return true
+    }
+
+    private fun canLog(e: QuickWorkout.Entry) = e.strength != null || e.muscles.isNotEmpty()
 
     private fun strengthOf(k: String?) = WorkoutTemplates.Kind.entries.firstOrNull { it.name == k }
 
@@ -160,8 +171,13 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
 
         v.findViewById<TextView>(R.id.tvQwPill).text = "JDU NA TRÉNINK"
         v.findViewById<TextView>(R.id.tvQwTitle).text = kind?.let { label(it, variant) } ?: "Co dnes procvičíš?"
-        v.findViewById<TextView>(R.id.tvQwSub).text =
-            if (kind == null) "Klepni na partie, podle nich vyberu trénink." else "Klepnutím na postavu výběr upravíš."
+        v.findViewById<TextView>(R.id.tvQwSub).text = when {
+            kind == null -> "Klepni na partie, podle nich vyberu trénink."
+            kind == QuickWorkout.OTHER && selected.isNotEmpty() ->
+                "Nesedí do žádné šablony, složím ti ${QuickWorkout.exercisesFor(selected).size} cviků na vybrané partie."
+            kind == QuickWorkout.OTHER -> "Klepni na partie a složím ti cviky na míru."
+            else -> "Klepnutím na postavu výběr upravíš."
+        }
 
         v.findViewById<BodyMapView>(R.id.bodyQw).setIntensities(selected.associateWith { 1.0 }, c(R.color.brand_accent_deep))
         v.findViewById<TextView>(R.id.tvQwMuscles).text =
@@ -238,10 +254,19 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
             val mins = java.time.Duration.between(LocalTime.now(), LocalTime.parse(p.time)).toMinutes()
             hint.text = when { mins > 0 -> "za $mins min"; mins == 0L -> "právě teď"; else -> "před ${-mins} min" }
         }
-        v.findViewById<View>(R.id.btnQwSets).visibility = if (running && p.strength != null) View.VISIBLE else View.GONE
-        v.findViewById<MaterialButton>(R.id.btnQwDone).text = if (running) "Hotovo ✓" else "Začít teď"
+        v.findViewById<MaterialButton>(R.id.btnQwSets).apply {
+            visibility = if (running && (confirmDone || canLog(p))) View.VISIBLE else View.GONE
+            text = if (confirmDone) "Ještě cvičím" else "Zapsat série"
+        }
+        v.findViewById<MaterialButton>(R.id.btnQwDone).text = when {
+            !running -> "Začít teď"
+            confirmDone -> "Ano, dokončit trénink"
+            else -> "Hotovo ✓"
+        }
         val shortCardio = running && p.kind == QuickWorkout.CARDIO && p.minutes() < QuickWorkout.CARDIO_MIN
         v.findViewById<TextView>(R.id.tvQwRunNote).text = when {
+            confirmDone -> "Opravdu dokončit ${p.label} po ${p.minutes()} min? Stopky se zastaví." +
+                if (shortCardio) " Kardio pod ${QuickWorkout.CARDIO_MIN} min energii nedá." else ""
             !running -> "Připomenu se v čase tréninku. Pak stačí klepnout na činku."
             shortCardio -> "Kardio se do energie počítá od ${QuickWorkout.CARDIO_MIN} min (zbývá ${QuickWorkout.CARDIO_MIN - p.minutes()} min)."
             p.kind == QuickWorkout.CARDIO -> "Za dokončené kardio +10 ⚡ v Makrosvětu."
@@ -297,13 +322,14 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
     private fun go() {
         val k = kind ?: return
         val ctx = requireContext()
+        val muscles = if (k == QuickWorkout.OTHER) selected.toSet() else emptySet()
         if (whenMode == When.NOW) {
-            QuickWorkout.start(ctx, k, variant)
+            QuickWorkout.start(ctx, k, variant, muscles)
             changed()
-            strengthOf(k)?.let { WorkoutSessionSheet.show(parentFragmentManager, it, variant ?: 'A') }
+            QuickWorkout.today(ctx)?.let { openSession(it) }
             dismiss()
         } else {
-            QuickWorkout.plan(ctx, k, variant, hhmm(time()))
+            QuickWorkout.plan(ctx, k, variant, hhmm(time()), muscles)
             changed()
             render()
         }
@@ -313,11 +339,13 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
         val p = pending() ?: return
         val ctx = requireContext().applicationContext
         if (!p.running()) {            // naplánovaný → začít teď
-            QuickWorkout.start(ctx, p.kind, p.variant)
+            QuickWorkout.start(ctx, p.kind, p.variant, p.muscles)
             changed()
-            p.strength?.let { WorkoutSessionSheet.show(parentFragmentManager, it, p.variant ?: 'A'); dismiss() } ?: render()
+            if (QuickWorkout.today(ctx)?.let { openSession(it) } == true) dismiss() else render()
             return
         }
+        // Hotovo se nejdřív zeptá – omylem ukončený trénink by přišel o odměnu i stopky
+        if (!confirmDone) { confirmDone = true; renderRun(); return }
         val rewarded = p.kind != QuickWorkout.CARDIO || p.minutes() >= QuickWorkout.CARDIO_MIN
         viewLifecycleOwner.lifecycleScope.launch {
             QuickWorkout.finish(ctx, done = true)

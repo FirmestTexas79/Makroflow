@@ -130,14 +130,19 @@ připsané vynuluje, takže dnešní odměny jdou znovu nad čistých 100. `game
 události, které v tabulkách nejsou (rychlý zápis tréninku, kardio, den volna – fáze 3).
 Dokud není fáze 3, série se odměňují i bez spuštěného „Jdu na trénink“ a dokončený trénink = ≥ 6 sérií.
 
+### Bublina po sérii (část fáze 4)
+Zápis série v `WorkoutSessionSheet` ukáže na 5 s nad sheetem bublinu „+2 ⚡ · Skok do Makrosvěta“
+(`MakrosvetBubble`, PopupWindow; „+2 ⚡“ jen do stropu 15 sérií). Přepínač v nastavení přijde se zbytkem fáze 4.
+
 ### Implementace rychlého zápisu (fáze 3)
 Místo nové tabulky `activity_log` (vyžadovala by migraci DB) je dnešní jednorázový trénink v
 `TrainingPrefs` (`QuickWorkout`: druh, varianta, čas, start, konec) a potvrzené „Hotovo“ se zapisuje
 do `game_events` jako `WORKOUT_DONE` / `CARDIO_DONE`. Ledger tak zůstává jeden a auditovatelný.
 * V Plánu plovoucí tlačítko s činkou → sheet „Jdu na trénink“: klepnutím na partie na postavě se předvybere
-  trénink (Push/Pull/Legs podle největšího překryvu, jinak „Jiný“; jde i ručně, včetně Kardia) a čas
+  trénink (Push/Pull/Legs, jen když se do šablony vejdou všechny vybrané partie; jinak „Jiný“ s cviky
+  složenými na vybrané partie, 2 na partii, přednost cviky ze šablon; jde i ručně, včetně Kardia) a čas
   **za 15 min**. Jedním klepnutím „Teď“, nebo „Upravit čas“. Když trénink běží, sheet ukazuje stopky,
-  „Zapsat série“, „Hotovo“ (s odměnou přímo v sheetu) a dvoukrokové „Zrušit“. Tlačítko v Plánu pak
+  „Zapsat série“, „Hotovo“ (nejdřív se zeptá „Opravdu dokončit?“, pak ukáže odměnu) a dvoukrokové „Zrušit“. Tlačítko v Plánu pak
   ukazuje co a kdy / kolik minut běží. Karta „Dnešní trénink“ zůstává podle plánu beze změny.
 * Čas rychlého zápisu má na dnešek přednost před týdenním plánem v `TrainingTimeManager`, takže kontext
   jídel (PRE/POST) a notifikace fungují i bez plánu.
