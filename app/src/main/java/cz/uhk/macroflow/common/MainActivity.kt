@@ -83,6 +83,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         hideStatusBar()
+        // Debug: detail cviku (adb … --es debug_exercise skull_crusher)
+        if (cz.uhk.macroflow.BuildConfig.DEBUG) intent.getStringExtra("debug_exercise")?.let { id ->
+            window.decorView.postDelayed({
+                if (!isFinishing) cz.uhk.macroflow.training.atlas.ExerciseDetailSheet.show(supportFragmentManager, id)
+            }, 1200)
+        }
 
         // ── Inicializace controllerů ──────────────────────────────────
         // Musí být hned po setContentView, aby měly přístup k views

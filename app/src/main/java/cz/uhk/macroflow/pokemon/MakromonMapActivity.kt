@@ -471,7 +471,7 @@ class MakromonMapActivity : AppCompatActivity() {
             restPill.setOnClickListener(null); restPill.isClickable = false
             return
         }
-        tv.text = "Pauza skončila · Zpět na trénink"
+        tv.text = "Konec pauzy · Zpět ▸"
         if (restPill.background !== restBgOver) restPill.background = restBgOver
         more.visibility = if (restExtra == 0L) View.VISIBLE else View.GONE
         if (more.background == null) more.background = restBgMore()
