@@ -28,7 +28,8 @@ Základ se doplní na 100, když platí obojí:
 
 Kontrola běží v `onResume` mapy. Kdo hraje přes půlnoc, doplnění v 00:01 nedostane. Dostane ho
 při prvním příchodu po čtyřhodinové pauze. Posun hodin dozadu (`now < lastExitAt`) se ignoruje.
-Overstim se přes noc nemaže, drží ho strop +50.
+Při doplnění se **overstim maže** (rozhodnuto 2026-10-07): každý den začíná na čistých 100 a overstim
+se dá získat jen zápisy toho dne.
 
 ### 3. Odměny z funkční části (tabulka A)
 Odměňuje se **zápis a trefení cíle, nikdy množství**. Každý zdroj má denní strop, aby se energie
@@ -52,12 +53,21 @@ Maximum za den je zhruba +145. Odměna jde nejdřív do základu do 100, zbytek 
 ### 4. Ceny akcí (tabulka B)
 | Akce | Cena | Místo v kódu |
 |---|---|---|
-| Přechod mezi lokacemi | 3 | `MakromonMapActivity.enterBiomeAtNode` |
+| Přechod mezi lokacemi | 3 | `MakromonMapActivity.enterBiomeAtNode` (viz pravidla níže) |
 | Divoký souboj | 4 | `startWildEncounter` |
 | Strážce / speciální souboj | 15 | `startSpecialBattle` |
 | Spuštění sběru (AFK) | 2 | `openGatherSpot → onStart` (vybrání výnosu zdarma) |
 | Výroba u stolu | 2 | `openCraftingTable` |
 | NPC, deník, Makrodex, batoh, obchod, cinematiky | 0 | |
+
+**Pravidla přechodů** (rozhodnuto 2026-10-07):
+* **Překliknutí zdarma:** návrat do lokace, ze které hráč přišel před méně než **5 minutami**, nic nestojí
+  (omylem otevřený přechod a hned zpátky). Po 5 minutách se platí normálně, postava tam opravdu musí dojít.
+* **Teleport z deníku** (`ZoneOne`, docs/adr/0052): **10 teleportů za den zdarma**. Pak teleport stojí
+  tolik, kolik by stála chůze: nejkratší cesta po spojnicích mapy zóny (`assets/zone/zone1.json`) × 3
+  za každý přechod. Přes tři lokace tedy 9. Když energie nestačí, `ZoneOne.teleportBlock` vrátí nový
+  důvod `Block.Energy(need, have)` a mapa zóny ukáže, kolik chybí. Výpočet cesty je čistá funkce
+  v `ZoneOne`, pokrytá testy.
 
 Cena se ukazuje přímo na tlačítku nebo v dialogu. Když energie nestačí, akce se neprovede a dialog
 nabídne, co ji doplní (např. „Zapiš oběd +5“), s přímým odkazem do funkční části.
@@ -119,7 +129,4 @@ nehru nezablokuje.
 5. Ladění hodnot na testerech (tabulky A a B jsou jediné místo, kde se čísla mění).
 
 ## Otevřené otázky
-* Má být overstim přes noc zachován (návrh), nebo se má při doplnění mazat?
-* Platí cena i pro opakovaný přechod tam a zpátky mezi dvěma sousedními lokacemi, nebo první přechod
-  dne do lokace zdarma?
 * AFK sběr už má vlastní strop (`afkCapHours`). Stačí cena za spuštění 2, nebo ho z energie vyjmout úplně?
