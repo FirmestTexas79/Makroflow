@@ -10,7 +10,7 @@ class StaminaTest {
     private val h = 60L * 60 * 1000
 
     @Test fun firstEverEntryFills() {
-        assertEquals(State(base = 100, over = 0, refillDay = "2026-10-07"), Stamina.refill(State(base = 7, over = 3), "2026-10-07", 0))
+        assertEquals(State(base = 100, over = 0, refillDay = "2026-10-07", grantedDay = "2026-10-07"), Stamina.refill(State(base = 7, over = 3), "2026-10-07", 0))
     }
 
     @Test fun newDayRefillsOnlyAfterFourHoursAway() {
