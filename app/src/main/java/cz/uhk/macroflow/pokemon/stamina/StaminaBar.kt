@@ -38,6 +38,23 @@ class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
     private val overText = Paint(text).apply { color = Color.parseColor("#FFE27A") }
     private val deltaText = Paint(text)
+    private val boltPaint = Paint().apply { isAntiAlias = false }
+
+    private companion object {
+        val OUTLINE = Color.parseColor("#2E1B0E")
+        val BOLT_FILL = Color.parseColor("#F2C14E")
+        val BOLT_LIGHT = Color.parseColor("#FFF1B8")
+        val BOLT = listOf(
+            "..###",
+            ".#oo#",
+            ".#o#.",
+            "#ox##",
+            "#xxx#",
+            "##x#.",
+            ".#x#.",
+            ".##..",
+            ".#...")
+    }
 
     fun set(state: Stamina.State, animate: Boolean = true) {
         val spent = (base + over) - state.total
@@ -67,8 +84,7 @@ class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     override fun onDraw(canvas: Canvas) {
         val artW = StepBarArt.BAR_W; val artH = StepBarArt.H
-        // bar v horní části, pod ním místo na vyletující „−3“
-        val scale = maxOf(1, (height * 0.6f / artH).toInt())
+        val scale = maxOf(1, height / artH)
         val baseCols = StepBarArt.fillColumns(shownBase / Stamina.BASE_MAX)
         val overCols = if (shownOver <= 0f) 0 else StepBarArt.fillColumns(shownOver / Stamina.BASE_MAX)
         val key = "$baseCols:$overCols"
@@ -78,23 +94,37 @@ class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet
             bitmapKey = key
         }
         val w = artW * scale; val h = artH * scale
-        val top = 0
-        dst.set(0, top, w, top + h)
+        val top = (height - h) / 2
+
+        // pixelový blesk před barem (5 × 9 art pixelů)
+        val u = scale.toFloat()
+        val boltW = (BOLT[0].length + 1) * u
+        val by = top + (h - BOLT.size * u) / 2
+        for ((row, line) in BOLT.withIndex()) for ((col, ch) in line.withIndex()) {
+            if (ch == '.') continue
+            boltPaint.color = if (ch == '#') OUTLINE else if (ch == 'o') BOLT_LIGHT else BOLT_FILL
+            canvas.drawRect(col * u, by + row * u, (col + 1) * u, by + (row + 1) * u, boltPaint)
+        }
+
+        val bx = boltW.toInt()
+        dst.set(bx, top, bx + w, top + h)
         canvas.drawBitmap(bitmap!!, null, dst, pixels)
 
-        text.textSize = h * 0.95f; overText.textSize = text.textSize
-        val baseline = top + h * 0.8f
-        val x = w + h * 0.25f
+        text.textSize = h * 1.05f; overText.textSize = text.textSize
+        val baseline = top + h * 0.82f
+        var x = bx + w + h * 0.3f
         val num = base.toString()
         canvas.drawText(num, x, baseline, text)
-        if (over > 0) canvas.drawText(" +$over", x + text.measureText(num), baseline, overText)
+        x += text.measureText(num)
+        if (over > 0) { canvas.drawText(" +$over", x, baseline, overText); x += overText.measureText(" +$over") }
 
+        // útrata/zisk krátce zazáří vedle čísla a zmizí
         if (deltaAnim?.isRunning == true && delta != 0) {
-            deltaText.textSize = text.textSize * 0.9f
-            deltaText.color = if (delta < 0) Color.parseColor("#FF8A6A") else Color.parseColor("#B3C877")
+            deltaText.textSize = text.textSize * 0.85f
+            deltaText.color = if (delta < 0) Color.parseColor("#FF9A7A") else Color.parseColor("#C8DC8A")
             deltaText.alpha = (255 * (1f - deltaT)).toInt()
-            val label = if (delta < 0) "−${-delta}" else "+$delta"
-            canvas.drawText(label, w * 0.55f, baseline + h * 0.7f * deltaT, deltaText)
+            val label = if (delta < 0) " −${-delta}" else " +$delta"
+            canvas.drawText(label, x, baseline - h * 0.35f * deltaT, deltaText)
         }
     }
 

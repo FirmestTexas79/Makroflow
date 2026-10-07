@@ -141,6 +141,12 @@ class MakromonMapActivity : AppCompatActivity() {
         mapWorld = findViewById(R.id.mapWorld)
         stepProgressBar = findViewById(R.id.stepProgressBar)
         staminaBar = findViewById(R.id.staminaBar)
+        run {
+            val dp = resources.displayMetrics.density
+            findViewById<View>(R.id.hudPanel).background = cz.uhk.macroflow.pokemon.skills.ui.WoodPanelDrawable(2f * dp, parchment = false)
+            findViewById<View>(R.id.companionShadow).background = cz.uhk.macroflow.pokemon.skills.ui.BevelDrawable(
+                2f * dp, 0xFF606C38.toInt(), 0xFF8C9C5B.toInt(), 0xFF283618.toInt(), 0xFF2E1B0E.toInt())
+        }
 
         // Postava ze Sunnyside World (docs/adr/0051): snímek 64 × 40 px, 1 px spritu = 2 dp
         // (celé zařízení px, ať jsou pixely ostré); pata je u spodní hrany
@@ -558,7 +564,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val ui = listOf(
             findViewById<View>(R.id.btnExitMap)?.parent as? View,
             findViewById<View>(R.id.btnOpenJournal),
-            findViewById<View>(R.id.tvCompanionLabel)?.parent as? View,
+            findViewById<View>(R.id.hudPanel),
             stepProgressBar
         )
         val r = android.graphics.Rect()
