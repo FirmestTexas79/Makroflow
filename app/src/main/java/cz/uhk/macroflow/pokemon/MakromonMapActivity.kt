@@ -410,6 +410,7 @@ class MakromonMapActivity : AppCompatActivity() {
         // Energie: nový den po aspoň 4 h pauze doplní bar (docs/adr/0065)
         staminaBar.set(cz.uhk.macroflow.pokemon.stamina.StaminaStore.onEnter(this), animate = false)
         collectStamina()
+        startRestTimer()
         // AFK těžba / kácení: po návratu ukázat, co se za tu dobu udělalo (docs/adr/0035)
         mapWorld.postDelayed({ reportAfk() }, 700)
     }
@@ -429,7 +430,67 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    // ── Pauza mezi sériemi (docs/adr/0065, bod 5) ───────────────────────────
+    private var lastSetAt = 0L
+    private var restExtra = 0L
+    private var restAlertedFor = 0L
+    private val restPill by lazy { findViewById<View>(R.id.restPill) }
+    private val restBgCount by lazy { cz.uhk.macroflow.pokemon.skills.ui.BevelDrawable(2f * resources.displayMetrics.density, 0xFF606C38.toInt(), 0xFF8C9C5B.toInt(), 0xFF283618.toInt(), 0xFF2E1B0E.toInt()) }
+    private val restBgOver by lazy { cz.uhk.macroflow.pokemon.skills.ui.BevelDrawable(2f * resources.displayMetrics.density, 0xFFBC6C25.toInt(), 0xFFE9B072.toInt(), 0xFF7A4416.toInt(), 0xFF2E1B0E.toInt()) }
+    private fun restBgMore() = cz.uhk.macroflow.pokemon.skills.ui.BevelDrawable(1.5f * resources.displayMetrics.density, 0xFFFEFAE0.toInt(), 0xFFFFFFFF.toInt(), 0xFFD7CFA8.toInt(), 0xFF2E1B0E.toInt())
+    private val restTick = object : Runnable {
+        override fun run() { renderRest(); restPill.postDelayed(this, 1000) }
+    }
+
+    private fun startRestTimer() {
+        restPill.removeCallbacks(restTick)
+        lifecycleScope.launch {
+            val last = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                runCatching { cz.uhk.macroflow.data.AppDatabase.getDatabase(this@MakromonMapActivity).workoutDao().lastSetAt() }.getOrNull() ?: 0L
+            }
+            // Debug: pauza, ze které zbývá N s (adb … --ei debug_rest_left 5)
+            val dbg = if (BuildConfig.DEBUG) intent.getIntExtra("debug_rest_left", -1) else -1
+            val use = if (dbg >= 0) System.currentTimeMillis() - cz.uhk.macroflow.training.QuickWorkout.REST_MS + dbg * 1000L else last
+            if (use != lastSetAt) { lastSetAt = use; restExtra = 0 }
+            restTick.run()
+        }
+    }
+
+    /** Během pauzy odpočet; po jejím konci jantarová výzva „Zpět na trénink“ (+30 s jednou za pauzu). */
+    private fun renderRest() {
+        val left = cz.uhk.macroflow.training.QuickWorkout.restLeft(lastSetAt, System.currentTimeMillis(), restExtra)
+        if (left == null) { restPill.visibility = View.GONE; return }
+        val tv = findViewById<TextView>(R.id.tvRest)
+        val more = findViewById<TextView>(R.id.tvRestMore)
+        restPill.visibility = View.VISIBLE
+        if (left > 0) {
+            val sec = (left + 999) / 1000
+            tv.text = "⏱ Pauza ${sec / 60}:${String.format(java.util.Locale.US, "%02d", sec % 60)}"
+            if (restPill.background !== restBgCount) restPill.background = restBgCount
+            more.visibility = View.GONE
+            restPill.setOnClickListener(null); restPill.isClickable = false
+            return
+        }
+        tv.text = "Pauza skončila · Zpět na trénink"
+        if (restPill.background !== restBgOver) restPill.background = restBgOver
+        more.visibility = if (restExtra == 0L) View.VISIBLE else View.GONE
+        if (more.background == null) more.background = restBgMore()
+        more.setOnClickListener { restExtra = 30_000; renderRest() }
+        restPill.setOnClickListener {
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+            finish()
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        }
+        if (restAlertedFor != lastSetAt + restExtra) {
+            restAlertedFor = lastSetAt + restExtra
+            restPill.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            restPill.scaleX = 0.7f; restPill.scaleY = 0.7f
+            restPill.animate().scaleX(1f).scaleY(1f).setInterpolator(android.view.animation.OvershootInterpolator(3f)).setDuration(420).start()
+        }
+    }
+
     override fun onPause() {
+        restPill.removeCallbacks(restTick)
         cz.uhk.macroflow.pokemon.audio.GameAudio.pause()
         cz.uhk.macroflow.pokemon.stamina.StaminaStore.onExit(this)
         saveLastLocation()
@@ -580,6 +641,7 @@ class MakromonMapActivity : AppCompatActivity() {
             findViewById<View>(R.id.btnExitMap)?.parent as? View,
             findViewById<View>(R.id.btnOpenJournal),
             staminaBar,
+            restPill,
             findViewById<View>(R.id.companionBox),
             stepProgressBar
         )

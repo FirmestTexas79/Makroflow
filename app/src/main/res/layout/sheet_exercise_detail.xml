@@ -311,6 +311,20 @@
                 style="@style/ProfileSection"
                 android:text="PROVEDENÍ" />
 
+            <!-- Ilustrace výchozí a koncové polohy (docs/adr/0066) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardExFigure"
+                style="@style/ProfileCard"
+                android:visibility="gone"
+                app:cardBackgroundColor="#F3EDD3">
+
+                <cz.uhk.macroflow.training.figure.ExerciseFigureView
+                    android:id="@+id/exFigure"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:layout_margin="12dp" />
+            </com.google.android.material.card.MaterialCardView>
+
             <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
                 <LinearLayout
                     android:id="@+id/llExSteps"

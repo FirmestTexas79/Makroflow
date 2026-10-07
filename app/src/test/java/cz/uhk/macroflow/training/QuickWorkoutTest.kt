@@ -25,4 +25,13 @@ class QuickWorkoutTest {
         sel.forEach { m -> assert(ids.count { m in cz.uhk.macroflow.training.exercises.ExerciseLibrary.byId(it)!!.primary } >= 2) { m } }
         assert(QuickWorkout.exercisesFor(emptyList()).isEmpty())
     }
+
+    @Test fun `pauza mezi seriemi`() {
+        val t = 1_000_000_000L
+        assertNull(QuickWorkout.restLeft(0, t))
+        assertEquals(QuickWorkout.REST_MS, QuickWorkout.restLeft(t, t))
+        assertEquals(0L, QuickWorkout.restLeft(t, t + QuickWorkout.REST_MS))
+        assertEquals(30_000L, QuickWorkout.restLeft(t, t + QuickWorkout.REST_MS, extraMs = 30_000))
+        assertNull(QuickWorkout.restLeft(t, t + QuickWorkout.ACTIVE_WINDOW_MS + 1))     // trénink skončil
+    }
 }

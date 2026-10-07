@@ -44,6 +44,44 @@
             android:layout_marginStart="8dp"
             android:elevation="15dp" />
 
+        <!-- Pauza mezi sériemi: odpočet a po jejím konci návrat na trénink (docs/adr/0065) -->
+        <LinearLayout
+            android:id="@+id/restPill"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="58dp"
+            android:elevation="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvRest"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/jersey_15"
+                android:textColor="#FEFAE0"
+                android:textSize="19sp" />
+
+            <TextView
+                android:id="@+id/tvRestMore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:fontFamily="@font/jersey_15"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:text="+30 s"
+                android:textColor="#283618"
+                android:textSize="17sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
         <!-- Aktivní Makromon v pravém dolním rohu (rámeček kreslí kód) -->
         <LinearLayout
             android:id="@+id/companionBox"

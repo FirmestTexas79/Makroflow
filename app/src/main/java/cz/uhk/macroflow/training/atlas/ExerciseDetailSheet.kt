@@ -55,6 +55,10 @@ class ExerciseDetailSheet : BottomSheetDialogFragment() {
 
         bindMuscles(view, e)
         cz.uhk.macroflow.training.log.WorkoutLogSection(this, view, e).start()
+        cz.uhk.macroflow.training.figure.ExerciseFigures.BY_ID[e.id]?.let { ill ->
+            view.findViewById<View>(R.id.cardExFigure).visibility = View.VISIBLE
+            view.findViewById<cz.uhk.macroflow.training.figure.ExerciseFigureView>(R.id.exFigure).set(ill, e.primary, e.secondary)
+        }
         fillNumbered(view.findViewById(R.id.llExSteps), e.steps)
         fillBullets(view.findViewById(R.id.llExTips), e.tips, R.drawable.ic_check_circle, R.color.brand_primary)
         fillBullets(view.findViewById(R.id.llExMistakes), e.mistakes, R.drawable.ic_close, R.color.exercise_mistake)

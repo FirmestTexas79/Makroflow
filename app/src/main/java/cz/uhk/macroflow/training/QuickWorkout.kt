@@ -90,6 +90,20 @@ object QuickWorkout {
         return out.take(max)
     }
 
+    /** Výchozí pauza mezi sériemi (později v nastavení a per cvik v šabloně). */
+    const val REST_MS = 3L * 60 * 1000
+    /** Aktivní trénink = série za posledních 45 min (docs/adr/0065, bod 5). */
+    const val ACTIVE_WINDOW_MS = 45L * 60 * 1000
+
+    /**
+     * Kolik zbývá z pauzy po sérii zapsané v [lastSetAt] (ms, ≤ 0 = pauza skončila).
+     * null = žádný aktivní trénink (žádná série za posledních 45 min).
+     */
+    fun restLeft(lastSetAt: Long, now: Long, extraMs: Long = 0): Long? {
+        if (lastSetAt <= 0 || now < lastSetAt || now - lastSetAt > ACTIVE_WINDOW_MS) return null
+        return lastSetAt + REST_MS + extraMs - now
+    }
+
     private fun prefs(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private fun today() = LocalDate.now().toString()
 
