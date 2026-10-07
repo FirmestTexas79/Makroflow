@@ -16,13 +16,15 @@ class ExerciseFiguresTest {
         assertEquals(16f, far.x, 0.1f)
     }
 
-    @Test fun `ilustrace jen pro existujici cviky a s delkami clanku`() {
+    @Test fun `kazdy cvik ma ilustraci a pozy drzi delky clanku`() {
+        assertEquals(ExerciseLibrary.ALL.map { it.id }.toSet(), ExerciseFigures.BY_ID.keys)
         ExerciseFigures.BY_ID.forEach { (id, ill) ->
-            assert(ExerciseLibrary.byId(id) != null) { id }
-            listOf(ill.start, ill.end).map(ExerciseFigures::solve).forEach { j ->
-                assertEquals(ExerciseFigures.UPPER_ARM, (j.elbow - j.shoulder).len(), 0.01f)
-                assertEquals(ExerciseFigures.FOREARM, (j.wrist - j.elbow).len(), 0.01f)
-                assertEquals(ExerciseFigures.SHIN, (j.ankle - j.knee).len(), 0.01f)
+            listOfNotNull(ill.start, ill.end).forEach { pose ->
+                val j = ExerciseFigures.solve(pose)
+                val arm = pose.armScale
+                assertEquals(id, ExerciseFigures.UPPER_ARM * arm, (j.elbow - j.shoulderR).len(), 0.01f)
+                assertEquals(id, ExerciseFigures.FOREARM * arm, (j.wrist - j.elbow).len(), 0.01f)
+                assertEquals(id, ExerciseFigures.SHIN, (j.ankle - j.knee).len(), 0.01f)
             }
         }
     }

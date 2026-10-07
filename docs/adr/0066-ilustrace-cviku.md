@@ -1,6 +1,6 @@
 # 0066 – Ilustrace cviků (postava a stroj)
 
-**Stav:** prototyp na 3 cvicích · **Datum:** 2026-10-07
+**Stav:** implementováno pro všech 67 cviků · **Datum:** 2026-10-07
 
 ## Kontext
 Tester v posilovně nepoznal, o jaký cvik jde. Latinské názvy a postup v textu nestačí, chybí obrázek
@@ -15,9 +15,14 @@ Tester v posilovně nepoznal, o jaký cvik jde. Latinské názvy a postup v text
   dvoukloubová IK. Jeden cvik = pár řádků dat v `ExerciseFigures.BY_ID`, žádné ruční kreslení.
 * Cvik bez ilustrace kartu nemá.
 
-## Prototyp
-`skull_crusher`, `incline_machine_press`, `lat_pulldown`. Po schválení stylu doplnit zbytek knihovny
-(67 cviků); každou pózu je potřeba zkontrolovat okem.
+## Implementace
+* `ExerciseFigures` (kinematika, typy), `ExerciseFigureData` (vygenerovaná data), `ExerciseFigureView` (Canvas).
+* Pózy se ladí v `tools/exercise_figures` (Python + Pillow): `engine.py` kreslí náhled stejně jako
+  aplikace, `sheet.py` dělá kontaktní arch, `gen.py` z `figs.py` vygeneruje Kotlin. Data se ručně neupravují.
+* Bokorys pro většinu cviků; **čelní pohled** pro pohyby do stran (upažování, rozpažky, pec deck,
+  reverse pec deck, abdukce kyčle, dřevorubec, boční plank). Pohyb do hloubky v bokorysu zkracuje
+  paži (`armScale`). Výdrže (plank, boční plank) mají jeden snímek „Výdrž“.
+* Test hlídá, že každý cvik z knihovny má ilustraci a pózy drží délky článků.
 
 ## Omezení
 Boční pohled je 2D: pohyb do hloubky (lokty od těla, rozpažení) se zobrazí zkráceně. U cviků, kde je
