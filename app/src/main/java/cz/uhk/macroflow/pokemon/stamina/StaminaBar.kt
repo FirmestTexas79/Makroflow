@@ -12,11 +12,12 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 import androidx.core.content.res.ResourcesCompat
 import cz.uhk.macroflow.R
+import cz.uhk.macroflow.pokemon.skills.ui.WoodPanelDrawable
 import cz.uhk.macroflow.pokemon.ui.StepBarArt
 
 /**
- * Svislý bar energie u levého kraje Makrosvěta (docs/adr/0065): stejný dřevěný rámeček jako
- * ukazatel kroků, jantarová náplň odspodu a přes ni zlatý overstim. Nahoře blesk, číslo a „+32“.
+ * Kompaktní blok energie u levého kraje Makrosvěta (docs/adr/0065): dřevěný rámeček, nahoře blesk,
+ * číslo a „+32“, pod nimi svislý bar s jantarovou náplní odspodu a zlatým overstimem.
  * Při útratě krátce zazáří „−3“.
  */
 class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
@@ -41,21 +42,33 @@ class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val deltaText = Paint(text)
     private val boltPaint = Paint().apply { isAntiAlias = false }
 
+    init {
+        // jeden kompaktní dřevěný blok: blesk, číslo a bar dohromady (padding dodá rámeček)
+        background = WoodPanelDrawable(1.5f * resources.displayMetrics.density, parchment = false)
+    }
+
     private companion object {
         val OUTLINE = Color.parseColor("#2E1B0E")
-        val BOLT_FILL = Color.parseColor("#F2C14E")
-        val BOLT_LIGHT = Color.parseColor("#FFF1B8")
+        val BOLT_COLORS = mapOf(
+            '#' to OUTLINE,
+            'o' to Color.parseColor("#FFF6CF"),
+            'y' to Color.parseColor("#F5C542"),
+            'd' to Color.parseColor("#C98A1F"))
         val BOLT = listOf(
-            "..####",
-            "..#oo#",
-            ".#oo#.",
-            ".#o###",
-            "#xxxx#",
-            "###x#.",
-            "..#x#.",
-            ".#x#..",
-            ".##...",
-            "##....")
+            "....#####",
+            "...#oooy#",
+            "...#oyyd#",
+            "..#oyyd#.",
+            "..#oyd#..",
+            ".#oyy####",
+            ".#oyyyyy#",
+            "#ddddyyd#",
+            "####yyd#.",
+            "...#yd#..",
+            "..#yd#...",
+            "..#d#....",
+            ".#d#.....",
+            ".##......")
     }
 
     fun set(state: Stamina.State, animate: Boolean = true) {
@@ -85,27 +98,28 @@ class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
 
     override fun onDraw(canvas: Canvas) {
-        // svislý bar u levého kraje: nahoře blesk a číslo, pod nimi bar plnící se odspodu
-        val u = maxOf(1, (width * 0.5f / StepBarArt.H).toInt())   // velikost art pixelu
+        // obsah uvnitř rámečku: nahoře blesk a číslo, pod nimi bar plnící se odspodu
+        val cl = paddingLeft; val ct = paddingTop
+        val cw = width - paddingLeft - paddingRight
+        val cb = height - paddingBottom
+        val cx = cl + cw / 2f
+        val u = maxOf(1, (cw * 0.55f / StepBarArt.H).toInt())   // velikost art pixelu
         val thick = StepBarArt.H * u
-        val boltU = maxOf(1, (width * 0.55f / BOLT[0].length).toInt()).toFloat()
-        val boltH = BOLT.size * boltU
-        val bx0 = (width - BOLT[0].length * boltU) / 2
+        val boltU = maxOf(1, (cw * 0.6f / BOLT[0].length).toInt()).toFloat()
+        val bx0 = cx - BOLT[0].length * boltU / 2
         for ((row, line) in BOLT.withIndex()) for ((col, ch) in line.withIndex()) {
-            if (ch == '.') continue
-            boltPaint.color = if (ch == '#') OUTLINE else if (ch == 'o') BOLT_LIGHT else BOLT_FILL
-            canvas.drawRect(bx0 + col * boltU, row * boltU, bx0 + (col + 1) * boltU, (row + 1) * boltU, boltPaint)
+            boltPaint.color = BOLT_COLORS[ch] ?: continue
+            canvas.drawRect(bx0 + col * boltU, ct + row * boltU, bx0 + (col + 1) * boltU, ct + (row + 1) * boltU, boltPaint)
         }
 
-        text.textSize = width * 0.62f; overText.textSize = width * 0.48f
+        text.textSize = cw * 0.62f; overText.textSize = cw * 0.46f
         text.textAlign = Paint.Align.CENTER; overText.textAlign = Paint.Align.CENTER
-        var y = boltH + text.textSize * 0.95f
-        canvas.drawText(base.toString(), width / 2f, y, text)
-        if (over > 0) { y += overText.textSize * 1.0f; canvas.drawText("+$over", width / 2f, y, overText) }
-        val barTop = (y + text.textSize * 0.35f).toInt()
+        var y = ct + BOLT.size * boltU + text.textSize * 0.95f
+        canvas.drawText(base.toString(), cx, y, text)
+        if (over > 0) { y += overText.textSize; canvas.drawText("+$over", cx, y, overText) }
+        val barTop = (y + text.textSize * 0.3f).toInt()
 
-        val lenPx = height - barTop
-        val artLen = maxOf(16, lenPx / u)
+        val artLen = maxOf(16, (cb - barTop) / u)
         val inner = artLen - 8
         fun cols(v: Float) = if (v <= 0f) 0 else maxOf(1, (v / Stamina.BASE_MAX * inner).toInt().coerceAtMost(inner))
         val key = "${cols(shownBase)}:${cols(shownOver)}:$artLen"
@@ -115,22 +129,21 @@ class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet
             bitmapKey = key
         }
         val len = artLen * u
-        val left = (width - thick) / 2f
         canvas.save()
         // otočení o −90°: začátek baru (náplň) je dole, konec nahoře
-        canvas.translate(left, (barTop + len).toFloat())
+        canvas.translate(cx - thick / 2f, (barTop + len).toFloat())
         canvas.rotate(-90f)
         dst.set(0, 0, len, thick)
         canvas.drawBitmap(bitmap!!, null, dst, pixels)
         canvas.restore()
 
-        // útrata/zisk krátce zazáří vedle čísla a odpluje dolů
+        // útrata/zisk krátce zazáří pod číslem a odpluje dolů
         if (deltaAnim?.isRunning == true && delta != 0) {
-            deltaText.textSize = width * 0.5f; deltaText.textAlign = Paint.Align.CENTER
+            deltaText.textSize = cw * 0.5f; deltaText.textAlign = Paint.Align.CENTER
             deltaText.color = if (delta < 0) Color.parseColor("#FF9A7A") else Color.parseColor("#C8DC8A")
             deltaText.alpha = (255 * (1f - deltaT)).toInt()
             val label = if (delta < 0) "−${-delta}" else "+$delta"
-            canvas.drawText(label, width / 2f, barTop + text.textSize * (0.8f + 1.2f * deltaT), deltaText)
+            canvas.drawText(label, cx, barTop + text.textSize * (0.8f + 1.2f * deltaT), deltaText)
         }
     }
 

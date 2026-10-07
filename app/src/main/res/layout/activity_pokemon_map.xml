@@ -33,34 +33,36 @@
                 android:elevation="2dp" />
         </FrameLayout>
 
-        <!-- HUD u levého kraje: portrét aktivního Makromona, pod ním jméno a svislý bar energie
-             (docs/adr/0065). Horní okraj mapy zůstává volný pro cesty a NPC. Rámeček portrétu kreslí kód. -->
-        <LinearLayout
-            android:id="@+id/hudPanel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <!-- Energie u levého kraje (docs/adr/0065): kompaktní dřevěný blok s bleskem, číslem a svislým barem.
+             Horní okraj mapy zůstává volný pro cesty a NPC. -->
+        <cz.uhk.macroflow.pokemon.stamina.StaminaBar
+            android:id="@+id/staminaBar"
+            android:layout_width="56dp"
+            android:layout_height="236dp"
             android:layout_gravity="top|start"
             android:layout_marginTop="58dp"
             android:layout_marginStart="8dp"
+            android:elevation="15dp" />
+
+        <!-- Aktivní Makromon v pravém dolním rohu (rámeček kreslí kód) -->
+        <LinearLayout
+            android:id="@+id/companionBox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="28dp"
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:elevation="15dp">
-
             <FrameLayout
                 android:id="@+id/companionShadow"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
                 android:visibility="gone">
-                <ImageView android:id="@+id/ivCompanion" android:layout_width="44dp" android:layout_height="44dp" android:layout_gravity="center" android:scaleType="fitCenter" android:visibility="gone" />
+                <ImageView android:id="@+id/ivCompanion" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="center" android:scaleType="fitCenter" android:visibility="gone" />
             </FrameLayout>
-
             <TextView android:id="@+id/tvCompanionLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/jersey_15" android:textSize="14sp" android:textColor="#FEFAE0" android:shadowColor="#E61A1208" android:shadowDy="2" android:shadowRadius="3" android:maxLines="1" android:visibility="gone" />
-
-            <cz.uhk.macroflow.pokemon.stamina.StaminaBar
-                android:id="@+id/staminaBar"
-                android:layout_width="40dp"
-                android:layout_height="230dp"
-                android:layout_marginTop="6dp" />
         </LinearLayout>
 
         <LinearLayout

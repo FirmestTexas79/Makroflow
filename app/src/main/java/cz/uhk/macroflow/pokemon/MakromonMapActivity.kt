@@ -563,7 +563,8 @@ class MakromonMapActivity : AppCompatActivity() {
         val ui = listOf(
             findViewById<View>(R.id.btnExitMap)?.parent as? View,
             findViewById<View>(R.id.btnOpenJournal),
-            findViewById<View>(R.id.hudPanel),
+            staminaBar,
+            findViewById<View>(R.id.companionBox),
             stepProgressBar
         )
         val r = android.graphics.Rect()
