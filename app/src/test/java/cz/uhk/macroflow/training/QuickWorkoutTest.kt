@@ -33,5 +33,7 @@ class QuickWorkoutTest {
         assertEquals(0L, QuickWorkout.restLeft(t, t + QuickWorkout.REST_MS))
         assertEquals(30_000L, QuickWorkout.restLeft(t, t + QuickWorkout.REST_MS, extraMs = 30_000))
         assertNull(QuickWorkout.restLeft(t, t + QuickWorkout.ACTIVE_WINDOW_MS + 1))     // trénink skončil
+        assertNull(QuickWorkout.restLeft(t, t + 1000, endedAt = t + 500))                  // Hotovo po sérii
+        assertEquals(QuickWorkout.REST_MS - 1000, QuickWorkout.restLeft(t, t + 1000, endedAt = t - 1))  // nová série po ukončení
     }
 }

@@ -305,7 +305,7 @@ internal object ExerciseFigureData {
             ),
             "preacher_curl" to Illustration(
                 Pose(pelvis = p(40f, 30f), torso = 85f, wrist = p(63.9f, 38.9f), ankle = p(62f, 3f), elbowBend = 1),
-                Pose(pelvis = p(40f, 30f), torso = 85f, wrist = p(50.1f, 62.8f), ankle = p(62f, 3f), elbowBend = 1),
+                Pose(pelvis = p(40f, 30f), torso = 85f, wrist = p(50.1f, 62.8f), ankle = p(62f, 3f)),
                 listOf(
                 Prop.Bar(p(28f, 25f), p(52f, 25f), 6f, Ink.CUSHION, Layer.BACK),
                 Prop.Bar(p(40f, 3f), p(40f, 24f), 4f, Ink.FRAME, Layer.BACK),
@@ -319,7 +319,7 @@ internal object ExerciseFigureData {
             ),
             "single_arm_supported_curl" to Illustration(
                 Pose(pelvis = p(40f, 30f), torso = 85f, wrist = p(63.9f, 38.9f), ankle = p(62f, 3f), elbowBend = 1),
-                Pose(pelvis = p(40f, 30f), torso = 85f, wrist = p(50.1f, 62.8f), ankle = p(62f, 3f), elbowBend = 1),
+                Pose(pelvis = p(40f, 30f), torso = 85f, wrist = p(50.1f, 62.8f), ankle = p(62f, 3f)),
                 listOf(
                 Prop.Bar(p(28f, 25f), p(52f, 25f), 6f, Ink.CUSHION, Layer.BACK),
                 Prop.Bar(p(40f, 3f), p(40f, 24f), 4f, Ink.FRAME, Layer.BACK),

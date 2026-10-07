@@ -458,7 +458,8 @@ class MakromonMapActivity : AppCompatActivity() {
 
     /** Během pauzy odpočet; po jejím konci jantarová výzva „Zpět na trénink“ (+30 s jednou za pauzu). */
     private fun renderRest() {
-        val left = cz.uhk.macroflow.training.QuickWorkout.restLeft(lastSetAt, System.currentTimeMillis(), restExtra)
+        val left = cz.uhk.macroflow.training.QuickWorkout.restLeft(lastSetAt, System.currentTimeMillis(), restExtra,
+            cz.uhk.macroflow.training.QuickWorkout.endedAt(this))
         if (left == null) { restPill.visibility = View.GONE; return }
         val tv = findViewById<TextView>(R.id.tvRest)
         val more = findViewById<TextView>(R.id.tvRestMore)

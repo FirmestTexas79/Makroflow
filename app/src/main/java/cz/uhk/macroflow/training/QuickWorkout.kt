@@ -37,6 +37,8 @@ object QuickWorkout {
     private const val K_STARTED = "quick_started"
     private const val K_FINISHED = "quick_finished"
     private const val K_MUSCLES = "quick_muscles"
+    /** Kdy byl trénink naposledy ukončen (Hotovo i Zrušit) – po něm už pauza v Makrosvětu neběží. */
+    private const val K_ENDED = "quick_ended"
 
     /** [kind] = název [WorkoutTemplates.Kind], [CARDIO] nebo [OTHER]. [startedAt] 0 = zatím jen naplánováno. */
     data class Entry(
@@ -97,12 +99,16 @@ object QuickWorkout {
 
     /**
      * Kolik zbývá z pauzy po sérii zapsané v [lastSetAt] (ms, ≤ 0 = pauza skončila).
-     * null = žádný aktivní trénink (žádná série za posledních 45 min).
+     * null = žádný aktivní trénink: žádná série za posledních 45 min, nebo byl trénink po poslední
+     * sérii ukončen ([endedAt], Hotovo / Zrušit).
      */
-    fun restLeft(lastSetAt: Long, now: Long, extraMs: Long = 0): Long? {
+    fun restLeft(lastSetAt: Long, now: Long, extraMs: Long = 0, endedAt: Long = 0): Long? {
         if (lastSetAt <= 0 || now < lastSetAt || now - lastSetAt > ACTIVE_WINDOW_MS) return null
+        if (endedAt >= lastSetAt) return null
         return lastSetAt + REST_MS + extraMs - now
     }
+
+    fun endedAt(ctx: Context): Long = prefs(ctx).getLong(K_ENDED, 0)
 
     private fun prefs(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private fun today() = LocalDate.now().toString()
@@ -145,8 +151,9 @@ object QuickWorkout {
     suspend fun finish(ctx: Context, done: Boolean): Int {
         val e = today(ctx) ?: return 0
         val minutes = e.minutes()
-        if (!done) { prefs(ctx).edit().remove(K_DAY).apply(); return minutes }
-        prefs(ctx).edit().putLong(K_FINISHED, System.currentTimeMillis()).apply()
+        val now = System.currentTimeMillis()
+        if (!done) { prefs(ctx).edit().remove(K_DAY).putLong(K_ENDED, now).apply(); return minutes }
+        prefs(ctx).edit().putLong(K_FINISHED, now).putLong(K_ENDED, now).apply()
         val db = AppDatabase.getDatabase(ctx)
         when {
             e.kind != CARDIO -> GameEvents.record(db, GameEventType.WORKOUT_DONE, payload = e.kind)

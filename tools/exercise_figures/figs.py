@@ -86,9 +86,9 @@ s=sh((40,30),125)
 ex('incline_db_curl',pose(pelvis=P(40,30),torso=125,ankle=P(62,3),wrist=P(s[0],s[1]-29),eb=-1),pose(pelvis=P(40,30),torso=125,ankle=P(62,3),wrist=P(s[0]+9,s[1]-5),eb=-1),
    seat()+backrest(P(36,28),P(16,57))+dumbbell()+floor(0,80))
 s=sh((40,30),85); e=fk(s,-40,16)
-ex('preacher_curl',pose(pelvis=P(40,30),torso=85,ankle=P(62,3),wrist=fk(e,-50,14),eb=1),pose(pelvis=P(40,30),torso=85,ankle=P(62,3),wrist=fk(e,110,14),eb=1),
+ex('preacher_curl',pose(pelvis=P(40,30),torso=85,ankle=P(62,3),wrist=fk(e,-50,14),eb=1),pose(pelvis=P(40,30),torso=85,ankle=P(62,3),wrist=fk(e,110,14),eb=-1),
    seat()+[('bar',P(e[0]-10,e[1]+6),P(e[0]+1,e[1]-4),5,'C',B),('bar',P(e[0]+2,e[1]-6),P(e[0]+6,3),3,'F',B),('to',P(e[0],e[1]-1),'W',3,'S',M)]+handle()+floor(10,80))
-ex('single_arm_supported_curl',pose(pelvis=P(40,30),torso=85,ankle=P(62,3),wrist=fk(e,-50,14),eb=1),pose(pelvis=P(40,30),torso=85,ankle=P(62,3),wrist=fk(e,110,14),eb=1),
+ex('single_arm_supported_curl',pose(pelvis=P(40,30),torso=85,ankle=P(62,3),wrist=fk(e,-50,14),eb=1),pose(pelvis=P(40,30),torso=85,ankle=P(62,3),wrist=fk(e,110,14),eb=-1),
    seat()+[('bar',P(e[0]-10,e[1]+6),P(e[0]+1,e[1]-4),5,'C',B),('bar',P(e[0]+2,e[1]-6),P(e[0]+6,3),3,'F',B)]+dumbbell()+floor(10,80))
 # zápěstí: sed, předloktí na stehnech, ruka s činkou nad kolenem
 WC=[('only',0,('to',P(69,28),'W',3.6,'K',F)),('only',1,('to',P(68,39),'W',3.6,'K',F))]
