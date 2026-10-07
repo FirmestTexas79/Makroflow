@@ -97,7 +97,8 @@ class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet
         val top = (height - h) / 2
 
         // pixelový blesk před barem (5 × 9 art pixelů)
-        val u = scale.toFloat()
+        // blesk stejně vysoký jako bar, pixely zaokrouhlené na celé px
+        val u = maxOf(1, (h * 1.15f / BOLT.size).toInt()).toFloat()
         val boltW = (BOLT[0].length + 1) * u
         val by = top + (h - BOLT.size * u) / 2
         for ((row, line) in BOLT.withIndex()) for ((col, ch) in line.withIndex()) {
