@@ -45,15 +45,16 @@ class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet
         val BOLT_FILL = Color.parseColor("#F2C14E")
         val BOLT_LIGHT = Color.parseColor("#FFF1B8")
         val BOLT = listOf(
-            "..###",
-            ".#oo#",
-            ".#o#.",
-            "#ox##",
-            "#xxx#",
-            "##x#.",
-            ".#x#.",
-            ".##..",
-            ".#...")
+            "..####",
+            "..#oo#",
+            ".#oo#.",
+            ".#o###",
+            "#xxxx#",
+            "###x#.",
+            "..#x#.",
+            ".#x#..",
+            ".##...",
+            "##....")
     }
 
     fun set(state: Stamina.State, animate: Boolean = true) {

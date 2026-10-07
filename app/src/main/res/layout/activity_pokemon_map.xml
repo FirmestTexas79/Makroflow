@@ -62,7 +62,7 @@
                 <TextView android:id="@+id/tvCompanionLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/jersey_15" android:textSize="20sp" android:textColor="#FEFAE0" android:shadowColor="#CC1A1208" android:shadowDy="2" android:shadowRadius="2" android:maxLines="1" android:visibility="gone" />
                 <cz.uhk.macroflow.pokemon.stamina.StaminaBar
                     android:id="@+id/staminaBar"
-                    android:layout_width="164dp"
+                    android:layout_width="188dp"
                     android:layout_height="26dp"
                     android:layout_marginTop="2dp" />
             </LinearLayout>
