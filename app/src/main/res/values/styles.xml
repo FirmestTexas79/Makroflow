@@ -191,4 +191,14 @@
         <item name="tint">@color/brand_primary</item>
         <item name="android:visibility">invisible</item>
     </style>
+    <!-- Nadpis sekce v „Jdu na trénink“ (docs/adr/0065) -->
+    <style name="QwSection">
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:letterSpacing">0.14</item>
+        <item name="android:textColor">@color/brand_accent_deep</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 </resources>

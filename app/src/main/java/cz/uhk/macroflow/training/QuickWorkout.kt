@@ -4,6 +4,8 @@ import android.content.Context
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.GameEventType
 import cz.uhk.macroflow.data.GameEvents
+import cz.uhk.macroflow.training.body.Muscle
+import cz.uhk.macroflow.training.body.TrainingMuscles
 import cz.uhk.macroflow.training.log.WorkoutTemplates
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -44,6 +46,22 @@ object QuickWorkout {
         }
         fun running(now: Long = System.currentTimeMillis()) = startedAt > 0 && finishedAt == 0L && now - startedAt < MAX_ACTIVE_MS
         fun minutes(now: Long = System.currentTimeMillis()) = ((now - startedAt) / 60_000).toInt().coerceAtLeast(0)
+    }
+
+    /** Partie, které trénink [kind] hlavně zatěžuje (pro rozsvícení postavy). */
+    fun musclesOf(kind: String): Set<Muscle> = when (kind) {
+        CARDIO -> TrainingMuscles.of("run").filterValues { it >= TrainingMuscles.PRIMARY }.keys
+        OTHER -> emptySet()
+        else -> TrainingMuscles.of(kind.lowercase()).filterValues { it >= TrainingMuscles.PRIMARY }.keys
+    }
+
+    /** Silový trénink, který nejvíc pokrývá vybrané partie (hlavní 1, vedlejší 0,5); null = nic vybráno. */
+    fun suggest(selected: Set<Muscle>): String? {
+        if (selected.isEmpty()) return null
+        val (best, score) = WorkoutTemplates.Kind.entries
+            .map { k -> k.name to selected.sumOf { TrainingMuscles.of(k.planType)[it] ?: 0.0 } }
+            .maxBy { it.second }
+        return if (score > 0) best else OTHER
     }
 
     private fun prefs(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

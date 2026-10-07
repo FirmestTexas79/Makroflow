@@ -134,10 +134,13 @@ Dokud není fáze 3, série se odměňují i bez spuštěného „Jdu na trénin
 Místo nové tabulky `activity_log` (vyžadovala by migraci DB) je dnešní jednorázový trénink v
 `TrainingPrefs` (`QuickWorkout`: druh, varianta, čas, start, konec) a potvrzené „Hotovo“ se zapisuje
 do `game_events` jako `WORKOUT_DONE` / `CARDIO_DONE`. Ledger tak zůstává jeden a auditovatelný.
-* Karta „Dnešní trénink“ v Plánu: „＋ Jiný“ → druh (Push/Pull/Legs A/B, Kardio, Jiný) → Teď / Za 15 min / Vlastní.
+* V Plánu plovoucí tlačítko s činkou → sheet „Jdu na trénink“: klepnutím na partie na postavě se předvybere
+  trénink (Push/Pull/Legs podle největšího překryvu, jinak „Jiný“; jde i ručně, včetně Kardia) a čas
+  **za 15 min**. Jedním klepnutím „Teď“, nebo „Upravit čas“. Když trénink běží, sheet ukazuje stopky,
+  „Zapsat série“, „Hotovo“ (s odměnou přímo v sheetu) a dvoukrokové „Zrušit“. Tlačítko v Plánu pak
+  ukazuje co a kdy / kolik minut běží. Karta „Dnešní trénink“ zůstává podle plánu beze změny.
 * Čas rychlého zápisu má na dnešek přednost před týdenním plánem v `TrainingTimeManager`, takže kontext
   jídel (PRE/POST) a notifikace fungují i bez plánu.
-* „Začít trénink“ u plánované šablony trénink také spustí, takže „Hotovo“ jde potvrdit vždy.
 * Běžící trénink po 4 h sám vyprší. Kardio pod 15 min odměnu nedá.
 * Den volna: +10, když je dnes v plánu volno, zbytek týdne plán má a dnes nebyl žádný trénink.
 

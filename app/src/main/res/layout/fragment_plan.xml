@@ -691,4 +691,24 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- „Jdu na trénink“: jednorázový trénink mimo plán (docs/adr/0065) -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fabQuickWorkout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="108dp"
+        android:contentDescription="Jdu na trénink"
+        android:fontFamily="sans-serif-black"
+        android:text="Jdu na trénink"
+        android:textColor="@color/brand_cream"
+        android:textSize="13sp"
+        app:backgroundTint="@color/brand_dark"
+        app:elevation="6dp"
+        app:icon="@drawable/ic_ls_lift"
+        app:iconSize="26dp"
+        app:iconTint="@color/brand_accent_warm"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.LargeComponent.Rounded" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

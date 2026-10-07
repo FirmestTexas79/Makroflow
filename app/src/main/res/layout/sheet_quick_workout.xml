@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Rychlý zápis tréninku „Jdu na trénink“ (docs/adr/0065): výběr partií na postavě → trénink → kdy.
+    Když trénink běží nebo je naplánovaný, ukazuje odpočet a Hotovo.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_sheet_cream"
+    android:orientation="vertical">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="@color/brand_dark_alpha20" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:paddingBottom="28dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvQwPill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="@color/brand_accent_deep"
+                    android:letterSpacing="0.12"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="6dp"
+                    android:text="JDU NA TRÉNINK"
+                    android:textColor="@color/brand_cream"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+
+                <ImageButton
+                    android:id="@+id/btnQwClose"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Zavřít"
+                    android:src="@drawable/ic_close"
+                    app:tint="@color/brand_dark" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvQwTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:fontFamily="sans-serif-black"
+                android:text="Co dnes procvičíš?"
+                android:textColor="@color/brand_dark"
+                android:textSize="30sp" />
+
+            <TextView
+                android:id="@+id/tvQwSub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:alpha="0.7"
+                android:text="Klepni na partie, podle nich vyberu trénink."
+                android:textColor="@color/brand_dark"
+                android:textSize="13sp" />
+
+            <!-- ── Výběr ─────────────────────────────────────────── -->
+            <LinearLayout
+                android:id="@+id/groupQwPick"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:cardBackgroundColor="@color/brand_dark_alpha05"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/brand_dark_alpha10"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <cz.uhk.macroflow.training.body.BodyMapView
+                            android:id="@+id/bodyQw"
+                            android:layout_width="match_parent"
+                            android:layout_height="250dp" />
+
+                        <TextView
+                            android:id="@+id/tvQwMuscles"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:gravity="center"
+                            android:minLines="2"
+                            android:text="Zatím nic nevybráno"
+                            android:textColor="@color/brand_dark"
+                            android:textSize="12.5sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    style="@style/QwSection"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TRÉNINK" />
+
+                <LinearLayout
+                    android:id="@+id/llQwKinds"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+
+                <LinearLayout
+                    android:id="@+id/llQwVariant"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/tvQwVariant"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:alpha="0.75"
+                        android:textColor="@color/brand_dark"
+                        android:textSize="12.5sp" />
+
+                    <LinearLayout
+                        android:id="@+id/llQwVariantPills"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/QwSection"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="KDY" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardQwWhen"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/brand_dark"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:id="@+id/tvQwWhenLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:letterSpacing="0.14"
+                            android:text="ZA 15 MIN"
+                            android:textColor="@color/brand_accent_warm"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvQwTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-black"
+                            android:text="--:--"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="44sp" />
+
+                        <LinearLayout
+                            android:id="@+id/llQwWhen"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:orientation="horizontal" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnQwGo"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="18dp"
+                    android:backgroundTint="@color/brand_accent_warm"
+                    android:fontFamily="sans-serif-black"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Vyber trénink"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="16sp"
+                    app:cornerRadius="18dp"
+                    app:icon="@drawable/ic_ls_lift"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/brand_dark" />
+
+                <TextView
+                    android:id="@+id/tvQwReward"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:alpha="0.65"
+                    android:gravity="center"
+                    android:text="Po dokončení +15 ⚡ v Makrosvětu"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- ── Běží / naplánováno ───────────────────────────── -->
+            <LinearLayout
+                android:id="@+id/groupQwRun"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:cardBackgroundColor="@color/brand_dark"
+                    app:cardCornerRadius="28dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="22dp"
+                        android:paddingVertical="26dp">
+
+                        <TextView
+                            android:id="@+id/tvQwRunState"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:letterSpacing="0.16"
+                            android:text="TRÉNINK BĚŽÍ"
+                            android:textColor="@color/brand_accent_warm"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvQwTimer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="sans-serif-black"
+                            android:text="00:00"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="64sp" />
+
+                        <TextView
+                            android:id="@+id/tvQwRunHint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:alpha="0.75"
+                            android:gravity="center"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnQwSets"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="sans-serif-black"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Zapsat série"
+                    android:textColor="@color/brand_dark"
+                    app:cornerRadius="18dp"
+                    app:strokeColor="@color/brand_dark"
+                    app:strokeWidth="1.5dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnQwDone"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="10dp"
+                    android:backgroundTint="@color/brand_accent_warm"
+                    android:fontFamily="sans-serif-black"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Hotovo"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="16sp"
+                    app:cornerRadius="18dp" />
+
+                <TextView
+                    android:id="@+id/tvQwRunNote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:alpha="0.65"
+                    android:gravity="center"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnQwCancel"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="4dp"
+                    android:text="Zrušit trénink"
+                    android:textColor="@color/brand_accent_deep" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>
