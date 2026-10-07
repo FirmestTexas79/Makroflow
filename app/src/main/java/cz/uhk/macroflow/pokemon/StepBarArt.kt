@@ -71,27 +71,39 @@ object StepBarArt {
         return px
     }
 
+    /** Barvy náplně drážky (stín, odlesk, světlá, základ, tmavá, čelo). */
+    class Fill(val shadow: Int, val highlight: Int, val light: Int, val base: Int, val dark: Int, val edge: Int)
+    val GREEN = Fill(G_SHADOW, G_HIGHLIGHT, G_LIGHT, G, G_DARK, G_EDGE)
+    /** Energie Makrosvěta (docs/adr/0065): jantarová. */
+    val AMBER = Fill(c(0xFF7A5418), c(0xFFF6DE98), c(0xFFE8B958), c(0xFFD39A33), c(0xFF8E6420), c(0xFFF0C870))
+    /** Overstim: světlé zlato přes jantar. */
+    val GOLD = Fill(c(0xFFA4842A), c(0xFFFFFBE0), c(0xFFFFEE9E), c(0xFFFFDE5C), c(0xFFC9A230), c(0xFFFFF6C8))
+
     /** Pruh s [fill] zaplněnými sloupci drážky. */
-    fun bar(fill: Int): IntArray {
+    fun bar(fill: Int, colors: Fill = GREEN): IntArray = paint(frame(BAR_W), fill, colors)
+
+    /** Energie: [base] sloupců jantaru a přes ně zleva [over] sloupců zlatého overstimu. */
+    fun energyBar(base: Int, over: Int): IntArray = paint(paint(frame(BAR_W), base, AMBER), over, GOLD)
+
+    private fun paint(px: IntArray, fill: Int, k: Fill): IntArray {
         val w = BAR_W
-        val px = frame(w)
         val n = fill.coerceIn(0, INNER_W)
         for (i in 0 until n) {
             val x = 4 + i
             for (y in INNER_TOP..INNER_BOTTOM) {
                 px[y * w + x] = when (y) {
-                    INNER_TOP -> G_SHADOW                          // stín rámu přes náplň
-                    INNER_TOP + 1 -> if (x == 4) G_SHADOW else G_HIGHLIGHT   // hlavní odlesk
-                    INNER_TOP + 2 -> if (x == 4) G_SHADOW else G_LIGHT
-                    INNER_BOTTOM -> G_DARK
-                    else -> if (x == 4) G_SHADOW else G
+                    INNER_TOP -> k.shadow                          // stín rámu přes náplň
+                    INNER_TOP + 1 -> if (x == 4) k.shadow else k.highlight   // hlavní odlesk
+                    INNER_TOP + 2 -> if (x == 4) k.shadow else k.light
+                    INNER_BOTTOM -> k.dark
+                    else -> if (x == 4) k.shadow else k.base
                 }
             }
             // krátký druhý odlesk ve spodní polovině
-            if (i in 3 until n - 2 && (i % 11) in 1..3) px[(INNER_BOTTOM - 2) * w + x] = G_LIGHT
+            if (i in 3 until n - 2 && (i % 11) in 1..3) px[(INNER_BOTTOM - 2) * w + x] = k.light
         }
         // čelo náplně
-        if (n in 2 until INNER_W) for (y in INNER_TOP + 1 until INNER_BOTTOM) px[y * w + 3 + n] = G_EDGE
+        if (n in 2 until INNER_W) for (y in INNER_TOP + 1 until INNER_BOTTOM) px[y * w + 3 + n] = k.edge
         return px
     }
 

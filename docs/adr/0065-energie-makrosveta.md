@@ -1,6 +1,6 @@
 # 0065 – Energie Makrosvěta, overstim a propojení s tréninkem
 
-**Stav:** návrh k odsouhlasení (nic zatím neimplementováno) · **Datum:** 2026-10-07
+**Stav:** schváleno, fáze 1 (jádro, bar, ceny akcí) implementována · **Datum:** 2026-10-07
 
 ## Kontext
 Makrosvět je teď volně přístupný a dá se projít naráz. Obsah se tak spotřebuje příliš rychle

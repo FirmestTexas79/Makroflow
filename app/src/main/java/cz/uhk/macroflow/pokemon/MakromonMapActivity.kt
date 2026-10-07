@@ -70,6 +70,7 @@ class MakromonMapActivity : AppCompatActivity() {
     private lateinit var questDialogManager: QuestDialogManager
     private lateinit var companionManager: CompanionManager
     private lateinit var stepProgressBar:  StepProgressBar
+    private lateinit var staminaBar: cz.uhk.macroflow.pokemon.stamina.StaminaBar
     lateinit var questManager:             QuestManager
     private lateinit var gudwinNPC:        ImageView
     private lateinit var starterBush:      ImageView
@@ -139,6 +140,7 @@ class MakromonMapActivity : AppCompatActivity() {
         mapBackground = findViewById(R.id.mapBackground)
         mapWorld = findViewById(R.id.mapWorld)
         stepProgressBar = findViewById(R.id.stepProgressBar)
+        staminaBar = findViewById(R.id.staminaBar)
 
         // Postava ze Sunnyside World (docs/adr/0051): snímek 64 × 40 px, 1 px spritu = 2 dp
         // (celé zařízení px, ať jsou pixely ostré); pata je u spodní hrany
@@ -354,6 +356,12 @@ class MakromonMapActivity : AppCompatActivity() {
             if (BuildConfig.DEBUG) intent.getStringExtra("debug_special")?.let { SpecialBattle.from(it) }?.let { sp ->
                 mapWorld.postDelayed({ if (!isFinishing) startSpecialBattle(sp, currentBiome) }, 1200)
             }
+            // Debug: energie (adb … --es debug_stamina 30+10)
+            if (BuildConfig.DEBUG) intent.getStringExtra("debug_stamina")?.split("+")?.let { v ->
+                val st = cz.uhk.macroflow.pokemon.stamina.StaminaStore
+                st.debugSet(this, v[0].trim().toIntOrNull() ?: 100, v.getOrNull(1)?.trim()?.toIntOrNull() ?: 0)
+                staminaBar.set(st.load(this), animate = false)
+            }
             // Debug: splnit N fází aktivního questu (adb … --ei debug_quest_complete 5)
             if (BuildConfig.DEBUG) intent.getIntExtra("debug_quest_complete", 0).takeIf { it > 0 }?.let { n ->
                 (1..n).forEach { i -> mapWorld.postDelayed({ if (!isFinishing) questManager.debugCompleteStage() }, 1500L + i * 600L) }
@@ -394,12 +402,15 @@ class MakromonMapActivity : AppCompatActivity() {
         super.onResume()
         if (::companionManager.isInitialized) companionManager.refresh()
         cz.uhk.macroflow.pokemon.audio.GameAudio.resume(this)
+        // Energie: nový den po aspoň 4 h pauze doplní bar (docs/adr/0065)
+        staminaBar.set(cz.uhk.macroflow.pokemon.stamina.StaminaStore.onEnter(this), animate = false)
         // AFK těžba / kácení: po návratu ukázat, co se za tu dobu udělalo (docs/adr/0035)
         mapWorld.postDelayed({ reportAfk() }, 700)
     }
 
     override fun onPause() {
         cz.uhk.macroflow.pokemon.audio.GameAudio.pause()
+        cz.uhk.macroflow.pokemon.stamina.StaminaStore.onExit(this)
         saveLastLocation()
         super.onPause()
     }
@@ -638,7 +649,8 @@ class MakromonMapActivity : AppCompatActivity() {
             // Starý dub: ve fázi s bossem se z kořenů vynoří Soulord místo divokého setkání
             if (nodeName == ForestHeart.OAK_NODE && rotBossWaiting()) {
                 showMapToast("🍂 Kořeny Starého dubu se zachvějí a z hniloby stoupá fialová mlha…")
-                startSpecialBattle(SpecialBattle.FOREST_ROT, BiomeType.FOREST)
+                if (payStamina(cz.uhk.macroflow.pokemon.stamina.Stamina.Action.GUARDIAN))
+                    startSpecialBattle(SpecialBattle.FOREST_ROT, BiomeType.FOREST)
                 return@action
             }
             // Roztržený list Kustodiátu (docs/adr/0047) – najde se jednou, místo běžné akce místa
@@ -659,11 +671,11 @@ class MakromonMapActivity : AppCompatActivity() {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
                 "cave", "mine" -> BiomeRegistry.caveBehind(nodeName)?.let { cave ->
                     val entry = BiomeRegistry.definition(cave)?.cave?.exitNode ?: return@let
-                    enterBiomeAtNode(cave, entry, MapTransition.CAVE_IN)
+                    walkInto(cave, entry, MapTransition.CAVE_IN)
                 }
                 // Doly (docs/adr/0049): zabedněná štola ve Starém dole → sestup; zpět tunelem do dolu
-                MinesMap.MAZE_NODE -> enterBiomeAtNode(BiomeType.MINES, MinesMap.EXIT_NODE, MapTransition.MINE_DESCENT)
-                MinesMap.EXIT_NODE -> enterBiomeAtNode(BiomeType.CAVE_MAZE, MinesMap.MAZE_NODE, MapTransition.CAVE_IN)
+                MinesMap.MAZE_NODE -> walkInto(BiomeType.MINES, MinesMap.EXIT_NODE, MapTransition.MINE_DESCENT)
+                MinesMap.EXIT_NODE -> walkInto(BiomeType.CAVE_MAZE, MinesMap.MAZE_NODE, MapTransition.CAVE_IN)
                 MinesMap.NET_NODE -> onOldNet()
                 MinesMap.DOOR_NODE -> showMapToast("🚪 " + MinesMap.DOOR_TEXT +
                     (if (Insight.level(StoryFlags.all(this)) >= 3) MinesMap.DOOR_TEXT_INSIGHT else "") +
@@ -671,7 +683,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 Vendelin.NODE -> { questManager.loadQuest(Vendelin.QUEST_ID); mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150) }
                 Vendelin.BOOK_NODE -> onMinerBook()
                 "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
-                    enterBiomeAtNode(BiomeType.valueOf(it.parentBiome), it.mountainNode,
+                    walkInto(BiomeType.valueOf(it.parentBiome), it.mountainNode,
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
                 "tezba" -> scanInMine()
@@ -704,6 +716,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     // obyčejné městské křoví (se shiny šancí) – dřív zůstal vynucený navždy a shiny
                     // ve městě nikdy nepadl
                     val intro = !questManager.isIntroQuestFinished()
+                    if (!intro && !payStamina(cz.uhk.macroflow.pokemon.stamina.Stamina.Action.WILD_BATTLE)) return@action
                     getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).edit()
                         .putString("LAST_BIOME", currentBiome.name)
                         .apply { if (intro) putString("FORCE_ENCOUNTER_ID", "starter_bush") else remove("FORCE_ENCOUNTER_ID") }
@@ -711,20 +724,21 @@ class MakromonMapActivity : AppCompatActivity() {
                     replaceMapContent(PokemonBattleFragment())
                 }
                 "hory" -> tryEnterBiome(BiomeType.MOUNTAINS, entryNode = "vstup_z_meadow")
-                "vstup_z_meadow" -> enterBiomeAtNode(BiomeType.MEADOW, "hory")
+                "vstup_z_meadow" -> walkInto(BiomeType.MEADOW, "hory")
                 "les" -> {
                     if (!questManager.isIntroQuestFinished()) {
                         movementEngine.cancel()
                         showBlockingDialog()
                     } else {
-                        changeBiome(BiomeType.MEADOW, PointF(0.340f, 0.640f))
+                        payMove(BiomeType.MEADOW) { changeBiome(BiomeType.MEADOW, PointF(0.340f, 0.640f)) }
                     }
                 }
                 "domov" -> replaceMapContent(InventoryFragment())
                 "pokedex" -> replaceMapContent(MakrodexFragment())
                 "obchod" -> replaceMapContent(PokemonShopFragment())
-                "vstup_z_town" -> changeBiome(BiomeType.TOWN, PointF(0.46f, 0.15f))
+                "vstup_z_town" -> payMove(BiomeType.TOWN) { changeBiome(BiomeType.TOWN, PointF(0.46f, 0.15f)) }
                 in encounterNodes -> {
+                    if (!payStamina(cz.uhk.macroflow.pokemon.stamina.Stamina.Action.WILD_BATTLE)) return@action
                     if ((1..100).random() <= 90) {
                         // Jeskyně ukládají svůj biom (vlastní intro); Makromoni a questy jsou horské (wildBiome)
                         // Jezírka ve Hvozdu jsou vodní setkání
@@ -815,7 +829,7 @@ class MakromonMapActivity : AppCompatActivity() {
         // Debug: sedmimílové boty přeskočí denní krokový zámek (jen v debug buildu)
         val boots = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false)
         if (boots || BiomeAccess.canEnter(target, currentDailySteps)) {
-            enterBiomeAtNode(target, entryNode)
+            walkInto(target, entryNode)
         } else {
             showStepWarningToast(BiomeAccess.missingSteps(target, currentDailySteps))
         }
@@ -826,6 +840,39 @@ class MakromonMapActivity : AppCompatActivity() {
         val pos = BiomeRegistry.nodePos(graph, nodeId) ?: return
         changeBiome(target, PointF(pos.x, pos.y), transition)
     }
+
+    // ─── ENERGIE (docs/adr/0065) ─────────────────────────────────────────────
+
+    /** Zaplatí [cost] energie; když nestačí, řekne kolik chybí a vrátí false. */
+    private fun payStamina(cost: Int, what: String): Boolean {
+        if (cost <= 0) return true
+        val paid = cz.uhk.macroflow.pokemon.stamina.StaminaStore.pay(this, cost)
+        if (paid == null) {
+            val have = cz.uhk.macroflow.pokemon.stamina.StaminaStore.load(this).total
+            showMapToast("⚡ Na $what ti chybí energie (stojí $cost, máš $have).\n" +
+                "Doplníš ji zápisem jídla, vody nebo tréninku, nebo zítra po odpočinku.")
+            return false
+        }
+        staminaBar.set(paid)
+        return true
+    }
+
+    private fun payStamina(action: cz.uhk.macroflow.pokemon.stamina.Stamina.Action) =
+        payStamina(action.cost, action.label.lowercase())
+
+    /** Placený přechod hráče do [target]; návrat odkud přišel je do 5 minut zdarma. */
+    private fun payMove(target: BiomeType, go: () -> Unit) {
+        val st = cz.uhk.macroflow.pokemon.stamina.Stamina
+        val store = cz.uhk.macroflow.pokemon.stamina.StaminaStore
+        val now = System.currentTimeMillis()
+        val cost = st.transitionCost(store.load(this), target.name, now)
+        if (!payStamina(cost, "přechod")) return
+        store.save(this, st.moved(store.load(this), from = currentBiome.name, cost = cost, now = now))
+        go()
+    }
+
+    private fun walkInto(target: BiomeType, nodeId: String, transition: MapTransition = MapTransition.FADE) =
+        payMove(target) { enterBiomeAtNode(target, nodeId, transition) }
 
     private var awardsChecking = false
 
@@ -1584,9 +1631,12 @@ class MakromonMapActivity : AppCompatActivity() {
             val (owned, state) = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.counts(ctx) to SS.state(ctx) }
             cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.craftMenu(findViewById(R.id.mapRootContainer), owned, state,
                 onCraft = { ball, times ->
+                    val craftCost = cz.uhk.macroflow.pokemon.stamina.Stamina.Action.CRAFT.cost
+                    if (cz.uhk.macroflow.pokemon.stamina.StaminaStore.load(ctx).total < craftCost) { payStamina(cz.uhk.macroflow.pokemon.stamina.Stamina.Action.CRAFT); return@craftMenu }
                     lifecycleScope.launch {
                         val res = kotlinx.coroutines.withContext(Dispatchers.IO) { SS.craft(ctx, ball, times) }
                         if (res == null) { showMapToast("Chybí suroviny."); return@launch }
+                        payStamina(cz.uhk.macroflow.pokemon.stamina.Stamina.Action.CRAFT)
                         val (made, xp) = res
                         forgeAnimation(ball.pixels, cz.uhk.macroflow.pokemon.balls.Makroball.SIZE) {
                             showMapToast("🔨 Vyrobeno: ${made}× ${ball.label}" + (if (made > times) " (dvojitá výroba!)" else "") +
@@ -1702,7 +1752,7 @@ class MakromonMapActivity : AppCompatActivity() {
             movementEngine.face(1)
             cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.gatherMenu(findViewById(R.id.mapRootContainer), info,
                 onStart = {
-                    lifecycleScope.launch {
+                    if (payStamina(cz.uhk.macroflow.pokemon.stamina.Stamina.Action.GATHER_START)) lifecycleScope.launch {
                         val prev = kotlinx.coroutines.withContext(Dispatchers.IO) {
                             val now = System.currentTimeMillis() / 1000
                             val r = SS.claimActivity(ctx, now)
@@ -1783,7 +1833,8 @@ class MakromonMapActivity : AppCompatActivity() {
             when (progress.altar(color)) {
                 LegendProgress.Altar.GUARDED -> {
                     val sp = SpecialBattle.guardianOf(color)
-                    startSpecialBattle(sp, battleBiome = currentBiome)
+                    if (payStamina(cz.uhk.macroflow.pokemon.stamina.Stamina.Action.GUARDIAN))
+                        startSpecialBattle(sp, battleBiome = currentBiome)
                 }
                 LegendProgress.Altar.CRYSTAL_READY -> takeCrystal(color)
                 LegendProgress.Altar.EMPTY -> showMapToast("Oltář je prázdný – ${color.label} už je u tebe.")
@@ -1942,7 +1993,7 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             if (cz.uhk.macroflow.pokemon.cave.ForestMap.canEnter(done)) {
                 val entry = cz.uhk.macroflow.pokemon.cave.ForestMap.MAP.exitNode
-                enterBiomeAtNode(BiomeType.FOREST, entry, MapTransition.FADE)
+                walkInto(BiomeType.FOREST, entry, MapTransition.FADE)
             } else {
                 val need = cz.uhk.macroflow.pokemon.cave.ForestMap.REQUIRED_TASKS
                 showMapToast("🌲 Hvozd je hustý a cesta se v něm snadno ztratí.\n" +
@@ -2148,7 +2199,7 @@ class MakromonMapActivity : AppCompatActivity() {
         showMapToast("🍄 " + SecretGrove.thornText(open))
         if (open) mapWorld.postDelayed({
             if (!isFinishing && currentBiome == BiomeType.FOREST)
-                enterBiomeAtNode(BiomeType.HIDDEN_GROVE, SecretGrove.EXIT_NODE, MapTransition.FADE)
+                walkInto(BiomeType.HIDDEN_GROVE, SecretGrove.EXIT_NODE, MapTransition.FADE)
         }, 1600)
     }
 
@@ -2474,13 +2525,15 @@ class MakromonMapActivity : AppCompatActivity() {
                         "Krystaly hlídají strážci v jeskyni a ve Starém dole.")
                 LegendProgress.Shrine.ReadyToPlace -> placeCrystalsCeremony()
                 LegendProgress.Shrine.LegendAwaits -> {
-                    showMapToast("Krystaly v lůžkách září… Drak se znovu probouzí!")
-                    startSpecialBattle(SpecialBattle.LEGEND_PEAK, BiomeType.MOUNTAINS)
+                    if (payStamina(cz.uhk.macroflow.pokemon.stamina.Stamina.Action.GUARDIAN)) {
+                        showMapToast("Krystaly v lůžkách září… Drak se znovu probouzí!")
+                        startSpecialBattle(SpecialBattle.LEGEND_PEAK, BiomeType.MOUNTAINS)
+                    }
                 }
                 LegendProgress.Shrine.GateOpen -> {
                     if (!StoryFlags.isSet(this@MakromonMapActivity, SkyPass.VISITED_KEY))
                         showMapToast("Brána za svatyní zůstala otevřená. Za ní stoupá úzká stezka do mraků…")
-                    enterBiomeAtNode(BiomeType.SKY_PASS, SkyPass.MAP.exitNode, MapTransition.FADE)
+                    walkInto(BiomeType.SKY_PASS, SkyPass.MAP.exitNode, MapTransition.FADE)
                 }
             }
         }
