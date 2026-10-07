@@ -1,6 +1,6 @@
 # 0065 – Energie Makrosvěta, overstim a propojení s tréninkem
 
-**Stav:** schváleno, fáze 1 (jádro, bar, ceny akcí) a fáze 2 (odměny za zápisy) implementovány · **Datum:** 2026-10-07
+**Stav:** schváleno, fáze 1 (jádro, bar, ceny akcí) fáze 2 (odměny za zápisy) a fáze 3 (rychlý zápis tréninku) implementovány · **Datum:** 2026-10-07
 
 ## Kontext
 Makrosvět je teď volně přístupný a dá se projít naráz. Obsah se tak spotřebuje příliš rychle
@@ -129,6 +129,17 @@ spočítá celodenní nárok podle tabulky A a `Stamina.reward` připíše jen r
 připsané vynuluje, takže dnešní odměny jdou znovu nad čistých 100. `game_events` zůstává pro
 události, které v tabulkách nejsou (rychlý zápis tréninku, kardio, den volna – fáze 3).
 Dokud není fáze 3, série se odměňují i bez spuštěného „Jdu na trénink“ a dokončený trénink = ≥ 6 sérií.
+
+### Implementace rychlého zápisu (fáze 3)
+Místo nové tabulky `activity_log` (vyžadovala by migraci DB) je dnešní jednorázový trénink v
+`TrainingPrefs` (`QuickWorkout`: druh, varianta, čas, start, konec) a potvrzené „Hotovo“ se zapisuje
+do `game_events` jako `WORKOUT_DONE` / `CARDIO_DONE`. Ledger tak zůstává jeden a auditovatelný.
+* Karta „Dnešní trénink“ v Plánu: „＋ Jiný“ → druh (Push/Pull/Legs A/B, Kardio, Jiný) → Teď / Za 15 min / Vlastní.
+* Čas rychlého zápisu má na dnešek přednost před týdenním plánem v `TrainingTimeManager`, takže kontext
+  jídel (PRE/POST) a notifikace fungují i bez plánu.
+* „Začít trénink“ u plánované šablony trénink také spustí, takže „Hotovo“ jde potvrdit vždy.
+* Běžící trénink po 4 h sám vyprší. Kardio pod 15 min odměnu nedá.
+* Den volna: +10, když je dnes v plánu volno, zbytek týdne plán má a dnes nebyl žádný trénink.
 
 ## Fáze implementace
 1. `stamina` jádro: stav, doplnění přes noc, ceny akcí, bar v UI, zpracování `game_events` + unit testy.

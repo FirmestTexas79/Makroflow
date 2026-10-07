@@ -37,7 +37,11 @@ data class GameEventEntity(
 
 enum class GameEventType {
     /** Úspěšně naskenovaný a v OpenFoodFacts dohledaný čárový kód. payload = kód. */
-    BARCODE_SCANNED
+    BARCODE_SCANNED,
+    /** Potvrzené „Hotovo“ u rychlého zápisu silového nebo jiného tréninku. payload = druh. */
+    WORKOUT_DONE,
+    /** Potvrzené kardio aspoň 15 min. payload = minuty. */
+    CARDIO_DONE
 }
 
 @Dao
@@ -47,6 +51,9 @@ interface GameEventDao {
 
     @Query("SELECT COUNT(*) FROM game_events WHERE type = :type AND timestamp >= :since")
     fun countSince(type: String, since: Long): Int
+
+    @Query("SELECT COUNT(*) FROM game_events WHERE type = :type AND date = :date")
+    fun countOnDate(type: String, date: String): Int
 
     /** Emituje při každé změně tabulky – slouží jako spouštěč přepočtu questů. */
     @Query("SELECT COUNT(*) FROM game_events WHERE type = :type")

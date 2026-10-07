@@ -35,6 +35,8 @@ object TrainingTimeManager {
     }
 
     fun getTrainingTimeForToday(context: Context): String? {
+        // rychlý zápis „Jdu na trénink“ má na dnešek přednost před týdenním plánem (docs/adr/0065)
+        QuickWorkout.today(context)?.let { return it.time }
         val day = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
         return getTrainingTime(context, day)
     }
@@ -118,7 +120,7 @@ object TrainingTimeManager {
     fun getMealContextLabel(context: Context): String? {
         val timeStr = getTrainingTimeForToday(context) ?: return null
         val minutes = minutesToTraining(context) ?: return null
-        val trainingType = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val trainingType = QuickWorkout.today(context)?.label?.uppercase() ?: context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString("type_${SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())}", "rest")
             ?.uppercase() ?: "REST"
 

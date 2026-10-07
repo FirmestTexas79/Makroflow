@@ -3,6 +3,8 @@ package cz.uhk.macroflow.pokemon.stamina
 import android.content.Context
 import cz.uhk.macroflow.dashboard.MacroCalculator
 import cz.uhk.macroflow.data.AppDatabase
+import cz.uhk.macroflow.data.GameEventType
+import cz.uhk.macroflow.training.QuickWorkout
 import cz.uhk.macroflow.pokemon.daily.DailyQuestStore
 import java.time.LocalDate
 
@@ -53,8 +55,10 @@ object StaminaStore {
     fun dayFacts(ctx: Context): Stamina.Day {
         val f = DailyQuestStore.facts(ctx)
         val goals = runCatching { MacroCalculator.calculate(ctx) }.getOrNull()
-        val kcal = AppDatabase.getDatabase(ctx).consumedSnackDao()
-            .getConsumedByDateSync(LocalDate.now().toString()).sumOf { it.calories }
+        val db = AppDatabase.getDatabase(ctx)
+        val today = LocalDate.now().toString()
+        val kcal = db.consumedSnackDao().getConsumedByDateSync(today).sumOf { it.calories }
+        val events = db.gameEventDao()
         return Stamina.Day(
             checkIn = f.checkIn,
             meals = f.meals,
@@ -62,8 +66,20 @@ object StaminaStore {
             waterGoalMl = goals?.let { (it.water * 1000).toInt() } ?: 0,
             macrosHit = goals != null && Stamina.macrosHit(f.proteinG.toDouble(), goals.protein, kcal.toDouble(), goals.calories),
             steps = f.steps,
-            sets = f.workoutSets
+            sets = f.workoutSets,
+            workoutDone = events.countOnDate(GameEventType.WORKOUT_DONE.name, today) > 0,
+            cardioDone = events.countOnDate(GameEventType.CARDIO_DONE.name, today) > 0,
+            restDay = f.workoutSets == 0 && QuickWorkout.today(ctx) == null && plannedRestDay(ctx)
         )
+    }
+
+    /** Dnes je v plánu volno a zbytek týdne plán má (bez plánu není co odpočívat). */
+    private fun plannedRestDay(ctx: Context): Boolean {
+        val p = ctx.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
+        fun rest(day: java.time.DayOfWeek) = listOf("type_", "kardio_type_").all {
+            p.getString(it + day.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH), "rest") == "rest"
+        }
+        return rest(LocalDate.now().dayOfWeek) && !java.time.DayOfWeek.entries.all { rest(it) }
     }
 
     /** Připíše energii za dnešní zápisy, které ještě připsané nebyly. */

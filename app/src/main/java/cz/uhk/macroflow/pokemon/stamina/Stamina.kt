@@ -76,7 +76,13 @@ object Stamina {
         val waterGoalMl: Int = 0,
         val macrosHit: Boolean = false,
         val steps: Int = 0,
-        val sets: Int = 0
+        val sets: Int = 0,
+        /** Potvrzené „Hotovo“ u rychlého zápisu tréninku. */
+        val workoutDone: Boolean = false,
+        /** Potvrzené kardio aspoň 15 min. */
+        val cardioDone: Boolean = false,
+        /** Plánovaný den volna (a dnes se necvičilo). */
+        val restDay: Boolean = false
     )
 
     /** Energie za celý den podle tabulky A, včetně denních stropů. Odměňuje zápis a cíl, ne množství. */
@@ -89,7 +95,9 @@ object Stamina {
         if (d.macrosHit) r += 10
         r += 5 * min(d.steps / 2000, 4)
         r += 2 * min(d.sets, 15)
-        if (d.sets >= 6) r += 15          // dokončený trénink
+        if (d.sets >= 6 || d.workoutDone) r += 15          // dokončený trénink
+        if (d.cardioDone) r += 10
+        if (d.restDay) r += 10
         return r
     }
 

@@ -91,7 +91,7 @@ class PlanFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        view?.let { updateStats(it); renderGymBag(it) }
+        view?.let { updateStats(it); renderGymBag(it); refreshTodayWorkout(it) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -343,8 +343,10 @@ class PlanFragment : Fragment() {
         val card = view.findViewById<View>(R.id.cardTodayWorkout) ?: return
         if (isKardioMode) { card.visibility = View.GONE; return }
         val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
-        val kind = WorkoutTemplates.Kind.fromPlanType(trainingPrefs.getString("type_$dayName", "rest"))
         val ctx = requireContext().applicationContext
+        val quick = QuickWorkout.today(ctx)
+        // rychlý zápis „Jdu na trénink“ má na dnešek přednost před plánem (docs/adr/0065)
+        val kind = quick?.strength ?: WorkoutTemplates.Kind.fromPlanType(trainingPrefs.getString("type_$dayName", "rest"))
         viewLifecycleOwner.lifecycleScope.launch {
             val history = withContext(Dispatchers.IO) {
                 WorkoutRepository.toLogged(AppDatabase.getDatabase(ctx).workoutDao().getAllSync())
@@ -354,34 +356,130 @@ class PlanFragment : Fragment() {
             val title = view.findViewById<TextView>(R.id.tvTodayWorkout)
             val sub = view.findViewById<TextView>(R.id.tvTodayWorkoutSub)
             val start = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnStartWorkout)
-            if (kind != null) {
-                val variant = WorkoutTemplates.variantFor(kind, history, todayDay)
-                val key = WorkoutTemplates.key(kind, variant)
-                val count = WorkoutRepository.templateIds(ctx, key).size
-                val doneToday = history.count { it.day == todayDay && it.template == key }
-                title.text = WorkoutTemplates.label(key)
-                sub.text = if (doneToday > 0) "$count cviků · dnes zapsáno $doneToday sérií"
-                    else "$count cviků · střídá se s ${WorkoutTemplates.label(WorkoutTemplates.key(kind, if (variant == 'A') 'B' else 'A'))}"
-                start.text = if (doneToday > 0) "Pokračovat" else "Začít trénink"
-                start.setOnClickListener { WorkoutSessionSheet.show(childFragmentManager, kind, variant) }
-            } else {
-                title.text = "Bez šablony"
-                sub.text = "Dnes nemáš v plánu PUSH / PULL / LEGS. Chceš si i tak zacvičit?"
-                start.text = "Vybrat trénink"
-                start.setOnClickListener { pickWorkout(history, todayDay) }
+            val pick = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnPickWorkout)
+            pick.text = "＋ Jiný"
+            pick.setOnClickListener { quickWorkout(history, todayDay) }
+            val setsToday = history.count { it.day == todayDay }
+            when {
+                quick != null && quick.running() -> {
+                    title.text = quick.label
+                    sub.text = "Trénink běží ${quick.minutes()} min" + if (setsToday > 0) " · dnes $setsToday sérií" else ""
+                    start.text = if (quick.strength != null) "Zapsat série" else "Probíhá…"
+                    start.setOnClickListener {
+                        val k = quick.strength ?: return@setOnClickListener
+                        WorkoutSessionSheet.show(childFragmentManager, k, quick.variant ?: 'A')
+                    }
+                    pick.text = "Hotovo"
+                    pick.setOnClickListener { confirmFinish(quick) }
+                }
+                quick != null && quick.startedAt == 0L -> {
+                    title.text = quick.label
+                    sub.text = "Jednorázově dnes v ${quick.time}"
+                    start.text = "Začít teď"
+                    start.setOnClickListener { startNow(quick.kind, quick.variant) }
+                }
+                quick != null && quick.strength == null -> {
+                    title.text = quick.label
+                    sub.text = "Hotovo ✓ · ${quick.time}"
+                    start.text = "Další trénink"
+                    start.setOnClickListener { quickWorkout(history, todayDay) }
+                }
+                kind != null -> {
+                    val variant = quick?.variant ?: WorkoutTemplates.variantFor(kind, history, todayDay)
+                    val key = WorkoutTemplates.key(kind, variant)
+                    val count = WorkoutRepository.templateIds(ctx, key).size
+                    val doneToday = history.count { it.day == todayDay && it.template == key }
+                    title.text = WorkoutTemplates.label(key)
+                    sub.text = when {
+                        (quick?.finishedAt ?: 0L) > 0L -> "Hotovo ✓ · dnes zapsáno $doneToday sérií"
+                        doneToday > 0 -> "$count cviků · dnes zapsáno $doneToday sérií"
+                        else -> "$count cviků · střídá se s ${WorkoutTemplates.label(WorkoutTemplates.key(kind, if (variant == 'A') 'B' else 'A'))}"
+                    }
+                    start.text = if (doneToday > 0) "Pokračovat" else "Začít trénink"
+                    start.setOnClickListener { startNow(kind.name, variant) }
+                }
+                else -> {
+                    title.text = "Bez šablony"
+                    sub.text = "Dnes nemáš v plánu PUSH / PULL / LEGS. Jdeš i tak na trénink?"
+                    start.text = "Jdu na trénink"
+                    start.setOnClickListener { quickWorkout(history, todayDay) }
+                }
             }
-            view.findViewById<View>(R.id.btnPickWorkout).setOnClickListener { pickWorkout(history, todayDay) }
         }
     }
 
-    private fun pickWorkout(history: List<cz.uhk.macroflow.training.log.LoggedSet>, todayDay: Int) {
-        val options = WorkoutTemplates.Kind.entries.flatMap { k -> WorkoutTemplates.VARIANTS.map { k to it } }
+    /** Spustí trénink (jednorázově na dnešek) a u silového rovnou otevře zápis sérií. */
+    private fun startNow(kind: String, variant: Char?) {
+        val ctx = requireContext()
+        if (QuickWorkout.active(ctx)?.kind != kind) QuickWorkout.start(ctx, kind, variant)
+        (requireActivity() as? MainActivity)?.refreshStickyNotification()
+        WorkoutTemplates.Kind.entries.firstOrNull { it.name == kind }?.let {
+            WorkoutSessionSheet.show(childFragmentManager, it, variant ?: 'A')
+        }
+        view?.let { refreshTodayWorkout(it) }
+    }
+
+    /** „Jdu na trénink“: co a kdy. Ukládá se jako jednorázová aktivita, ne do týdenního plánu. */
+    private fun quickWorkout(history: List<cz.uhk.macroflow.training.log.LoggedSet>, todayDay: Int) {
+        val options = WorkoutTemplates.Kind.entries.flatMap { k -> WorkoutTemplates.VARIANTS.map { k.name to it } } +
+            listOf(QuickWorkout.CARDIO to null, QuickWorkout.OTHER to null)
+        val labels = options.map { (k, v) ->
+            val kind = WorkoutTemplates.Kind.entries.firstOrNull { it.name == k }
+            when {
+                kind != null && v != null -> WorkoutTemplates.label(WorkoutTemplates.key(kind, v)) +
+                    if (WorkoutTemplates.variantFor(kind, history, todayDay) == v) "  · na řadě" else ""
+                k == QuickWorkout.CARDIO -> "Kardio"
+                else -> "Jiný trénink"
+            }
+        }
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Který trénink?")
-            .setItems(options.map { (k, v) ->
-                val next = WorkoutTemplates.variantFor(k, history, todayDay) == v
-                WorkoutTemplates.label(WorkoutTemplates.key(k, v)) + if (next) "  · na řadě" else ""
-            }.toTypedArray()) { _, i -> WorkoutSessionSheet.show(childFragmentManager, options[i].first, options[i].second) }
+            .setTitle("Jdu na trénink")
+            .setItems(labels.toTypedArray()) { _, i -> askWhen(options[i].first, options[i].second) }
+            .show()
+    }
+
+    private fun askWhen(kind: String, variant: Char?) {
+        val ctx = requireContext()
+        fun planAt(h: Int, m: Int) {
+            QuickWorkout.plan(ctx, kind, variant, String.format(Locale.US, "%02d:%02d", h, m))
+            (requireActivity() as? MainActivity)?.refreshStickyNotification()
+            view?.let { refreshTodayWorkout(it) }
+        }
+        MaterialAlertDialogBuilder(ctx)
+            .setTitle("Kdy?")
+            .setItems(arrayOf("Teď", "Za 15 min", "Vlastní čas")) { _, i ->
+                when (i) {
+                    0 -> startNow(kind, variant)
+                    1 -> java.time.LocalTime.now().plusMinutes(15).let { planAt(it.hour, it.minute) }
+                    else -> java.time.LocalTime.now().let { now ->
+                        MakroflowTimePicker.show(parentFragmentManager, now.hour, now.minute, "Čas tréninku") { h, m -> planAt(h, m) }
+                    }
+                }
+            }
+            .show()
+    }
+
+    /** „Hotovo?“ – teprve potvrzení dá odměnu za dokončený trénink nebo kardio. */
+    private fun confirmFinish(e: QuickWorkout.Entry) {
+        val ctx = requireContext().applicationContext
+        val shortCardio = e.kind == QuickWorkout.CARDIO && e.minutes() < QuickWorkout.CARDIO_MIN
+        fun finish(done: Boolean) = viewLifecycleOwner.lifecycleScope.launch {
+            QuickWorkout.finish(ctx, done)
+            (activity as? MainActivity)?.refreshStickyNotification()
+            view?.let { refreshTodayWorkout(it) }
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Hotovo?")
+            .setMessage(
+                "${e.label} · ${e.minutes()} min\n\n" + when {
+                    shortCardio -> "Kardio pod ${QuickWorkout.CARDIO_MIN} min se do energie v Makrosvětu nepočítá."
+                    e.kind == QuickWorkout.CARDIO -> "Za dokončené kardio dostaneš v Makrosvětu +10 ⚡."
+                    else -> "Za dokončený trénink dostaneš v Makrosvětu +15 ⚡."
+                }
+            )
+            .setPositiveButton("Hotovo") { _, _ -> finish(true) }
+            .setNeutralButton("Zrušit trénink") { _, _ -> finish(false) }
+            .setNegativeButton("Ještě ne", null)
             .show()
     }
 
