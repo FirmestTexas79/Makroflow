@@ -143,7 +143,6 @@ class MakromonMapActivity : AppCompatActivity() {
         staminaBar = findViewById(R.id.staminaBar)
         run {
             val dp = resources.displayMetrics.density
-            findViewById<View>(R.id.hudPanel).background = cz.uhk.macroflow.pokemon.skills.ui.WoodPanelDrawable(2f * dp, parchment = false)
             findViewById<View>(R.id.companionShadow).background = cz.uhk.macroflow.pokemon.skills.ui.BevelDrawable(
                 2f * dp, 0xFF606C38.toInt(), 0xFF8C9C5B.toInt(), 0xFF283618.toInt(), 0xFF2E1B0E.toInt())
         }

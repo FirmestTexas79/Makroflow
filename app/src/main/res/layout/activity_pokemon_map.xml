@@ -33,39 +33,34 @@
                 android:elevation="2dp" />
         </FrameLayout>
 
-        <!-- HUD vlevo nahoře: portrét aktivního Makromona, jméno a energie v jedné dřevěné ceduli
-             (docs/adr/0065). Pozadí a rámeček portrétu kreslí kód (WoodPanelDrawable, BevelDrawable). -->
+        <!-- HUD u levého kraje: portrét aktivního Makromona, pod ním jméno a svislý bar energie
+             (docs/adr/0065). Horní okraj mapy zůstává volný pro cesty a NPC. Rámeček portrétu kreslí kód. -->
         <LinearLayout
             android:id="@+id/hudPanel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="top|start"
             android:layout_marginTop="58dp"
-            android:layout_marginStart="10dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
+            android:layout_marginStart="8dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
             android:elevation="15dp">
 
             <FrameLayout
                 android:id="@+id/companionShadow"
-                android:layout_width="58dp"
-                android:layout_height="58dp"
-                android:layout_marginEnd="8dp"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
                 android:visibility="gone">
-                <ImageView android:id="@+id/ivCompanion" android:layout_width="50dp" android:layout_height="50dp" android:layout_gravity="center" android:scaleType="fitCenter" android:visibility="gone" />
+                <ImageView android:id="@+id/ivCompanion" android:layout_width="44dp" android:layout_height="44dp" android:layout_gravity="center" android:scaleType="fitCenter" android:visibility="gone" />
             </FrameLayout>
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-                <TextView android:id="@+id/tvCompanionLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/jersey_15" android:textSize="20sp" android:textColor="#FEFAE0" android:shadowColor="#CC1A1208" android:shadowDy="2" android:shadowRadius="2" android:maxLines="1" android:visibility="gone" />
-                <cz.uhk.macroflow.pokemon.stamina.StaminaBar
-                    android:id="@+id/staminaBar"
-                    android:layout_width="188dp"
-                    android:layout_height="26dp"
-                    android:layout_marginTop="2dp" />
-            </LinearLayout>
+            <TextView android:id="@+id/tvCompanionLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="@font/jersey_15" android:textSize="14sp" android:textColor="#FEFAE0" android:shadowColor="#E61A1208" android:shadowDy="2" android:shadowRadius="3" android:maxLines="1" android:visibility="gone" />
+
+            <cz.uhk.macroflow.pokemon.stamina.StaminaBar
+                android:id="@+id/staminaBar"
+                android:layout_width="40dp"
+                android:layout_height="230dp"
+                android:layout_marginTop="6dp" />
         </LinearLayout>
 
         <LinearLayout

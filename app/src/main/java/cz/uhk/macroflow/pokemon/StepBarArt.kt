@@ -80,14 +80,14 @@ object StepBarArt {
     val GOLD = Fill(c(0xFFA4842A), c(0xFFFFFBE0), c(0xFFFFEE9E), c(0xFFFFDE5C), c(0xFFC9A230), c(0xFFFFF6C8))
 
     /** Pruh s [fill] zaplněnými sloupci drážky. */
-    fun bar(fill: Int, colors: Fill = GREEN): IntArray = paint(frame(BAR_W), fill, colors)
+    fun bar(fill: Int, colors: Fill = GREEN): IntArray = paint(frame(BAR_W), fill, colors, BAR_W)
 
-    /** Energie: [base] sloupců jantaru a přes ně zleva [over] sloupců zlatého overstimu. */
-    fun energyBar(base: Int, over: Int): IntArray = paint(paint(frame(BAR_W), base, AMBER), over, GOLD)
+    /** Energie o délce [w]: [base] sloupců jantaru a přes ně zleva [over] sloupců zlatého overstimu. */
+    fun energyBar(base: Int, over: Int, w: Int = BAR_W): IntArray = paint(paint(frame(w), base, AMBER, w), over, GOLD, w)
 
-    private fun paint(px: IntArray, fill: Int, k: Fill): IntArray {
-        val w = BAR_W
-        val n = fill.coerceIn(0, INNER_W)
+    private fun paint(px: IntArray, fill: Int, k: Fill, w: Int): IntArray {
+        val inner = w - 8
+        val n = fill.coerceIn(0, inner)
         for (i in 0 until n) {
             val x = 4 + i
             for (y in INNER_TOP..INNER_BOTTOM) {
@@ -103,7 +103,7 @@ object StepBarArt {
             if (i in 3 until n - 2 && (i % 11) in 1..3) px[(INNER_BOTTOM - 2) * w + x] = k.light
         }
         // čelo náplně
-        if (n in 2 until INNER_W) for (y in INNER_TOP + 1 until INNER_BOTTOM) px[y * w + 3 + n] = k.edge
+        if (n in 2 until inner) for (y in INNER_TOP + 1 until INNER_BOTTOM) px[y * w + 3 + n] = k.edge
         return px
     }
 

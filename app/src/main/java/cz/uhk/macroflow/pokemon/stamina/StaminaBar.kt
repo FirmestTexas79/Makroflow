@@ -15,8 +15,9 @@ import cz.uhk.macroflow.R
 import cz.uhk.macroflow.pokemon.ui.StepBarArt
 
 /**
- * Bar energie nahoře v Makrosvětu (docs/adr/0065): stejný dřevěný rámeček jako ukazatel kroků,
- * jantarová náplň a přes ni zlatý overstim. Vedle číslo „100 +32“. Při útratě krátce vyletí „−3“.
+ * Svislý bar energie u levého kraje Makrosvěta (docs/adr/0065): stejný dřevěný rámeček jako
+ * ukazatel kroků, jantarová náplň odspodu a přes ni zlatý overstim. Nahoře blesk, číslo a „+32“.
+ * Při útratě krátce zazáří „−3“.
  */
 class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
@@ -84,49 +85,52 @@ class StaminaBar @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
 
     override fun onDraw(canvas: Canvas) {
-        val artW = StepBarArt.BAR_W; val artH = StepBarArt.H
-        val scale = maxOf(1, height / artH)
-        val baseCols = StepBarArt.fillColumns(shownBase / Stamina.BASE_MAX)
-        val overCols = if (shownOver <= 0f) 0 else StepBarArt.fillColumns(shownOver / Stamina.BASE_MAX)
-        val key = "$baseCols:$overCols"
-        if (key != bitmapKey || bitmap == null) {
-            bitmap?.recycle()
-            bitmap = Bitmap.createBitmap(StepBarArt.energyBar(baseCols, overCols), artW, artH, Bitmap.Config.ARGB_8888)
-            bitmapKey = key
-        }
-        val w = artW * scale; val h = artH * scale
-        val top = (height - h) / 2
-
-        // pixelový blesk před barem (5 × 9 art pixelů)
-        // blesk stejně vysoký jako bar, pixely zaokrouhlené na celé px
-        val u = maxOf(1, (h * 1.15f / BOLT.size).toInt()).toFloat()
-        val boltW = (BOLT[0].length + 1) * u
-        val by = top + (h - BOLT.size * u) / 2
+        // svislý bar u levého kraje: nahoře blesk a číslo, pod nimi bar plnící se odspodu
+        val u = maxOf(1, (width * 0.5f / StepBarArt.H).toInt())   // velikost art pixelu
+        val thick = StepBarArt.H * u
+        val boltU = maxOf(1, (width * 0.55f / BOLT[0].length).toInt()).toFloat()
+        val boltH = BOLT.size * boltU
+        val bx0 = (width - BOLT[0].length * boltU) / 2
         for ((row, line) in BOLT.withIndex()) for ((col, ch) in line.withIndex()) {
             if (ch == '.') continue
             boltPaint.color = if (ch == '#') OUTLINE else if (ch == 'o') BOLT_LIGHT else BOLT_FILL
-            canvas.drawRect(col * u, by + row * u, (col + 1) * u, by + (row + 1) * u, boltPaint)
+            canvas.drawRect(bx0 + col * boltU, row * boltU, bx0 + (col + 1) * boltU, (row + 1) * boltU, boltPaint)
         }
 
-        val bx = boltW.toInt()
-        dst.set(bx, top, bx + w, top + h)
+        text.textSize = width * 0.62f; overText.textSize = width * 0.48f
+        text.textAlign = Paint.Align.CENTER; overText.textAlign = Paint.Align.CENTER
+        var y = boltH + text.textSize * 0.95f
+        canvas.drawText(base.toString(), width / 2f, y, text)
+        if (over > 0) { y += overText.textSize * 1.0f; canvas.drawText("+$over", width / 2f, y, overText) }
+        val barTop = (y + text.textSize * 0.35f).toInt()
+
+        val lenPx = height - barTop
+        val artLen = maxOf(16, lenPx / u)
+        val inner = artLen - 8
+        fun cols(v: Float) = if (v <= 0f) 0 else maxOf(1, (v / Stamina.BASE_MAX * inner).toInt().coerceAtMost(inner))
+        val key = "${cols(shownBase)}:${cols(shownOver)}:$artLen"
+        if (key != bitmapKey || bitmap == null) {
+            bitmap?.recycle()
+            bitmap = Bitmap.createBitmap(StepBarArt.energyBar(cols(shownBase), cols(shownOver), artLen), artLen, StepBarArt.H, Bitmap.Config.ARGB_8888)
+            bitmapKey = key
+        }
+        val len = artLen * u
+        val left = (width - thick) / 2f
+        canvas.save()
+        // otočení o −90°: začátek baru (náplň) je dole, konec nahoře
+        canvas.translate(left, (barTop + len).toFloat())
+        canvas.rotate(-90f)
+        dst.set(0, 0, len, thick)
         canvas.drawBitmap(bitmap!!, null, dst, pixels)
+        canvas.restore()
 
-        text.textSize = h * 1.05f; overText.textSize = text.textSize
-        val baseline = top + h * 0.82f
-        var x = bx + w + h * 0.3f
-        val num = base.toString()
-        canvas.drawText(num, x, baseline, text)
-        x += text.measureText(num)
-        if (over > 0) { canvas.drawText(" +$over", x, baseline, overText); x += overText.measureText(" +$over") }
-
-        // útrata/zisk krátce zazáří vedle čísla a zmizí
+        // útrata/zisk krátce zazáří vedle čísla a odpluje dolů
         if (deltaAnim?.isRunning == true && delta != 0) {
-            deltaText.textSize = text.textSize * 0.85f
+            deltaText.textSize = width * 0.5f; deltaText.textAlign = Paint.Align.CENTER
             deltaText.color = if (delta < 0) Color.parseColor("#FF9A7A") else Color.parseColor("#C8DC8A")
             deltaText.alpha = (255 * (1f - deltaT)).toInt()
-            val label = if (delta < 0) " −${-delta}" else " +$delta"
-            canvas.drawText(label, x, baseline - h * 0.35f * deltaT, deltaText)
+            val label = if (delta < 0) "−${-delta}" else "+$delta"
+            canvas.drawText(label, width / 2f, barTop + text.textSize * (0.8f + 1.2f * deltaT), deltaText)
         }
     }
 
