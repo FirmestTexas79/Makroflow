@@ -83,6 +83,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         hideStatusBar()
+        // Debug: přechod do Makrosvěta (adb … --ez debug_portal true)
+        if (cz.uhk.macroflow.BuildConfig.DEBUG && intent.getBooleanExtra("debug_portal", false))
+            window.decorView.postDelayed({ if (!isFinishing) openMakromonBattle() }, 1500)
         // Debug: detail cviku (adb … --es debug_exercise skull_crusher)
         if (cz.uhk.macroflow.BuildConfig.DEBUG) intent.getStringExtra("debug_exercise")?.let { id ->
             window.decorView.postDelayed({
