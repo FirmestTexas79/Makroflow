@@ -145,6 +145,14 @@ class SnackFragment : Fragment() {
             render(scrollToTop = true)
         }
 
+        // přechod vpravo zmizí, když je pás dojetý na konec
+        val hs = root.findViewById<android.widget.HorizontalScrollView>(R.id.hsCategories)
+        val fade = root.findViewById<View>(R.id.railFade)
+        hs.setOnScrollChangeListener { _, _, _, _, _ ->
+            val atEnd = !hs.canScrollHorizontally(1)
+            fade.animate().alpha(if (atEnd) 0f else 1f).setDuration(150).start()
+        }
+
         fab.setOnClickListener { showAddMenu() }
         root.findViewById<View>(R.id.btnEmptyCreate).setOnClickListener {
             showEditSheet(existing = null, prefill = Prefill(name = query.replaceFirstChar { it.uppercase() }))
@@ -218,6 +226,8 @@ class SnackFragment : Fragment() {
         FoodCategory.entries.filter { (counts[it] ?: 0) > 0 }.forEach { c ->
             rail.addView(categoryTile(c, c.emoji, c.label, counts[c] ?: 0, c.color.toInt()))
         }
+        val hs = root.findViewById<android.widget.HorizontalScrollView>(R.id.hsCategories)
+        hs.post { root.findViewById<View>(R.id.railFade).alpha = if (hs.canScrollHorizontally(1)) 1f else 0f }
     }
 
     private fun categoryTile(c: FoodCategory?, emoji: String, label: String, count: Int, color: Int): View {

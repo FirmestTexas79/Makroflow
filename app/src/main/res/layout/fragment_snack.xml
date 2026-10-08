@@ -126,26 +126,38 @@
                     app:tint="@color/brand_dark" />
             </LinearLayout>
 
-            <!-- Kategorie (docs/adr/0073): dlaždice se sestaví v kódu podle toho, co ve špajzce je -->
-            <HorizontalScrollView
-                android:id="@+id/hsCategories"
+            <!-- Kategorie (docs/adr/0073): dlaždice se sestaví v kódu podle toho, co ve špajzce je.
+                 Vpravo je vidět půlka další dlaždice a jemný přechod do pozadí – je poznat, že pás jde posunout. -->
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="-20dp"
-                android:layout_marginTop="14dp"
-                android:clipToPadding="false"
-                android:fadingEdgeLength="56dp"
-                android:overScrollMode="never"
-                android:paddingHorizontal="20dp"
-                android:requiresFadingEdge="horizontal"
-                android:scrollbars="none">
+                android:layout_marginTop="14dp">
 
-                <LinearLayout
-                    android:id="@+id/llCategoryRail"
-                    android:layout_width="wrap_content"
+                <HorizontalScrollView
+                    android:id="@+id/hsCategories"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal" />
-            </HorizontalScrollView>
+                    android:clipToPadding="false"
+                    android:overScrollMode="never"
+                    android:paddingHorizontal="20dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/llCategoryRail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+
+                <View
+                    android:id="@+id/railFade"
+                    android:layout_width="64dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="end"
+                    android:background="@drawable/bg_rail_fade"
+                    android:importantForAccessibility="no" />
+            </FrameLayout>
 
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/toggleSnackTiming"

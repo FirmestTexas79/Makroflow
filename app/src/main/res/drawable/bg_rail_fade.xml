@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Přechod na pravém kraji pásu kategorií ve Snaccích (docs/adr/0073). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="0"
+        android:endColor="@color/brand_cream"
+        android:centerColor="#B3FEFAE0"
+        android:startColor="#00FEFAE0" />
+</shape>
