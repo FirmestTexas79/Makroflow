@@ -525,7 +525,7 @@ object SpeciesRegistry {
         ),
 
         Species("038", "JOHNSOVA", "Johnsova", "BLESK / HORY",
-            desc = "Horský bleskový sovička. Jakmile uslyšíš houknutí, můžeš očekávat, že tě brzy trefí blesk.",
+            desc = "Horská blesková sovička. Jakmile uslyšíš houknutí, můžeš očekávat, že tě brzy trefí blesk.",
             hint = "Hledej v Horách.",
             stats = Stats(hp = 35, atk = 12, def = 12, spd = 15),
             moves = { listOf(
