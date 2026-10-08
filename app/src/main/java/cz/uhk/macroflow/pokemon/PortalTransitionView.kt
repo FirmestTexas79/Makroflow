@@ -51,6 +51,7 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
     private val titleShadow = Paint(title).apply { color = 0xFF0A0F06.toInt() }
     private val accent = Paint().apply { color = 0xFFE9B072.toInt() }
     private val bit = Paint()
+    private val zz = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFEFAE0.toInt(); typeface = font }
 
     private val grass = decode(R.drawable.portal_grass)
     private val bushL = decode(R.drawable.portal_bush_a)
@@ -64,9 +65,16 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         var burst = false
     }
 
+    /** Sova a Drakirra přelétají oblohou. */
+    private class Flyer(val id: String, val right: Boolean, val start: Float, val dur: Float, val y: Float, val size: Float) {
+        @Volatile var bmp: Bitmap? = null
+    }
+
     private class Bit(var x: Float, var y: Float, var vx: Float, var vy: Float, var life: Float, val max: Float, val color: Int, val size: Float, val gravity: Boolean)
 
     private val runners = mutableListOf<Runner>()
+    private val flyers = mutableListOf<Flyer>()
+    @Volatile private var gudwin: Bitmap? = null
     private val bits = mutableListOf<Bit>()
 
     init {
@@ -76,18 +84,26 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
             val picks = SIDE.shuffled().take(DELAYS.size)
             picks.forEachIndexed { i, id ->
                 val right = i % 3 != 1
-                runners += Runner(id, right, DELAYS[i], 400f + Random.nextFloat() * 90f, 0.2f + Random.nextFloat() * 0.07f,
+                runners += Runner(id, right, DELAYS[i], 820f + Random.nextFloat() * 160f, 0.2f + Random.nextFloat() * 0.07f,
                     mirror = if (right) id in FACES_LEFT else id in FACES_RIGHT)
             }
-            // spritů je 640 px – dekódovat mimo hlavní vlákno, dlaždice je zatím zakryjí
-            Thread {
-                runners.forEach { r ->
-                    val name = SpeciesRegistry.byId("0${r.id}")?.sprite ?: return@forEach
-                    val res = resources.getIdentifier(name, "drawable", context.packageName)
-                    if (res != 0) r.bmp = BitmapFactory.decodeResource(resources, res, BitmapFactory.Options().apply { inSampleSize = 2; inScaled = false })
-                }
-            }.start()
+            val owlRight = Random.nextBoolean()
+            flyers += Flyer("38", owlRight, 560f, 1700f, 0.15f, 0.17f)
+            flyers += Flyer("19", !owlRight, 1000f, 1350f, 0.47f, 0.21f)
         }
+        // spritů je 640 px – dekódovat mimo hlavní vlákno, dlaždice je zatím zakryjí
+        Thread {
+            gudwin = sprite("30")
+            flyers.forEach { it.bmp = sprite(it.id) }
+            runners.forEach { it.bmp = sprite(it.id) }
+            postInvalidate()
+        }.start()
+    }
+
+    private fun sprite(id: String): Bitmap? {
+        val name = SpeciesRegistry.byId("0$id")?.sprite ?: return null
+        val res = resources.getIdentifier(name, "drawable", context.packageName)
+        return if (res == 0) null else BitmapFactory.decodeResource(resources, res, BitmapFactory.Options().apply { inSampleSize = 2; inScaled = false })
     }
 
     private fun decode(id: Int) = BitmapFactory.decodeResource(resources, id, BitmapFactory.Options().apply { inScaled = false })
@@ -137,9 +153,9 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         while (x < w) { dst.set(x, top, x + gw, top + gh); canvas.drawBitmap(grass, null, dst, pixels); x += gw }
 
         // nápis
-        val a = if (covering) ((time - 220f) / 160f).coerceIn(0f, 1f) else 1f - ((time - HOLD_MS) / (REVEAL_MS * 0.4f)).coerceIn(0f, 1f)
+        val a = if (covering) ((time - TITLE_AT) / 260f).coerceIn(0f, 1f) else 1f - ((time - HOLD_MS) / (REVEAL_MS * 0.4f)).coerceIn(0f, 1f)
         if (a > 0f) {
-            val pop = if (covering) 1f + 0.25f * (1f - ease(((time - 220f) / 220f).coerceIn(0f, 1f))) else 1f
+            val pop = if (covering) 1f + 0.25f * (1f - ease(((time - TITLE_AT) / 360f).coerceIn(0f, 1f))) else 1f
             val size = w / 6.4f * pop
             title.textSize = size; titleShadow.textSize = size
             val ty = h * 0.34f
@@ -151,8 +167,31 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
             canvas.drawRect(w / 2f - lw / 2f, ty + sh * 3, w / 2f + lw / 2f, ty + sh * 5, accent)
         }
 
+        sleepyGudwin(canvas, w, h)
         bush(canvas, bushL, w, h, left = true)
         bush(canvas, bushR, w, h, left = false)
+    }
+
+    /** Gudwin sedí v trávě a spí: dýchá a stoupají z něj Z. */
+    private fun sleepyGudwin(canvas: Canvas, w: Float, h: Float) {
+        val bmp = gudwin ?: return
+        val s = w * 0.2f
+        val x = w * 0.66f; val y = feet(h) - s * 0.02f
+        val breath = 0.5f + 0.5f * sin(time / 260f)
+        dst.set(x - s * 0.3f, y - s * 0.035f, x + s * 0.3f, y + s * 0.035f)
+        canvas.drawOval(dst, shadowPaint)
+        canvas.save()
+        canvas.scale(1f + breath * 0.02f, 1f - breath * 0.035f, x, y)
+        dst.set(x - s / 2f, y - s * 0.98f, x + s / 2f, y + s * 0.02f)
+        canvas.drawBitmap(bmp, null, dst, smooth)
+        canvas.restore()
+        zz.textSize = s * 0.22f
+        for (i in 0 until 3) {
+            val k = ((time / 1500f + i / 3f) % 1f)
+            zz.alpha = (255 * sin(k * PI.toFloat())).toInt().coerceIn(0, 255)
+            zz.textSize = s * (0.14f + 0.1f * k)
+            canvas.drawText("z", x + s * (0.28f + 0.22f * k), y - s * (0.85f + 0.5f * k), zz)
+        }
     }
 
     /** Keř šustí, dokud z něj někdo vybíhá (a lehce i mezi tím). */
@@ -160,10 +199,10 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         val bw = w * BUSH_W; val bh = bw * bmp.height / bmp.width
         val bx = if (left) w * 0.1f else w * 0.9f
         val by = feet(h) + bh * 0.08f
-        val busy = covering && runners.any { it.right == left && time in it.start - 140f..it.start + HOP_MS * 0.6f }
+        val busy = covering && runners.any { it.right == left && time in it.start - 260f..it.start + HOP_MS * 0.6f }
         val idle = covering && time > TILES_MS
         val amp = when { busy -> 3.2f; idle -> 0.8f; else -> 0f }
-        val rot = amp * sin(time / 28f)
+        val rot = amp * sin(time / 40f)
         canvas.save()
         canvas.rotate(rot, bx, by)
         canvas.scale(1f + rot / 120f, 1f - abs(rot) / 160f, bx, by)
@@ -182,6 +221,26 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
             canvas.drawRect(b.x - b.size / 2, b.y - b.size / 2, b.x + b.size / 2, b.y + b.size / 2, bit)
         }
         runners.forEach { r -> if (phase(r) > HIDE) drawRunner(canvas, r, w, h) }
+        flyers.forEach { drawFlyer(canvas, it, w, h) }
+    }
+
+    /** Let: plachtění po vlnovce, mávání křídly = rychlé natahování a smršťování. */
+    private fun drawFlyer(canvas: Canvas, f: Flyer, w: Float, h: Float) {
+        val bmp = f.bmp ?: return
+        val k = (time - f.start) / f.dur
+        if (k < 0f || k > 1f) return
+        val s = w * f.size
+        val x = if (f.right) -s + (w + 2 * s) * k else w + s - (w + 2 * s) * k
+        val wave = sin(k * PI.toFloat() * 2.4f)
+        val y = h * f.y + wave * h * 0.035f
+        val flap = sin(time / 55f)
+        canvas.save()
+        canvas.translate(x, y)
+        canvas.rotate((if (f.right) 1f else -1f) * (4f - wave * 6f))
+        canvas.scale((1f - flap * 0.04f) * if (f.right) 1f else -1f, 1f + flap * 0.09f)
+        dst.set(-s / 2f, -s / 2f, s / 2f, s / 2f)
+        canvas.drawBitmap(bmp, null, dst, smooth)
+        canvas.restore()
     }
 
     /** 0 … HOP_MS výskok z keře, pak běh; −1 = ještě ne, >1 hotovo (v jednotkách celého běhu). */
@@ -238,11 +297,11 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
                 r.burst = true
                 repeat(9) {
                     bits += Bit(bushX + (Random.nextFloat() - 0.5f) * w * 0.18f, feet(h) - w * BUSH_W * 0.45f,
-                        (Random.nextFloat() - 0.5f) * w * 0.9f, -w * (0.4f + Random.nextFloat() * 0.5f), 620f, 620f,
+                        (Random.nextFloat() - 0.5f) * w * 0.9f, -w * (0.4f + Random.nextFloat() * 0.5f), 800f, 800f,
                         if (Random.nextBoolean()) 0xFF68A03C.toInt() else 0xFF4F7F2A.toInt(), px * 1.6f, gravity = true)
                 }
             }
-            if (t > HOP_MS && t < HOP_MS + r.run && t - r.lastDust > 55f) {
+            if (t > HOP_MS && t < HOP_MS + r.run && t - r.lastDust > 80f) {
                 r.lastDust = t
                 val k = ((t - HOP_MS) / r.run).coerceIn(0f, 1f)
                 val land = bushX + (if (r.right) 1f else -1f) * w * 0.13f
@@ -250,13 +309,13 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
                 val x = land + (end - land) * k.pow(1.55f) - (if (r.right) 1f else -1f) * w * r.size * 0.22f
                 val back = if (r.right) -1f else 1f
                 bits += Bit(x, feet(h) - px * 2, back * w * (0.06f + Random.nextFloat() * 0.06f), -w * (0.03f + Random.nextFloat() * 0.04f),
-                    360f, 360f, 0xBFD6C8A0.toInt(), px * 2.2f, gravity = false)
+                    480f, 480f, 0xBFD6C8A0.toInt(), px * 2.2f, gravity = false)
             }
         }
         val sec = dt / 1000f
         bits.forEach { b ->
             b.x += b.vx * sec; b.y += b.vy * sec
-            if (b.gravity) b.vy += w * 2.6f * sec
+            if (b.gravity) b.vy += w * 1.8f * sec
             b.life -= dt
         }
         bits.removeAll { it.life <= 0f }
@@ -276,13 +335,14 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         private const val SPRITE_FOOT = 0.94f
         private const val HIDE = 0.1f
 
-        private const val TILES_MS = 360f
-        private const val HOP_MS = 180f
-        private const val GAIT_MS = 190f
-        private val DELAYS = floatArrayOf(330f, 420f, 500f, 590f, 680f)
-        private const val COVER_MS = 1300L
-        private const val HOLD_MS = 70f
-        private const val REVEAL_MS = 480f
+        private const val TILES_MS = 560f
+        private const val TITLE_AT = 360f
+        private const val HOP_MS = 300f
+        private const val GAIT_MS = 270f
+        private val DELAYS = floatArrayOf(560f, 760f, 980f, 1180f)
+        private const val COVER_MS = 2450L
+        private const val HOLD_MS = 120f
+        private const val REVEAL_MS = 700f
 
         /** Kam sprite kouká (stejné rozdělení jako průvod na webu). */
         private val FACES_LEFT = listOf("01", "02", "03", "07", "10", "22", "23", "32")
