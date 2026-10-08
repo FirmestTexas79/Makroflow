@@ -104,6 +104,8 @@ class MakromonMapActivity : AppCompatActivity() {
         MINE_DESCENT }
 
     companion object {
+        /** Vstup s pixelovým přechodem (docs/adr/0070). */
+        const val EXTRA_PORTAL = "portal"
         private const val DOUBLE_CLICK_TIME = 300L
         /** Lokace s vlastní scénou přechodu (docs/adr/0042). */
         private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS", "HIDDEN_GROVE")
@@ -136,6 +138,8 @@ class MakromonMapActivity : AppCompatActivity() {
         // kdy byl poutník naposledy na mapě – pro ranní sny (docs/adr/0057); onPause to přepíše
         launchLastSeen = getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).getLong("map_last_seen", 0L)
         setContentView(R.layout.activity_pokemon_map)
+        if (savedInstanceState == null && intent.getBooleanExtra(EXTRA_PORTAL, false))
+            PortalTransitionView.reveal(findViewById(android.R.id.content))
 
         mapBackground = findViewById(R.id.mapBackground)
         mapWorld = findViewById(R.id.mapWorld)

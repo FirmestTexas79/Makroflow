@@ -253,11 +253,18 @@ class MainActivity : AppCompatActivity() {
      * Spouští se long-pressem na FAB (2 sekundy).
      */
     fun openMakromonBattle() {
+        if (portal != null) return   // přechod už běží
         lureSmokeController.stop()
-        val intent = Intent(this, MakromonMapActivity::class.java)
-        startActivity(intent)
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        val root = window.decorView as android.view.ViewGroup
+        portal = cz.uhk.macroflow.pokemon.PortalTransitionView.cover(root) {
+            startActivity(Intent(this, MakromonMapActivity::class.java).putExtra(MakromonMapActivity.EXTRA_PORTAL, true))
+            overridePendingTransition(0, 0)
+            // overlay drží, dokud mapa nepřekreslí obrazovku; pak pryč, ať po návratu nezavazí
+            root.postDelayed({ portal?.let { root.removeView(it) }; portal = null }, 700)
+        }
     }
+
+    private var portal: cz.uhk.macroflow.pokemon.PortalTransitionView? = null
 
     /**
      * Přidá fragment do nav_host_fragment s fade animací.
