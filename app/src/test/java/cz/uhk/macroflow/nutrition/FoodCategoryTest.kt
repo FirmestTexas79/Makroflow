@@ -12,7 +12,7 @@ class FoodCategoryTest {
             "Řecký jogurt (Skyr)" to DAIRY, "Vejce celé (60g)" to DAIRY, "Eidam 30%" to DAIRY,
             "Rýže bílá (syrová)" to GRAINS, "Houskové knedlíky" to GRAINS, "Makarony" to GRAINS, "Batáty" to GRAINS,
             "Žitný chléb" to BAKERY, "Tortilla celozrnná" to BAKERY,
-            "Brokolice" to VEGETABLES, "Fazolky zelené" to VEGETABLES, "Žampiony" to VEGETABLES,
+            "Brokolice" to VEGETABLES, "Kukuřice cukrová" to VEGETABLES, "Pór" to VEGETABLES, "Fazolky zelené" to VEGETABLES, "Žampiony" to VEGETABLES,
             "Banán" to FRUIT, "Rybíz červený" to FRUIT, "Avokádo" to FRUIT,
             "Červená čočka" to LEGUMES, "Hummus" to LEGUMES, "Tofu na pánvi" to LEGUMES,
             "Mandle" to NUTS, "Arašídové máslo" to NUTS, "Mák" to NUTS,

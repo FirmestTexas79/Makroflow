@@ -45,12 +45,16 @@ object PantryPlates {
                     setOf(Kind.MAIN), all.map { DayPlanner.Part(it.snack.name, it.nutr, 0.5, 3.0) })
             }
         }
-        val singles = items.filter { SnackCatalog.categoryOf(it.snack) in SNACKABLE }.take(SINGLES).map {
-            DayPlanner.Option(PREFIX + it.key, it.snack.name, setOf(Kind.SNACK, Kind.BREAKFAST),
+        val singles = items.filter { SnackCatalog.categoryOf(it.snack) in SNACKABLE || isCereal(it) }.take(SINGLES).map {
+            DayPlanner.Option(PREFIX + it.key, it.snack.name, if (isCereal(it)) setOf(Kind.BREAKFAST) else setOf(Kind.SNACK, Kind.BREAKFAST),
                 listOf(DayPlanner.Part(it.snack.name, it.nutr, 0.5, 2.0)))
         }
         return plates + singles
     }
+
+    /** Snídaňové obiloviny (vločky, müsli…) – samotné jen k snídani. */
+    private fun isCereal(i: Item) = SnackCatalog.categoryOf(i.snack) == FoodCategory.GRAINS &&
+        Regex("vlock|musli|granol|cornfl|kase|cereal").containsMatchIn(FoodCategory.normalize(i.snack.name))
 
     /** Potraviny talíře z [optionId] (v pořadí složek). */
     fun parts(optionId: String, ranked: List<SnackEntity>): List<Item> =
