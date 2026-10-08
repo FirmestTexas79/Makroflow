@@ -96,13 +96,6 @@ class SettingsFragment : Fragment() {
 
 
         // 📝 2. Otevření vlastního dialogu pro editaci textů v Pokédexu
-        // Úvod do Makrosvěta znovu (docs/adr/0072)
-        view.findViewById<MaterialButton>(R.id.btnPlayIntro)?.setOnClickListener {
-            startActivity(android.content.Intent(requireContext(), cz.uhk.macroflow.pokemon.MakromonMapActivity::class.java)
-                .putExtra("debug_intro", true))
-            activity?.overridePendingTransition(0, 0)
-        }
-
         btnEditPokedex?.setOnClickListener {
             showPokedexEditorDialog()
         }

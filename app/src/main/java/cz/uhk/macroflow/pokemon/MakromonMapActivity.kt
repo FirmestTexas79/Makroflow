@@ -1968,7 +1968,8 @@ class MakromonMapActivity : AppCompatActivity() {
             "🍂 Reset příběhu Hvozdu",
             "🍄 Soulord poražen (otevře háj)",
             "🌕 Bdění u oltáře splněno (noc)",
-            "🗝 Reset Zapomenutého háje"
+            "🗝 Reset Zapomenutého háje",
+            "🎬 Přehrát úvod do Makrosvěta"
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("Debug – Makrosvět")
@@ -2028,6 +2029,7 @@ class MakromonMapActivity : AppCompatActivity() {
                         showMapToast("🌕 Debug: bdění splněno")
                     }
                     11 -> debugResetGrove()
+                    12 -> IntroFlyoverView.play(findViewById(android.R.id.content))
                 }
             }
             .show()

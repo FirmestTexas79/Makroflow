@@ -62,6 +62,7 @@ class IntroFlyoverView(context: Context) : View(context) {
     private var axe: Bitmap? = null
     private var mining: Bitmap? = null
     private var cloud: Bitmap? = null
+    private var oak: Bitmap? = null
     private var king: Drawable? = null
 
     // ── Svět ────────────────────────────────────────────────────────────────
@@ -106,6 +107,9 @@ class IntroFlyoverView(context: Context) : View(context) {
                 ?.takeIf { it != 0 }?.let { BitmapFactory.decodeResource(res, it, BitmapFactory.Options().apply { inSampleSize = 2; inScaled = false }) }
             axe = asset("hero/axe_w.png"); mining = asset("hero/mining_e.png")
             cloud = makeCloud()
+            // stejný dub jako na mapě louky (GatherLayout, GearArt)
+            oak = cz.uhk.macroflow.pokemon.skills.GearArt.spot(cz.uhk.macroflow.pokemon.skills.GatherSpot.OAK)
+                ?.let { (px, ow, oh) -> Bitmap.createBitmap(px, ow, oh, Bitmap.Config.ARGB_8888) }
             king = runCatching {
                 if (Build.VERSION.SDK_INT >= 28)
                     android.graphics.ImageDecoder.decodeDrawable(android.graphics.ImageDecoder.createSource(res, R.drawable.kral_mlsak))
@@ -180,8 +184,8 @@ class IntroFlyoverView(context: Context) : View(context) {
             k(2700f, gud, 2.4f, 0.14f, -0.05f),
             k(4300f, gud, 2.5f, 0.14f, -0.05f),
             k(5500f, floatArrayOf(0.5f * w, tops[TOWN]), 1.1f),
-            k(6700f, tree, 2.6f, 0.09f, -0.03f),
-            k(8600f, tree, 2.7f, 0.09f, -0.03f),
+            k(6700f, tree, 2.6f, 0.04f, -0.06f),
+            k(8600f, tree, 2.7f, 0.04f, -0.06f),
             k(9300f, bushP, 2.4f, 0.05f, -0.04f),
             k(10900f, bushP, 2.2f, 0.22f, -0.04f),
             k(11900f, at(MOUNTAINS, 0.3f, 0.75f), 1.4f),
@@ -290,7 +294,12 @@ class IntroFlyoverView(context: Context) : View(context) {
     private fun lumberjack(c: Canvas, w: Float) {
         val tx = TREE_X * w; val ty = tops[MEADOW] + TREE_Y * mapH(MEADOW, w)
         val u = w / 205f
-        val fx = tx + 0.1f * w; val fy = ty + 0.012f * w
+        oak?.let { o ->
+            val k = OAK_SCALE * w / 688f
+            dst.set(tx - o.width * k / 2, ty - o.height * k, tx + o.width * k / 2, ty); c.drawBitmap(o, null, dst, pixels)
+        }
+        // poutník stojí vpravo od kmene a seká doleva do dubu
+        val fx = tx + 0.045f * w; val fy = ty + 0.006f * w
         hero(c, axe, heroFrame(time, 75f), fx, fy, u)
         val loop = time % 750f
         if (loop in 420f..750f) chips(c, fx - 14 * u, fy - 10 * u, (loop - 420f) / 330f, u, (time / 750f).toInt())
@@ -573,9 +582,10 @@ class IntroFlyoverView(context: Context) : View(context) {
         private const val MEADOW = 2
         private const val TOWN = 3
 
-        /** Strom u louky (pata kmene) a keř s makromonem – podíl rozměrů meadow.png (688 × 1536). */
-        private const val TREE_X = 255f / 688f
-        private const val TREE_Y = 668f / 1536f
+        /** Dub na louce (GatherLayout.OAK: pata kmene 127, 745, art × 3,6) a keř s makromonem – podíl meadow.png (688 × 1536). */
+        private const val TREE_X = 127f / 688f
+        private const val TREE_Y = 745f / 1536f
+        private const val OAK_SCALE = 3.6f
         private const val BUSH_X = 0.62f
         private const val BUSH_Y = 0.47f
         /** Stříbrná žíla ve Starém dole (GatherLayout: 100, 338 v 150 × 540). */
