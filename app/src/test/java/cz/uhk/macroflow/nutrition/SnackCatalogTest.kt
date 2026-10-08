@@ -62,8 +62,9 @@ class SnackCatalogTest {
         val c = snack("Mandle", "30g", 5f, 6f, 16f)
         val d = snack("Tuňák", "130g", 28f, 0f, 1f)
         val rows = SnackCatalog.rows(listOf(a, b, c, d), "", Timing.ALL, mapOf("Banán" to 3, "Tuňák" to 7))
-        val headers = rows.filterIsInstance<Row.Header>().map { it.group }
-        assertEquals(listOf(Group.FAVOURITES, Group.PROTEIN, Group.CARBS, Group.FAT).filter { g -> g != Group.CARBS }, headers)
+        val headers = rows.filterIsInstance<Row.Header>().map { it.category }
+        // Oblíbené (null), pak kategorie v pořadí enumu; Banán i Tuňák jsou v Oblíbených
+        assertEquals(listOf(null, FoodCategory.DAIRY, FoodCategory.NUTS), headers)
         // Oblíbené podle počtu použití, v dalších skupinách se neopakují
         val items = rows.filterIsInstance<Row.Item>()
         assertEquals(listOf("Tuňák", "Banán"), items.take(2).map { it.snack.name })
@@ -75,7 +76,7 @@ class SnackCatalogTest {
         val a = snack("Skyr", "140g", 16f, 5f, 0f, pre = true)
         val d = snack("Tuňák", "130g", 28f, 0f, 1f)
         val rows = SnackCatalog.rows(listOf(a, d), "tun", Timing.ALL, mapOf("Tuňák" to 7))
-        assertEquals(Group.PROTEIN, (rows.first() as Row.Header).group)
+        assertEquals(FoodCategory.FISH, (rows.first() as Row.Header).category)
         val pre = SnackCatalog.rows(listOf(a, d), "", Timing.PRE, emptyMap())
         assertEquals(listOf("Skyr"), pre.filterIsInstance<Row.Item>().map { it.snack.name })
     }
@@ -106,5 +107,14 @@ class SnackCatalogTest {
         // Bez etikety: z maker
         val rice = SnackCatalog.scale(snack("Rýže", "100g", 7f, 77f, 1f), 100f)
         assertEquals(345, rice.kcal)
+    }
+
+    @Test
+    fun categoryFilterAndCounts() {
+        val list = listOf(snack("Skyr", "140g", 16f, 5f, 0f), snack("Banán", "100g", 0.3f, 23f, 0.3f), snack("Jablko", "150g", 0.4f, 17f, 0.2f))
+        val fruit = SnackCatalog.rows(list, "", Timing.ALL, mapOf("Banán" to 9), FoodCategory.FRUIT)
+        assertEquals(listOf(FoodCategory.FRUIT), fruit.filterIsInstance<Row.Header>().map { it.category })   // ve filtru bez Oblíbených
+        assertEquals(2, fruit.filterIsInstance<Row.Item>().size)
+        assertEquals(mapOf(FoodCategory.DAIRY to 1, FoodCategory.FRUIT to 2), SnackCatalog.counts(list, Timing.ALL))
     }
 }

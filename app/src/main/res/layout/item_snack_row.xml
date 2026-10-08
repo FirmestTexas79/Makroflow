@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Řádek potraviny (docs/adr/0021): prstenec s podílem energie z B/S/T, název, porce a makra,
+    Řádek potraviny (docs/adr/0021, 0073): ikona kategorie v prstenci podílu energie z B/S/T, název, porce a makra,
     kcal vpravo a tlačítko „+“ pro okamžité přidání porce (s možností Zpět).
     Klepnutí = vlastní množství, podržení = nabídka (upravit, přesunout, smazat).
 -->
@@ -30,11 +30,27 @@
         android:paddingStart="12dp"
         android:paddingEnd="8dp">
 
-        <cz.uhk.macroflow.nutrition.MacroDonutView
-            android:id="@+id/donutSnack"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
-            android:importantForAccessibility="no" />
+        <!-- Ikona kategorie (docs/adr/0073) v prstenci podílu energie z B/S/T -->
+        <FrameLayout
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:importantForAccessibility="no">
+
+            <TextView
+                android:id="@+id/tvSnackEmoji"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_status_pill"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textSize="18sp" />
+
+            <cz.uhk.macroflow.nutrition.MacroDonutView
+                android:id="@+id/donutSnack"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="0dp"

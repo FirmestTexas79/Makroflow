@@ -32,7 +32,12 @@ object SnackRowBinder {
         row.findViewById<TextView>(R.id.tvSnackMeta).text = meta(snack)
         row.findViewById<TextView>(R.id.tvSnackKcal).text =
             FoodEnergy.kcalPreferLabel(snack.energyKj, snack.p, snack.s, snack.t, snack.fiber).roundToInt().toString()
-        row.findViewById<MacroDonutView>(R.id.donutSnack).setMacros(snack.p, snack.s, snack.t)
+        val cat = SnackCatalog.categoryOf(snack)
+        row.findViewById<TextView>(R.id.tvSnackEmoji).apply {
+            text = cat.emoji
+            backgroundTintList = android.content.res.ColorStateList.valueOf(tint(cat, 0.16f))
+        }
+        row.findViewById<MacroDonutView>(R.id.donutSnack).apply { ringWidthDp = 3.5f; setMacros(snack.p, snack.s, snack.t) }
         row.setOnClickListener { onClick(snack) }
         if (onLongClick != null) row.setOnLongClickListener { onLongClick(snack); true } else row.setOnLongClickListener(null)
         row.findViewById<View>(R.id.btnQuickAdd).apply {
@@ -40,8 +45,11 @@ object SnackRowBinder {
             setOnClickListener { onQuickAdd?.invoke(snack) }
             contentDescription = "Přidat porci ${snack.weight}: ${snack.name}"
         }
-        row.contentDescription = "${snack.name}, ${snack.weight}"
+        row.contentDescription = "${snack.name}, ${snack.weight}, ${cat.label}"
     }
+
+    /** Barva kategorie s průhledností [alpha] (0–1). */
+    fun tint(c: FoodCategory, alpha: Float = 1f): Int = ((alpha * 255).toInt() shl 24) or (c.color.toInt() and 0xFFFFFF)
 
     /** „180 g  ·  B 10  S 40  T 8“ – písmena v barvách maker. */
     fun meta(snack: SnackEntity): CharSequence {

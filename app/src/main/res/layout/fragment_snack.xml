@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Snacky (docs/adr/0021): hlavička s dnešním zůstatkem, hledání a filtr před/po tréninku
-    se při scrollu schová a při návratu vyjede; seznam je RecyclerView po skupinách
-    (Oblíbené, Bílkoviny, Sacharidy, Tuky). Jediné plovoucí tlačítko „Přidat“ otevře nabídku
+    se při scrollu schová a při návratu vyjede; pod hledáním dlaždice kategorií (docs/adr/0073),
+    seznam je RecyclerView po kategoriích (Oblíbené, Maso, Ryby, Mléčné …). Jediné plovoucí tlačítko „Přidat“ otevře nabídku
     (ručně, čárový kód, fotka, složit jídlo, swipe).
 -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -125,6 +125,25 @@
                     android:visibility="gone"
                     app:tint="@color/brand_dark" />
             </LinearLayout>
+
+            <!-- Kategorie (docs/adr/0073): dlaždice se sestaví v kódu podle toho, co ve špajzce je -->
+            <HorizontalScrollView
+                android:id="@+id/hsCategories"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="-20dp"
+                android:layout_marginTop="14dp"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
+                android:paddingHorizontal="20dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/llCategoryRail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
 
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/toggleSnackTiming"

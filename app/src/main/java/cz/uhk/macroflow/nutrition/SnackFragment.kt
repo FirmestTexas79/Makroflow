@@ -63,7 +63,8 @@ import kotlin.math.roundToInt
 /**
  * Snacky – špajzka potravin (docs/adr/0021).
  *
- *  - seznam jako RecyclerView po skupinách podle zdroje energie (Oblíbené, Bílkoviny, Sacharidy, Tuky),
+ *  - dlaždice kategorií nahoře (Maso, Ryby, Mléčné, Ovoce …) – potravina se zařadí sama podle názvu (docs/adr/0073),
+ *  - seznam jako RecyclerView po kategoriích, nahoře Oblíbené,
  *  - „+“ v řádku přidá porci hned (se Zpět), klepnutí = vlastní množství, podržení = nabídka,
  *  - jedno tlačítko „Přidat“ s nabídkou (ručně, čárový kód, fotka, složit jídlo, swipe),
  *  - hlavička ukazuje dnešní zůstatek kalorií a bílkovin.
@@ -83,6 +84,9 @@ class SnackFragment : Fragment() {
 
     private var timing = Timing.ALL
     private var query = ""
+    /** Vybraná kategorie; null = vše (docs/adr/0073). */
+    private var category: FoodCategory? = null
+    private var railCounts: Map<FoodCategory, Int>? = null
     private var snacks: List<SnackEntity> = emptyList()
     private var usage: Map<String, Int> = emptyMap()
 
@@ -137,6 +141,7 @@ class SnackFragment : Fragment() {
         root.findViewById<MaterialButtonToggleGroup>(R.id.toggleSnackTiming).addOnButtonCheckedListener { _, id, checked ->
             if (!checked) return@addOnButtonCheckedListener
             timing = when (id) { R.id.btnPreWorkout -> Timing.PRE; R.id.btnPostWorkout -> Timing.POST; else -> Timing.ALL }
+            railCounts = null
             render(scrollToTop = true)
         }
 
@@ -182,24 +187,97 @@ class SnackFragment : Fragment() {
     }
 
     private fun render(scrollToTop: Boolean = false) {
-        val rows = SnackCatalog.rows(snacks, query, timing, usage)
+        renderRail()
+        val rows = SnackCatalog.rows(snacks, query, timing, usage, category)
         adapter.submitList(rows) { if (scrollToTop) rv.scrollToPosition(0) }
         val empty = rows.isEmpty() && snacks.isNotEmpty()
         emptyView.visibility = if (empty) View.VISIBLE else View.GONE
         if (empty) {
             root.findViewById<TextView>(R.id.tvSnackEmpty).text =
-                if (query.isNotEmpty()) "„$query“ ve špajzce není." else "V téhle kategorii zatím nic není."
+                when {
+                    query.isNotEmpty() && category != null -> "„$query“ v kategorii ${category!!.label} není."
+                    query.isNotEmpty() -> "„$query“ ve špajzce není."
+                    else -> "V téhle kategorii zatím nic není."
+                }
             root.findViewById<TextView>(R.id.btnEmptyCreate).text =
                 if (query.isNotEmpty()) "Vytvořit „$query“" else "Vytvořit potravinu"
         }
     }
 
+    // ── Kategorie (docs/adr/0073) ───────────────────────────────────────────
+
+    /** Dlaždice „Vše“ + kategorie, ve kterých něco je. Přestaví se jen při změně počtů nebo výběru. */
+    private fun renderRail(force: Boolean = false) {
+        val counts = SnackCatalog.counts(snacks, timing)
+        if (!force && counts == railCounts) return
+        railCounts = counts
+        if (category != null && (counts[category] ?: 0) == 0) category = null
+        val rail = root.findViewById<LinearLayout>(R.id.llCategoryRail)
+        rail.removeAllViews()
+        rail.addView(categoryTile(null, "🧺", "Vše", counts.values.sum(), 0xFF283618.toInt()))
+        FoodCategory.entries.filter { (counts[it] ?: 0) > 0 }.forEach { c ->
+            rail.addView(categoryTile(c, c.emoji, c.label, counts[c] ?: 0, c.color.toInt()))
+        }
+    }
+
+    private fun categoryTile(c: FoodCategory?, emoji: String, label: String, count: Int, color: Int): View {
+        val ctx = requireContext()
+        val selected = c == category
+        val cream = ContextCompat.getColor(ctx, R.color.brand_cream)
+        val dark = ContextCompat.getColor(ctx, R.color.brand_dark)
+        val tile = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            setPadding(dp(6), dp(10), dp(6), dp(10))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(22).toFloat()
+                if (selected) setColor(color)
+                else { setColor(ContextCompat.getColor(ctx, R.color.profile_card)); setStroke(dp(1), ContextCompat.getColor(ctx, R.color.brand_dark_alpha12)) }
+            }
+            isClickable = true; isFocusable = true
+            contentDescription = "$label, $count potravin" + if (selected) ", vybráno" else ""
+            setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                category = if (selected) null else c
+                renderRail(force = true)
+                render(scrollToTop = true)
+                // vybraná dlaždice pruží a dojede do záběru
+                val rail = root.findViewById<LinearLayout>(R.id.llCategoryRail)
+                rail.children().firstOrNull { v -> v.tag == category }?.let { v ->
+                    v.scaleX = 0.9f; v.scaleY = 0.9f
+                    v.animate().scaleX(1f).scaleY(1f).setInterpolator(android.view.animation.OvershootInterpolator(3f)).setDuration(320).start()
+                    root.findViewById<android.widget.HorizontalScrollView>(R.id.hsCategories).smoothScrollTo((v.left - dp(40)).coerceAtLeast(0), 0)
+                }
+            }
+            tag = c
+        }
+        tile.addView(TextView(ctx).apply {
+            text = emoji; textSize = 22f; gravity = android.view.Gravity.CENTER; includeFontPadding = false
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(if (selected) (0x40 shl 24) or (cream and 0xFFFFFF) else (0x2E shl 24) or (color and 0xFFFFFF))
+            }
+        }, LinearLayout.LayoutParams(dp(48), dp(48)))
+        tile.addView(TextView(ctx).apply {
+            text = label; textSize = 11f; maxLines = 2; gravity = android.view.Gravity.CENTER
+            setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.NORMAL))
+            setTextColor(if (selected) cream else dark); setLineSpacing(0f, 0.9f)
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+        tile.addView(TextView(ctx).apply {
+            text = count.toString(); textSize = 10f; gravity = android.view.Gravity.CENTER
+            setTextColor(if (selected) cream else dark); alpha = 0.65f
+        }, LinearLayout.LayoutParams(-1, -2))
+        return tile.apply { layoutParams = LinearLayout.LayoutParams(dp(84), -2).apply { marginEnd = dp(8) } }
+    }
+
+    private fun LinearLayout.children(): List<View> = (0 until childCount).map { getChildAt(it) }
+
     // ── Seznam ──────────────────────────────────────────────────────────────
 
     private inner class RowsAdapter : ListAdapter<Row, RecyclerView.ViewHolder>(object : DiffUtil.ItemCallback<Row>() {
         override fun areItemsTheSame(a: Row, b: Row) = when {
-            a is Row.Header && b is Row.Header -> a.group == b.group
-            a is Row.Item && b is Row.Item -> a.snack.id == b.snack.id && a.group == b.group
+            a is Row.Header && b is Row.Header -> a.category == b.category
+            a is Row.Item && b is Row.Item -> a.snack.id == b.snack.id && a.category == b.category
             else -> false
         }
         override fun areContentsTheSame(a: Row, b: Row) = a == b
@@ -213,7 +291,7 @@ class SnackFragment : Fragment() {
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             when (val row = getItem(position)) {
-                is Row.Header -> (holder.itemView as TextView).text = "${row.group.title} · ${row.count}"
+                is Row.Header -> bindHeader(holder.itemView, row)
                 is Row.Item -> SnackRowBinder.bind(
                     holder.itemView, row.snack,
                     onClick = { showConsumeSheet(it) },
@@ -222,6 +300,19 @@ class SnackFragment : Fragment() {
                 )
             }
         }
+    }
+
+    private fun bindHeader(v: View, row: Row.Header) {
+        val c = row.category
+        val color = c?.color?.toInt() ?: ContextCompat.getColor(requireContext(), R.color.brand_accent_warm)
+        v.findViewById<TextView>(R.id.tvHeaderEmoji).apply {
+            text = c?.emoji ?: "⭐"
+            backgroundTintList = android.content.res.ColorStateList.valueOf((0x2E shl 24) or (color and 0xFFFFFF))
+        }
+        v.findViewById<TextView>(R.id.tvSnackHeader).text = c?.label ?: "Oblíbené"
+        v.findViewById<TextView>(R.id.tvHeaderCount).text = row.count.toString()
+        v.findViewById<View>(R.id.headerLine).backgroundTintList = android.content.res.ColorStateList.valueOf((0x40 shl 24) or (color and 0xFFFFFF))
+        v.contentDescription = "${c?.label ?: "Oblíbené"}, ${row.count} potravin"
     }
 
     // ── Zápis do deníku ─────────────────────────────────────────────────────
@@ -259,8 +350,11 @@ class SnackFragment : Fragment() {
 
         val base = SnackCatalog.portionGrams(snack.weight)
         val unit = SnackCatalog.unit(snack.weight)
-        val group = SnackCatalog.groupOf(snack)
-        v.findViewById<TextView>(R.id.tvConsumeGroup).text = group.title
+        val cat = SnackCatalog.categoryOf(snack)
+        v.findViewById<TextView>(R.id.tvConsumeGroup).apply {
+            text = "${cat.emoji}  ${cat.label.uppercase(Locale("cs"))}"
+            backgroundTintList = android.content.res.ColorStateList.valueOf(cat.color.toInt())
+        }
         v.findViewById<TextView>(R.id.tvConsumeName).text = snack.name
         v.findViewById<TextView>(R.id.tvConsumePortion).text =
             "Porce ${SnackRowBinder.grams(base)} $unit · ${SnackCatalog.scale(snack, base).kcal} kcal"
@@ -477,6 +571,13 @@ class SnackFragment : Fragment() {
         transparentSheet(dialog, expanded = true)
 
         val etName = v.findViewById<TextInputEditText>(R.id.etName)
+        // kategorie se určí sama z názvu – jen ukážeme, kam potravina padne (docs/adr/0073)
+        val tilName = v.findViewById<TextInputLayout>(R.id.tilName)
+        fun showCategory() {
+            val name = etName.text?.toString()?.trim().orEmpty()
+            tilName.helperText = if (name.isEmpty()) null else FoodCategory.of(name, existing?.weight ?: "").let { "Zařadí se do: ${it.emoji} ${it.label}" }
+        }
+        etName.addTextChangedListener { showCategory() }
         val etPortion = v.findViewById<TextInputEditText>(R.id.etPortion)
         val etP = v.findViewById<TextInputEditText>(R.id.etProtein)
         val etS = v.findViewById<TextInputEditText>(R.id.etCarbs)

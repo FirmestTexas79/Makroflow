@@ -27,10 +27,22 @@ object SnackCatalog {
         LIGHT("ZELENINA A LEHKÉ")
     }
 
+    /** Řádky seznamu; [Header.category] null = oddíl Oblíbené (docs/adr/0073). */
     sealed interface Row {
-        data class Header(val group: Group, val count: Int) : Row
-        data class Item(val snack: SnackEntity, val group: Group) : Row
+        data class Header(val category: FoodCategory?, val count: Int) : Row
+        data class Item(val snack: SnackEntity, val category: FoodCategory?) : Row
     }
+
+    private val categoryCache = java.util.concurrent.ConcurrentHashMap<String, FoodCategory>()
+
+    /** Kategorie potraviny – sama z názvu (a jednotky), uživatel nic nezadává. */
+    fun categoryOf(snack: SnackEntity): FoodCategory =
+        categoryCache.getOrPut(snack.name + "\u0000" + snack.weight) { FoodCategory.of(snack.name, snack.weight) }
+
+    /** Počty potravin v kategoriích (pro dlaždice nahoře), bez hledání. */
+    fun counts(snacks: List<SnackEntity>, timing: Timing): Map<FoodCategory, Int> =
+        snacks.filter { matchesTiming(it, timing) }.distinctBy { normalize(it.name) to it.weight }
+            .groupingBy { categoryOf(it) }.eachCount()
 
     const val MAX_FAVOURITES = 5
 
@@ -98,25 +110,25 @@ object SnackCatalog {
      * Oblíbené (nejvýš [MAX_FAVOURITES] s [usage] > 0) jen bez hledání; v ostatních skupinách se neopakují.
      * Duplicitní názvy (stejná potravina uložená dvakrát) se ukážou jednou.
      */
-    fun rows(snacks: List<SnackEntity>, query: String, timing: Timing, usage: Map<String, Int>): List<Row> {
-        val visible = snacks.filter { matchesTiming(it, timing) && matches(it, query) }
+    fun rows(snacks: List<SnackEntity>, query: String, timing: Timing, usage: Map<String, Int>, filter: FoodCategory? = null): List<Row> {
+        val visible = snacks.filter { matchesTiming(it, timing) && matches(it, query) && (filter == null || categoryOf(it) == filter) }
             .distinctBy { normalize(it.name) to it.weight }
-        val favourites = if (query.isBlank())
+        val favourites = if (query.isBlank() && filter == null)
             visible.filter { (usage[it.name] ?: 0) > 0 }.sortedByDescending { usage[it.name] ?: 0 }.take(MAX_FAVOURITES)
         else emptyList()
         val favIds = favourites.map { it.id }.toSet()
 
         val out = mutableListOf<Row>()
         if (favourites.isNotEmpty()) {
-            out += Row.Header(Group.FAVOURITES, favourites.size)
-            favourites.forEach { out += Row.Item(it, Group.FAVOURITES) }
+            out += Row.Header(null, favourites.size)
+            favourites.forEach { out += Row.Item(it, null) }
         }
-        val rest = visible.filter { it.id !in favIds }.groupBy { groupOf(it) }
-        listOf(Group.PROTEIN, Group.CARBS, Group.FAT, Group.LIGHT).forEach { g ->
-            val items = rest[g].orEmpty()
+        val rest = visible.filter { it.id !in favIds }.groupBy { categoryOf(it) }
+        FoodCategory.entries.forEach { c ->
+            val items = rest[c].orEmpty()
             if (items.isNotEmpty()) {
-                out += Row.Header(g, items.size)
-                items.forEach { out += Row.Item(it, g) }
+                out += Row.Header(c, items.size)
+                items.forEach { out += Row.Item(it, c) }
             }
         }
         return out
