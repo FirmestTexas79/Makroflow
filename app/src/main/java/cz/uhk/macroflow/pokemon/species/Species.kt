@@ -534,7 +534,25 @@ object SpeciesRegistry {
                 attackScratch(),
                 attackConfuseRay()
             ) },
+            evolves = Evolve("039", 10),
             spawns = listOf(Spawn(COMMON, listOf(MOUNTAINS)))
+        ),
+
+        // 39 - Grifben (vývoj Johnsovy: sovička dorostla v gryfa)
+        Species("039", "GRIFBEN", "Grifben", "BLESK / LÉTAJÍCÍ",
+            desc = "Z malé sovičky vyrostl horský gryf s vějířem bleskových per. Než udeří, peří se mu naježí a vzduch zapraská.",
+            hint = "Grifben se vyvine z Johnsovy na levelu 10. Vzácně krouží i nad Horami.",
+            stats = Stats(hp = 62, atk = 24, def = 22, spd = 26, level = 10),
+            moves = { listOf(
+                attackWingAttack(),
+                attackThunderbolt(),
+                attackSlash(),
+                attackLeer()
+            ) },
+            type = MakromonType.ELECTRIC,
+            spawns = listOf(Spawn(RARE, listOf(MOUNTAINS))),
+            catchRate = 0.6f,
+            battleHeight = 40f
         ),
 
         Species("040", "LUMIVIX", "Lumivix", "VÍLA / KRYSTAL",
