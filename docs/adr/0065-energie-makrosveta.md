@@ -1,6 +1,6 @@
 # 0065 – Energie Makrosvěta, overstim a propojení s tréninkem
 
-**Stav:** schváleno, fáze 1 (jádro, bar, ceny akcí) fáze 2 (odměny za zápisy) a fáze 3 (rychlý zápis tréninku) implementovány · **Datum:** 2026-10-07
+**Stav:** schváleno, fáze 1 (jádro, bar, ceny akcí) fáze 1–4 implementovány (2026-10-08: nastavení bubliny a pauzy, teleport za energii) · **Datum:** 2026-10-07
 
 ## Kontext
 Makrosvět je teď volně přístupný a dá se projít naráz. Obsah se tak spotřebuje příliš rychle
@@ -67,7 +67,8 @@ Maximum za den je zhruba +145. Odměna jde nejdřív do základu do 100, zbytek 
   tolik, kolik by stála chůze: nejkratší cesta po spojnicích mapy zóny (`assets/zone/zone1.json`) × 3
   za každý přechod. Přes tři lokace tedy 9. Když energie nestačí, `ZoneOne.teleportBlock` vrátí nový
   důvod `Block.Energy(need, have)` a mapa zóny ukáže, kolik chybí. Výpočet cesty je čistá funkce
-  v `ZoneOne`, pokrytá testy.
+  v `ZoneOne` (BFS po `ZoneOne.LINKS`, test hlídá shodu se zone1.json). Implementováno 2026-10-08;
+  nabídka teleportu ukazuje „Zdarma · zbývá N z 10“ nebo cenu.
 
 Cena se ukazuje přímo na tlačítku nebo v dialogu. Když energie nestačí, akce se neprovede a dialog
 nabídne, co ji doplní (např. „Zapiš oběd +5“), s přímým odkazem do funkční části.
@@ -132,7 +133,7 @@ Dokud není fáze 3, série se odměňují i bez spuštěného „Jdu na trénin
 
 ### Bublina po sérii (část fáze 4)
 Zápis série v `WorkoutSessionSheet` ukáže na 5 s nad sheetem bublinu „+2 ⚡ · Skok do Makrosvěta“
-(`MakrosvetBubble`, PopupWindow; „+2 ⚡“ jen do stropu 15 sérií). Přepínač v nastavení přijde se zbytkem fáze 4.
+(`MakrosvetBubble`, PopupWindow; „+2 ⚡“ jen do stropu 15 sérií). V Nastavení → Zobrazení: přepínač bubliny, přepínač pauzy a délka pauzy (1:00–5:00, výchozí 3:00, klepnutím na čas). Délka per cvik zatím ne.
 
 ### Implementace rychlého zápisu (fáze 3)
 Místo nové tabulky `activity_log` (vyžadovala by migraci DB) je dnešní jednorázový trénink v
