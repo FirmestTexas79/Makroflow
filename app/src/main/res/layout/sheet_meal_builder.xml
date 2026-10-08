@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Složit jídlo (docs/adr/0068): suroviny se sečtou do jednoho záznamu v deníku.
+    Přichází sem i recept z „Fitness receptů“ – suroviny jsou předvyplněné a dají se upravit.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_sheet_cream">
+
+    <!-- ── Složení ─────────────────────────────────────────── -->
+    <LinearLayout
+        android:id="@+id/viewMealBuilder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_dark_alpha20" />
+
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp">
+
+                <TextView
+                    android:id="@+id/tvMealBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="@color/brand_primary"
+                    android:letterSpacing="0.12"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="5dp"
+                    android:text="SLOŽIT JÍDLO"
+                    android:textColor="@color/brand_cream"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/etMealName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@null"
+                    android:fontFamily="sans-serif-black"
+                    android:hint="Název jídla"
+                    android:importantForAutofill="no"
+                    android:inputType="textCapSentences"
+                    android:maxLines="2"
+                    android:paddingVertical="4dp"
+                    android:textColor="@color/brand_dark"
+                    android:textColorHint="@color/brand_dark_alpha30"
+                    android:textSize="26sp" />
+
+                <TextView
+                    android:id="@+id/tvMealSub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:alpha="0.7"
+                    android:text="Přidej suroviny, sečtou se do jednoho záznamu v deníku."
+                    android:textColor="@color/brand_primary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    style="@style/QwSection"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SUROVINY" />
+
+                <LinearLayout
+                    android:id="@+id/llIngredients"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:id="@+id/tvIngEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_search_soft"
+                    android:gravity="center"
+                    android:padding="18dp"
+                    android:text="Zatím nic. Přidej surovinu ze špajzky nebo naskenuj obal."
+                    android:textColor="@color/brand_dark"
+                    android:alpha="0.7"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddFromPantry"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="5dp"
+                        android:fontFamily="sans-serif-black"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Ze špajzky"
+                        android:textColor="@color/brand_dark"
+                        app:cornerRadius="16dp"
+                        app:icon="@drawable/ic_line_plus"
+                        app:iconTint="@color/brand_dark"
+                        app:strokeColor="@color/brand_dark_alpha30" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnScanIngredient"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="5dp"
+                        android:fontFamily="sans-serif-black"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Skenovat"
+                        android:textColor="@color/brand_dark"
+                        app:cornerRadius="16dp"
+                        app:icon="@drawable/ic_line_barcode"
+                        app:iconTint="@color/brand_dark"
+                        app:strokeColor="@color/brand_dark_alpha30" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/QwSection"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="KOLIK SNÍŠ" />
+
+                <LinearLayout
+                    android:id="@+id/llPortion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+
+                <!-- Souhrn -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/ProfileCard"
+                    android:layout_marginTop="12dp"
+                    app:cardBackgroundColor="@color/brand_dark"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <cz.uhk.macroflow.nutrition.MacroDonutView
+                            android:id="@+id/donutMeal"
+                            android:layout_width="92dp"
+                            android:layout_height="92dp" />
+
+                        <LinearLayout
+                            android:id="@+id/llMealTotals"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveMeal"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginBottom="20dp"
+            android:backgroundTint="@color/brand_dark"
+            android:fontFamily="sans-serif-black"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Uložit do deníku"
+            android:textColor="@color/brand_cream"
+            android:textSize="15sp"
+            app:cornerRadius="18dp"
+            app:icon="@drawable/ic_line_plus"
+            app:iconGravity="textStart"
+            app:iconTint="@color/brand_cream" />
+    </LinearLayout>
+
+    <!-- ── Výběr ze špajzky ────────────────────────────────── -->
+    <LinearLayout
+        android:id="@+id/viewPantrySearch"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-black"
+                android:text="Ze špajzky"
+                android:textColor="@color/brand_dark"
+                android:textSize="24sp" />
+
+            <ImageButton
+                android:id="@+id/btnClosePantry"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Zpět"
+                android:src="@drawable/ic_close"
+                app:tint="@color/brand_dark" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/etPantrySearch"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_search_soft"
+            android:hint="Hledej surovinu"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:paddingHorizontal="18dp"
+            android:textColor="@color/brand_dark"
+            android:textColorHint="@color/brand_dark_alpha40"
+            android:textSize="15sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvPantryResults"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="10dp"
+            android:clipToPadding="false"
+            android:paddingBottom="24dp" />
+    </LinearLayout>
+</FrameLayout>
