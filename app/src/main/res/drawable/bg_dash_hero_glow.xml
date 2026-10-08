@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Teplá záře za prstenci (docs/adr/0074). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="50%p"
+        android:centerColor="#14E9B072"
+        android:startColor="#2EE9B072"
+        android:endColor="#00E9B072" />
+</shape>

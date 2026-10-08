@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Karta energie na hlavní obrazovce (docs/adr/0074): tmavá olivová s jemným přechodem. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="32dp" />
+    <gradient
+        android:angle="315"
+        android:endColor="#1C2711"
+        android:centerColor="#283618"
+        android:startColor="#3A4B23"
+        android:type="linear" />
+</shape>
