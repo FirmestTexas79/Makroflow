@@ -101,6 +101,54 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Ideální den (docs/adr/0069) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/addDayPlan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="5dp"
+        android:layout_marginBottom="10dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardBackgroundColor="@color/brand_accent_warm"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.14"
+                android:text="PREDIKCE + NÁVRH"
+                android:textColor="@color/brand_accent_deep"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:text="Ideální den"
+                android:textColor="@color/brand_dark"
+                android:textSize="20sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.75"
+                android:text="Co sníst na zbytek dne, aby vyšel cíl. I s tvým každodenním shakem."
+                android:textColor="@color/brand_dark"
+                android:textSize="11.5sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/addManual"

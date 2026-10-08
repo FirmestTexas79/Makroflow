@@ -445,6 +445,9 @@ class SnackFragment : Fragment() {
         }
         v.findViewById<View>(R.id.addSwipe).setOnClickListener { dialog.dismiss(); FoodSwipeDialog().show(parentFragmentManager, "FoodSwipe") }
         v.findViewById<View>(R.id.addRepeat).setOnClickListener { dialog.dismiss(); showRepeat() }
+        v.findViewById<View>(R.id.addDayPlan).setOnClickListener {
+            dialog.dismiss(); cz.uhk.macroflow.nutrition.plan.DayPlanSheet.show(parentFragmentManager, timing == Timing.PRE)
+        }
         v.findViewById<View>(R.id.addRecipes).setOnClickListener {
             dialog.dismiss(); cz.uhk.macroflow.nutrition.recipes.RecipesSheet.show(parentFragmentManager, timing == Timing.PRE)
         }

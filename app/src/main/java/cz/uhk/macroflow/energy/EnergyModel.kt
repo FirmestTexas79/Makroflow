@@ -2,6 +2,7 @@ package cz.uhk.macroflow.energy
 
 import java.text.Normalizer
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.min
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -179,13 +180,31 @@ object EnergyModel {
      *  - dnešek → alespoň předpoklad (den ještě neskončil, cíl nesmí ráno padat),
      *  - uzavřený den → skutečnost.
      */
-    fun stepsForDay(recordedSteps: Int?, isToday: Boolean): Int {
+    fun stepsForDay(recordedSteps: Int?, isToday: Boolean, baseline: Int = ASSUMED_DAILY_STEPS, minuteOfDay: Int? = null): Int {
         val recorded = recordedSteps ?: 0
         return when {
+            isToday && minuteOfDay != null -> projectedSteps(recorded, baseline, minuteOfDay)
             recorded <= 0 -> ASSUMED_DAILY_STEPS
             isToday -> max(recorded, ASSUMED_DAILY_STEPS)
             else -> recorded
         }
+    }
+
+    /**
+     * Predikce kroků na konec dneška (docs/adr/0069): co už je nachozeno + zbývající podíl dne
+     * × obvyklý den uživatele ([baseline] = medián posledních dní). Chůze je rozložená zhruba
+     * rovnoměrně mezi 6:00 a 22:00 ([dayShare]). Ráno = obvyklý den, večer ≈ skutečnost.
+     */
+    fun projectedSteps(recorded: Int, baseline: Int, minuteOfDay: Int): Int =
+        max(0, recorded) + ((1.0 - dayShare(minuteOfDay)) * baseline).roundToInt()
+
+    /** Podíl denní chůze, který už typicky proběhl v [minuteOfDay] (lineárně 6:00 → 22:00). */
+    fun dayShare(minuteOfDay: Int): Double = ((minuteOfDay - 6 * 60) / (16.0 * 60)).coerceIn(0.0, 1.0)
+
+    /** Obvyklý počet kroků: medián uzavřených dní s daty, při méně než 3 dnech [ASSUMED_DAILY_STEPS]. */
+    fun baselineSteps(pastDays: List<Int>): Int {
+        val v = pastDays.filter { it > 0 }.sorted()
+        return if (v.size < 3) ASSUMED_DAILY_STEPS else v[v.size / 2]
     }
 
     // ── Trénink ─────────────────────────────────────────────────────────────

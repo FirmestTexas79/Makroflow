@@ -64,8 +64,12 @@ object AppSettings {
     fun restReminder(ctx: Context) = prefs(ctx).getBoolean("rest_reminder", true)
     fun setRestReminder(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean("rest_reminder", on).apply()
 
-    /** Délka pauzy mezi sériemi v sekundách. */
-    val REST_OPTIONS = listOf(60, 90, 120, 150, 180, 240, 300)
-    fun restSeconds(ctx: Context) = prefs(ctx).getInt("rest_seconds", 180)
+    /** Délka pauzy mezi sériemi v sekundách; [REST_AUTO] = podle cviku (training/exercises/RestTimes). */
+    const val REST_AUTO = 0
+    val REST_OPTIONS = listOf(REST_AUTO, 60, 90, 120, 150, 180, 240, 300)
+    fun restSeconds(ctx: Context) = prefs(ctx).getInt("rest_seconds", REST_AUTO)
+    /** Pauza po sérii cviku [exerciseId]: pevná z nastavení, jinak podle cviku. */
+    fun restSecondsFor(ctx: Context, exerciseId: String?) =
+        restSeconds(ctx).takeIf { it != REST_AUTO } ?: cz.uhk.macroflow.training.exercises.RestTimes.seconds(exerciseId)
     fun setRestSeconds(ctx: Context, s: Int) = prefs(ctx).edit().putInt("rest_seconds", s).apply()
 }

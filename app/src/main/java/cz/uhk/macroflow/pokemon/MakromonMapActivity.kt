@@ -432,6 +432,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     // ── Pauza mezi sériemi (docs/adr/0065, bod 5) ───────────────────────────
     private var lastSetAt = 0L
+    private var lastSetExercise: String? = null
     private var restExtra = 0L
     private var restAlertedFor = 0L
     private val restPill by lazy { findViewById<View>(R.id.restPill) }
@@ -445,12 +446,14 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun startRestTimer() {
         restPill.removeCallbacks(restTick)
         lifecycleScope.launch {
-            val last = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                runCatching { cz.uhk.macroflow.data.AppDatabase.getDatabase(this@MakromonMapActivity).workoutDao().lastSetAt() }.getOrNull() ?: 0L
+            val set = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                runCatching { cz.uhk.macroflow.data.AppDatabase.getDatabase(this@MakromonMapActivity).workoutDao().lastSet() }.getOrNull()
             }
+            val last = set?.createdAt ?: 0L
+            lastSetExercise = set?.exerciseId
             // Debug: pauza, ze které zbývá N s (adb … --ei debug_rest_left 5)
             val dbg = if (BuildConfig.DEBUG) intent.getIntExtra("debug_rest_left", -1) else -1
-            val use = if (dbg >= 0) System.currentTimeMillis() - cz.uhk.macroflow.common.AppSettings.restSeconds(this@MakromonMapActivity) * 1000L + dbg * 1000L else last
+            val use = if (dbg >= 0) System.currentTimeMillis() - cz.uhk.macroflow.common.AppSettings.restSecondsFor(this@MakromonMapActivity, lastSetExercise) * 1000L + dbg * 1000L else last
             if (use != lastSetAt) { lastSetAt = use; restExtra = 0 }
             restTick.run()
         }
@@ -459,7 +462,7 @@ class MakromonMapActivity : AppCompatActivity() {
     /** Během pauzy odpočet; po jejím konci jantarová výzva „Zpět na trénink“ (+30 s jednou za pauzu). */
     private fun renderRest() {
         val left = cz.uhk.macroflow.training.QuickWorkout.restLeft(lastSetAt, System.currentTimeMillis(), restExtra,
-            cz.uhk.macroflow.training.QuickWorkout.endedAt(this), cz.uhk.macroflow.common.AppSettings.restSeconds(this) * 1000L)
+            cz.uhk.macroflow.training.QuickWorkout.endedAt(this), cz.uhk.macroflow.common.AppSettings.restSecondsFor(this, lastSetExercise) * 1000L)
             ?.takeIf { cz.uhk.macroflow.common.AppSettings.restReminder(this) }
         if (left == null) { restPill.visibility = View.GONE; return }
         val tv = findViewById<TextView>(R.id.tvRest)

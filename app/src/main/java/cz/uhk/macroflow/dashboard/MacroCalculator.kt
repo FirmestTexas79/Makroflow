@@ -48,11 +48,20 @@ object    MacroCalculator {
             profile = profile,
             exercises = plannedExercises(context, date),
             strengthLabel = strengthLabel(context, date),
-            steps = EnergyModel.stepsForDay(recordedSteps, isToday),
+            steps = if (isToday) EnergyModel.stepsForDay(recordedSteps, true, baselineSteps(db, dateKey), minuteNow())
+                else EnergyModel.stepsForDay(recordedSteps, false),
             adaptiveFactor = factor,
             trendWeightKg = adaptive?.trendWeightKg
         )
     }
+
+    /** Medián kroků posledních 14 uzavřených dní – „obvyklý den“ pro predikci dneška. */
+    private fun baselineSteps(db: AppDatabase, todayKey: String): Int {
+        val from = java.time.LocalDate.parse(todayKey).minusDays(14).toString()
+        return EnergyModel.baselineSteps(db.stepsDao().getAllStepsSync().filter { it.date in from..todayKey && it.date != todayKey }.map { it.count })
+    }
+
+    private fun minuteNow(): Int = java.time.LocalTime.now().let { it.hour * 60 + it.minute }
 
     private fun daysBetween(from: String, to: String): Long =
         java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(from), java.time.LocalDate.parse(to))

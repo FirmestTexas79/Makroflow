@@ -67,9 +67,9 @@ abstract class WorkoutDao {
     @Query("SELECT * FROM workout_sets")
     abstract fun getAllSync(): List<WorkoutSetEntity>
 
-    /** Kdy byla zapsaná poslední série (pauza mezi sériemi v Makrosvětu, docs/adr/0065). */
-    @Query("SELECT MAX(createdAt) FROM workout_sets")
-    abstract fun lastSetAt(): Long?
+    /** Poslední zapsaná série: pauza v Makrosvětu (docs/adr/0065), délka podle jejího cviku (0069). */
+    @Query("SELECT * FROM workout_sets ORDER BY createdAt DESC LIMIT 1")
+    abstract fun lastSet(): WorkoutSetEntity?
 
     @Query("DELETE FROM workout_sets")
     abstract fun deleteAllLocally()

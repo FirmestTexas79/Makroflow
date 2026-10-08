@@ -51,7 +51,7 @@ class ExerciseDetailSheet : BottomSheetDialogFragment() {
 
         view.findViewById<TextView>(R.id.tvExBadge).text = e.equipment.label.uppercase()
         view.findViewById<TextView>(R.id.tvExTitle).text = e.name
-        view.findViewById<TextView>(R.id.tvExSubtitle).text = "${e.alias} · ${e.levelLabel}"
+        view.findViewById<TextView>(R.id.tvExSubtitle).text = "${e.alias} · ${e.levelLabel} · pauza ${cz.uhk.macroflow.training.exercises.RestTimes.label(cz.uhk.macroflow.training.exercises.RestTimes.seconds(e.id))}"
 
         bindMuscles(view, e)
         cz.uhk.macroflow.training.log.WorkoutLogSection(this, view, e).start()

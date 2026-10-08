@@ -67,6 +67,7 @@ class MealBuilderSheet(private val isPreSelected: Boolean = false) : BottomSheet
     private var prefillName: String? = null
     private var prefillBadge: String? = null
     private var prefillSub: String? = null
+    private var staple = false
 
     /** Předvyplnění (recept): název, suroviny a štítek nad názvem. Volat před show(). */
     fun prefill(name: String, items: List<Ingredient>, badge: String = "RECEPT", sub: String? = null): MealBuilderSheet {
@@ -74,6 +75,9 @@ class MealBuilderSheet(private val isPreSelected: Boolean = false) : BottomSheet
         ingredients.clear(); ingredients += items
         return this
     }
+
+    /** Režim „pevná položka dne“ (docs/adr/0069): neuloží se do deníku, ale do [DailyStaples]. */
+    fun asStaple(): MealBuilderSheet { staple = true; return this }
 
     private fun c(id: Int) = ContextCompat.getColor(requireContext(), id)
     private fun dp(v: Number) = (v.toFloat() * resources.displayMetrics.density).toInt()
@@ -101,6 +105,12 @@ class MealBuilderSheet(private val isPreSelected: Boolean = false) : BottomSheet
         prefillName?.let { view.findViewById<EditText>(R.id.etMealName).setText(it) }
         prefillBadge?.let { view.findViewById<TextView>(R.id.tvMealBadge).text = it }
         prefillSub?.let { view.findViewById<TextView>(R.id.tvMealSub).text = it }
+        if (staple) {
+            view.findViewById<TextView>(R.id.tvMealBadge).text = "KAŽDÝ DEN"
+            view.findViewById<EditText>(R.id.etMealName).hint = "Např. Proteinový shake"
+            view.findViewById<TextView>(R.id.tvMealSub).text = "Pevná položka: plán dne s ní počítá každý den a zapíšeš ji jedním klepnutím."
+            view.findViewById<TextView>(R.id.btnSaveMeal).text = "Uložit jako pevnou položku"
+        }
 
         view.findViewById<MacroDonutView>(R.id.donutMeal).apply {
             trackColor = Color.parseColor("#26FEFAE0"); centerTextColor = c(R.color.brand_cream); ringWidthDp = 8f
@@ -304,6 +314,13 @@ class MealBuilderSheet(private val isPreSelected: Boolean = false) : BottomSheet
         if (mealName.isEmpty()) { Toast.makeText(requireContext(), "Pojmenuj jídlo", Toast.LENGTH_SHORT).show(); return }
         if (ingredients.isEmpty()) { Toast.makeText(requireContext(), "Přidej aspoň jednu surovinu", Toast.LENGTH_SHORT).show(); return }
         val t = totals()
+        if (staple) {
+            cz.uhk.macroflow.nutrition.plan.DailyStaples.add(requireContext(),
+                MealRepeat.Item(mealName, t.p, t.s, t.t, t.kcal, t.kj, t.fiber, ""))
+            root.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            parentFragmentManager.setFragmentResult(cz.uhk.macroflow.nutrition.plan.DayPlanSheet.REFRESH, Bundle())
+            dismiss(); return
+        }
         val entity = ConsumedSnackEntity(
             date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
             time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()),

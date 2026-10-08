@@ -184,10 +184,10 @@ class AppSettingsFragment : Fragment() {
             switchOf(r, AppSettings.gymBubble(ctx)) { on -> AppSettings.setGymBubble(ctx, on) }
         })
         box.addView(divider())
-        val restRow = row(box, R.drawable.ic_line_bell, "Konec pauzy v Makrosvětu", "Odpočet pauzy a výzva „Zpět na trénink“. Klepnutím na čas změníš délku pauzy")
+        val restRow = row(box, R.drawable.ic_line_bell, "Konec pauzy v Makrosvětu", "Odpočet pauzy a výzva „Zpět na trénink“. Délka podle cviku (dřep 4 min, upažování 1 min), klepnutím nastavíš pevnou")
         switchOf(restRow, AppSettings.restReminder(ctx)) { on -> AppSettings.setRestReminder(ctx, on) }
         restRow.findViewById<TextView>(R.id.tvSettingValue).apply {
-            fun fmt(s: Int) = "${s / 60}:${String.format(java.util.Locale.US, "%02d", s % 60)}"
+            fun fmt(s: Int) = if (s == AppSettings.REST_AUTO) "Podle cviku" else "${s / 60}:${String.format(java.util.Locale.US, "%02d", s % 60)}"
             visibility = View.VISIBLE
             text = fmt(AppSettings.restSeconds(ctx))
             contentDescription = "Délka pauzy ${fmt(AppSettings.restSeconds(ctx))}, klepnutím změníš"

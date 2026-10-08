@@ -61,6 +61,16 @@ class EnergyModelTest {
         assertEquals(3000, EnergyModel.stepsForDay(3000, isToday = false))  // uzavřený den = realita
     }
 
+    @Test
+    fun todayStepsAreProjectedToEvening() {
+        assertEquals(8000, EnergyModel.projectedSteps(0, 8000, 5 * 60))            // před 6:00 = obvyklý den
+        assertEquals(4000 + 4000, EnergyModel.projectedSteps(4000, 8000, 14 * 60)) // v půlce dne + půlka obvyklého
+        assertEquals(2000, EnergyModel.projectedSteps(2000, 8000, 23 * 60))        // večer = skutečnost
+        assertEquals(EnergyModel.ASSUMED_DAILY_STEPS, EnergyModel.baselineSteps(listOf(9000, 0)))
+        assertEquals(9000, EnergyModel.baselineSteps(listOf(3000, 9000, 12000, 0)))
+        assertEquals(8000, EnergyModel.stepsForDay(4000, isToday = true, baseline = 8000, minuteOfDay = 14 * 60))
+    }
+
     // ── Trénink (Compendium, ACSM) ──────────────────────────────────────────
 
     @Test fun `běh 1 kcal na kg a km`() =
