@@ -168,29 +168,31 @@ class RecipesSheet : BottomSheetDialogFragment() {
 
         // porce a makra na zvolený počet porcí
         val m = r.macros(portions.toFloat())
-        val stats = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; setPadding(dp(14), dp(14), dp(14), dp(14)); background = roundRect(22, c(R.color.brand_dark), null) }
-        val stepper = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL }
-        stepper.addView(TextView(ctx).apply { text = "PORCE"; textSize = 9.5f; letterSpacing = 0.12f; setTypeface(typeface, Typeface.BOLD); setTextColor(c(R.color.brand_accent_warm)) })
-        val sRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val stats = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(12), dp(16), dp(14)); background = roundRect(22, c(R.color.brand_dark), null) }
+        val pRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        pRow.addView(TextView(ctx).apply { text = "PORCE"; textSize = 10f; letterSpacing = 0.12f; setTypeface(typeface, Typeface.BOLD); setTextColor(c(R.color.brand_accent_warm)) },
+            LinearLayout.LayoutParams(0, -2, 1f))
         fun stepBtn(icon: Int, desc: String, to: Int) = ImageButton(ctx).apply {
             setImageResource(icon); contentDescription = desc; setColorFilter(c(R.color.brand_cream))
-            background = roundRect(100, Color.parseColor("#26FEFAE0"), null); setPadding(dp(7), dp(7), dp(7), dp(7))
+            background = roundRect(100, Color.parseColor("#26FEFAE0"), null); setPadding(dp(8), dp(8), dp(8), dp(8))
             isEnabled = to in 1..(r.servings * 4); alpha = if (isEnabled) 1f else 0.35f
             setOnClickListener { it.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); showDetail(r, to) }
         }
-        sRow.addView(stepBtn(R.drawable.ic_line_minus, "Méně porcí", portions - 1), LinearLayout.LayoutParams(dp(30), dp(30)))
-        sRow.addView(TextView(ctx).apply { text = "$portions"; typeface = black; textSize = 22f; setTextColor(c(R.color.brand_cream)); gravity = Gravity.CENTER },
-            LinearLayout.LayoutParams(dp(34), -2))
-        sRow.addView(stepBtn(R.drawable.ic_line_plus, "Víc porcí", portions + 1), LinearLayout.LayoutParams(dp(30), dp(30)))
-        stepper.addView(sRow)
-        stats.addView(stepper, LinearLayout.LayoutParams(0, -2, 1.3f))
-        listOf("KCAL" to "${m.kcal}", "BÍLK." to "${m.p.roundToInt()} g", "S / T" to "${m.s.roundToInt()} / ${m.t.roundToInt()}", "ČAS" to "${r.minutes}′").forEach { (k, v) ->
-            stats.addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
-                addView(TextView(ctx).apply { text = k; textSize = 9.5f; letterSpacing = 0.12f; setTypeface(typeface, Typeface.BOLD); setTextColor(c(R.color.brand_accent_warm)) })
-                addView(TextView(ctx).apply { text = v; typeface = black; textSize = 16f; setTextColor(c(R.color.brand_cream)); setPadding(0, dp(6), 0, 0) })
+        pRow.addView(stepBtn(R.drawable.ic_line_minus, "Méně porcí", portions - 1), LinearLayout.LayoutParams(dp(34), dp(34)))
+        pRow.addView(TextView(ctx).apply { text = "$portions"; typeface = black; textSize = 22f; setTextColor(c(R.color.brand_cream)); gravity = Gravity.CENTER },
+            LinearLayout.LayoutParams(dp(44), -2))
+        pRow.addView(stepBtn(R.drawable.ic_line_plus, "Víc porcí", portions + 1), LinearLayout.LayoutParams(dp(34), dp(34)))
+        stats.addView(pRow)
+        stats.addView(View(ctx).apply { setBackgroundColor(Color.parseColor("#26FEFAE0")) }, LinearLayout.LayoutParams(-1, 1).apply { topMargin = dp(10); bottomMargin = dp(10) })
+        val cols = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        listOf("KCAL" to "${m.kcal}", "BÍLKOVINY" to "${m.p.roundToInt()} g", "SACH. / TUKY" to "${m.s.roundToInt()} / ${m.t.roundToInt()} g", "ČAS" to "${r.minutes} min").forEach { (k, v) ->
+            cols.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(ctx).apply { text = k; textSize = 9f; letterSpacing = 0.1f; setTypeface(typeface, Typeface.BOLD); setTextColor(c(R.color.brand_accent_warm)); maxLines = 1 })
+                addView(TextView(ctx).apply { text = v; typeface = black; textSize = 15f; setTextColor(c(R.color.brand_cream)); setPadding(0, dp(4), 0, 0); maxLines = 1 })
             }, LinearLayout.LayoutParams(0, -2, 1f))
         }
+        stats.addView(cols)
         body.addView(stats, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(14) })
         body.addView(TextView(ctx).apply {
             text = "Recept je na ${r.servings} ${porci(r.servings)}. Suroviny níže jsou pro $portions ${porci(portions)}."
