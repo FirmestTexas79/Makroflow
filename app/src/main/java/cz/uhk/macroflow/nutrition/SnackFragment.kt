@@ -267,7 +267,13 @@ class SnackFragment : Fragment() {
             text = count.toString(); textSize = 10f; gravity = android.view.Gravity.CENTER
             setTextColor(if (selected) cream else dark); alpha = 0.65f
         }, LinearLayout.LayoutParams(-1, -2))
-        return tile.apply { layoutParams = LinearLayout.LayoutParams(dp(84), -2).apply { marginEnd = dp(8) } }
+        return tile.apply { layoutParams = LinearLayout.LayoutParams(tileWidth(), -2).apply { marginEnd = dp(8) } }
+    }
+
+    /** Šířka dlaždice tak, aby na kraji byla vidět půlka další – je poznat, že pás jde posunout. */
+    private fun tileWidth(): Int {
+        val screen = resources.displayMetrics.widthPixels
+        return ((screen - dp(20) - 4 * dp(8)) / 4.5f).toInt()
     }
 
     private fun LinearLayout.children(): List<View> = (0 until childCount).map { getChildAt(it) }
