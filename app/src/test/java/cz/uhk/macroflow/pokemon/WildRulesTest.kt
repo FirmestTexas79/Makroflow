@@ -89,7 +89,7 @@ class WildRulesTest {
 
     @Test
     fun storedMovesResolve() {
-        val fallback = BattleFactory.createIgnar().moves
+        val fallback = BattleFactory.createById("001").moves
         assertEquals(fallback, MovePool.resolve("", fallback))
         assertEquals(listOf("EMBER", "SCRATCH"), MovePool.resolve("EMBER, SCRATCH,NEEXISTUJE", fallback).map { it.name })
         assertEquals(fallback, MovePool.resolve("NEEXISTUJE", fallback))
@@ -121,7 +121,7 @@ class WildRulesTest {
 
     @Test
     fun speciesTypeStaysWithRandomMoves() {
-        val base = BattleFactory.createAqulin()
+        val base = BattleFactory.createById("004")
         val m = base.copy(moves = listOf(BattleFactory.attackTackle()), type = base.speciesType)
         assertEquals(base.moves.first().type, m.speciesType)
     }

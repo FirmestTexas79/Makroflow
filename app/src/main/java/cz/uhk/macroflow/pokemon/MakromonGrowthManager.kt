@@ -9,6 +9,7 @@ data class LearnableMove(
 // 📋 2. Třída pro růstovou křivku konkrétního Makromona
 data class MakromonGrowthProfile(
     val makrodexId: String,
+    /** Vyplňuje getProfile z registru druhů – v GROWTH_DATABASE se nezadává. */
     val evolutionLevel: Int = 0,
     val evolutionToId: String = "",
     val movesLearnedAt: List<LearnableMove> = emptyList()
@@ -22,8 +23,6 @@ object MakromonGrowthManager {
         // ── IGNAR RODINA (001 -> 002 -> 003) ─────────────────────────
         "001" to MakromonGrowthProfile(
             makrodexId = "001",
-            evolutionLevel = 4,
-            evolutionToId = "002",
             movesLearnedAt = listOf(
                 LearnableMove(1, BattleFactory.attackScratch()),
                 LearnableMove(1, BattleFactory.attackGrowl()),
@@ -32,8 +31,6 @@ object MakromonGrowthManager {
         ),
         "002" to MakromonGrowthProfile(
             makrodexId = "002",
-            evolutionLevel = 10,
-            evolutionToId = "003",
             movesLearnedAt = listOf(
                 LearnableMove(4, BattleFactory.attackSmokescreen()),
                 LearnableMove(7, BattleFactory.attackFireFang()),
@@ -42,8 +39,6 @@ object MakromonGrowthManager {
         ),
         "003" to MakromonGrowthProfile(
             makrodexId = "003",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(10, BattleFactory.attackFlamethrower()),
                 LearnableMove(13, BattleFactory.attackDragonClaw()),
@@ -56,8 +51,6 @@ object MakromonGrowthManager {
         // ── AQULIN RODINA (004 -> 005 -> 006) ────────────────────────
         "004" to MakromonGrowthProfile(
             makrodexId = "004",
-            evolutionLevel = 4,
-            evolutionToId = "005",
             movesLearnedAt = listOf(
                 LearnableMove(1, BattleFactory.attackWaterGun()),
                 LearnableMove(1, BattleFactory.attackGrowl()),
@@ -66,8 +59,6 @@ object MakromonGrowthManager {
         ),
         "005" to MakromonGrowthProfile(
             makrodexId = "005",
-            evolutionLevel = 10,
-            evolutionToId = "006",
             movesLearnedAt = listOf(
                 LearnableMove(4, BattleFactory.attackBite()),
                 LearnableMove(7, BattleFactory.attackBubbleBeam()),
@@ -76,8 +67,6 @@ object MakromonGrowthManager {
         ),
         "006" to MakromonGrowthProfile(
             makrodexId = "006",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(10, BattleFactory.attackAquaTail()),
                 LearnableMove(15, BattleFactory.attackCrunch()),
@@ -88,8 +77,6 @@ object MakromonGrowthManager {
         // ── FLORI RODINA (007 -> 008 -> 009) ─────────────────────────
         "007" to MakromonGrowthProfile(
             makrodexId = "007",
-            evolutionLevel = 4,
-            evolutionToId = "008",
             movesLearnedAt = listOf(
                 LearnableMove(1, BattleFactory.attackTackle()),
                 LearnableMove(1, BattleFactory.attackGrowl()),
@@ -98,8 +85,6 @@ object MakromonGrowthManager {
         ),
         "008" to MakromonGrowthProfile(
             makrodexId = "008",
-            evolutionLevel = 10,
-            evolutionToId = "009",
             movesLearnedAt = listOf(
                 LearnableMove(4, BattleFactory.attackRazorLeaf()),
                 LearnableMove(7, BattleFactory.attackSeedBomb()),
@@ -108,8 +93,6 @@ object MakromonGrowthManager {
         ),
         "009" to MakromonGrowthProfile(
             makrodexId = "009",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(10, BattleFactory.attackLeafBlade()),
                 LearnableMove(15, Move("PETAL DANCE", MakromonType.GRASS, 120, 100, 10)),
@@ -121,8 +104,6 @@ object MakromonGrowthManager {
         // ── UMBEX / LUMEX (010, 011) – nevyvíjejí se ─────────────────
         "010" to MakromonGrowthProfile(
             makrodexId = "010",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackLick()),
                 LearnableMove(1,  BattleFactory.attackNightShade()),
@@ -134,8 +115,6 @@ object MakromonGrowthManager {
         ),
         "011" to MakromonGrowthProfile(
             makrodexId = "011",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackDazzlingGleam()),
                 LearnableMove(1,  BattleFactory.attackHex()),
@@ -150,8 +129,6 @@ object MakromonGrowthManager {
         // Spirra se nevyvíjí přirozeně – evoluce se volí hráčem
         "012" to MakromonGrowthProfile(
             makrodexId = "012",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1, BattleFactory.attackTackle()),
                 LearnableMove(1, BattleFactory.attackGrowl()),
@@ -163,8 +140,6 @@ object MakromonGrowthManager {
         ),
         "013" to MakromonGrowthProfile(
             makrodexId = "013",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackEmber()),
                 LearnableMove(5,  BattleFactory.attackFireFang()),
@@ -175,8 +150,6 @@ object MakromonGrowthManager {
         ),
         "014" to MakromonGrowthProfile(
             makrodexId = "014",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackWaterGun()),
                 LearnableMove(5,  BattleFactory.attackBubbleBeam()),
@@ -187,8 +160,6 @@ object MakromonGrowthManager {
         ),
         "015" to MakromonGrowthProfile(
             makrodexId = "015",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackVineWhip()),
                 LearnableMove(5,  BattleFactory.attackRazorLeaf()),
@@ -199,8 +170,6 @@ object MakromonGrowthManager {
         ),
         "016" to MakromonGrowthProfile(
             makrodexId = "016",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackLick()),
                 LearnableMove(5,  BattleFactory.attackShadowBall()),
@@ -211,8 +180,6 @@ object MakromonGrowthManager {
         ),
         "017" to MakromonGrowthProfile(
             makrodexId = "017",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackCharm()),
                 LearnableMove(5,  BattleFactory.attackDazzlingGleam()),
@@ -223,8 +190,6 @@ object MakromonGrowthManager {
         ),
         "018" to MakromonGrowthProfile(
             makrodexId = "018",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  Move("ICE SHARD",  MakromonType.NORMAL, 40, 100, 30)),
                 LearnableMove(5,  Move("ICE FANG",   MakromonType.WATER,  65, 95,  15)),
@@ -235,8 +200,6 @@ object MakromonGrowthManager {
         ),
         "019" to MakromonGrowthProfile(
             makrodexId = "019",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackDragonBreath()),
                 LearnableMove(5,  BattleFactory.attackDragonClaw()),
@@ -249,8 +212,6 @@ object MakromonGrowthManager {
         // ── FINLET / SERPFIN (020 -> 021) ────────────────────────────
         "020" to MakromonGrowthProfile(
             makrodexId = "020",
-            evolutionLevel = 8,
-            evolutionToId = "021",
             movesLearnedAt = listOf(
                 LearnableMove(1, BattleFactory.attackWaterGun()),
                 LearnableMove(1, BattleFactory.attackTackle()),
@@ -260,8 +221,6 @@ object MakromonGrowthManager {
         ),
         "021" to MakromonGrowthProfile(
             makrodexId = "021",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(8,  BattleFactory.attackAquaTail()),
                 LearnableMove(12, BattleFactory.attackHydroPump()),
@@ -273,8 +232,6 @@ object MakromonGrowthManager {
         // ── MYSNIC / MYSNOR (032 -> 033) – horská myška se štítem, docs/adr/0061, 0063 ──
         "032" to MakromonGrowthProfile(
             makrodexId = "032",
-            evolutionLevel = 10,
-            evolutionToId = "033",
             movesLearnedAt = listOf(
                 LearnableMove(1,  Move("STONE TOSS", MakromonType.GROUND, 40, 95, 30)),
                 LearnableMove(1,  BattleFactory.attackHarden()),
@@ -287,8 +244,6 @@ object MakromonGrowthManager {
         ),
         "033" to MakromonGrowthProfile(
             makrodexId = "033",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(10, Move("SHELL SLAM",     MakromonType.GROUND, 60, 95, 20)),
                 LearnableMove(10, Move("BOULDER GUARD",  MakromonType.GROUND,  0, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))),
@@ -301,8 +256,6 @@ object MakromonGrowthManager {
         // ── MYCIT / MYDRUS (022 -> 023) ───────────────────────────────
         "022" to MakromonGrowthProfile(
             makrodexId = "022",
-            evolutionLevel = 7,
-            evolutionToId = "023",
             movesLearnedAt = listOf(
                 LearnableMove(1, BattleFactory.attackTackle()),
                 LearnableMove(1, Move("CRYSTAL SHARD", MakromonType.NORMAL, 35, 100, 30)),
@@ -312,8 +265,6 @@ object MakromonGrowthManager {
         ),
         "023" to MakromonGrowthProfile(
             makrodexId = "023",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(7,  BattleFactory.attackSludgeBomb()),
                 LearnableMove(10, Move("TOXIC AURA",  MakromonType.POISON, 70, 90, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.POISON, 30))),
@@ -326,8 +277,6 @@ object MakromonGrowthManager {
         // ── SOULU RODINA (024 -> 025 -> 026) ─────────────────────────
         "024" to MakromonGrowthProfile(
             makrodexId = "024",
-            evolutionLevel = 5,
-            evolutionToId = "025",
             movesLearnedAt = listOf(
                 LearnableMove(1, BattleFactory.attackLick()),
                 LearnableMove(1, BattleFactory.attackNightShade()),
@@ -336,8 +285,6 @@ object MakromonGrowthManager {
         ),
         "025" to MakromonGrowthProfile(
             makrodexId = "025",
-            evolutionLevel = 10,
-            evolutionToId = "026",
             movesLearnedAt = listOf(
                 LearnableMove(5,  BattleFactory.attackShadowPunch()),
                 LearnableMove(8,  BattleFactory.attackShadowBall()),
@@ -346,8 +293,6 @@ object MakromonGrowthManager {
         ),
         "026" to MakromonGrowthProfile(
             makrodexId = "026",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(10, BattleFactory.attackPsychic()),
                 LearnableMove(15, Move("DARK PULSE",    MakromonType.GHOST,   80, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH, 20))),
@@ -359,8 +304,6 @@ object MakromonGrowthManager {
         // ── PHANTIL RODINA (027 -> 028 -> 029) ───────────────────────
         "027" to MakromonGrowthProfile(
             makrodexId = "027",
-            evolutionLevel = 6,
-            evolutionToId = "028",
             movesLearnedAt = listOf(
                 LearnableMove(1, BattleFactory.attackTackle()),
                 LearnableMove(1, BattleFactory.attackWaterGun()),
@@ -370,8 +313,6 @@ object MakromonGrowthManager {
         ),
         "028" to MakromonGrowthProfile(
             makrodexId = "028",
-            evolutionLevel = 12,
-            evolutionToId = "029",
             movesLearnedAt = listOf(
                 LearnableMove(6,  BattleFactory.attackWaterPulse()),
                 LearnableMove(9,  BattleFactory.attackShadowBall()),
@@ -380,8 +321,6 @@ object MakromonGrowthManager {
         ),
         "029" to MakromonGrowthProfile(
             makrodexId = "029",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(12, BattleFactory.attackHydroPump()),
                 LearnableMove(15, BattleFactory.attackDragonPulse()),
@@ -393,8 +332,6 @@ object MakromonGrowthManager {
         // ── GUDWIN (030) – nevyvíjí se ───────────────────────────────
         "030" to MakromonGrowthProfile(
             makrodexId = "030",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  Move("BODY SLAM",  MakromonType.NORMAL, 85, 85, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.PARALYZE, 30))),
                 LearnableMove(1,  Move("LULLABY",    MakromonType.NORMAL,  0, 80, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.SLEEP))),
@@ -408,8 +345,6 @@ object MakromonGrowthManager {
         // ── AXLU (031) – nevyvíjí se, tvář aplikace ──────────────────
         "031" to MakromonGrowthProfile(
             makrodexId = "031",
-            evolutionLevel = 0,
-            evolutionToId = "",
             movesLearnedAt = listOf(
                 LearnableMove(1,  BattleFactory.attackWaterGun()),
                 LearnableMove(1,  BattleFactory.attackCharm()),
@@ -422,7 +357,18 @@ object MakromonGrowthManager {
         )
     )
 
-    fun getProfile(makrodexId: String): MakromonGrowthProfile? = GROWTH_DATABASE[makrodexId]
+    /** Růstová křivka druhu; vývoj (level, na koho) se bere z registru species/Species.kt (docs/adr/0067). */
+    fun getProfile(makrodexId: String): MakromonGrowthProfile? {
+        val species = cz.uhk.macroflow.pokemon.species.SpeciesRegistry.byId(makrodexId)
+        val growth = GROWTH_DATABASE[makrodexId]
+        if (species == null && growth == null) return null
+        return MakromonGrowthProfile(
+            makrodexId = makrodexId,
+            evolutionLevel = species?.evolves?.level ?: 0,
+            evolutionToId = species?.evolves?.to ?: "",
+            movesLearnedAt = growth?.movesLearnedAt.orEmpty()
+        )
+    }
 
     fun getNewMoveForLevel(makrodexId: String, level: Int): Move? {
         val profile = getProfile(makrodexId) ?: return null

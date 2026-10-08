@@ -110,22 +110,14 @@ enum class DropFamily(val material: Resource?) {
 object Drops {
     data class Drop(val itemId: String, val amount: Int)
 
-    private val FAMILY: Map<String, DropFamily> = buildMap {
-        listOf("IGNAR", "IGNAROC", "IGNAROTH", "FLAMIRRA", "IGNILEO").forEach { put(it, DropFamily.FIRE) }
-        listOf("AQULIN", "AQULIND", "AQULINOX", "AQUIRRA", "FINLET", "SERPFIN", "GLACIRRA", "AQUAVULP").forEach { put(it, DropFamily.WATER) }
-        listOf("FLORI", "FLORIND", "FLORINDRA", "VERDIRRA").forEach { put(it, DropFamily.GRASS) }
-        listOf("UMBEX", "LUMEX", "SOULU", "SOULEX", "SOULORD", "PHANTIL", "PHANTIUS", "PHANTIAX", "SHADIRRA").forEach { put(it, DropFamily.GHOST) }
-        put("DRAKIRRA", DropFamily.DRAGON)
-        put("CHARMIRRA", DropFamily.FAIRY)
-    }
-
     /** Vylepšené materiály z evolucí. */
     val UPGRADE: Map<String, Resource> = mapOf(
         "IGNAROC" to Resource.FIRE_STONE, "IGNAROTH" to Resource.MAGMA_ORB,
         "FLORIND" to Resource.LEAF_LIVING, "FLORINDRA" to Resource.LEAF_LIVING
     )
 
-    fun family(species: String): DropFamily = FAMILY[species.uppercase()] ?: DropFamily.NORMAL
+    fun family(species: String): DropFamily =
+        cz.uhk.macroflow.pokemon.species.SpeciesRegistry.byName(species.uppercase())?.family ?: DropFamily.NORMAL
 
     /** Šance na fragment energie: po výhře 35 % (+1 % za level, max 60 %), po chycení 25 %. Normální Makromoni +20 % (max 80 %). */
     fun fragmentChance(level: Int, caught: Boolean, family: DropFamily = DropFamily.WATER): Double {
@@ -175,7 +167,8 @@ object Drops {
 
     /** Kteří Makromoni dávají daný materiál (pro ceduli v deníku). */
     fun speciesFor(r: Resource): List<String> =
-        FAMILY.filter { it.value.material == r }.keys.toList() + UPGRADE.filter { it.value == r }.keys
+        cz.uhk.macroflow.pokemon.species.SpeciesRegistry.ALL.filter { it.family.material == r }.map { it.name } +
+            UPGRADE.filter { it.value == r }.keys
 }
 
 /** Chytání: XP a šance na útěk po vyskočení z ballu. */

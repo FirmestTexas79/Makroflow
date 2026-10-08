@@ -72,7 +72,8 @@ object MoveDex {
 }
 
 object SpeciesIds {
-    val ALL: List<String> = (1..31).map { "%03d".format(it) }
+    /** Všechny druhy, které se dají mít (z registru species/Species.kt). */
+    val ALL: List<String> get() = cz.uhk.macroflow.pokemon.species.SpeciesRegistry.PLAYABLE.map { it.id }
 }
 
 /**

@@ -437,23 +437,8 @@ class PokemonBattleView @JvmOverloads constructor(
         }
     }
 
-    private fun enemySpriteHeight(): Float = when (gs.enemy.name) {
-        "SERPFIN"   -> 42f
-        "SOULORD"   -> 38f
-        "PHANTIAX"  -> 36f
-        "IGNAROTH"  -> 40f
-        "IGNILEO"   -> 42f
-        "AQUAVULP"  -> 36f
-        "AQULINOX"  -> 38f
-        "FLORINDRA" -> 36f
-        "DRAKIRRA"  -> 34f
-        "GUDWIN"    -> 42f
-        "MYDRUS"    -> 32f
-        "AXLU"      -> 30f
-        "UMBEX"     -> 28f
-        "LUMEX"     -> 28f
-        else        -> 28f
-    }
+    private fun enemySpriteHeight(): Float =
+        cz.uhk.macroflow.pokemon.species.SpeciesRegistry.byName(gs.enemy.name)?.battleHeight ?: 28f
 
     private fun renderFrame() {
         val c = gbCvs
