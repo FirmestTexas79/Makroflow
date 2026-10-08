@@ -325,13 +325,13 @@ class PortalTransitionView(context: Context, private val covering: Boolean, priv
                         if (Random.nextBoolean()) 0xFF68A03C.toInt() else 0xFF4F7F2A.toInt(), px * 1.6f, gravity = true)
                 }
             }
-            if (t > HOP_MS && t < HOP_MS + r.run && t - r.lastDust > 80f) {
+            if (t > HOP_MS && t < HOP_MS + r.run && abs(t - r.lastDust) > 80f) {
                 r.lastDust = t
                 val k = ((t - HOP_MS) / r.run).coerceIn(0f, 1f)
                 val land = bushX + (if (r.right) 1f else -1f) * w * 0.13f
                 val end = if (r.right) w + w * r.size else -w * r.size
-                val x = land + (end - land) * k.pow(1.55f) + back * w * r.size * 0.22f
                 val back = (if (r.right) -1f else 1f) * (if (exit) -1f else 1f)
+                val x = land + (end - land) * k.pow(1.55f) + back * w * r.size * 0.22f
                 bits += Bit(x, feet(h) - px * 2, back * w * (0.06f + Random.nextFloat() * 0.06f), -w * (0.03f + Random.nextFloat() * 0.04f),
                     480f, 480f, 0xBFD6C8A0.toInt(), px * 2.2f, gravity = false)
             }
