@@ -450,7 +450,7 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             // Debug: pauza, ze které zbývá N s (adb … --ei debug_rest_left 5)
             val dbg = if (BuildConfig.DEBUG) intent.getIntExtra("debug_rest_left", -1) else -1
-            val use = if (dbg >= 0) System.currentTimeMillis() - cz.uhk.macroflow.common.AppSettings.restSeconds(this) * 1000L + dbg * 1000L else last
+            val use = if (dbg >= 0) System.currentTimeMillis() - cz.uhk.macroflow.common.AppSettings.restSeconds(this@MakromonMapActivity) * 1000L + dbg * 1000L else last
             if (use != lastSetAt) { lastSetAt = use; restExtra = 0 }
             restTick.run()
         }
