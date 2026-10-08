@@ -240,7 +240,7 @@
                                 android:includeFontPadding="false"
                                 android:text="0"
                                 android:textColor="@color/brand_cream"
-                                android:textSize="44sp" />
+                                android:textSize="40sp" />
 
                             <TextView
                                 android:id="@+id/tvCaloriesLabel"
@@ -254,20 +254,22 @@
                                 android:textSize="10sp"
                                 android:textStyle="bold" />
 
-                            <TextView
-                                android:id="@+id/tvCaloriesSub"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:background="@drawable/bg_status_pill"
-                                android:backgroundTint="#1FFEFAE0"
-                                android:paddingHorizontal="10dp"
-                                android:paddingVertical="3dp"
-                                android:textColor="@color/brand_accent_warm"
-                                android:textSize="11sp"
-                                android:textStyle="bold" />
                         </LinearLayout>
                     </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/tvCaloriesSub"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_status_pill"
+                        android:backgroundTint="#1FFEFAE0"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"
+                        android:textColor="@color/brand_accent_warm"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
 
                     <!-- legenda: snědeno / cíl a kolik zbývá -->
                     <LinearLayout
@@ -673,6 +675,17 @@
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <!-- ztmavení za oknem rituálu; klepnutím se okno zavře -->
+    <View
+        android:id="@+id/ritualScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#99283618"
+        android:clickable="true"
+        android:contentDescription="Zavřít rituál"
+        android:focusable="true"
+        android:visibility="gone" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardRitualOverlay"

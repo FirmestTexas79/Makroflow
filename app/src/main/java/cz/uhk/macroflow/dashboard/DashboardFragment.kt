@@ -59,7 +59,6 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val ritualOverlay = view.findViewById<MaterialCardView>(R.id.cardRitualOverlay)
         val coachCard = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
@@ -87,6 +86,7 @@ class DashboardFragment : Fragment() {
         }
 
         view.findViewById<View>(R.id.tvCoachCta)?.setOnClickListener { coachCard.performClick() }
+        view.findViewById<View>(R.id.ritualScrim)?.setOnClickListener { showRitual(view, false) }
         coachCard.setOnClickListener {
             lifecycleScope.launch(Dispatchers.Main) {
                 val todayCheckIn = withContext(Dispatchers.IO) {
@@ -110,17 +110,13 @@ class DashboardFragment : Fragment() {
                     view.findViewById<Slider>(R.id.sliderHunger).value = todayCheckIn.hungerLevel.toFloat()
                 }
 
-                ritualOverlay.visibility = View.VISIBLE
-                ritualOverlay.alpha = 0f
-                ritualOverlay.animate().alpha(1f).setDuration(300).start()
+                showRitual(view, true)
             }
         }
 
         btnSave.setOnClickListener {
             saveCheckInData(view)
-            ritualOverlay.animate().alpha(0f).setDuration(200).withEndAction {
-                ritualOverlay.visibility = View.GONE
-            }.start()
+            showRitual(view, false)
         }
 
         view.findViewById<TextView>(R.id.btnFoodLog)?.setOnClickListener {
@@ -430,6 +426,22 @@ class DashboardFragment : Fragment() {
             while (d.toString() in days) { n++; d = d.minusDays(1) }
             chip.visibility = if (n >= 2) View.VISIBLE else View.GONE
             chip.text = "🔥  $n ${if (n in 2..4) "dny" else "dní"} v řadě"
+        }
+    }
+
+    /** Okno ranního rituálu se ztmavením pozadí; okno lehce naskočí. */
+    private fun showRitual(view: View, show: Boolean) {
+        val card = view.findViewById<View>(R.id.cardRitualOverlay) ?: return
+        val scrim = view.findViewById<View>(R.id.ritualScrim)
+        if (show) {
+            listOf(scrim, card).forEach { it?.visibility = View.VISIBLE; it?.alpha = 0f }
+            scrim?.animate()?.alpha(1f)?.setDuration(220)?.start()
+            card.scaleX = 0.94f; card.scaleY = 0.94f
+            card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(280)
+                .setInterpolator(android.view.animation.OvershootInterpolator(1.4f)).start()
+        } else {
+            scrim?.animate()?.alpha(0f)?.setDuration(200)?.withEndAction { scrim.visibility = View.GONE }?.start()
+            card.animate().alpha(0f).scaleX(0.96f).scaleY(0.96f).setDuration(200).withEndAction { card.visibility = View.GONE }.start()
         }
     }
 

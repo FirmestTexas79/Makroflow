@@ -59,8 +59,8 @@ class MacroRingsView @JvmOverloads constructor(context: Context, attrs: Attribut
         val size = min(width, height).toFloat()
         if (size <= 0f) return
         val cx = width / 2f; val cy = height / 2f
-        val stroke = size * 0.078f
-        val gap = stroke * 0.42f
+        val stroke = size * 0.064f
+        val gap = stroke * 0.40f
         for (i in 0..2) {
             val r = size / 2f - stroke / 2f - 2f - i * (stroke + gap)
             oval.set(cx - r, cy - r, cx + r, cy + r)
