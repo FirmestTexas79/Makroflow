@@ -95,6 +95,16 @@ object StaminaStore {
     /** Zaplatí [cost]. null = nestačí (stav se nemění). */
     fun pay(ctx: Context, cost: Int): Stamina.State? = Stamina.spend(load(ctx), cost)?.also { save(ctx, it) }
 
+    /** Kolik teleportů hráč dnes použil (docs/adr/0065: 10 zdarma, pak za energii). */
+    fun teleportsToday(ctx: Context): Int = prefs(ctx).run {
+        if (getString("teleport_day", null) == LocalDate.now().toString()) getInt("teleport_used", 0) else 0
+    }
+
+    fun recordTeleport(ctx: Context) {
+        val used = teleportsToday(ctx) + 1
+        prefs(ctx).edit().putString("teleport_day", LocalDate.now().toString()).putInt("teleport_used", used).apply()
+    }
+
     /** Debug: nastaví energii přímo (adb … --es debug_stamina 30+10). */
     fun debugSet(ctx: Context, base: Int, over: Int) =
         save(ctx, load(ctx).copy(base = base.coerceIn(0, Stamina.BASE_MAX), over = over.coerceIn(0, Stamina.OVER_MAX)))

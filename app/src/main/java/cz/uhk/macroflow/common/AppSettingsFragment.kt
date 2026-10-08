@@ -179,6 +179,27 @@ class AppSettingsFragment : Fragment() {
         box.addView(row(box, R.drawable.ic_ls_lift, "Série z kamery do deníku", "Po sérii naměřené kamerou se sama zapíše váha, opakování, tempo i RIR").also { r ->
             switchOf(r, AppSettings.cameraToDiary(ctx)) { on -> AppSettings.setCameraToDiary(ctx, on) }
         })
+        box.addView(divider())
+        box.addView(row(box, R.drawable.ic_line_paw, "Skok do Makrosvěta po sérii", "Po zápisu série na chvíli vyskočí bublina „+2 ⚡ · Skok do Makrosvěta“").also { r ->
+            switchOf(r, AppSettings.gymBubble(ctx)) { on -> AppSettings.setGymBubble(ctx, on) }
+        })
+        box.addView(divider())
+        val restRow = row(box, R.drawable.ic_line_bell, "Konec pauzy v Makrosvětu", "Odpočet pauzy a výzva „Zpět na trénink“. Klepnutím na čas změníš délku pauzy")
+        switchOf(restRow, AppSettings.restReminder(ctx)) { on -> AppSettings.setRestReminder(ctx, on) }
+        restRow.findViewById<TextView>(R.id.tvSettingValue).apply {
+            fun fmt(s: Int) = "${s / 60}:${String.format(java.util.Locale.US, "%02d", s % 60)}"
+            visibility = View.VISIBLE
+            text = fmt(AppSettings.restSeconds(ctx))
+            contentDescription = "Délka pauzy ${fmt(AppSettings.restSeconds(ctx))}, klepnutím změníš"
+            setOnClickListener {
+                val opts = AppSettings.REST_OPTIONS
+                val next = opts[(opts.indexOf(AppSettings.restSeconds(ctx)) + 1).mod(opts.size)]
+                AppSettings.setRestSeconds(ctx, next)
+                text = fmt(next); contentDescription = "Délka pauzy ${fmt(next)}, klepnutím změníš"
+                performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+            }
+        }
+        box.addView(restRow)
     }
 
     // ── Promo kódy ──────────────────────────────────────────────────────────

@@ -72,7 +72,43 @@ object ZoneOne {
         data class Steps(val missing: Int) : Block()
         /** Hvozd pustí dál až po splněných úkolech. */
         data class Forest(val done: Int, val need: Int) : Block()
+        /** Na placený teleport nestačí energie (docs/adr/0065). */
+        data class Energy(val need: Int, val have: Int) : Block()
     }
+
+    // ── Teleport a energie (docs/adr/0065) ─────────────────────────────────
+
+    /** Teleportů za den zdarma; další stojí jako cesta pěšky. */
+    const val FREE_TELEPORTS = 10
+    /** Cena jednoho přechodu mezi lokacemi (Stamina.Action.TRANSITION). */
+    const val HOP_COST = 3
+
+    /** Spoje lokací – stejné jako „links“ v assets/zone/zone1.json (hlídá test). */
+    val LINKS = listOf(
+        "TOWN" to "MEADOW", "MEADOW" to "FOREST", "MEADOW" to "MOUNTAINS", "MOUNTAINS" to "SKY_PASS",
+        "MOUNTAINS" to "CAVE_OPEN", "MOUNTAINS" to "CAVE_MAZE", "CAVE_MAZE" to "MINES", "FOREST" to "HIDDEN_GROVE"
+    )
+
+    /** Počet přechodů po nejkratší cestě (BFS); null = nespojeno. */
+    fun hops(from: String, to: String): Int? {
+        if (from == to) return 0
+        val next = LINKS.flatMap { (a, b) -> listOf(a to b, b to a) }.groupBy({ it.first }, { it.second })
+        val dist = mutableMapOf(from to 0)
+        val queue = ArrayDeque(listOf(from))
+        while (queue.isNotEmpty()) {
+            val cur = queue.removeFirst()
+            for (n in next[cur].orEmpty()) if (n !in dist) {
+                dist[n] = dist.getValue(cur) + 1
+                if (n == to) return dist[n]
+                queue.addLast(n)
+            }
+        }
+        return null
+    }
+
+    /** Cena teleportu: prvních [FREE_TELEPORTS] za den zdarma, pak [HOP_COST] za každý přechod cesty. */
+    fun teleportCost(from: String, to: String, usedToday: Int): Int =
+        if (usedToday < FREE_TELEPORTS) 0 else (hops(from, to) ?: 1) * HOP_COST
 
     /**
      * [missingMountainSteps] = kolik kroků dnes chybí do zámku hor (0 = otevřeno),
@@ -80,13 +116,15 @@ object ZoneOne {
      */
     fun teleportBlock(
         target: String, current: String, seen: Set<String>,
-        missingMountainSteps: Int, forestDone: Int, forestNeed: Int
+        missingMountainSteps: Int, forestDone: Int, forestNeed: Int,
+        usedToday: Int = 0, energy: Int = Int.MAX_VALUE
     ): Block? = when {
         target == current -> Block.Here
         target in SECRET -> Block.Secret
         target !in seen -> Block.Unknown
         target in BEHIND_MOUNTAINS && missingMountainSteps > 0 -> Block.Steps(missingMountainSteps)
         target == "FOREST" && forestDone < forestNeed -> Block.Forest(forestDone, forestNeed)
+        teleportCost(current, target, usedToday) > energy -> Block.Energy(teleportCost(current, target, usedToday), energy)
         else -> null
     }
 

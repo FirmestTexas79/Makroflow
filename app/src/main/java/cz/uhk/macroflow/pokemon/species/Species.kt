@@ -537,8 +537,8 @@ object SpeciesRegistry {
             spawns = listOf(Spawn(COMMON, listOf(MOUNTAINS)))
         ),
 
-        Species("040", "HAPPINY", "Happiny", "NORMÁLNÍ / FAIRY",
-            desc = "Veselý parťák na cesty.",
+        Species("040", "LUMIVIX", "Lumivix", "VÍLA / KRYSTAL",
+            desc = "Liščátko s křídly z růžového krystalu a kamínkem na hrudi. Kde proběhne, zůstanou ve vzduchu jiskřičky. Prý má i temnou podobu.",
             hint = "Potkáš ho v divočině.",
             stats = Stats(hp = 35, atk = 12, def = 12, spd = 15),
             moves = { listOf(
@@ -546,7 +546,9 @@ object SpeciesRegistry {
                 attackCharm(),
                 attackBite()
             ) },
-            spawns = listOf(Spawn(COMMON, ALL_WILD))
+            spawns = listOf(Spawn(COMMON, ALL_WILD)),
+            type = MakromonType.FAIRY,
+            family = DropFamily.FAIRY
         )
 
     ) }

@@ -450,7 +450,7 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             // Debug: pauza, ze které zbývá N s (adb … --ei debug_rest_left 5)
             val dbg = if (BuildConfig.DEBUG) intent.getIntExtra("debug_rest_left", -1) else -1
-            val use = if (dbg >= 0) System.currentTimeMillis() - cz.uhk.macroflow.training.QuickWorkout.REST_MS + dbg * 1000L else last
+            val use = if (dbg >= 0) System.currentTimeMillis() - cz.uhk.macroflow.common.AppSettings.restSeconds(this) * 1000L + dbg * 1000L else last
             if (use != lastSetAt) { lastSetAt = use; restExtra = 0 }
             restTick.run()
         }
@@ -459,7 +459,8 @@ class MakromonMapActivity : AppCompatActivity() {
     /** Během pauzy odpočet; po jejím konci jantarová výzva „Zpět na trénink“ (+30 s jednou za pauzu). */
     private fun renderRest() {
         val left = cz.uhk.macroflow.training.QuickWorkout.restLeft(lastSetAt, System.currentTimeMillis(), restExtra,
-            cz.uhk.macroflow.training.QuickWorkout.endedAt(this))
+            cz.uhk.macroflow.training.QuickWorkout.endedAt(this), cz.uhk.macroflow.common.AppSettings.restSeconds(this) * 1000L)
+            ?.takeIf { cz.uhk.macroflow.common.AppSettings.restReminder(this) }
         if (left == null) { restPill.visibility = View.GONE; return }
         val tv = findViewById<TextView>(R.id.tvRest)
         val more = findViewById<TextView>(R.id.tvRestMore)
@@ -2894,8 +2895,13 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             val boots = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false)
             val missing = if (boots) 0 else BiomeAccess.missingSteps(BiomeType.MOUNTAINS, currentDailySteps)
-            val block = cz.uhk.macroflow.pokemon.zone.ZoneOne.teleportBlock(biome, currentBiome.name, zoneSeen,
-                missing, forestDone, cz.uhk.macroflow.pokemon.cave.ForestMap.REQUIRED_TASKS)
+            val store = cz.uhk.macroflow.pokemon.stamina.StaminaStore
+            val zone = cz.uhk.macroflow.pokemon.zone.ZoneOne
+            val used = store.teleportsToday(this@MakromonMapActivity)
+            val cost = zone.teleportCost(currentBiome.name, biome, used)
+            val block = zone.teleportBlock(biome, currentBiome.name, zoneSeen,
+                missing, forestDone, cz.uhk.macroflow.pokemon.cave.ForestMap.REQUIRED_TASKS,
+                usedToday = used, energy = store.load(this@MakromonMapActivity).total)
             val root = findViewById<FrameLayout>(R.id.mapRootContainer)
             when (block) {
                 cz.uhk.macroflow.pokemon.zone.ZoneOne.Block.Here -> showMapToast("📍 $name – tady právě stojíš.")
@@ -2905,10 +2911,21 @@ class MakromonMapActivity : AppCompatActivity() {
                     showMapToast("⛰️ $name leží za horami. Dnes ti na cestu chybí ještě ${block.missing} kroků.")
                 is cz.uhk.macroflow.pokemon.zone.ZoneOne.Block.Forest ->
                     showMapToast("🌲 Hvozd tě pustí dál, až splníš ${block.need} úkolů (máš ${block.done}).")
+                is cz.uhk.macroflow.pokemon.zone.ZoneOne.Block.Energy ->
+                    showMapToast("⚡ Dnešních ${zone.FREE_TELEPORTS} teleportů zdarma je pryč. Cesta sem stojí ${block.need} energie, máš ${block.have}.")
                 null -> cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, "Teleport", "Zóna 1 · $name") { ui, body, close ->
                     body.addView(ui.text("Vyskočíš vysoko nad Makrosvět a dopadneš rovnou na místo.", 16f, ui.inkSoft))
+                    body.addView(ui.spacer(8f))
+                    val free = zone.FREE_TELEPORTS - used
+                    body.addView(ui.text(
+                        if (cost == 0) "Zdarma · dnes ještě ${free} z ${zone.FREE_TELEPORTS} teleportů zdarma"
+                        else "Stojí $cost ⚡ (jako cesta pěšky, ${cost / zone.HOP_COST}× přechod)", 15f, ui.inkSoft))
                     body.addView(ui.spacer(12f))
-                    body.addView(ui.button("Přenést se: $name") { close(); teleportTo(target) })
+                    body.addView(ui.button(if (cost == 0) "Přenést se: $name" else "Přenést se za $cost ⚡") {
+                        if (!payStamina(cost, "teleport")) return@button
+                        store.recordTeleport(this@MakromonMapActivity)
+                        close(); teleportTo(target)
+                    })
                 }
             }
         }

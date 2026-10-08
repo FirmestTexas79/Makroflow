@@ -128,7 +128,7 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         val all = WorkoutRepository.toLogged(entities)
 
         val todayCount = entities.count { it.date == today.toString() }
-        lastTodayCount?.let { if (todayCount > it) MakrosvetBubble.show(v, todayCount) }
+        lastTodayCount?.let { if (todayCount > it && cz.uhk.macroflow.common.AppSettings.gymBubble(requireContext())) MakrosvetBubble.show(v, todayCount) }
         lastTodayCount = todayCount
 
         v.findViewById<TextView>(R.id.tvSessionTitle).text = requireArguments().getString(ARG_TITLE) ?: WorkoutTemplates.label(key())

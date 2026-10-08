@@ -53,4 +53,19 @@ object AppSettings {
     /** Série naměřené kamerou se samy zapíšou do tréninkového deníku (docs/adr/0027). */
     fun cameraToDiary(ctx: Context) = prefs(ctx).getBoolean(K_CAMERA_DIARY, true)
     fun setCameraToDiary(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(K_CAMERA_DIARY, on).apply()
+
+    // ── Posilovna ↔ Makrosvět (docs/adr/0065, bod 5) ─────────────────────────
+
+    /** Bublina „+2 ⚡ · Skok do Makrosvěta“ po zápisu série. */
+    fun gymBubble(ctx: Context) = prefs(ctx).getBoolean("gym_bubble", true)
+    fun setGymBubble(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean("gym_bubble", on).apply()
+
+    /** Odpočet pauzy a výzva „Zpět na trénink“ v Makrosvětu. */
+    fun restReminder(ctx: Context) = prefs(ctx).getBoolean("rest_reminder", true)
+    fun setRestReminder(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean("rest_reminder", on).apply()
+
+    /** Délka pauzy mezi sériemi v sekundách. */
+    val REST_OPTIONS = listOf(60, 90, 120, 150, 180, 240, 300)
+    fun restSeconds(ctx: Context) = prefs(ctx).getInt("rest_seconds", 180)
+    fun setRestSeconds(ctx: Context, s: Int) = prefs(ctx).edit().putInt("rest_seconds", s).apply()
 }

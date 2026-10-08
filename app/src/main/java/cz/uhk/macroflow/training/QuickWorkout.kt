@@ -102,10 +102,10 @@ object QuickWorkout {
      * null = žádný aktivní trénink: žádná série za posledních 45 min, nebo byl trénink po poslední
      * sérii ukončen ([endedAt], Hotovo / Zrušit).
      */
-    fun restLeft(lastSetAt: Long, now: Long, extraMs: Long = 0, endedAt: Long = 0): Long? {
+    fun restLeft(lastSetAt: Long, now: Long, extraMs: Long = 0, endedAt: Long = 0, restMs: Long = REST_MS): Long? {
         if (lastSetAt <= 0 || now < lastSetAt || now - lastSetAt > ACTIVE_WINDOW_MS) return null
         if (endedAt >= lastSetAt) return null
-        return lastSetAt + REST_MS + extraMs - now
+        return lastSetAt + restMs + extraMs - now
     }
 
     fun endedAt(ctx: Context): Long = prefs(ctx).getLong(K_ENDED, 0)

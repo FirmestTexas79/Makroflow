@@ -211,6 +211,8 @@ abstract class AppDatabase : RoomDatabase() {
          */
         private fun renumberSpecies(db: SupportSQLiteDatabase) {
             runCatching { db.execSQL("UPDATE captured_pokemon SET makromonId = '032' WHERE name = 'MYSNIC' AND makromonId <> '032'") }
+            // Happiny → Lumivix (2026-10-08): původní jméno patřilo cizí značce
+            runCatching { db.execSQL("UPDATE captured_pokemon SET name = 'LUMIVIX' WHERE name = 'HAPPINY'") }
         }
 
         /** Makrodex z registru druhů (docs/adr/0067); zapisuje se při každém otevření, verzi DB netřeba zvedat. */
