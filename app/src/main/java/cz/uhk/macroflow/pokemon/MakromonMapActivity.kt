@@ -138,8 +138,12 @@ class MakromonMapActivity : AppCompatActivity() {
         // kdy byl poutník naposledy na mapě – pro ranní sny (docs/adr/0057); onPause to přepíše
         launchLastSeen = getSharedPreferences("GamePrefs", Context.MODE_PRIVATE).getLong("map_last_seen", 0L)
         setContentView(R.layout.activity_pokemon_map)
-        if (savedInstanceState == null && intent.getBooleanExtra(EXTRA_PORTAL, false))
-            PortalTransitionView.reveal(findViewById(android.R.id.content))
+        // první vstup: dlouhý úvod (docs/adr/0072), jinak krátké odkrytí (0070)
+        val debugIntro = BuildConfig.DEBUG && intent.getBooleanExtra("debug_intro", false)
+        if (savedInstanceState == null && (debugIntro || intent.getBooleanExtra(EXTRA_PORTAL, false))) {
+            if (debugIntro || IntroFlyoverView.shouldPlay(this)) IntroFlyoverView.play(findViewById(android.R.id.content))
+            else PortalTransitionView.reveal(findViewById(android.R.id.content))
+        }
 
         mapBackground = findViewById(R.id.mapBackground)
         mapWorld = findViewById(R.id.mapWorld)
