@@ -36,9 +36,8 @@ class DayPlannerTest {
         assertTrue("kcal ${best.total.kcal}", abs(best.total.kcal - target.kcal) / target.kcal < 0.08)
         assertTrue("protein ${best.total.p}", abs(best.total.p - target.p) / target.p < 0.12)
         best.meals.forEach { m ->
-            assertTrue(m.portions in 0.5..2.5)
-            assertEquals(0.0, m.portions % DayPlanner.STEP, 1e-9)
-            assertEquals(m.slot.kind, m.option.kind)
+            m.portions.forEach { assertTrue(it in 0.5..2.5); assertEquals(0.0, it % DayPlanner.STEP, 1e-9) }
+            assertTrue(m.slot.kind in m.option.kinds)
         }
         assertEquals("žádný recept dvakrát", best.meals.size, best.meals.map { it.option.id }.toSet().size)
     }
@@ -62,5 +61,23 @@ class DayPlannerTest {
         assertTrue(plans.size > 1)
         assertEquals(plans.size, plans.map { p -> p.meals.map { it.option.id }.toSet() }.toSet().size)
         assertTrue(plans.zipWithNext().all { (a, b) -> a.score <= b.score })
+    }
+
+    @Test fun pantryPlatesFillTheDay() {
+        fun snack(id: Int, name: String, p: Float, s: Float, t: Float) =
+            cz.uhk.macroflow.data.SnackEntity(id, name, "100 g", p, s, t, false, 0f, 0f)
+        val pantry = listOf(
+            snack(1, "Kuřecí prsa", 31f, 0f, 3.6f), snack(2, "Rýže vařená", 2.7f, 28f, 0.3f),
+            snack(3, "Brokolice", 2.8f, 4f, 0.4f), snack(4, "Řecký jogurt", 10f, 3.6f, 0.4f),
+            snack(5, "Ovesné vločky", 13f, 60f, 7f), snack(6, "Arašídové máslo", 25f, 12f, 50f)
+        )
+        val opts = PantryPlates.options(pantry)
+        val plate = opts.first { Kind.MAIN in it.kinds }
+        assertEquals(3, plate.parts.size)                                   // maso + příloha + zelenina
+        assertEquals("Kuřecí prsa", PantryPlates.parts(plate.id, pantry).first().snack.name)   // nejoblíbenější bílkovina
+        assertEquals("Brokolice", PantryPlates.parts(plate.id, pantry).last().snack.name)
+        val best = DayPlanner.plans(target, Nutr.ZERO, Slot.entries, opts).first()
+        assertTrue("kcal ${best.total.kcal}", abs(best.total.kcal - target.kcal) / target.kcal < 0.1)
+        best.meals.forEach { m -> m.option.parts.zip(m.portions).forEach { (pt, k) -> assertTrue(k in pt.minPortion..pt.maxPortion) } }
     }
 }

@@ -162,6 +162,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (cz.uhk.macroflow.pokemon.PortalTransitionView.pendingExitReveal) {
+            cz.uhk.macroflow.pokemon.PortalTransitionView.pendingExitReveal = false
+            cz.uhk.macroflow.pokemon.PortalTransitionView.reveal(window.decorView as android.view.ViewGroup, exit = true)
+        }
         // Refresh Pokémona (mohl se změnit zatímco jsme byli v jiné aktivitě)
         updateMakromonVisibility()
         // Denní XP — controller si hlídá aby se nedalo vícekrát za den

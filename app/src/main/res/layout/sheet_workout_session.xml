@@ -20,7 +20,8 @@
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingBottom="32dp">
 
@@ -130,4 +131,93 @@
                 android:textSize="11sp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <!-- Pauza po sérii podle cviku (docs/adr/0071) – připnutá dole, ať je vidět při scrollování -->
+    <LinearLayout
+        android:id="@+id/restBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_status_pill"
+        android:backgroundTint="@color/brand_dark"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="10dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvRestLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:letterSpacing="0.1"
+                android:maxLines="1"
+                android:textColor="@color/brand_accent_warm"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvRestTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:textColor="@color/brand_cream"
+                android:textSize="26sp" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/bg_status_pill"
+                android:backgroundTint="@color/brand_cream_alpha40">
+
+                <View
+                    android:id="@+id/restProgress"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_status_pill"
+                    android:backgroundTint="@color/brand_accent_warm"
+                    android:transformPivotX="0dp" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btnRestMore"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_status_pill"
+            android:backgroundTint="@color/brand_cream_alpha40"
+            android:contentDescription="Prodloužit pauzu o 30 sekund"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:paddingHorizontal="14dp"
+            android:text="+30 s"
+            android:textColor="@color/brand_cream"
+            android:textSize="13sp" />
+
+        <ImageButton
+            android:id="@+id/btnRestSkip"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Ukončit pauzu"
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close"
+            app:tint="@color/brand_cream" />
+    </LinearLayout>
 </LinearLayout>

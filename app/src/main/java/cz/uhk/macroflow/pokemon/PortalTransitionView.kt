@@ -31,9 +31,15 @@ import kotlin.random.Random
  *    naskočí MAKROSVĚT, keře zašustí a vyskočí z nich makromoni, kteří přeběhnou přes obrazovku
  *    (poskakování, prach od tlapek, lístky z keře),
  *  - [reveal] (mapa): stejná scéna bez makromonů se od středu rozpadne a odhalí svět.
+ * Odchod ([exit]): totéž obráceně – nad mapou se složí scéna s nápisem MAKROFLOW, makromoni
+ * přiběhnou z okrajů a schovají se do keřů, v aplikaci se scéna rozpadne.
  * Mřížka i scéna se počítají ze šířky obrazovky, takže obě poloviny na sebe navazují.
  */
-class PortalTransitionView(context: Context, private val covering: Boolean) : View(context) {
+class PortalTransitionView(context: Context, private val covering: Boolean, private val exit: Boolean = false) : View(context) {
+
+    private val label = if (exit) "MAKROFLOW" else "MAKROSVĚT"
+    private val tilesMs = if (exit) EXIT_TILES_MS else TILES_MS
+    private val titleAt = if (exit) EXIT_TITLE_AT else TITLE_AT
 
     /** ms od začátku přechodu */
     var time = 0f
@@ -81,15 +87,22 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         isClickable = true   // během přechodu nic neprokliknout
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         if (covering) {
-            val picks = SIDE.shuffled().take(DELAYS.size)
+            val delays = if (exit) EXIT_DELAYS else DELAYS
+            val picks = SIDE.shuffled().take(delays.size)
             picks.forEachIndexed { i, id ->
                 val right = i % 3 != 1
-                runners += Runner(id, right, DELAYS[i], 820f + Random.nextFloat() * 160f, 0.2f + Random.nextFloat() * 0.07f,
-                    mirror = if (right) id in FACES_LEFT else id in FACES_RIGHT)
+                val run = if (exit) 640f + Random.nextFloat() * 120f else 820f + Random.nextFloat() * 160f
+                // při odchodu běží obráceně (od okraje do keře) → kouká na druhou stranu
+                val facesLeft = id in FACES_LEFT
+                runners += Runner(id, right, delays[i], run, 0.2f + Random.nextFloat() * 0.07f,
+                    mirror = if (right != exit) facesLeft else !facesLeft)
             }
             val owlRight = Random.nextBoolean()
-            flyers += Flyer("38", owlRight, 560f, 1700f, 0.15f, 0.17f)
-            flyers += Flyer("19", !owlRight, 1000f, 1350f, 0.47f, 0.21f)
+            if (exit) flyers += Flyer("38", owlRight, 300f, 1300f, 0.15f, 0.17f)
+            else {
+                flyers += Flyer("38", owlRight, 560f, 1700f, 0.15f, 0.17f)
+                flyers += Flyer("19", !owlRight, 1000f, 1350f, 0.47f, 0.21f)
+            }
         }
         // spritů je 640 px – dekódovat mimo hlavní vlákno, dlaždice je zatím zakryjí
         Thread {
@@ -113,7 +126,7 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
         if (w <= 0f) return
-        val p = if (covering) (time / TILES_MS).coerceIn(0f, 1f) else ((time - HOLD_MS) / REVEAL_MS).coerceIn(0f, 1f)
+        val p = if (covering) (time / tilesMs).coerceIn(0f, 1f) else ((time - HOLD_MS) / REVEAL_MS).coerceIn(0f, 1f)
 
         // dlaždice jako ořez – uvnitř nich je celá scéna
         tiles.rewind()
@@ -153,17 +166,17 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         while (x < w) { dst.set(x, top, x + gw, top + gh); canvas.drawBitmap(grass, null, dst, pixels); x += gw }
 
         // nápis
-        val a = if (covering) ((time - TITLE_AT) / 260f).coerceIn(0f, 1f) else 1f - ((time - HOLD_MS) / (REVEAL_MS * 0.4f)).coerceIn(0f, 1f)
+        val a = if (covering) ((time - titleAt) / 260f).coerceIn(0f, 1f) else 1f - ((time - HOLD_MS) / (REVEAL_MS * 0.4f)).coerceIn(0f, 1f)
         if (a > 0f) {
-            val pop = if (covering) 1f + 0.25f * (1f - ease(((time - TITLE_AT) / 360f).coerceIn(0f, 1f))) else 1f
+            val pop = if (covering) 1f + 0.25f * (1f - ease(((time - titleAt) / 360f).coerceIn(0f, 1f))) else 1f
             val size = w / 6.4f * pop
             title.textSize = size; titleShadow.textSize = size
             val ty = h * 0.34f
             val sh = max(2f, size / 14f)
             val al = (a * 255).toInt(); title.alpha = al; titleShadow.alpha = al; accent.alpha = al
-            canvas.drawText(TITLE, w / 2f + sh, ty + sh, titleShadow)
-            canvas.drawText(TITLE, w / 2f, ty, title)
-            val lw = title.measureText(TITLE) * 0.55f * a
+            canvas.drawText(label, w / 2f + sh, ty + sh, titleShadow)
+            canvas.drawText(label, w / 2f, ty, title)
+            val lw = title.measureText(label) * 0.55f * a
             canvas.drawRect(w / 2f - lw / 2f, ty + sh * 3, w / 2f + lw / 2f, ty + sh * 5, accent)
         }
 
@@ -199,8 +212,8 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         val bw = w * BUSH_W; val bh = bw * bmp.height / bmp.width
         val bx = if (left) w * 0.1f else w * 0.9f
         val by = feet(h) + bh * 0.08f
-        val busy = covering && runners.any { it.right == left && time in it.start - 260f..it.start + HOP_MS * 0.6f }
-        val idle = covering && time > TILES_MS
+        val busy = covering && runners.any { it.right == left && local(it) in -260f..HOP_MS * 0.6f }
+        val idle = covering && time > tilesMs
         val amp = when { busy -> 3.2f; idle -> 0.8f; else -> 0f }
         val rot = amp * sin(time / 40f)
         canvas.save()
@@ -243,12 +256,22 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         canvas.restore()
     }
 
-    /** 0 … HOP_MS výskok z keře, pak běh; −1 = ještě ne, >1 hotovo (v jednotkách celého běhu). */
-    private fun phase(r: Runner): Float = (time - r.start) / (HOP_MS + r.run)
+    /**
+     * Čas běhu „jako při příchodu“: 0 = v keři, HOP_MS = doskočil, HOP_MS + run = za okrajem.
+     * Při odchodu běží pozpátku (z okraje do keře). Mimo běh vychází < 0 nebo > celek.
+     */
+    private fun local(r: Runner): Float {
+        val e = time - r.start
+        return if (exit) HOP_MS + r.run - e else e
+    }
+
+    /** podíl celého běhu (0 = v keři) */
+    private fun phase(r: Runner): Float = if (time < r.start) -1f else local(r) / (HOP_MS + r.run)
 
     private fun drawRunner(canvas: Canvas, r: Runner, w: Float, h: Float) {
         val bmp = r.bmp ?: return
-        val t = time - r.start
+        if (time < r.start) return
+        val t = local(r)
         if (t < 0f || t > HOP_MS + r.run) return
         val s = w * r.size
         val dir = if (r.right) 1f else -1f
@@ -291,9 +314,10 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         if (!covering || width == 0 || dt <= 0f) return
         val w = width.toFloat(); val h = height.toFloat(); val px = px(w)
         runners.forEach { r ->
-            val t = time + dt - r.start
+            if (time < r.start) return@forEach
+            val t = local(r)
             val bushX = if (r.right) w * 0.1f else w * 0.9f
-            if (!r.burst && t >= 0f) {
+            if (!r.burst && (if (exit) t <= 0f else t >= 0f)) {
                 r.burst = true
                 repeat(9) {
                     bits += Bit(bushX + (Random.nextFloat() - 0.5f) * w * 0.18f, feet(h) - w * BUSH_W * 0.45f,
@@ -306,8 +330,8 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
                 val k = ((t - HOP_MS) / r.run).coerceIn(0f, 1f)
                 val land = bushX + (if (r.right) 1f else -1f) * w * 0.13f
                 val end = if (r.right) w + w * r.size else -w * r.size
-                val x = land + (end - land) * k.pow(1.55f) - (if (r.right) 1f else -1f) * w * r.size * 0.22f
-                val back = if (r.right) -1f else 1f
+                val x = land + (end - land) * k.pow(1.55f) + back * w * r.size * 0.22f
+                val back = (if (r.right) -1f else 1f) * (if (exit) -1f else 1f)
                 bits += Bit(x, feet(h) - px * 2, back * w * (0.06f + Random.nextFloat() * 0.06f), -w * (0.03f + Random.nextFloat() * 0.04f),
                     480f, 480f, 0xBFD6C8A0.toInt(), px * 2.2f, gravity = false)
             }
@@ -329,7 +353,6 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
     companion object {
         private const val COLS = 9
         private const val SPREAD = 0.55f
-        private const val TITLE = "MAKROSVĚT"
         private const val BUSH_W = 0.34f
         /** kde je ve spritu (640 × 640) pata – podíl výšky od spodu */
         private const val SPRITE_FOOT = 0.94f
@@ -341,6 +364,10 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         private const val GAIT_MS = 270f
         private val DELAYS = floatArrayOf(560f, 760f, 980f, 1180f)
         private const val COVER_MS = 2450L
+        private val EXIT_DELAYS = floatArrayOf(380f, 560f, 760f)
+        private const val EXIT_TILES_MS = 440f
+        private const val EXIT_TITLE_AT = 240f
+        private const val EXIT_COVER_MS = 1750L
         private const val HOLD_MS = 120f
         private const val REVEAL_MS = 700f
 
@@ -350,16 +377,19 @@ class PortalTransitionView(context: Context, private val covering: Boolean) : Vi
         private val SIDE = FACES_LEFT + FACES_RIGHT
 
         /** Překryje [root] a po dokončení zavolá [then]; overlay zůstává, odstraní ho volající. */
-        fun cover(root: ViewGroup, then: () -> Unit): PortalTransitionView {
-            val v = PortalTransitionView(root.context, covering = true)
+        fun cover(root: ViewGroup, exit: Boolean = false, then: () -> Unit): PortalTransitionView {
+            val v = PortalTransitionView(root.context, covering = true, exit = exit)
             root.addView(v, ViewGroup.LayoutParams(-1, -1))
-            run(v, COVER_MS, 0) { then() }
+            run(v, if (exit) EXIT_COVER_MS else COVER_MS, 0) { then() }
             return v
         }
 
-        /** Odhalí [root] (mapa), overlay se na konci sám odstraní. */
-        fun reveal(root: ViewGroup) {
-            val v = PortalTransitionView(root.context, covering = false)
+        /** Odchod z Makrosvěta proběhl – aplikace po návratu scénu rozpustí ([reveal] s exit). */
+        @JvmStatic var pendingExitReveal = false
+
+        /** Odhalí [root] (mapa / po odchodu aplikace), overlay se na konci sám odstraní. */
+        fun reveal(root: ViewGroup, exit: Boolean = false) {
+            val v = PortalTransitionView(root.context, covering = false, exit = exit)
             root.addView(v, ViewGroup.LayoutParams(-1, -1))
             v.post { run(v, (HOLD_MS + REVEAL_MS).toLong(), 0) { root.removeView(v) } }
         }

@@ -30,6 +30,9 @@ import cz.uhk.macroflow.data.ConsumedSnackEntity
 import cz.uhk.macroflow.nutrition.FoodLog
 import cz.uhk.macroflow.nutrition.MealBuilderSheet
 import cz.uhk.macroflow.nutrition.MealRepeat
+import cz.uhk.macroflow.nutrition.SnackCatalog
+import cz.uhk.macroflow.data.SnackEntity
+import kotlinx.coroutines.flow.first
 import cz.uhk.macroflow.nutrition.recipes.FitnessRecipes
 import cz.uhk.macroflow.nutrition.plan.DayPlanner.Nutr
 import kotlinx.coroutines.Dispatchers
@@ -54,8 +57,15 @@ class DayPlanSheet : BottomSheetDialogFragment() {
 
     private data class State(
         val target: MacroResult, val eaten: Nutr, val staples: List<Pair<MealRepeat.Item, Boolean>>,
-        val slots: List<DayPlanner.Slot>, val plans: List<DayPlanner.Plan>
+        val slots: List<DayPlanner.Slot>, val plans: List<DayPlanner.Plan>, val pantry: List<SnackEntity>
     )
+
+    /** Z čeho skládat návrh – volba se pamatuje. */
+    private enum class Source(val label: String) { ALL("Vše"), RECIPES("Recepty"), PANTRY("Špajzka") }
+    private var source: Source
+        get() = runCatching { Source.valueOf(prefs().getString("plan_source", null) ?: "") }.getOrDefault(Source.ALL)
+        set(v) = prefs().edit().putString("plan_source", v.name).apply()
+    private fun prefs() = requireContext().getSharedPreferences("NutritionPrefs", android.content.Context.MODE_PRIVATE)
 
     private lateinit var root: LinearLayout
     private var state: State? = null
@@ -90,6 +100,7 @@ class DayPlanSheet : BottomSheetDialogFragment() {
 
     private fun load() {
         val app = requireContext().applicationContext
+        val src = source
         lifecycleScope.launch {
             state = withContext(Dispatchers.IO) {
                 val target = MacroCalculator.calculate(app)
@@ -100,7 +111,10 @@ class DayPlanSheet : BottomSheetDialogFragment() {
                 val now = LocalTime.now().let { it.hour * 60 + it.minute }
                 val slots = DayPlanner.openSlots(now, today.mapNotNull { MealRepeat.minutes(it.time) })
                 val goal = Nutr(target.calories, target.protein, target.carbs, target.fat)
-                State(target, eaten, staples, slots, DayPlanner.plans(goal, eaten + pending, slots, recipeOptions()))
+                val pantry = AppDatabase.getDatabase(app).snackDao().getAllSnacksSmart(System.currentTimeMillis()).first()
+                val options = (if (src != Source.PANTRY) recipeOptions() else emptyList()) +
+                    (if (src != Source.RECIPES) PantryPlates.options(pantry) else emptyList())
+                State(target, eaten, staples, slots, DayPlanner.plans(goal, eaten + pending, slots, options), pantry)
             }
             planIndex = 0
             if (isAdded) render()
@@ -139,13 +153,15 @@ class DayPlanSheet : BottomSheetDialogFragment() {
         }, full().apply { topMargin = dp(8) })
 
         section("NÁVRH NA ZBYTEK DNE")
+        sourceChips()
         val plan = s.plans.getOrNull(planIndex)
         val left = s.target.calories - (s.eaten + pendingStaples(s)).kcal
         if (plan == null) {
             root.addView(note(when {
                 left < DayPlanner.DONE_KCAL -> "Na dnešek máš splněno. Další jídlo už cíl nepotřebuje."
                 s.slots.isEmpty() -> "Dnešní jídla už proběhla. Zbývá ${kcal(left)} – stačí menší svačina."
-                else -> "Pro tenhle zbytek dne se nic z receptů nehodí."
+                source == Source.PANTRY && s.pantry.isEmpty() -> "Špajzka je prázdná. Přidej si potraviny, nebo přepni na recepty."
+                else -> "Pro tenhle zbytek dne se nic nehodí. Zkus jiný zdroj."
             }), full())
             return
         }
@@ -223,30 +239,78 @@ class DayPlanSheet : BottomSheetDialogFragment() {
         }
     }
 
+    private fun sourceChips() {
+        val row = LinearLayout(requireContext()).apply { orientation = LinearLayout.HORIZONTAL }
+        Source.entries.forEach { src ->
+            val on = src == source
+            row.addView(text(src.label, 13f, if (on) c(R.color.brand_cream) else c(R.color.brand_dark), black).apply {
+                gravity = Gravity.CENTER; setPadding(dp(16), dp(8), dp(16), dp(8))
+                background = round(100, if (on) c(R.color.brand_dark) else c(R.color.brand_dark_alpha05))
+                isClickable = true; contentDescription = "Zdroj návrhu: ${src.label}" + if (on) ", vybráno" else ""
+                setOnClickListener { v -> if (!on) { v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); source = src; load() } }
+            }, wrap().apply { marginEnd = dp(8) })
+        }
+        root.addView(row, full().apply { topMargin = dp(8); bottomMargin = dp(2) })
+    }
+
     private fun mealCard(m: DayPlanner.Meal) {
-        val r = FitnessRecipes.ALL.first { it.id == m.option.id }
+        val s = state ?: return
+        val recipe = FitnessRecipes.ALL.firstOrNull { it.id == m.option.id }
+        val pantryParts = if (recipe == null) PantryPlates.parts(m.option.id, s.pantry) else emptyList()
         val n = m.nutr
+        val name = recipe?.name ?: m.option.name
+        val amount = if (recipe != null) portions(m.portions[0])
+            else pantryParts.zip(m.portions).joinToString(" · ") { (item, k) -> "${grams((item.grams * k).toFloat())} ${unit(item)}" }
         val card = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(8), dp(8), dp(14), dp(8))
             background = round(20, c(R.color.brand_dark_alpha05)).apply { setStroke(dp(1), c(R.color.brand_dark_alpha12)) }
             isClickable = true
-            contentDescription = "${m.slot.label}: ${r.name}, ${portions(m.portions)}"
-            setOnClickListener { v -> v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); openMeal(r, m.portions) }
+            contentDescription = "${m.slot.label}: $name, $amount"
+            setOnClickListener { v ->
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                if (recipe != null) openMeal(recipe, m.portions[0]) else openPantry(name, pantryParts, m.portions)
+            }
         }
-        val photo = resources.getIdentifier(r.photo, "drawable", requireContext().packageName)
-        card.addView(ShapeableImageView(requireContext()).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            shapeAppearanceModel = ShapeAppearanceModel.builder().setAllCornerSizes(dp(14).toFloat()).build()
-            if (photo != 0) setImageResource(photo)
-        }, LinearLayout.LayoutParams(dp(68), dp(68)))
+        if (recipe != null) {
+            val photo = resources.getIdentifier(recipe.photo, "drawable", requireContext().packageName)
+            card.addView(ShapeableImageView(requireContext()).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                shapeAppearanceModel = ShapeAppearanceModel.builder().setAllCornerSizes(dp(14).toFloat()).build()
+                if (photo != 0) setImageResource(photo)
+            }, LinearLayout.LayoutParams(dp(68), dp(68)))
+        } else {
+            // talíř ze špajzky: miska v barvě značky
+            card.addView(ImageView(requireContext()).apply {
+                setImageResource(R.drawable.ic_line_bowl); setColorFilter(c(R.color.brand_cream))
+                setPadding(dp(18), dp(18), dp(18), dp(18)); background = round(14, c(R.color.brand_primary))
+            }, LinearLayout.LayoutParams(dp(68), dp(68)))
+        }
         val info = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), 0, 0, 0) }
-        info.addView(text("${m.slot.label.uppercase(Locale.ROOT)} · ${portions(m.portions).uppercase(Locale.ROOT)}", 9.5f, c(R.color.brand_accent_deep), bold = true).apply { letterSpacing = 0.1f })
-        info.addView(text(r.name, 14.5f, c(R.color.brand_dark), black).apply { maxLines = 2 })
+        val tag = if (recipe != null) amount else "ZE ŠPAJZKY"
+        info.addView(text("${m.slot.label.uppercase(Locale.ROOT)} · ${tag.uppercase(Locale.ROOT)}", 9.5f, c(R.color.brand_accent_deep), bold = true).apply { letterSpacing = 0.1f })
+        info.addView(text(name, 14.5f, c(R.color.brand_dark), black).apply { maxLines = 2 })
+        if (recipe == null) info.addView(text(amount, 12f, c(R.color.brand_dark)).apply { maxLines = 2 })
         info.addView(text("${n.kcal.roundToInt()} kcal · B ${g(n.p)} · S ${g(n.s)} · T ${g(n.t)}", 12f, c(R.color.brand_dark)).apply { alpha = 0.65f })
         card.addView(info, LinearLayout.LayoutParams(0, -2, 1f))
         card.addView(text("›", 22f, c(R.color.brand_dark), black).apply { alpha = 0.4f })
         root.addView(card, full().apply { topMargin = dp(8) })
+    }
+
+    private fun unit(i: PantryPlates.Item) = SnackCatalog.unit(i.snack.weight)
+    private fun grams(v: Float) = if (v >= 20f) ((v / 5f).roundToInt() * 5).toString() else v.roundToInt().toString()
+
+    /** Talíř ze špajzky do Složit jídlo – každá potravina s dopočítanými gramy. */
+    private fun openPantry(name: String, parts: List<PantryPlates.Item>, portions: List<Double>) {
+        val items = parts.zip(portions).map { (item, k) ->
+            val sn = item.snack
+            val per = item.grams.coerceAtLeast(1f)
+            val v = SnackCatalog.scale(sn, per)
+            MealBuilderSheet.Ingredient(sn.name, grams(item.grams * k.toFloat()).toFloat(), v.p / per, v.s / per, v.t / per, v.fiber / per, v.kj / per)
+        }
+        MealBuilderSheet(isPre).prefill(name, items, "IDEÁLNÍ DEN · ZE ŠPAJZKY",
+            "Gramy jsou spočítané tak, aby den vyšel na cíl. Uprav je podle sebe a zapiš.").show(parentFragmentManager, "MealBuilder")
+        dismiss()
     }
 
     private fun resultCard(plan: DayPlanner.Plan, s: State) {

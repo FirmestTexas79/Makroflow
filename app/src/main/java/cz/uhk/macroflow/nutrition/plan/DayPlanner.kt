@@ -9,7 +9,8 @@ import kotlin.math.roundToInt
  * Cíl dne (kcal, B, S, T) dává [cz.uhk.macroflow.dashboard.MacroCalculator] – predikce výdeje
  * (BMR + NEAT + kroky do konce dne + trénink + TEF, adaptivně korigovaná vážením).
  * Od něj se odečte snědené a pevné položky dne (shake …), které ještě nejsou zapsané.
- * Zbytek se rozdělí do volných jídel dne: pro každou kombinaci receptů se hledají porce x_i
+ * Zbytek se rozdělí do volných jídel dne: pro každou kombinaci jídel (recepty, talíře ze špajzky)
+ * se hledají porce x_i každé složky (recept = 1 složka, talíř = maso, příloha, zelenina zvlášť)
  * minimalizující vážené relativní odchylky od cíle
  *
  *     Σ_j w_j · ((base_j + Σ_i a_ij·x_i − T_j) / T_j)²  +  λ · Σ_i (x_i − 1)²  +  c · počet jídel
@@ -38,14 +39,18 @@ object DayPlanner {
         DINNER("Večeře", 17 * 60 + 30, 22 * 60, Kind.MAIN)
     }
 
-    /** Jídlo, které jde navrhnout: makra jedné porce a rozsah porcí. */
-    data class Option(
-        val id: String, val name: String, val kind: Kind, val perPortion: Nutr,
-        val minPortion: Double = 0.5, val maxPortion: Double = 2.5
-    )
+    /** Složka jídla: makra výchozí porce a rozsah porcí. */
+    data class Part(val name: String, val perPortion: Nutr, val minPortion: Double = 0.5, val maxPortion: Double = 2.5)
 
-    data class Meal(val slot: Slot, val option: Option, val portions: Double) {
-        val nutr: Nutr get() = option.perPortion * portions
+    /** Jídlo, které jde navrhnout, a do kterých jídel dne se hodí. */
+    data class Option(val id: String, val name: String, val kinds: Set<Kind>, val parts: List<Part>) {
+        /** Recept: jedna složka. */
+        constructor(id: String, name: String, kind: Kind, perPortion: Nutr) : this(id, name, setOf(kind), listOf(Part(name, perPortion)))
+    }
+
+    /** [portions] = násobek výchozí porce pro každou složku. */
+    data class Meal(val slot: Slot, val option: Option, val portions: List<Double>) {
+        val nutr: Nutr get() = option.parts.indices.fold(Nutr.ZERO) { a, i -> a + option.parts[i].perPortion * portions[i] }
     }
 
     /** [total] = snědené + pevné položky + navržená jídla. */
@@ -80,39 +85,43 @@ object DayPlanner {
     private fun pick(slots: List<Slot>, options: List<Option>, i: Int, acc: ArrayList<Option>, emit: (List<Option>) -> Unit) {
         if (i == slots.size) { emit(acc.toList()); return }
         for (o in options) {
-            if (o.kind != slots[i].kind || acc.any { it.id == o.id }) continue
+            if (slots[i].kind !in o.kinds || acc.any { it.id == o.id }) continue
             acc += o; pick(slots, options, i + 1, acc, emit); acc.removeAt(acc.lastIndex)
         }
     }
 
     private fun fit(target: Nutr, base: Nutr, slots: List<Slot>, picks: List<Option>): Plan {
-        val n = picks.size
-        val rem = target - base
+        val parts = picks.flatMap { it.parts }
+        val n = parts.size
         val x = DoubleArray(n) { 1.0 }
-        repeat(40) {
+        val total = DoubleArray(4) { j -> base[j] + parts.sumOf { it.perPortion[j] } }
+        val w = DoubleArray(4) { j -> W[j] / sq(max(target[j], 1.0)) }
+        repeat(30) {
             for (i in 0 until n) {
+                val a = parts[i].perPortion
                 var num = LAMBDA; var den = LAMBDA
                 for (j in 0..3) {
-                    val w = W[j] / sq(max(target[j], 1.0))
-                    var other = 0.0
-                    for (k in 0 until n) if (k != i) other += picks[k].perPortion[j] * x[k]
-                    val a = picks[i].perPortion[j]
-                    num += w * a * (rem[j] - other); den += w * a * a
+                    val rest = target[j] - (total[j] - a[j] * x[i])   // co má složka i dorovnat
+                    num += w[j] * a[j] * rest; den += w[j] * a[j] * a[j]
                 }
-                x[i] = (num / den).coerceIn(picks[i].minPortion, picks[i].maxPortion)
+                val nx = (num / den).coerceIn(parts[i].minPortion, parts[i].maxPortion)
+                for (j in 0..3) total[j] += a[j] * (nx - x[i])
+                x[i] = nx
             }
         }
-        val meals = picks.indices.map { i ->
-            val q = ((x[i] / STEP).roundToInt() * STEP).coerceIn(picks[i].minPortion, picks[i].maxPortion)
-            Meal(slots[i], picks[i], q)
+        var k = 0
+        val meals = picks.mapIndexed { m, o ->
+            Meal(slots[m], o, o.parts.map { pt ->
+                ((x[k++] / STEP).roundToInt() * STEP).coerceIn(pt.minPortion, pt.maxPortion)
+            })
         }
-        val total = meals.fold(base) { acc, m -> acc + m.nutr }
-        return Plan(meals, total, score(total, target, meals))
+        val sum = meals.fold(base) { acc, m -> acc + m.nutr }
+        return Plan(meals, sum, score(sum, target, meals))
     }
 
     fun score(total: Nutr, target: Nutr, meals: List<Meal>): Double =
         (0..3).sumOf { j -> W[j] * sq((total[j] - target[j]) / max(target[j], 1.0)) } +
-            meals.sumOf { LAMBDA * sq(it.portions - 1.0) } + MEAL_COST * meals.size
+            meals.sumOf { m -> m.portions.sumOf { LAMBDA * sq(it - 1.0) } } + MEAL_COST * meals.size
 
     private fun sq(v: Double) = v * v
 }

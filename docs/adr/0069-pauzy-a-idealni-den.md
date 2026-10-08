@@ -26,4 +26,8 @@ Stav: přijato (2026-10-08)
 - Pevné položky (`DailyStaples`, prefs ve formátu šablon MealRepeat): skládají se ve Složit jídlo
   v režimu „Každý den“, v plánu se zapíšou jedním klepnutím, za snědené se považují podle názvu v deníku.
 - Vstup: Přidat jídlo → „Ideální den“. Návrh → Složit jídlo s gramy dopočítanými na cíl.
-- Zatím jen z 15 fitness receptů (0068); špajzka a vlastní šablony mohou přibýt jako další `Option`.
+- Zdroj návrhu: Vše / Recepty / Špajzka (pamatuje se). Ze špajzky (`PantryPlates`, potraviny podle oblíbenosti):
+  talíře na oběd a večeři = 3 nejoblíbenější bílkoviny × 2 přílohy (+ nejoblíbenější zelenina), samotné
+  potraviny na snídani a svačinu. Jídlo má složky (`DayPlanner.Part`) a planner dopočítá porci každé zvlášť
+  (talíř: 0,5–3× výchozí porce, tj. třeba 180 g masa + 220 g rýže + 150 g brokolice). Souřadnicový sestup
+  drží průběžný součet, takže jedna iterace je O(složky).

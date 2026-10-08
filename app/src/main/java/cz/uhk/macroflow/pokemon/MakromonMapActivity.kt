@@ -488,13 +488,26 @@ class MakromonMapActivity : AppCompatActivity() {
         restPill.setOnClickListener {
             it.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
             finish()
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         }
         if (restAlertedFor != lastSetAt + restExtra) {
             restAlertedFor = lastSetAt + restExtra
             restPill.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
             restPill.scaleX = 0.7f; restPill.scaleY = 0.7f
             restPill.animate().scaleX(1f).scaleY(1f).setInterpolator(android.view.animation.OvershootInterpolator(3f)).setDuration(420).start()
+        }
+    }
+
+    private var exiting = false
+
+    /** Každý odchod z Makrosvěta (tlačítko, zpět, „Zpět na trénink“) jde přes scénu (docs/adr/0070). */
+    override fun finish() {
+        if (exiting) return            // scéna odchodu už běží
+        if (isFinishing) return super.finish()
+        exiting = true
+        PortalTransitionView.cover(findViewById(android.R.id.content), exit = true) {
+            PortalTransitionView.pendingExitReveal = true
+            super.finish()
+            overridePendingTransition(0, 0)
         }
     }
 

@@ -12,4 +12,7 @@ Krátký přechod (~3,3 s) místo prostého prolnutí, stejná scéna jako prův
 - Sova (Johnsova) a Drakirra přeletí oblohou (vlnovka, mávání křídly), Gudwin sedí v trávě a spí
   (dýchá, stoupají z něj Z) – i v odkrývací polovině.
   Overlay během přechodu chytá dotyky.
+- Odchod (každý `finish()` mapy – ✕, zpět, „Zpět na trénink“): nad mapou se složí stejná scéna s nápisem
+  MAKROFLOW (0,44 s), přeletí sova a 3 makromoni přiběhnou od okrajů a schovají se do keřů (lístky);
+  celkem 1,75 s. Aplikace v onResume scénu rozpustí (`PortalTransitionView.pendingExitReveal`).
 - Dlouhá verze pro první vstup do Makrosvěta je odložená; přidá se jako další režim stejného view.

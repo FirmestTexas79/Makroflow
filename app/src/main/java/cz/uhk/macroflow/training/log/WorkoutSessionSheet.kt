@@ -44,6 +44,8 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         /** Šablona zapsaná u sérií z vlastního výběru cviků („Jiný trénink“). */
         const val CUSTOM_TEMPLATE = "OTHER"
         private const val TAG = "WorkoutSessionSheet"
+        /** Jak dlouho po konci pauzy ještě svítí „Další série“. */
+        private const val OVER_SHOWN_MS = 90_000L
 
         fun show(fm: FragmentManager, kind: WorkoutTemplates.Kind, variant: Char) {
             if (fm.findFragmentByTag(TAG) != null) return
@@ -63,6 +65,16 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
     private var lastTodayCount: Int? = null
     private var variant = 'A'
     private var observeJob: Job? = null
+
+    // ── Pauza po sérii (docs/adr/0071) ──────────────────────────────────────
+    /** Poslední dnes zapsaná série – podle jejího cviku se počítá délka pauzy. */
+    private var lastSet: WorkoutSetEntity? = null
+    private var restExtraMs = 0L
+    private var restSkippedFor = 0L
+    private var restAlertedFor = 0L
+    private val restTick = object : Runnable {
+        override fun run() { renderRest(); view?.postDelayed(this, 500) }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.sheet_workout_session, container, false)
@@ -128,6 +140,15 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         val all = WorkoutRepository.toLogged(entities)
 
         val todayCount = entities.count { it.date == today.toString() }
+        entities.filter { it.date == today.toString() }.maxByOrNull { it.createdAt }.let { newest ->
+            if (newest?.createdAt != lastSet?.createdAt) {
+                lastSet = newest; restExtraMs = 0
+                // pauza, která skončila ještě před otevřením okna, už nevibruje
+                val restMs = cz.uhk.macroflow.common.AppSettings.restSecondsFor(requireContext(), newest?.exerciseId) * 1000L
+                if (newest != null && System.currentTimeMillis() >= newest.createdAt + restMs && lastTodayCount == null) restAlertedFor = newest.createdAt
+            }
+        }
+        v.removeCallbacks(restTick); restTick.run()
         lastTodayCount?.let { if (todayCount > it && cz.uhk.macroflow.common.AppSettings.gymBubble(requireContext())) MakrosvetBubble.show(v, todayCount) }
         lastTodayCount = todayCount
 
@@ -188,6 +209,69 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
             }
             box.addView(row)
         }
+    }
+
+    /** Odpočet pauzy dole v okně; po jejím konci zavibruje a nabídne další sérii. */
+    private fun renderRest() {
+        val v = view ?: return
+        val bar = v.findViewById<View>(R.id.restBar)
+        val set = lastSet
+        val ctx = requireContext()
+        val restMs = cz.uhk.macroflow.common.AppSettings.restSecondsFor(ctx, set?.exerciseId) * 1000L
+        val now = System.currentTimeMillis()
+        val left = set?.takeIf { it.createdAt != restSkippedFor }?.let {
+            cz.uhk.macroflow.training.QuickWorkout.restLeft(it.createdAt, now, restExtraMs, cz.uhk.macroflow.training.QuickWorkout.endedAt(ctx), restMs)
+        }?.takeIf { it > -OVER_SHOWN_MS }
+        if (set == null || left == null) { bar.visibility = View.GONE; return }
+        bar.visibility = View.VISIBLE
+        val name = ExerciseLibrary.byId(set.exerciseId)?.name ?: "série"
+        val label = v.findViewById<TextView>(R.id.tvRestLabel)
+        val time = v.findViewById<TextView>(R.id.tvRestTime)
+        val more = v.findViewById<TextView>(R.id.btnRestMore)
+        val progress = v.findViewById<View>(R.id.restProgress)
+        more.setOnClickListener { restExtraMs += 30_000; it.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); renderRest() }
+        v.findViewById<View>(R.id.btnRestSkip).setOnClickListener { restSkippedFor = set.createdAt; renderRest() }
+        if (left > 0) {
+            val sec = (left + 999) / 1000
+            label.text = "PAUZA · ${name.uppercase()}"
+            time.text = "${sec / 60}:${String.format(java.util.Locale.US, "%02d", sec % 60)}"
+            bar.backgroundTintList = ContextCompat.getColorStateList(ctx, R.color.brand_dark)
+            label.setTextColor(ContextCompat.getColor(ctx, R.color.brand_accent_warm))
+            time.setTextColor(ContextCompat.getColor(ctx, R.color.brand_cream))
+            progress.scaleX = (1f - left.toFloat() / (restMs + restExtraMs)).coerceIn(0f, 1f)
+            bar.contentDescription = "Pauza, zbývá $sec sekund"
+            bar.setOnClickListener(null)
+            return
+        }
+        label.text = "PAUZA SKONČILA"
+        time.text = "Další série ▸"
+        bar.backgroundTintList = ContextCompat.getColorStateList(ctx, R.color.brand_accent_warm)
+        label.setTextColor(ContextCompat.getColor(ctx, R.color.brand_dark))
+        time.setTextColor(ContextCompat.getColor(ctx, R.color.brand_dark))
+        progress.scaleX = 1f
+        bar.contentDescription = "Pauza skončila"
+        bar.setOnClickListener { restSkippedFor = set.createdAt; renderRest() }
+        val key = set.createdAt + restExtraMs
+        if (restAlertedFor != key) {
+            restAlertedFor = key
+            vibrate()
+            bar.scaleX = 0.92f; bar.scaleY = 0.92f
+            bar.animate().scaleX(1f).scaleY(1f).setInterpolator(android.view.animation.OvershootInterpolator(3f)).setDuration(380).start()
+        }
+    }
+
+    private fun vibrate() {
+        val ctx = requireContext()
+        @Suppress("DEPRECATION")
+        val vib = if (android.os.Build.VERSION.SDK_INT >= 31)
+            (ctx.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager)?.defaultVibrator
+        else ctx.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+        vib?.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 180, 120, 260), -1))
+    }
+
+    override fun onDestroyView() {
+        view?.removeCallbacks(restTick)
+        super.onDestroyView()
     }
 
     private fun label(w: Double, r: Int, slow: Boolean, rir: Int = StrengthModel.DEFAULT_RIR) =
