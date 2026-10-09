@@ -18,6 +18,15 @@ import kotlin.random.Random
 
 class PokemonBattleFragment : Fragment() {
 
+    companion object {
+        private const val ARG_TRAINER = "trainer"
+
+        /** Souboj s trenérem v aréně (docs/adr/0076). */
+        fun forTrainer(t: cz.uhk.macroflow.pokemon.trainer.Trainer) = PokemonBattleFragment().apply {
+            arguments = Bundle().apply { putString(ARG_TRAINER, cz.uhk.macroflow.pokemon.trainer.Trainers.toJson(t)) }
+        }
+    }
+
     private var isClosing = false
 
     /** Shiny se losuje tady (ne ve view), aby na něj mohlo reagovat už intro. */
@@ -31,17 +40,19 @@ class PokemonBattleFragment : Fragment() {
 
         // Tutoriálové křoví je vždy stejné; ladicí přepínač vynutí shiny jen pro jedno setkání
         val gamePrefs = ctx.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
+        val trainer = cz.uhk.macroflow.pokemon.trainer.Trainers.fromJson(arguments?.getString(ARG_TRAINER))
         // Strážce jeskyně / legenda z vrcholu (docs/adr/0014) – příznak platí jen pro tento souboj
-        val special = cz.uhk.macroflow.pokemon.legend.SpecialBattle.from(
+        val special = if (trainer != null) null else cz.uhk.macroflow.pokemon.legend.SpecialBattle.from(
             gamePrefs.getString(cz.uhk.macroflow.pokemon.legend.SpecialBattle.PREF, null))
-        gamePrefs.edit().remove(cz.uhk.macroflow.pokemon.legend.SpecialBattle.PREF).apply()
-        val forced = gamePrefs.contains("FORCE_ENCOUNTER_ID") || special != null
+        if (trainer == null) gamePrefs.edit().remove(cz.uhk.macroflow.pokemon.legend.SpecialBattle.PREF).apply()
+        val forced = trainer != null || gamePrefs.contains("FORCE_ENCOUNTER_ID") || special != null
         val debugShiny = gamePrefs.getBoolean("DEBUG_FORCE_SHINY", false)
         if (debugShiny) gamePrefs.edit().remove("DEBUG_FORCE_SHINY").apply()
         isShiny = !forced && (debugShiny || cz.uhk.macroflow.pokemon.shiny.ShinyPalette.roll())
 
         val root = FrameLayout(ctx).apply {
             setBackgroundColor(Color.BLACK)
+            isClickable = true   // v aréně leží souboj přes celou aplikaci – dotyky nesmí propadnout dolů
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -61,6 +72,8 @@ class PokemonBattleFragment : Fragment() {
 
         val titleTv = TextView(ctx).apply {
             text      = when {
+                trainer?.kind == cz.uhk.macroflow.pokemon.trainer.Trainer.Kind.GHOST -> "☾  GHOST TRAINER  ☾"
+                trainer != null -> "⚔  ARENA  ⚔"
                 special?.kind == cz.uhk.macroflow.pokemon.legend.SpecialBattle.Kind.LEGEND -> "✦  LEGENDARY  ✦"
                 special != null -> "⚔  GUARDIAN  ⚔"
                 isShiny -> "✦  SHINY ENCOUNTER  ✦"
@@ -77,11 +90,12 @@ class PokemonBattleFragment : Fragment() {
         }
 
         // V onCreateView fragmentu uprav onCaught takto:
-        val battleView = PokemonBattleView(ctx, null, isShiny, special).also { arenaView = it }.apply {
+        val battleView = PokemonBattleView(ctx, null, isShiny, special, trainer).also { arenaView = it }.apply {
             // 3D aréna vyplní celou výšku nad herním plátnem (docs/adr/0038)
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
             // V onCreateView fragmentu uprav onCaught:
-            onCaught = {
+            onCaught = onCaught@{
+                if (trainer != null) { view?.postDelayed({ safeClose() }, 400); return@onCaught }
                 val prefs = ctx.getSharedPreferences("GamePrefs", Context.MODE_PRIVATE)
 
                 // Tady je ten trik: pokud v prefs JE force encounter,
@@ -135,7 +149,7 @@ class PokemonBattleFragment : Fragment() {
         val biome = runCatching {
             BiomeType.valueOf(gamePrefs.getString("LAST_BIOME", BiomeType.TOWN.name) ?: BiomeType.TOWN.name)
         }.getOrDefault(BiomeType.TOWN)
-        val introOverlay = when (biome) {
+        val introOverlay = if (trainer != null) buildTrainerIntro(ctx, dp, battleContent, trainer) else when (biome) {
             BiomeType.MOUNTAINS -> buildMountainIntro(ctx, dp, battleContent)
             BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE, BiomeType.MINES -> buildCaveIntro(ctx, dp, battleContent)
             BiomeType.WATER, BiomeType.LAKE -> buildWaterIntro(ctx, dp, battleContent)
@@ -236,6 +250,77 @@ class PokemonBattleFragment : Fragment() {
             tracked()
             start()
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ARÉNA: pruhy se jmény a „VS“ (docs/adr/0076)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun buildTrainerIntro(ctx: Context, dp: Float, battleContent: View, trainer: cz.uhk.macroflow.pokemon.trainer.Trainer): FrameLayout {
+        val font = runCatching { androidx.core.content.res.ResourcesCompat.getFont(ctx, R.font.jersey_15) }.getOrNull()
+        val overlay = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(Color.BLACK)
+        }
+        val stage = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+        overlay.addView(stage)
+        val ghost = trainer.kind == cz.uhk.macroflow.pokemon.trainer.Trainer.Kind.GHOST
+        fun band(text: String, sub: String, color: Int, top: Boolean) = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = if (top) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.END or Gravity.CENTER_VERTICAL
+            setBackgroundColor(color)
+            setPadding((28 * dp).toInt(), 0, (28 * dp).toInt(), 0)
+            rotation = -6f
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, (120 * dp).toInt(),
+                if (top) Gravity.TOP else Gravity.BOTTOM).also {
+                it.leftMargin = (-40 * dp).toInt(); it.rightMargin = (-40 * dp).toInt()
+                if (top) it.topMargin = (150 * dp).toInt() else it.bottomMargin = (190 * dp).toInt()
+            }
+            addView(TextView(ctx).apply { this.text = sub; textSize = 15f; typeface = font; setTextColor(Color.parseColor("#CCFEFAE0")); letterSpacing = 0.15f })
+            addView(TextView(ctx).apply { this.text = text; textSize = 40f; typeface = font; setTextColor(Color.parseColor("#FEFAE0"))
+                setShadowLayer(0f, 3 * dp, 3 * dp, Color.parseColor("#66000000")) })
+        }
+        val enemyBand = band(trainer.battleName, if (ghost) "DUCH TRENÉRA" else "TRENÉR",
+            Color.parseColor(if (ghost) "#4B3F72" else "#8E2F23"), top = true)
+        val meBand = band("TY", "TVŮJ TÝM", Color.parseColor("#3D5A1E"), top = false)
+        val vs = TextView(ctx).apply {
+            text = "VS"; textSize = 96f; typeface = font; gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#E9B072")); setShadowLayer(0f, 5 * dp, 5 * dp, Color.parseColor("#BC6C25"))
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER)
+                .also { it.bottomMargin = (20 * dp).toInt() }
+            scaleX = 0f; scaleY = 0f
+        }
+        stage.addView(enemyBand); stage.addView(meBand); stage.addView(vs)
+
+        overlay.post {
+            val w = overlay.width.toFloat(); val h = overlay.height.toFloat()
+            enemyBand.translationX = -w * 1.2f
+            meBand.translationX = w * 1.2f
+            fun finish() {
+                if (introDone) return
+                introDone = true
+                revealBattle(ctx, overlay, battleContent, w, h, dp, baseFlash = Color.argb(235, 255, 236, 200))
+            }
+            val inEnemy = ObjectAnimator.ofFloat(enemyBand, "translationX", -w * 1.2f, 0f).apply { duration = 420; interpolator = DecelerateInterpolator(2f) }
+            val inMe = ObjectAnimator.ofFloat(meBand, "translationX", w * 1.2f, 0f).apply { duration = 420; interpolator = DecelerateInterpolator(2f) }
+            val pop = AnimatorSet().apply {
+                playTogether(ObjectAnimator.ofFloat(vs, "scaleX", 0f, 1.25f, 1f), ObjectAnimator.ofFloat(vs, "scaleY", 0f, 1.25f, 1f))
+                duration = 380; interpolator = OvershootInterpolator(2.5f)
+            }
+            AnimatorSet().apply {
+                play(inEnemy).with(inMe)
+                play(pop).after(inEnemy)
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(a: Animator) { introHandler.postDelayed({ finish() }, 900) }
+                })
+                tracked()
+                start()
+            }
+            overlay.setOnClickListener { finish() }
+        }
+        return overlay
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -418,6 +418,7 @@ class MainActivity : AppCompatActivity() {
                 // ── Sbírka ────────────────────────────────────────────
                 R.id.nav_pokedex       -> replaceFragment(MakrodexFragment())
                 R.id.nav_inventory     -> replaceFragment(InventoryFragment())
+                R.id.nav_arena         -> replaceFragment(cz.uhk.macroflow.pokemon.trainer.ArenaFragment())
                 R.id.nav_generate_report -> showReportSetupDialog()
 
                 // ── Profil & Nastavení ────────────────────────────────

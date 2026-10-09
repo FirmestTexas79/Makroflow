@@ -43,7 +43,9 @@ data class CapturedMakromonEntity(
     val caughtDate: Long = System.currentTimeMillis(),
     var moveListStr: String = "",
     var level: Int = 1,
-    var xp: Int = 0
+    var xp: Int = 0,
+    /** Stálé ID napříč telefony a cloudem (docs/adr/0076) – základ pro arénu a budoucí výměny. */
+    var uid: String = java.util.UUID.randomUUID().toString()
 )
 
 @Dao

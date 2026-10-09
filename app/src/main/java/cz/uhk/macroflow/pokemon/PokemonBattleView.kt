@@ -20,7 +20,9 @@ class PokemonBattleView @JvmOverloads constructor(
     /** Divoký Makromon je shiny – o šanci rozhoduje fragment před vytvořením view (kvůli intru). */
     private val enemyShiny: Boolean = false,
     /** Strážce jeskyně nebo legenda z vrcholu (docs/adr/0014); null = divoké setkání. */
-    private val special: cz.uhk.macroflow.pokemon.legend.SpecialBattle? = null
+    private val special: cz.uhk.macroflow.pokemon.legend.SpecialBattle? = null,
+    /** Souboj s trenérem v aréně – duch hráče nebo AI (docs/adr/0076); null = jiný souboj. */
+    private val trainer: cz.uhk.macroflow.pokemon.trainer.Trainer? = null
 ) : View(context, attrs) {
 
     var onCaught: (() -> Unit)? = null
@@ -93,7 +95,10 @@ class PokemonBattleView @JvmOverloads constructor(
     private var partyMenu = false
     /** Pasivní bonus Chytání (snižuje šanci na útěk po vyskočení z ballu). */
     private var catchingPassive = 0.0
-    private val enemyCond = cz.uhk.macroflow.pokemon.status.Condition()
+    private var enemyCond = cz.uhk.macroflow.pokemon.status.Condition()
+    /** Tým trenéra (Makromon, shiny) a kdo z něj právě bojuje. */
+    private val enemyTeam = mutableListOf<Pair<Makromon, Boolean>>()
+    private var enemyIdx = 0
 
     private val absorbPaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
     private val beamPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -124,7 +129,7 @@ class PokemonBattleView @JvmOverloads constructor(
         // --- 🌍 NAČTENÍ AKTUÁLNÍHO BIOMU ---
         val biomeStr = prefs.getString("LAST_BIOME", BiomeType.TOWN.name)
         val currentBiome = BiomeType.valueOf(biomeStr!!)
-        startArena(currentBiome)
+        startArena(if (trainer != null) BiomeType.TOWN else currentBiome)
 
         Thread {
             val db = AppDatabase.getDatabase(context)
@@ -151,8 +156,13 @@ class PokemonBattleView @JvmOverloads constructor(
                 type = playerBase.speciesType
             )
 
+            // Trenér: celý tým najednou, statistiky z druhu a levelu (docs/adr/0076)
+            val trainerTeam = trainer?.team?.map { cz.uhk.macroflow.pokemon.trainer.Trainers.toBattle(it) to it.shiny }.orEmpty()
+
             // --- 🎲 OPRAVENÝ ROLL S BIOMEM ---
-            val enemyWithStats = if (special != null) {
+            val enemyWithStats = if (trainerTeam.isNotEmpty()) {
+                trainerTeam[0].first
+            } else if (special != null) {
                 // Strážce / legenda: pevný Makromon s pevným levelem
                 createPlayerMakromon(special.statsId, special.level)
                     .let { m -> special.displayName?.let { m.copy(name = it) } ?: m }
@@ -170,7 +180,7 @@ class PokemonBattleView @JvmOverloads constructor(
                     wildLevel
                 )
             }
-            val enemyIsShiny = enemyShiny
+            val enemyIsShiny = if (trainerTeam.isNotEmpty()) trainerTeam[0].second else enemyShiny
 
             val counts = cz.uhk.macroflow.pokemon.balls.Makroball.entries.associateWith { db.userItemDao().getItemCount(it.id) ?: 0 }
             val currentPokeballs = counts.values.sum()
@@ -185,6 +195,7 @@ class PokemonBattleView @JvmOverloads constructor(
             }
 
             handler.post {
+                enemyTeam.clear(); enemyTeam += trainerTeam; enemyIdx = 0
                 party.clear()
                 party += PartyMember(caughtEntity?.id ?: -1, playerWithStats, playerIsShiny, playerCond)
                 party += restMembers
@@ -199,7 +210,7 @@ class PokemonBattleView @JvmOverloads constructor(
                 gs.isEnemyShiny  = enemyIsShiny
                 gs.isPlayerShiny = playerIsShiny
                 // Shiny Makrodex: zapsat, že hráč tuhle shiny verzi viděl (docs/adr/0016)
-                if (enemyIsShiny) {
+                if (enemyIsShiny && trainer == null) {
                     val id = BattleFactory.makrodexId(enemyWithStats)
                     val seen = prefs.getStringSet(cz.uhk.macroflow.pokemon.shiny.ShinyDex.SEEN_KEY, emptySet()).orEmpty()
                     if (id !in seen) prefs.edit().putStringSet(cz.uhk.macroflow.pokemon.shiny.ShinyDex.SEEN_KEY, seen + id).apply()
@@ -853,7 +864,11 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun startIntro() {
         busy = true
-        if (special != null) special.appearLines(gs.enemy.name).let { (a, b) -> setText(a, b) }
+        if (trainer != null) {
+            setText(trainer.battleName, "WANTS TO BATTLE!")
+            pendingAction = { say("${trainer.battleName} SENT", "OUT ${gs.enemy.name}!") { showMain() } }
+        }
+        else if (special != null) special.appearLines(gs.enemy.name).let { (a, b) -> setText(a, b) }
         else if (gs.isEnemyShiny) setText("*SHINY* ${gs.enemy.name}", "APPEARED!")
         else setText("WILD ${gs.enemy.name}", "APPEARED!")
         val startTime = System.currentTimeMillis()
@@ -900,6 +915,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
     private fun doRun() {
         special?.let { sp -> val (a, b) = sp.noRunLines; say(a, b) { showMain() }; return }
+        if (trainer != null) { say("NO RUNNING FROM", "A TRAINER BATTLE!") { showMain() }; return }
         busy = true
         // Paralýza půlí rychlost i při útěku
         val speed = (gs.player.speed * cz.uhk.macroflow.pokemon.status.StatusRules.speedMultiplier(playerCond)).toInt()
@@ -945,7 +961,8 @@ class PokemonBattleView @JvmOverloads constructor(
     private fun enemyTurn() {
         if (gs.enemy.currentHp <= 0 || gs.player.currentHp <= 0) { busy = false; showMain(); return }
         busy = true
-        val mv = BattleEngine.enemyChooseMove(gs.enemy, playerCond, enemyCond)
+        val mv = if (trainer != null) cz.uhk.macroflow.pokemon.trainer.TrainerAi.chooseMove(gs.enemy, gs.player, playerCond, enemyCond)
+            else BattleEngine.enemyChooseMove(gs.enemy, playerCond, enemyCond)
         val pre = cz.uhk.macroflow.pokemon.status.StatusRules.beforeMove(enemyCond, rng) { selfHitDamage(false) }
         handleBeforeMove(false, pre, act = { useMove(false, mv) }, skip = { endOfRound() })
     }
@@ -1112,6 +1129,7 @@ class PokemonBattleView @JvmOverloads constructor(
             }
             return
         }
+        if (trainer != null && party.none { it.mon.currentHp > 0 }) { trainerWon(); return }
         if (party.any { it.mon.currentHp > 0 }) {
             // Další člen týmu nastoupí
             say("${gs.player.name}", "FAINTED!") {
@@ -1129,7 +1147,59 @@ class PokemonBattleView @JvmOverloads constructor(
         pendingAction = { onCaught?.invoke() }
     }
 
+    // ── Souboj s trenérem (docs/adr/0076) ──
+
+    /** Padl celý hráčův tým: trenér vyhrál. Žádná smrt postavy – v aréně se jen prohrává. */
+    private fun trainerWon() {
+        val t = trainer ?: return
+        Thread { cz.uhk.macroflow.pokemon.trainer.Arena.recordResult(context, t, won = false) }.start()
+        say(gs.player.name, "FAINTED!") {
+            gs.phase = BattlePhase.PLAYER_FAINTED
+            setText(t.battleName, "WON THE BATTLE!")
+            busy = false
+            pendingAction = { onCaught?.invoke() }
+        }
+    }
+
+    /** Padl Makromon trenéra: nastoupí další, nebo hráč vyhrál. */
+    private fun trainerMonFainted() {
+        val t = trainer ?: return
+        val fallen = gs.enemy
+        awardXpToActiveMakromon(10 + fallen.level * 3)
+        val next = (enemyIdx + 1 until enemyTeam.size).firstOrNull { enemyTeam[it].first.currentHp > 0 }
+        if (next != null) {
+            gs.enemyVisible = false; invalidate()
+            say(fallen.name, "FAINTED!") {
+                enemyIdx = next
+                val (mon, shiny) = enemyTeam[next]
+                gs.enemy = mon
+                gs.isEnemyShiny = shiny
+                enemyCond = cz.uhk.macroflow.pokemon.status.Condition()
+                loadMakromonSprite(mon, isPlayer = false)
+                gs.enemyVisible = true
+                say("${t.battleName} SENT", "OUT ${mon.name}!") { showMain() }
+            }
+            return
+        }
+        busy = false
+        cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.VICTORY)
+        gs.enemyVisible = false
+        gs.phase = BattlePhase.ENEMY_FAINTED
+        setText(fallen.name, "FAINTED!")
+        Thread {
+            val coins = cz.uhk.macroflow.pokemon.trainer.Arena.recordResult(context, t, won = true)
+            if (coins > 0) db.coinDao().addCoins(coins)
+            handler.post {
+                val lines = mutableListOf("YOU DEFEATED" to t.battleName)
+                if (coins > 0) lines += "YOU GOT" to "$coins MAKRO COINS!"
+                lines.forEachIndexed { i, (a, b) -> handler.postDelayed({ setText(a, b) }, 900L + i * 1500L) }
+                handler.postDelayed({ onCaught?.invoke() }, 900L + lines.size * 1500L + 400L)
+            }
+        }.start()
+    }
+
     private fun enemyFainted() {
+        if (trainer != null) { trainerMonFainted(); return }
         busy = false
         cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.VICTORY)
         // Poražený strážce jeskyně uvolní svůj krystal
@@ -1436,6 +1506,7 @@ class PokemonBattleView @JvmOverloads constructor(
         if (gs.enemy.currentHp <= 0) return
         // Strážce ani legendu chytit nejde – ball se nespotřebuje
         special?.let { sp -> val (l1, l2) = sp.noCatchLines; say(l1, l2) { showMain() }; return }
+        if (trainer != null) { say("THE TRAINER", "BLOCKED THE BALL!") { showMain() }; return }
         ball = b; busy = true; gs.phase = BattlePhase.BALL_THROW
         ballCounts[b] = ((ballCounts[b] ?: 1) - 1).coerceAtLeast(0)
         Thread {

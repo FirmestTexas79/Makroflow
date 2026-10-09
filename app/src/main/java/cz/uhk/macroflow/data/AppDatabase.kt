@@ -39,7 +39,7 @@ import kotlin.concurrent.thread
         WorkoutTemplateEntity::class,
         MealTemplateEntity::class
     ],
-    version = 40,
+    version = 41,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -78,6 +78,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+
+        /** v41: stálé ID chyceného Makromona (docs/adr/0076); stávající dostanou náhodné. */
+        val MIGRATION_40_41 = object : Migration(40, 41) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `captured_pokemon` ADD COLUMN `uid` TEXT NOT NULL DEFAULT ''")
+                db.execSQL(
+                    "UPDATE `captured_pokemon` SET `uid` = lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || " +
+                        "substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(6))) WHERE `uid` = ''"
+                )
+            }
+        }
 
         /** v34: log herních událostí + začátek fáze questu. */
         val MIGRATION_33_34 = object : Migration(33, 34) {
@@ -181,7 +192,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_40)
+                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_40, MIGRATION_40_41)
                     // Destruktivní fallback jen pro verze PŘED zavedením migrací.
                     // Od v33 se lokální data uživatelů už nikdy nesmažou potichu:
                     // chybějící migrace = pád při vývoji, ne ztráta dat v produkci.

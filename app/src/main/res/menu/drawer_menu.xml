@@ -35,6 +35,10 @@
                     android:icon="@drawable/ic_nav_dex"
                     android:title="@string/label_pokedex_editor" />
                 <item
+                    android:id="@+id/nav_arena"
+                    android:icon="@drawable/ic_nav_arena"
+                    android:title="@string/label_arena" />
+                <item
                     android:id="@+id/nav_inventory"
                     android:icon="@drawable/ic_nav_bag"
                     android:title="@string/label_inventory" />

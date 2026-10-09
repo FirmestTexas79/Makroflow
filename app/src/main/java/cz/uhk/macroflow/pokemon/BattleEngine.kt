@@ -57,7 +57,7 @@ enum class BattlePhase {
 
 data class BattleState(
     var player: Makromon,
-    val enemy: Makromon,
+    var enemy: Makromon,
     var phase: BattlePhase = BattlePhase.INTRO,
     var ballCount: Int = 5,
     var textLine1: String = "",

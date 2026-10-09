@@ -361,7 +361,9 @@ object FirebaseRepository {
             "isLocked" to makromon.isLocked,
             "caughtDate" to makromon.caughtDate,
             "level" to makromon.level,
-            "xp" to makromon.xp
+            "xp" to makromon.xp,
+            "moves" to makromon.moveListStr,
+            "uid" to makromon.uid
         )
         userDoc().collection("captured_makromons").document(makromon.caughtDate.toString())
             .set(data, SetOptions.merge()).await()
@@ -379,7 +381,9 @@ object FirebaseRepository {
                 isLocked    = doc.getBoolean("isLocked") ?: false,
                 caughtDate  = doc.getLong("caughtDate") ?: System.currentTimeMillis(),
                 level       = (doc.getLong("level") ?: 1L).toInt(),
-                xp          = (doc.getLong("xp") ?: 0L).toInt()
+                xp          = (doc.getLong("xp") ?: 0L).toInt(),
+                moveListStr = doc.getString("moves") ?: "",
+                uid         = doc.getString("uid") ?: java.util.UUID.randomUUID().toString()
             )
         }
     }
@@ -698,6 +702,26 @@ object FirebaseRepository {
         "meal_templates"
     )
 
+    // ========== ARÉNA (docs/adr/0076) ==========
+
+    private const val ARENA = "arena"
+
+    /** Nahraje tým přihlášeného hráče jako jeho ducha v aréně. */
+    suspend fun publishArenaGhost(trainer: cz.uhk.macroflow.pokemon.trainer.Trainer) {
+        val uid = auth.currentUser?.uid ?: return
+        db.collection(ARENA).document(uid).set(cz.uhk.macroflow.pokemon.trainer.Trainers.toMap(trainer)).await()
+    }
+
+    /** Naposledy aktivní duchové (už ověření – neplatná data vypadnou). */
+    suspend fun fetchArenaGhosts(limit: Long = 40): List<cz.uhk.macroflow.pokemon.trainer.Trainer> {
+        if (!isLoggedIn) return emptyList()
+        return db.collection(ARENA).orderBy("updatedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(limit).get().await().documents
+            .mapNotNull { cz.uhk.macroflow.pokemon.trainer.Trainers.fromMap(it.id, it.data) }
+            .map { it.copy(kind = cz.uhk.macroflow.pokemon.trainer.Trainer.Kind.GHOST) }
+            .mapNotNull(cz.uhk.macroflow.pokemon.trainer.Trainers::sanitize)
+    }
+
     suspend fun deleteAllUserData() {
         val uid = auth.currentUser?.uid ?: return
         val db = FirebaseFirestore.getInstance()
@@ -711,6 +735,9 @@ object FirebaseRepository {
                 docs.documents.forEach { it.reference.delete().await() }
             } catch (e: Exception) { e.printStackTrace() }
         }
+
+        // Duch v aréně (docs/adr/0076)
+        try { db.collection(ARENA).document(uid).delete().await() } catch (e: Exception) { e.printStackTrace() }
 
         // Smazání hlavního dokumentu uživatele
         try {
