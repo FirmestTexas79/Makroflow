@@ -276,7 +276,11 @@ class ArenaFragment : Fragment() {
                         row.addView(w.text(tier.emoji, 20f).apply { setPadding(0, 0, w.px(6f), 0) })
                         row.addView(w.text(t.name + if (t.id == me) " (ty)" else "", 20f).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
                             w.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                        row.addView(w.text("${t.points} b.", 20f, tier.color))
+                        row.addView(w.text("${t.points} b.", 18f, w.cream, Gravity.CENTER).apply {
+                            // body na pilulce v barvě ranku – na pergamenu jsou čitelné i zlaté
+                            background = ArenaUi.pill(ArenaUi.darker(tier.color, 0.8f), w.dp)
+                            setPadding(w.px(10f), w.px(2f), w.px(10f), w.px(3f))
+                        })
                         b.addView(row)
                     }
                     if (place != null && list.none { it.id == me }) b.addView(w.text("Ty: #$place · $myPoints b.", 18f, w.ink).apply { setPadding(0, w.px(6f), 0, 0) })
