@@ -15,7 +15,7 @@ class SpirraEvolutionTest {
 
     @Test
     fun branchesMatchMakrodex() {
-        assertEquals(listOf("013", "014", "015", "016", "017", "018"), Branch.entries.map { it.id })
+        assertEquals(listOf("013", "014", "015", "016", "017", "018", "041"), Branch.entries.map { it.id })
         assertFalse(Branch.entries.any { it.id == SpirraEvolution.DRAKIRRA_ID })
     }
 
