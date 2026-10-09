@@ -3,6 +3,7 @@ package cz.uhk.macroflow.pokemon.trainer
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.InputFilter
 import android.view.Gravity
@@ -123,6 +124,7 @@ class ArenaFragment : Fragment() {
             renderTrade(tradeBox, user?.uid)
             section("Trénink s trenéry arény", "Mění se každý den a rostou s tebou.")
             ai.forEach { body.addView(trainerCard(it)) }
+            ArenaUi.cascade(body, ui.dp)
             section("Duchové hráčů", null)
             val ghostBox = ui.column(); body.addView(ghostBox)
 
@@ -153,82 +155,105 @@ class ArenaFragment : Fragment() {
 
     // ── Panel ──
 
+    private var myPower = 1
+
+    /** Karta tvého týmu: erb ranku, jméno, body s postupem, pořadí a tým (docs/adr/0080). */
     private fun renderMe(me: Trainer) {
+        val ctx = requireContext()
+        myPower = me.power.coerceAtLeast(1)
+        val points = Ranked.points(ctx)
+        val tier = Ranked.tierOf(points)
+        val rec = Arena.record(ctx)
+        val card = ui.column().apply { background = ArenaUi.plaque(ui.dp); setPadding(ui.px(14f), ui.px(12f), ui.px(14f), ui.px(12f)) }
         val top = ui.row()
-        val col = ui.column()
-        col.addView(ui.text("TVŮJ TÝM", 15f, ui.rust))
-        col.addView(ui.text("${me.name} ✎", 30f).apply { setOnClickListener { editName() } })
+        top.addView(ui.text(tier.emoji, 30f, ui.cream, Gravity.CENTER).apply {
+            background = ArenaUi.Emblem(tier.color, ui.dp); setPadding(0, 0, 0, ui.px(6f))
+        }, LinearLayout.LayoutParams(ui.px(66f), ui.px(74f)))
+        val col = ui.column().apply { setPadding(ui.px(12f), 0, 0, 0) }
+        col.addView(ui.text("${me.name} ✎", 28f, ui.cream).apply { setOnClickListener { editName() }; maxLines = 1 })
+        val tierRow = ui.row()
+        tierRow.addView(ui.text(tier.label.uppercase(), 20f, tier.color).apply { setShadowLayer(0.01f, ui.dp, ui.dp, 0xFF000000.toInt()) },
+            ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        tierRow.addView(ui.text("$points b.", 20f, ui.cream))
+        col.addView(tierRow)
+        // pruh postupu: tmavá drážka, výplň v barvě ranku
+        val prog = Ranked.progress(points)
+        col.addView(LinearLayout(ctx).apply {
+            background = ArenaUi.pill(0xFF1A120B.toInt(), ui.dp)
+            setPadding(ui.px(2f), ui.px(2f), ui.px(2f), ui.px(2f))
+            addView(View(ctx).apply { background = ArenaUi.pill(tier.color, ui.dp) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, prog.coerceAtLeast(0.03f)))
+            addView(View(ctx), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, (1f - prog).coerceAtLeast(0f)))
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ui.px(12f)).apply { topMargin = ui.px(4f) })
+        val info = ui.text(tier.next?.let { "Do ranku ${it.label}: ${it.min - points} b." } ?: "Nejvyšší rank!", 14f, 0xFFE8CFA0.toInt())
+        col.addView(info.apply { setPadding(0, ui.px(3f), 0, 0) })
         top.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        val rec = Arena.record(requireContext())
-        val stats = ui.column().apply { gravity = Gravity.END }
-        stats.addView(ui.text("⚔ ${me.power}", 30f, ui.ink, Gravity.END))
-        stats.addView(ui.text("${rec.wins} výher · ${rec.losses} proher", 15f, ui.inkSoft, Gravity.END))
-        top.addView(stats)
-        body.addView(top)
-        body.addView(teamRow(me.team, 52f).apply { setPadding(0, ui.px(8f), 0, ui.px(4f)) })
+        card.addView(top)
+        // statistiky
+        val stats = ui.row().apply { setPadding(0, ui.px(10f), 0, ui.px(8f)) }
+        fun stat(v: String, l: String) = ui.column().apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            addView(ui.text(v, 22f, ui.cream, Gravity.CENTER)); addView(ui.text(l, 13f, 0xFFC9A26B.toInt(), Gravity.CENTER))
+        }
+        val placeStat = stat("–", "POŘADÍ")
+        listOf(stat("⚔ ${me.power}", "SÍLA"), stat("${rec.wins}", "VÝHRY"), stat("${rec.losses}", "PROHRY"), placeStat)
+            .forEach { stats.addView(it, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)) }
+        card.addView(stats)
+        card.addView(teamRow(me.team, 46f))
         val status = when {
             me.team.isEmpty() -> "Nemáš tým – nejdřív chyť Makromona."
             FirebaseRepository.currentUser == null -> "Offline: bojuješ jen s trenéry arény."
             else -> "👻 Tvůj duch hájí arénu, i když nehraješ."
         }
-        body.addView(ui.text(status, 15f, ui.olive).apply { setPadding(0, ui.px(2f), 0, ui.px(4f)) })
+        card.addView(ui.text(status, 14f, 0xFFE8CFA0.toInt()).apply { setPadding(0, ui.px(6f), 0, 0) })
+        body.addView(card)
+        if (FirebaseRepository.currentUser != null) viewLifecycleOwner.lifecycleScope.launch {
+            val place = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.arenaPlace(points) }.getOrNull() }
+            if (place != null && isAdded) (placeStat.getChildAt(0) as android.widget.TextView).text = "#$place"
+        }
     }
 
-    // ── Rank (docs/adr/0079) ──
-
+    /** Dvě velké dlaždice režimů a tlačítko žebříčku. */
     private fun renderModes(me: Trainer, loggedIn: Boolean) {
         val ctx = requireContext()
         val points = Ranked.points(ctx)
         val tier = Ranked.tierOf(points)
-
-        // odznak ranku s postupem
-        val badge = WorkshopMenus.card(ui).apply { setPadding(ui.px(12f), ui.px(10f), ui.px(12f), ui.px(10f)) }
-        badge.addView(ui.text(tier.emoji, 34f).apply { setPadding(0, 0, ui.px(10f), 0) })
-        val col = ui.column()
-        val head = ui.row()
-        head.addView(ui.text(tier.label, 28f, tier.color), ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        head.addView(ui.text("$points b.", 24f, ui.ink))
-        col.addView(head)
-        // pruh postupu k dalšímu ranku
-        val prog = Ranked.progress(points)
-        col.addView(LinearLayout(ctx).apply {
-            background = BevelDrawable.slot(1f * ui.dp)
-            setPadding(ui.px(2f), ui.px(2f), ui.px(2f), ui.px(2f))
-            addView(View(ctx).apply { setBackgroundColor(tier.color) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, prog))
-            addView(View(ctx), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f - prog))
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ui.px(14f)).apply { topMargin = ui.px(4f); bottomMargin = ui.px(2f) })
-        val placeTv = ui.text(tier.next?.let { "Do ranku ${it.label}: ${it.min - points} b." } ?: "Nejvyšší rank – drž se na vrcholu!", 14f, ui.inkSoft)
-        col.addView(placeTv)
-        badge.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        body.addView(badge)
-        if (loggedIn) viewLifecycleOwner.lifecycleScope.launch {
-            val place = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.arenaPlace(points) }.getOrNull() }
-            if (place != null && isAdded) placeTv.text = "${placeTv.text}  ·  #$place v žebříčku"
-        }
-
-        // dva režimy
         val rankedOpp = Ranked.opponent(points, me.team, Ranked.matches(ctx))
-        val modes = ui.row()
-        fun mode(title: String, sub: String, label: String, enabled: Boolean, onPreview: (() -> Unit)?, go: () -> Unit) = ui.column().apply {
-            background = WoodPanelDrawable(1.5f * ui.dp)
-            setPadding(ui.px(12f), ui.px(10f), ui.px(12f), ui.px(10f))
-            addView(ui.text(title, 22f))
-            addView(ui.text(sub, 13f, ui.inkSoft).apply { setPadding(0, ui.px(2f), 0, ui.px(8f)); minLines = 3 })
-            addView(ui.button(label, enabled) { go() })
-            onPreview?.let { p -> setOnClickListener { p() } }
+        val hasTeam = me.team.isNotEmpty()
+        fun mode(icon: String, title: String, sub: String, chip: String, top: Int, bottom: Int, enabled: Boolean, go: () -> Unit) = ui.column().apply {
+            background = ArenaUi.tile(top, bottom, ui.dp)
+            setPadding(ui.px(12f), ui.px(10f), ui.px(12f), ui.px(12f))
+            alpha = if (enabled) 1f else 0.5f
+            addView(ui.text(icon, 32f, ui.cream))
+            addView(ui.text(title, 22f, ui.cream).apply { setShadowLayer(0.01f, ui.dp * 1.5f, ui.dp * 1.5f, 0x99000000.toInt()) })
+            addView(ui.text(sub, 13f, 0xE6FEFAE0.toInt()).apply { minLines = 3; setPadding(0, ui.px(2f), 0, ui.px(8f)) })
+            addView(ui.text(chip, 16f, 0xFF2A1D12.toInt(), Gravity.CENTER).apply {
+                background = ArenaUi.pill(0xFFFEFAE0.toInt(), ui.dp); setPadding(ui.px(10f), ui.px(4f), ui.px(10f), ui.px(5f))
+            })
+            if (enabled) setOnClickListener { go() }
         }
-        modes.addView(mode("⚡ Rychlý", "Náhodný soupeř, o body se nehraje.", "Hrát", me.team.isNotEmpty(), null) {
-            quickPool.randomOrNull()?.let { challenge(it) }
-        }, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        modes.addView(View(ctx), LinearLayout.LayoutParams(ui.px(8f), 1))
-        val rankedSub = if (!loggedIn) "Hodnocené zápasy jen s přihlášeným účtem."
-            else "${rankedOpp.name} · ${rankedOpp.team.size}× Lv ${rankedOpp.team.first().level}\nvýhra +${Ranked.WIN} · prohra −${Ranked.LOSS}"
-        modes.addView(mode("🏆 Hodnocený", rankedSub, "Hrát", loggedIn && me.team.isNotEmpty(),
-            { stage.setRight(sprites(rankedOpp.team)) }) { challenge(rankedOpp) },
+        val modes = ui.row()
+        modes.addView(mode("⚡", "RYCHLÝ ZÁPAS", "Náhodný soupeř.\nO body se nehraje.", "HRÁT ▶",
+            0xFF6E9E3A.toInt(), 0xFF3D5A1E.toInt(), hasTeam) { quickPool.randomOrNull()?.let { challenge(it) } },
             ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        body.addView(modes, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(4f) })
-        body.addView(ui.button("📜 Žebříček hráčů", loggedIn) { showLeaderboard(points) },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(8f) })
+        modes.addView(View(ctx), LinearLayout.LayoutParams(ui.px(10f), 1))
+        val rankedSub = if (!loggedIn) "Jen s přihlášeným účtem."
+            else "${rankedOpp.name}\n${rankedOpp.team.size}× Lv ${rankedOpp.team.first().level}\n+${Ranked.WIN} / −${Ranked.LOSS} b."
+        val ranked = mode("🏆", "HODNOCENÝ", rankedSub, "${tier.emoji} HRÁT ▶", tier.color, ArenaUi.darker(tier.color, 0.5f), loggedIn && hasTeam) {
+            stage.setRight(sprites(rankedOpp.team)); challenge(rankedOpp)
+        }
+        modes.addView(ranked, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        body.addView(modes, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(12f) })
+        if (loggedIn && hasTeam) ArenaUi.pulse(ranked)
+        if (loggedIn) stage.setRight(sprites(rankedOpp.team))
+        body.addView(ui.row().apply {
+            background = ArenaUi.plaque(ui.dp)
+            setPadding(ui.px(14f), ui.px(10f), ui.px(14f), ui.px(10f))
+            alpha = if (loggedIn) 1f else 0.5f
+            addView(ui.text("📜", 24f, ui.cream).apply { setPadding(0, 0, ui.px(10f), 0) })
+            addView(ui.text("ŽEBŘÍČEK HRÁČŮ", 22f, ui.cream), ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(ui.text("›", 28f, 0xFFC9A26B.toInt()))
+            if (loggedIn) setOnClickListener { showLeaderboard(points) }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) })
     }
 
     private fun showLeaderboard(myPoints: Int) {
@@ -260,24 +285,47 @@ class ArenaFragment : Fragment() {
         }
     }
 
+    /** Nadpis sekce jako stuha. */
     private fun section(title: String, sub: String?) {
-        body.addView(ui.text(title, 24f).apply { setPadding(0, ui.px(14f), 0, 0) })
-        if (sub != null) body.addView(ui.text(sub, 14f, ui.inkSoft).apply { setPadding(0, 0, 0, ui.px(6f)) })
+        body.addView(ui.text(title.uppercase(), 20f, ui.cream).apply {
+            background = ArenaUi.ribbon(ui.rust, ui.dp)
+            setPadding(ui.px(12f), ui.px(4f), ui.px(22f), ui.px(5f))
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(18f) })
+        if (sub != null) body.addView(ui.text(sub, 14f, ui.inkSoft).apply { setPadding(ui.px(2f), ui.px(4f), 0, ui.px(4f)) })
         else body.addView(ui.spacer(6f))
     }
 
     private fun note(s: String) = ui.text(s, 15f, ui.inkSoft).apply { setPadding(0, ui.px(2f), 0, ui.px(8f)) }
 
+    /** Karta soupeře: vedoucí Makromon v kruhu, štítek, obtížnost hvězdami, tým a tlačítko. */
     private fun trainerCard(t: Trainer): View {
-        val card = WorkshopMenus.card(ui)
-        val info = ui.column().apply { setPadding(0, 0, ui.px(8f), 0) }
-        info.addView(ui.text(if (t.kind == Trainer.Kind.GHOST) "👻 DUCH HRÁČE" else "TRENÉR ARÉNY", 13f, ui.rust))
+        val ghost = t.kind == Trainer.Kind.GHOST
+        val accent = if (ghost) 0xFF6B4A8A.toInt() else ui.rust
+        val card = WorkshopMenus.card(ui).apply { setPadding(ui.px(10f), ui.px(10f), ui.px(10f), ui.px(10f)) }
+        card.addView(ImageView(requireContext()).apply {
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor((accent and 0x00FFFFFF) or 0x33000000); setStroke(ui.px(2f), accent) }
+            val p = ui.px(6f); setPadding(p, p, p, p)
+            setImageBitmap(t.team.firstOrNull()?.let(::sprite)); scaleType = ImageView.ScaleType.FIT_CENTER
+        }, LinearLayout.LayoutParams(ui.px(58f), ui.px(58f)))
+        val info = ui.column().apply { setPadding(ui.px(10f), 0, ui.px(8f), 0) }
+        val head = ui.row()
+        head.addView(ui.text(if (ghost) "👻 DUCH" else "TRENÉR", 12f, ui.cream).apply {
+            background = ArenaUi.pill(accent, ui.dp); setPadding(ui.px(8f), ui.px(2f), ui.px(8f), ui.px(3f))
+        })
+        // obtížnost podle síly vůči tobě
+        val ratio = t.power.toFloat() / myPower
+        val stars = when { ratio < 0.8f -> "★☆☆"; ratio < 1.2f -> "★★☆"; else -> "★★★" }
+        head.addView(ui.text("  $stars", 16f, 0xFFD9A322.toInt()))
+        info.addView(head)
         info.addView(ui.text(t.name, 24f).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
-        info.addView(ui.text("⚔ ${t.power} · odměna ${Arena.coinsForWin(t)} 🪙", 14f, ui.inkSoft))
-        info.addView(teamRow(t.team, 30f).apply { setPadding(0, ui.px(4f), 0, 0) })
+        info.addView(ui.text("⚔ ${t.power} · ${Arena.coinsForWin(t)} 🪙", 14f, ui.inkSoft))
+        info.addView(teamRow(t.team, 26f).apply { setPadding(0, ui.px(3f), 0, 0) })
         card.addView(info, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        card.addView(ui.button("Vyzvat") { challenge(t) })
-        // klepnutí na kartu: soupeř nastoupí na písek naproti tvému parťákovi
+        card.addView(ui.text("VYZVAT", 17f, ui.cream, Gravity.CENTER).apply {
+            background = ArenaUi.tile(accent, ArenaUi.darker(accent, 0.7f), ui.dp, 8f)
+            setPadding(ui.px(12f), ui.px(9f), ui.px(12f), ui.px(10f))
+            setOnClickListener { challenge(t) }
+        })
         card.setOnClickListener { stage.setRight(sprites(t.team)) }
         return card
     }

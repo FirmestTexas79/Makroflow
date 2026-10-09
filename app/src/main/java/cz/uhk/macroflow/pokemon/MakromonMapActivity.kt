@@ -3380,7 +3380,12 @@ class MakromonMapActivity : AppCompatActivity() {
                 col.addView(android.widget.ImageView(this@MakromonMapActivity).apply {
                     background = cz.uhk.macroflow.pokemon.skills.ui.BevelDrawable.slot(1.5f * dp)
                     val p = (5 * dp).toInt(); setPadding(p, p, p, p)
-                    if (res != 0) setImageResource(res)
+                    if (res != 0) {
+                        // shiny Makromon i v týmu přebarvený jako jinde
+                        val plain = (resources.getDrawable(res, null) as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        if (m.isShiny && plain != null) setImageBitmap(cz.uhk.macroflow.pokemon.shiny.ShinySprites.recolor(plain, m.makromonId))
+                        else setImageResource(res)
+                    }
                     scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
                     contentDescription = "${m.name}, level ${m.level}"
                     setOnClickListener {
