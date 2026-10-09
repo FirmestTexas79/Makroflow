@@ -450,4 +450,13 @@
         <item name="android:textSize">9sp</item>
         <item name="android:textStyle">bold</item>
     </style>
+    <!-- Tlačítko HUD Makrosvěta: dřevěný rámeček (v kódu) a pixelová ikona (docs/adr/0080) -->
+    <style name="MapHudButton">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
+        <item name="android:padding">11dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:background">@android:color/transparent</item>
+    </style>
 </resources>

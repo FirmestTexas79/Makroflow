@@ -297,13 +297,17 @@ class MakromonMapActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btnStartTutorial).setOnClickListener { questDialogManager.startTutorial() }
         findViewById<View>(R.id.btnExitMap).setOnClickListener { finish() }
+        // HUD: všechna tlačítka v dřevěném rámečku jako menu Makrosvěta (docs/adr/0080)
+        listOf(R.id.btnExitMap, R.id.btnSound, R.id.btnArena, R.id.btnStartTutorial, R.id.btnOpenJournal).forEach {
+            findViewById<View>(it).background = cz.uhk.macroflow.pokemon.skills.ui.WoodPanelDrawable(1.5f * resources.displayMetrics.density, parchment = false)
+        }
 
         // Hudba a zvuky: přepínač v HUD, zvuky se načtou předem
         cz.uhk.macroflow.pokemon.audio.GameAudio.preload(this)
         val btnSound = findViewById<ImageButton>(R.id.btnSound)
         fun soundIcon() = btnSound.setImageResource(
-            if (cz.uhk.macroflow.pokemon.audio.GameAudio.isEnabled(this)) android.R.drawable.ic_lock_silent_mode_off
-            else android.R.drawable.ic_lock_silent_mode)
+            if (cz.uhk.macroflow.pokemon.audio.GameAudio.isEnabled(this)) R.drawable.ic_px_sound_on
+            else R.drawable.ic_px_sound_off)
         soundIcon()
         btnSound.setOnClickListener {
             val on = !cz.uhk.macroflow.pokemon.audio.GameAudio.isEnabled(this)
@@ -337,6 +341,7 @@ class MakromonMapActivity : AppCompatActivity() {
             refreshStepBar()            // nad deníkem / soubojem ukazatel kroků nemá co dělat (a bral dotyky)
             if (supportFragmentManager.backStackEntryCount == 0) {
                 companionManager.refresh()
+                refreshTeamColumn()
                 refreshStoryDecor()     // po souboji se strážcem / legendou
                 questManager.recheck()  // boss Hvozdu nastavil příznak → fáze questu se splní
                 checkAwards()           // chycení, denní úkoly… (docs/adr/0037)
@@ -418,6 +423,7 @@ class MakromonMapActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (::companionManager.isInitialized) companionManager.refresh()
+        refreshTeamColumn()
         cz.uhk.macroflow.pokemon.audio.GameAudio.resume(this)
         // Energie: nový den po aspoň 4 h pauze doplní bar (docs/adr/0065)
         staminaBar.set(cz.uhk.macroflow.pokemon.stamina.StaminaStore.onEnter(this), animate = false)
@@ -3352,6 +3358,39 @@ class MakromonMapActivity : AppCompatActivity() {
             body.addView(ui.text("List najdeš v deníku pod záložkou Spisy.", 14f, ui.inkSoft))
             body.addView(ui.spacer(8f))
             body.addView(ui.button("Odložit") { close() })
+        }
+    }
+
+    /** Tým nad parťákem vpravo dole: čtverce se sprity, klepnutí = nový parťák (docs/adr/0080). */
+    private fun refreshTeamColumn() {
+        val col = findViewById<android.widget.LinearLayout>(R.id.teamColumn) ?: return
+        val ctx = applicationContext
+        lifecycleScope.launch {
+            val mons = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                val dao = db.capturedMakromonDao()
+                val active = cz.uhk.macroflow.pokemon.skills.SkillStore.activeId(ctx)
+                cz.uhk.macroflow.pokemon.skills.SkillStore.team(ctx).filter { it != active }.mapNotNull { dao.getMakromonById(it) }
+            }
+            if (isFinishing) return@launch
+            col.removeAllViews()
+            val dp = resources.displayMetrics.density
+            mons.forEach { m ->
+                val res = cz.uhk.macroflow.pokemon.species.SpeciesRegistry.byId(m.makromonId)
+                    ?.let { resources.getIdentifier(it.sprite, "drawable", packageName) } ?: 0
+                col.addView(android.widget.ImageView(this@MakromonMapActivity).apply {
+                    background = cz.uhk.macroflow.pokemon.skills.ui.BevelDrawable.slot(1.5f * dp)
+                    val p = (5 * dp).toInt(); setPadding(p, p, p, p)
+                    if (res != 0) setImageResource(res)
+                    scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                    contentDescription = "${m.name}, level ${m.level}"
+                    setOnClickListener {
+                        lifecycleScope.launch {
+                            kotlinx.coroutines.withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.bag.PocketActions.makeActive(ctx, m) }
+                            companionManager.refresh(); refreshTeamColumn()
+                        }
+                    }
+                }, android.widget.LinearLayout.LayoutParams((40 * dp).toInt(), (40 * dp).toInt()).apply { bottomMargin = (4 * dp).toInt() })
+            }
         }
     }
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pixelová ikona HUD Makrosvěta (docs/adr/0080). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="16" android:viewportHeight="16">
+    <path android:fillColor="#FFFEFAE0" android:pathData="M7,2h1v1h-1zM6,3h2v1h-2zM5,4h3v1h-3zM1,5h7v1h-7zM9,5h1v1h-1zM13,5h1v1h-1zM1,6h7v1h-7zM10,6h1v1h-1zM12,6h1v1h-1zM1,7h7v1h-7zM11,7h1v1h-1zM1,8h7v1h-7zM10,8h1v1h-1zM12,8h1v1h-1zM1,9h7v1h-7zM9,9h1v1h-1zM13,9h1v1h-1zM1,10h7v1h-7zM5,11h3v1h-3zM6,12h2v1h-2zM7,13h1v1h-1z" />
+</vector>
