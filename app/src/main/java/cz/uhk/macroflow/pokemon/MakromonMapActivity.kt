@@ -391,6 +391,10 @@ class MakromonMapActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnOpenJournal).setOnClickListener {
             replaceMapContent(QuestJournalFragment(), TAG_JOURNAL)
         }
+        // Aréna: souboje s trenéry a duchy hráčů, výměny (docs/adr/0078)
+        findViewById<ImageButton>(R.id.btnArena).setOnClickListener {
+            if (supportFragmentManager.backStackEntryCount == 0) replaceMapContent(cz.uhk.macroflow.pokemon.trainer.ArenaFragment())
+        }
         // Ladění shiny (jen debug build): podržením deníku bude příští setkání shiny
         // Ladicí menu (jen debug build): podržení deníku
         if (BuildConfig.DEBUG) findViewById<ImageButton>(R.id.btnOpenJournal).setOnLongClickListener {

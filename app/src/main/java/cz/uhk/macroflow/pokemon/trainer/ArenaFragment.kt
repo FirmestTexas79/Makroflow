@@ -1,19 +1,21 @@
 package cz.uhk.macroflow.pokemon.trainer
 
+import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.text.InputFilter
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
+import android.widget.ScrollView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.AppDatabase
@@ -21,43 +23,76 @@ import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.pokemon.CapturedMakromonEntity
 import cz.uhk.macroflow.pokemon.PokemonBattleFragment
 import cz.uhk.macroflow.pokemon.skills.SkillStore
+import cz.uhk.macroflow.pokemon.skills.ui.BevelDrawable
+import cz.uhk.macroflow.pokemon.skills.ui.WoodPanelDrawable
+import cz.uhk.macroflow.pokemon.skills.ui.WoodUi
+import cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus
 import cz.uhk.macroflow.pokemon.species.SpeciesRegistry
+import cz.uhk.macroflow.pokemon.trade.TradeSheet
+import cz.uhk.macroflow.pokemon.trade.TradeStore
+import cz.uhk.macroflow.pokemon.trade.Trading
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 /**
- * Aréna (docs/adr/0076): přehled týmu, AI trenéři dne a duchové ostatních hráčů.
- * Souboj leží přes celou aplikaci; po jeho zavření se obrazovka obnoví (výsledky, nový level).
+ * Aréna v Makrosvětě (docs/adr/0076, 0078): nahoře gladiátorská aréna s tvým parťákem a vybraným
+ * soupeřem čelem k sobě na písku, dole dřevěný panel jako ostatní menu Makrosvěta – tvůj tým,
+ * výměna, trenéři arény a duchové hráčů. Souboj se otevře na místě arény, po něm se sem vrátíš.
  */
 class ArenaFragment : Fragment() {
 
+    private lateinit var ui: WoodUi
+    private lateinit var stage: ArenaStageView
+    private lateinit var body: LinearLayout
     private var myTeam: List<TrainerMon> = emptyList()
-    private val backStackListener = FragmentManager.OnBackStackChangedListener { if (isAdded) load(publish = false) }
+    private val spriteCache = HashMap<String, Bitmap?>()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
-        inflater.inflate(R.layout.fragment_arena, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        val ctx = requireContext()
+        ui = WoodUi(ctx)
+        val root = FrameLayout(ctx).apply { isClickable = true; setBackgroundColor(Color.BLACK) }
+        stage = ArenaStageView(ctx)
+        root.addView(stage, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        view.findViewById<TextView>(R.id.tvArenaName).setOnClickListener { editName() }
-        view.findViewById<View>(R.id.btnTradeOffer).setOnClickListener { cz.uhk.macroflow.pokemon.trade.TradeSheet(this) { load(false) }.startOffer() }
-        view.findViewById<View>(R.id.btnTradeJoin).setOnClickListener { cz.uhk.macroflow.pokemon.trade.TradeSheet(this) { load(false) }.startJoin() }
-        requireActivity().supportFragmentManager.addOnBackStackChangedListener(backStackListener)
-        load(publish = true)
+        // nadpis na obloze a zavření
+        val head = ui.column().apply { gravity = Gravity.CENTER_HORIZONTAL }
+        head.addView(ui.text("ARÉNA", 54f, ui.cream, Gravity.CENTER).apply { setShadowLayer(0.01f, 3 * ui.dp, 3 * ui.dp, 0xFF3B2A1A.toInt()) })
+        head.addView(ui.text("Souboje trenérů", 18f, 0xFFFFF2C8.toInt(), Gravity.CENTER).apply { setShadowLayer(0.01f, 2 * ui.dp, 2 * ui.dp, 0xFF3B2A1A.toInt()) })
+        root.addView(head, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP)
+            .apply { topMargin = ui.px(44f) })
+        root.addView(ui.text("✕", 28f, ui.cream, Gravity.CENTER).apply {
+            background = WoodPanelDrawable(1.5f * ui.dp, parchment = false)
+            setOnClickListener { parentFragmentManager.popBackStack() }
+        }, FrameLayout.LayoutParams(ui.px(48f), ui.px(48f), Gravity.TOP or Gravity.END).apply { topMargin = ui.px(44f); rightMargin = ui.px(16f) })
+
+        // dřevěný panel dole – překrývá spodní okraj písku
+        val panel = ui.column().apply {
+            background = WoodPanelDrawable(3f * ui.dp)
+            isClickable = true
+            setPadding(ui.px(16f), ui.px(14f), ui.px(16f), ui.px(8f))
+        }
+        body = ui.column()
+        panel.addView(ScrollView(ctx).apply { isVerticalScrollBarEnabled = false; addView(body) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        val panelLp = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT).apply {
+            leftMargin = ui.px(10f); rightMargin = ui.px(10f); bottomMargin = ui.px(10f)
+        }
+        root.addView(panel, panelLp)
+        root.post { panelLp.topMargin = (root.height * 0.44f).toInt(); panel.layoutParams = panelLp }
+        return root
     }
 
-    override fun onDestroyView() {
-        requireActivity().supportFragmentManager.removeOnBackStackChangedListener(backStackListener)
-        super.onDestroyView()
-    }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) { load(publish = savedInstanceState == null) }
+
+    // ── Data ──
 
     /** Tým v pořadí jako v souboji: aktivní parťák, pak ostatní členové. */
     private fun loadTeam(): List<CapturedMakromonEntity> {
         val ctx = requireContext().applicationContext
         val dao = AppDatabase.getDatabase(ctx).capturedMakromonDao()
-        val active = SkillStore.activeId(ctx)
-        val ids = (listOfNotNull(active) + SkillStore.team(ctx)).distinct()
+        val ids = (listOfNotNull(SkillStore.activeId(ctx)) + SkillStore.team(ctx)).distinct()
         return ids.mapNotNull { dao.getMakromonById(it) }.take(Trainers.MAX_TEAM)
     }
 
@@ -66,23 +101,26 @@ class ArenaFragment : Fragment() {
         val ctx = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
             val user = FirebaseRepository.currentUser
-            val name = Arena.arenaName(ctx, user?.displayName)
             val mons = withContext(Dispatchers.IO) { loadTeam() }
-            val me = Arena.snapshot(user?.uid ?: "local", name, mons, System.currentTimeMillis())
+            val me = Arena.snapshot(user?.uid ?: "local", Arena.arenaName(ctx, user?.displayName), mons, System.currentTimeMillis())
             myTeam = me.team
-            renderMe(me)
-            renderTrainers(R.id.llAiTrainers, Arena.aiTrainers(me.team, LocalDate.now().toEpochDay()))
+            val ai = Arena.aiTrainers(me.team, LocalDate.now().toEpochDay())
+            stage.setFighters(me.team.firstOrNull()?.let(::sprite), ai.getOrNull(1)?.team?.firstOrNull()?.let(::sprite))
 
-            val empty = view?.findViewById<TextView>(R.id.tvGhostsEmpty) ?: return@launch
-            val status = view?.findViewById<TextView>(R.id.tvGhostStatus) ?: return@launch
-            if (user != null) resumeTrade(user.uid)
+            body.removeAllViews()
+            renderMe(me)
+            val tradeBox = ui.column(); body.addView(tradeBox)
+            renderTrade(tradeBox, user?.uid)
+            section("Trenéři arény", "Mění se každý den a rostou s tebou.")
+            ai.forEach { body.addView(trainerCard(it)) }
+            section("Duchové hráčů", null)
+            val ghostBox = ui.column(); body.addView(ghostBox)
+
             if (user == null) {
-                status.text = "Přihlas se a tvůj tým začne hájit arénu proti ostatním hráčům."
-                empty.text = "Duchové ostatních hráčů jsou vidět po přihlášení."
-                empty.visibility = View.VISIBLE
+                ghostBox.addView(note("Přihlas se a tvůj tým začne hájit arénu proti ostatním hráčům."))
                 return@launch
             }
-            status.text = if (me.team.isEmpty()) "Nemáš tým – chyť Makromona v Makrosvětě." else "👻 Tvůj duch hájí arénu."
+            ghostBox.addView(note("Načítám duchy…"))
             val ghosts = withContext(Dispatchers.IO) {
                 runCatching {
                     if (publish && me.team.isNotEmpty()) FirebaseRepository.publishArenaGhost(me)
@@ -90,131 +128,145 @@ class ArenaFragment : Fragment() {
                 }
             }
             if (!isAdded) return@launch
+            ghostBox.removeAllViews()
             ghosts.onSuccess { list ->
                 val picked = Arena.pickGhosts(list, user.uid, me.power)
-                renderTrainers(R.id.llGhosts, picked)
-                empty.visibility = if (picked.isEmpty()) View.VISIBLE else View.GONE
-                empty.text = "Zatím tu nejsou žádní další duchové. Pozvi kamaráda!"
-            }.onFailure {
-                empty.visibility = View.VISIBLE
-                empty.text = "Duchy se nepodařilo načíst. Zkus to znovu později."
-                if (publish) status.text = "Tvého ducha se nepodařilo nahrát."
-            }
+                if (picked.isEmpty()) ghostBox.addView(note("Zatím tu nejsou žádní další duchové. Pozvi kamaráda!"))
+                picked.forEach { ghostBox.addView(trainerCard(it)) }
+            }.onFailure { ghostBox.addView(note("Duchy se nepodařilo načíst. Zkus to později.")) }
         }
+    }
+
+    // ── Panel ──
+
+    private fun renderMe(me: Trainer) {
+        val top = ui.row()
+        val col = ui.column()
+        col.addView(ui.text("TVŮJ TÝM", 15f, ui.rust))
+        col.addView(ui.text("${me.name} ✎", 30f).apply { setOnClickListener { editName() } })
+        top.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val rec = Arena.record(requireContext())
+        val stats = ui.column().apply { gravity = Gravity.END }
+        stats.addView(ui.text("⚔ ${me.power}", 30f, ui.ink, Gravity.END))
+        stats.addView(ui.text("${rec.wins} výher · ${rec.losses} proher", 15f, ui.inkSoft, Gravity.END))
+        top.addView(stats)
+        body.addView(top)
+        body.addView(teamRow(me.team, 52f).apply { setPadding(0, ui.px(8f), 0, ui.px(4f)) })
+        val status = when {
+            me.team.isEmpty() -> "Nemáš tým – nejdřív chyť Makromona."
+            FirebaseRepository.currentUser == null -> "Offline: bojuješ jen s trenéry arény."
+            else -> "👻 Tvůj duch hájí arénu, i když nehraješ."
+        }
+        body.addView(ui.text(status, 15f, ui.olive).apply { setPadding(0, ui.px(2f), 0, ui.px(4f)) })
+    }
+
+    private fun section(title: String, sub: String?) {
+        body.addView(ui.text(title, 24f).apply { setPadding(0, ui.px(14f), 0, 0) })
+        if (sub != null) body.addView(ui.text(sub, 14f, ui.inkSoft).apply { setPadding(0, 0, 0, ui.px(6f)) })
+        else body.addView(ui.spacer(6f))
+    }
+
+    private fun note(s: String) = ui.text(s, 15f, ui.inkSoft).apply { setPadding(0, ui.px(2f), 0, ui.px(8f)) }
+
+    private fun trainerCard(t: Trainer): View {
+        val card = WorkshopMenus.card(ui)
+        val info = ui.column().apply { setPadding(0, 0, ui.px(8f), 0) }
+        info.addView(ui.text(if (t.kind == Trainer.Kind.GHOST) "👻 DUCH HRÁČE" else "TRENÉR ARÉNY", 13f, ui.rust))
+        info.addView(ui.text(t.name, 24f).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
+        info.addView(ui.text("⚔ ${t.power} · odměna ${Arena.coinsForWin(t)} 🪙", 14f, ui.inkSoft))
+        info.addView(teamRow(t.team, 30f).apply { setPadding(0, ui.px(4f), 0, 0) })
+        card.addView(info, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        card.addView(ui.button("Vyzvat") { challenge(t) })
+        // klepnutí na kartu: soupeř nastoupí na písek naproti tvému parťákovi
+        card.setOnClickListener { stage.setRight(t.team.firstOrNull()?.let(::sprite)) }
+        return card
+    }
+
+    /** Řada spritů v dlaždicích, pod každým level. */
+    private fun teamRow(team: List<TrainerMon>, sizeDp: Float): LinearLayout {
+        val row = ui.row()
+        team.forEach { m ->
+            val cell = ui.column().apply { gravity = Gravity.CENTER_HORIZONTAL; setPadding(0, 0, ui.px(6f), 0) }
+            cell.addView(ImageView(requireContext()).apply {
+                background = BevelDrawable.slot(1.5f * ui.dp)
+                val p = ui.px(sizeDp * 0.1f)
+                setPadding(p, p, p, p)
+                setImageBitmap(sprite(m))
+                scaleType = ImageView.ScaleType.FIT_CENTER
+            }, LinearLayout.LayoutParams(ui.px(sizeDp), ui.px(sizeDp)))
+            cell.addView(ui.text("Lv ${m.level}", 13f, ui.inkSoft, Gravity.CENTER))
+            row.addView(cell)
+        }
+        return row
+    }
+
+    private fun sprite(m: TrainerMon): Bitmap? = spriteCache.getOrPut("${m.speciesId}${m.shiny}") {
+        val sp = SpeciesRegistry.byId(m.speciesId) ?: return@getOrPut null
+        val res = resources.getIdentifier(sp.sprite, "drawable", requireContext().packageName)
+        if (res == 0) return@getOrPut null
+        val plain = (resources.getDrawable(res, null) as? BitmapDrawable)?.bitmap ?: return@getOrPut null
+        if (m.shiny) cz.uhk.macroflow.pokemon.shiny.ShinySprites.recolor(plain, sp.id) else plain
+    }
+
+    // ── Výměna (docs/adr/0077) ──
+
+    private fun renderTrade(box: LinearLayout, uid: String?) {
+        box.addView(ui.text("Výměna s kamarádem", 24f).apply { setPadding(0, ui.px(14f), 0, 0) })
+        box.addView(ui.text("Jeden nabídne a ukáže kód, druhý ho opíše a nabídne svého.", 14f, ui.inkSoft).apply { setPadding(0, 0, 0, ui.px(6f)) })
+        val buttons = ui.row()
+        buttons.addView(ui.button("Nabídnout") { TradeSheet(this) { load(false) }.startOffer() }, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        buttons.addView(View(requireContext()), LinearLayout.LayoutParams(ui.px(8f), 1))
+        buttons.addView(ui.button("Mám kód") { TradeSheet(this) { load(false) }.startJoin() }, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        box.addView(buttons)
+        if (uid != null) viewLifecycleOwner.lifecycleScope.launch { resumeTrade(box, uid) }
     }
 
     /** Rozpracovaná výměna: dokončí potvrzenou, uklidí zrušenou, jinak nabídne pokračování. */
-    private suspend fun resumeTrade(uid: String) {
-        val TS = cz.uhk.macroflow.pokemon.trade.TradeStore
-        val T = cz.uhk.macroflow.pokemon.trade.Trading
+    private suspend fun resumeTrade(box: LinearLayout, uid: String) {
         val ctx = requireContext().applicationContext
-        val btn = view?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnTradeResume) ?: return
-        val code = TS.pendingCode(ctx) ?: run { btn.visibility = View.GONE; return }
+        val code = TradeStore.pendingCode(ctx) ?: return
         val trade = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.getTrade(code) }.getOrNull() }
         if (!isAdded) return
+        val phase = trade?.let { Trading.phase(it) }
         when {
-            trade == null || T.phase(trade) == cz.uhk.macroflow.pokemon.trade.Trading.Phase.CANCELLED -> { TS.clearPending(ctx); btn.visibility = View.GONE }
-            T.phase(trade) == cz.uhk.macroflow.pokemon.trade.Trading.Phase.DONE -> {
-                val got = withContext(Dispatchers.IO) { runCatching { TS.applyIfDone(ctx, trade, uid) }.getOrNull() }
-                btn.visibility = View.GONE
+            trade == null || phase == Trading.Phase.CANCELLED -> TradeStore.clearPending(ctx)
+            phase == Trading.Phase.DONE -> {
+                val got = withContext(Dispatchers.IO) { runCatching { TradeStore.applyIfDone(ctx, trade, uid) }.getOrNull() }
                 got?.let { Toast.makeText(ctx, "Výměna dokončena – ${it.name} je tvůj!", Toast.LENGTH_LONG).show() }
             }
-            else -> {
-                btn.text = "Pokračovat ve výměně ${T.pretty(code)}"
-                btn.visibility = View.VISIBLE
-                btn.setOnClickListener { cz.uhk.macroflow.pokemon.trade.TradeSheet(this) { load(false) }.resume(code) }
-            }
+            else -> box.addView(ui.button("Pokračovat ve výměně ${Trading.pretty(code)}") {
+                TradeSheet(this) { load(false) }.resume(code)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(8f) })
         }
     }
 
-    private fun renderMe(me: Trainer) {
-        val v = view ?: return
-        v.findViewById<TextView>(R.id.tvArenaName).text = "${me.name} ✎"
-        v.findViewById<TextView>(R.id.tvArenaPower).text = "⚔ ${me.power}"
-        val r = Arena.record(requireContext())
-        v.findViewById<TextView>(R.id.tvArenaRecord).text = "${r.wins} výher · ${r.losses} proher"
-        fillTeam(v.findViewById(R.id.llMyTeam), me.team, onDark = true)
-    }
-
-    private fun renderTrainers(containerId: Int, trainers: List<Trainer>) {
-        val box = view?.findViewById<LinearLayout>(containerId) ?: return
-        box.removeAllViews()
-        trainers.forEach { t ->
-            val row = layoutInflater.inflate(R.layout.item_arena_trainer, box, false)
-            row.findViewById<TextView>(R.id.tvTrainerKind).text = if (t.kind == Trainer.Kind.GHOST) "👻 DUCH HRÁČE" else "TRENÉR ARÉNY"
-            row.findViewById<TextView>(R.id.tvTrainerName).text = t.name
-            row.findViewById<TextView>(R.id.tvTrainerSub).text =
-                "⚔ ${t.power} · ${t.team.size} ${if (t.team.size == 1) "Makromon" else if (t.team.size < 5) "Makromoni" else "Makromonů"}" +
-                    " · odměna ${Arena.coinsForWin(t)} 🪙"
-            fillTeam(row.findViewById(R.id.llTrainerTeam), t.team, onDark = false)
-            row.findViewById<View>(R.id.btnChallenge).setOnClickListener { challenge(t) }
-            box.addView(row)
-        }
-    }
-
-    /** Sprity týmu v kroužcích, pod každým level. */
-    private fun fillTeam(box: LinearLayout, team: List<TrainerMon>, onDark: Boolean) {
-        box.removeAllViews()
-        val dp = resources.displayMetrics.density
-        team.forEach { m ->
-            val sp = SpeciesRegistry.byId(m.speciesId)
-            val cell = LinearLayout(requireContext()).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = android.view.Gravity.CENTER_HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            }
-            val res = sp?.let { resources.getIdentifier(it.sprite, "drawable", requireContext().packageName) } ?: 0
-            cell.addView(ImageView(requireContext()).apply {
-                layoutParams = LinearLayout.LayoutParams((44 * dp).toInt(), (44 * dp).toInt())
-                setBackgroundResource(R.drawable.bg_arena_slot)
-                if (onDark) background.mutate().alpha = 60
-                setPadding((5 * dp).toInt(), (5 * dp).toInt(), (5 * dp).toInt(), (5 * dp).toInt())
-                if (res != 0) setImageResource(res)
-                (drawable as? BitmapDrawable)?.isFilterBitmap = false
-            })
-            cell.addView(TextView(requireContext()).apply {
-                text = "Lv ${m.level}"
-                textSize = 10f
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(if (onDark) 0xCCFEFAE0.toInt() else 0xFF606C38.toInt())
-            })
-            box.addView(cell)
-        }
-        // prázdná místa do šesti, aby řada měla stejný rytmus
-        repeat(Trainers.MAX_TEAM - team.size) {
-            box.addView(View(requireContext()).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
-        }
-    }
+    // ── Akce ──
 
     private fun challenge(t: Trainer) {
         if (myTeam.isEmpty()) {
-            Toast.makeText(requireContext(), "Nejdřív si v Makrosvětě chyť Makromona.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Nejdřív si chyť Makromona.", Toast.LENGTH_SHORT).show()
             return
         }
-        requireActivity().supportFragmentManager.beginTransaction()
+        parentFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
-            .add(android.R.id.content, PokemonBattleFragment.forTrainer(t))
-            .addToBackStack("arena_battle")
+            .replace(R.id.mapFragmentContainer, PokemonBattleFragment.forTrainer(t))
+            .addToBackStack(null)
             .commit()
     }
 
     private fun editName() {
-        val ctx = requireContext()
-        val input = EditText(ctx).apply {
-            setText(Arena.arenaName(ctx, FirebaseRepository.currentUser?.displayName))
-            filters = arrayOf(InputFilter.LengthFilter(Trainers.NAME_MAX))
-            setSingleLine()
-        }
-        val pad = (20 * resources.displayMetrics.density).toInt()
-        AlertDialog.Builder(ctx)
-            .setTitle("Jméno v aréně")
-            .setMessage("Tohle jméno uvidí ostatní hráči u tvého ducha.")
-            .setView(android.widget.FrameLayout(ctx).apply { setPadding(pad, 0, pad, 0); addView(input) })
-            .setPositiveButton("Uložit") { _, _ ->
-                val n = input.text.toString().trim()
-                if (n.isNotEmpty()) { Arena.setArenaName(ctx, n); load(publish = true) }
+        val root = view as? FrameLayout ?: return
+        WorkshopMenus.show(root, "Jméno v aréně", "Tohle jméno uvidí ostatní hráči u tvého ducha.") { w, b, close ->
+            val input = EditText(requireContext()).apply {
+                setText(Arena.arenaName(requireContext(), FirebaseRepository.currentUser?.displayName))
+                filters = arrayOf(InputFilter.LengthFilter(Trainers.NAME_MAX))
+                setSingleLine(); textSize = 22f; typeface = w.font; setTextColor(w.ink)
             }
-            .setNegativeButton("Zrušit", null)
-            .show()
+            b.addView(input)
+            b.addView(w.button("Uložit") {
+                val n = input.text.toString().trim()
+                if (n.isNotEmpty()) { Arena.setArenaName(requireContext(), n); close(); load(publish = true) }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = w.px(8f) })
+        }
     }
 }

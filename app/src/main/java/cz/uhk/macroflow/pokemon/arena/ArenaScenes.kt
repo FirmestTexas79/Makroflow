@@ -321,10 +321,10 @@ object Arenas {
         // ── Gladiátorská aréna (docs/adr/0078) ──
         fun colosseum(): Scene {
             ground(M.ARENA_SAND)
-            // stopy v písku: tmavší a světlejší skvrny, vyhrabané kruhy
-            repeat(60) {
+            // světlejší uhlazené skvrny v písku
+            repeat(40) {
                 val x = r(-14f, 22f); val z = r(-3f, 17f)
-                box(x, 0f, z, x + r(0.4f, 1.6f), 0.02f, z + r(0.3f, 1f), if (rnd.nextFloat() > 0.5f) M.SAND else M.DIRT, shadow = false)
+                box(x, 0f, z, x + r(0.6f, 2f), 0.02f, z + r(0.5f, 1.4f), M.SAND, shadow = false)
             }
             // nízký písečný val soupeře
             box(E.x - 1.7f, 0f, E.z - 1.2f, E.x + 1.7f, PEDESTAL, E.z + 1.8f, M.ARENA_SAND)
@@ -400,14 +400,6 @@ object Arenas {
                 aa += 6f
             }
             ring(outer - 0.2f, outer + 1.6f, 13.5f, 14f, M.MARBLE)
-            // plachty (velarium) nahoře vzadu
-            var va = 40f
-            while (va <= 140f) {
-                val rad = Math.toRadians(va.toDouble())
-                val x = cx + (outer - 1.5f) * cos(rad).toFloat(); val z = cz + (outer - 1.5f) * sin(rad).toFloat()
-                box(x - 1.2f, 14f, z - 1.2f, x + 1.2f, 14.25f, z + 1.2f, if ((va / 20).toInt() % 2 == 0) M.BANNER_RED else M.MARBLE, shadow = false)
-                va += 10f
-            }
             // ohniště po stranách
             for (a in listOf(28f, 62f, 118f, 152f)) {
                 val rad = Math.toRadians(a.toDouble())
