@@ -67,12 +67,12 @@ object Arena {
     fun record(ctx: Context): Record = prefs(ctx).let { Record(it.getInt(WINS, 0), it.getInt(LOSSES, 0)) }
 
     /** Zapíše výsledek; vrátí penízky za výhru (0, pokud už dnes nad tímhle trenérem vyhrál). */
-    fun recordResult(ctx: Context, t: Trainer, won: Boolean, today: LocalDate = LocalDate.now()): Int {
+    fun recordResult(ctx: Context, t: Trainer, won: Boolean, today: LocalDate = LocalDate.now(), pay: Boolean = true): Int {
         val p = prefs(ctx)
         if (!won) { p.edit().putInt(LOSSES, p.getInt(LOSSES, 0) + 1).apply(); return 0 }
         val tag = "$today|${t.id}"
         val paid = p.getStringSet(PAID, emptySet()).orEmpty().filter { it.startsWith("$today|") }.toSet()
-        val coins = if (tag in paid) 0 else coinsForWin(t)
+        val coins = if (!pay || tag in paid) 0 else coinsForWin(t)
         p.edit().putInt(WINS, p.getInt(WINS, 0) + 1).putStringSet(PAID, paid + tag).apply()
         return coins
     }

@@ -186,6 +186,7 @@ class PokemonBattleFragment : Fragment() {
         introHandler.removeCallbacksAndMessages(null)
         introAnimators.toList().forEach { it.cancel() }
         introAnimators.clear()
+        arenaView?.forfeitIfRanked()
         arenaView?.onArenaReady = null; arenaView = null
         super.onDestroyView()
     }

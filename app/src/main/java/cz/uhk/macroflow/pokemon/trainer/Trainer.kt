@@ -31,7 +31,11 @@ data class Trainer(
     val name: String,
     val kind: Kind,
     val team: List<TrainerMon>,
-    val updatedAt: Long = 0L
+    val updatedAt: Long = 0L,
+    /** Hodnocený zápas – výsledek mění body v ranku (docs/adr/0079). */
+    val ranked: Boolean = false,
+    /** Body v ranku (u duchů z cloudu, pro žebříček). */
+    val points: Int = 0
 ) {
     enum class Kind { GHOST, AI }
 
@@ -101,11 +105,13 @@ object Trainers {
             )
         }
         val kind = runCatching { Trainer.Kind.valueOf(map["kind"] as? String ?: "") }.getOrDefault(Trainer.Kind.GHOST)
-        return Trainer(id, map["name"] as? String ?: "", kind, team, (map["updatedAt"] as? Number)?.toLong() ?: 0L)
+        return Trainer(id, map["name"] as? String ?: "", kind, team, (map["updatedAt"] as? Number)?.toLong() ?: 0L,
+            points = (map["points"] as? Number)?.toInt()?.coerceIn(0, 100_000) ?: 0)
     }
 
     fun toJson(t: Trainer): String = JSONObject().apply {
         put("id", t.id); put("name", t.name); put("kind", t.kind.name); put("updatedAt", t.updatedAt)
+        put("ranked", t.ranked); put("points", t.points)
         put("team", JSONArray(t.team.map { m ->
             JSONObject().put("s", m.speciesId).put("l", m.level).put("m", JSONArray(m.moves)).put("sh", m.shiny)
         }))
@@ -119,6 +125,7 @@ object Trainers {
             val mv = m.optJSONArray("m") ?: JSONArray()
             TrainerMon(m.getString("s"), m.getInt("l"), (0 until mv.length()).map { mv.getString(it) }, m.optBoolean("sh"))
         }
-        Trainer(o.getString("id"), o.getString("name"), Trainer.Kind.valueOf(o.getString("kind")), team, o.optLong("updatedAt"))
+        Trainer(o.getString("id"), o.getString("name"), Trainer.Kind.valueOf(o.getString("kind")), team, o.optLong("updatedAt"),
+            ranked = o.optBoolean("ranked"), points = o.optInt("points"))
     }.getOrNull()
 }

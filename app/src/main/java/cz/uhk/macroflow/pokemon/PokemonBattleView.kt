@@ -1155,12 +1155,17 @@ class PokemonBattleView @JvmOverloads constructor(
     /** Padl celý hráčův tým: trenér vyhrál. Žádná smrt postavy – v aréně se jen prohrává. */
     private fun trainerWon() {
         val t = trainer ?: return
+        trainerFinished = true
         Thread { cz.uhk.macroflow.pokemon.trainer.Arena.recordResult(context, t, won = false) }.start()
+        val rank = if (t.ranked) rankedOutcome(won = false) else null
         say(gs.player.name, "FAINTED!") {
-            gs.phase = BattlePhase.PLAYER_FAINTED
-            setText(t.battleName, "WON THE BATTLE!")
-            busy = false
-            pendingAction = { onCaught?.invoke() }
+            val end = {
+                gs.phase = BattlePhase.PLAYER_FAINTED
+                setText(t.battleName, "WON THE BATTLE!")
+                busy = false
+                pendingAction = { onCaught?.invoke() }
+            }
+            if (rank == null) end() else sayChain(rankLines(rank)) { end() }
         }
     }
 
@@ -1189,16 +1194,54 @@ class PokemonBattleView @JvmOverloads constructor(
         gs.enemyVisible = false
         gs.phase = BattlePhase.ENEMY_FAINTED
         setText(fallen.name, "FAINTED!")
+        trainerFinished = true
+        val rank = if (t.ranked) rankedOutcome(won = true) else null
         Thread {
-            val coins = cz.uhk.macroflow.pokemon.trainer.Arena.recordResult(context, t, won = true)
+            val daily = cz.uhk.macroflow.pokemon.trainer.Arena.recordResult(context, t, won = true, pay = rank == null)
+            val coins = daily + (rank?.coins ?: 0)
             if (coins > 0) db.coinDao().addCoins(coins)
             handler.post {
                 val lines = mutableListOf("YOU DEFEATED" to t.battleName)
+                if (rank != null) lines += rankLines(rank)
                 if (coins > 0) lines += "YOU GOT" to "$coins MAKRO COINS!"
                 lines.forEachIndexed { i, (a, b) -> handler.postDelayed({ setText(a, b) }, 900L + i * 1500L) }
                 handler.postDelayed({ onCaught?.invoke() }, 900L + lines.size * 1500L + 400L)
             }
         }.start()
+    }
+
+    /** Souboj s trenérem doběhl do konce (výsledek zapsaný). */
+    var trainerFinished = false
+        private set
+
+    /** Hráč odešel z hodnoceného zápasu před koncem → počítá se jako prohra (jinak by šlo utíkat). */
+    fun forfeitIfRanked() {
+        val t = trainer ?: return
+        if (trainerFinished || !t.ranked) return
+        trainerFinished = true
+        cz.uhk.macroflow.pokemon.trainer.Arena.recordResult(context, t, won = false)
+        rankedOutcome(won = false)
+    }
+
+    /** Hodnocený zápas (docs/adr/0079): body v telefonu hned, do cloudu na pozadí. */
+    private fun rankedOutcome(won: Boolean): cz.uhk.macroflow.pokemon.trainer.Ranked.Outcome {
+        trainerFinished = true
+        val o = cz.uhk.macroflow.pokemon.trainer.Ranked.record(context, won)
+        if (FirebaseRepository.isLoggedIn) kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+            runCatching { FirebaseRepository.updateArenaPoints(o.result.after) }
+        }
+        return o
+    }
+
+    private fun rankLines(o: cz.uhk.macroflow.pokemon.trainer.Ranked.Outcome): List<Pair<String, String>> {
+        val R = cz.uhk.macroflow.pokemon.trainer.Ranked
+        val r = o.result
+        val tier = R.tierOf(r.after)
+        val sign = if (r.delta >= 0) "+" else ""
+        val out = mutableListOf("RANKED $sign${r.delta} PTS" to "${tier.ascii} ${r.after} PTS")
+        if (r.promoted) out += "PROMOTED TO" to "${tier.ascii} RANK!"
+        if (r.demoted) out += "DROPPED TO" to "${tier.ascii} RANK"
+        return out
     }
 
     private fun enemyFainted() {

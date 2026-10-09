@@ -47,6 +47,8 @@ class ArenaFragment : Fragment() {
     private lateinit var stage: ArenaStageView
     private lateinit var body: LinearLayout
     private var myTeam: List<TrainerMon> = emptyList()
+    /** Soupeři pro rychlý zápas: trenéři arény + načtení duchové. */
+    private var quickPool: List<Trainer> = emptyList()
     private val spriteCache = HashMap<String, Bitmap?>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -109,9 +111,11 @@ class ArenaFragment : Fragment() {
 
             body.removeAllViews()
             renderMe(me)
+            quickPool = ai
+            renderModes(me, user != null)
             val tradeBox = ui.column(); body.addView(tradeBox)
             renderTrade(tradeBox, user?.uid)
-            section("Trenéři arény", "Mění se každý den a rostou s tebou.")
+            section("Trénink s trenéry arény", "Mění se každý den a rostou s tebou.")
             ai.forEach { body.addView(trainerCard(it)) }
             section("Duchové hráčů", null)
             val ghostBox = ui.column(); body.addView(ghostBox)
@@ -121,16 +125,20 @@ class ArenaFragment : Fragment() {
                 return@launch
             }
             ghostBox.addView(note("Načítám duchy…"))
+            val before = Ranked.points(ctx)
             val ghosts = withContext(Dispatchers.IO) {
                 runCatching {
                     if (publish && me.team.isNotEmpty()) FirebaseRepository.publishArenaGhost(me)
+                    runCatching { Ranked.syncFromCloud(ctx, FirebaseRepository.myArenaPoints()) }
                     FirebaseRepository.fetchArenaGhosts()
                 }
             }
+            if (Ranked.points(ctx) != before) { load(false); return@launch }   // body z jiného telefonu
             if (!isAdded) return@launch
             ghostBox.removeAllViews()
             ghosts.onSuccess { list ->
                 val picked = Arena.pickGhosts(list, user.uid, me.power)
+                quickPool = ai + picked
                 if (picked.isEmpty()) ghostBox.addView(note("Zatím tu nejsou žádní další duchové. Pozvi kamaráda!"))
                 picked.forEach { ghostBox.addView(trainerCard(it)) }
             }.onFailure { ghostBox.addView(note("Duchy se nepodařilo načíst. Zkus to později.")) }
@@ -158,6 +166,92 @@ class ArenaFragment : Fragment() {
             else -> "👻 Tvůj duch hájí arénu, i když nehraješ."
         }
         body.addView(ui.text(status, 15f, ui.olive).apply { setPadding(0, ui.px(2f), 0, ui.px(4f)) })
+    }
+
+    // ── Rank (docs/adr/0079) ──
+
+    private fun renderModes(me: Trainer, loggedIn: Boolean) {
+        val ctx = requireContext()
+        val points = Ranked.points(ctx)
+        val tier = Ranked.tierOf(points)
+
+        // odznak ranku s postupem
+        val badge = WorkshopMenus.card(ui).apply { setPadding(ui.px(12f), ui.px(10f), ui.px(12f), ui.px(10f)) }
+        badge.addView(ui.text(tier.emoji, 34f).apply { setPadding(0, 0, ui.px(10f), 0) })
+        val col = ui.column()
+        val head = ui.row()
+        head.addView(ui.text(tier.label, 28f, tier.color), ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        head.addView(ui.text("$points b.", 24f, ui.ink))
+        col.addView(head)
+        // pruh postupu k dalšímu ranku
+        val prog = Ranked.progress(points)
+        col.addView(LinearLayout(ctx).apply {
+            background = BevelDrawable.slot(1f * ui.dp)
+            setPadding(ui.px(2f), ui.px(2f), ui.px(2f), ui.px(2f))
+            addView(View(ctx).apply { setBackgroundColor(tier.color) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, prog))
+            addView(View(ctx), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f - prog))
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ui.px(14f)).apply { topMargin = ui.px(4f); bottomMargin = ui.px(2f) })
+        val placeTv = ui.text(tier.next?.let { "Do ranku ${it.label}: ${it.min - points} b." } ?: "Nejvyšší rank – drž se na vrcholu!", 14f, ui.inkSoft)
+        col.addView(placeTv)
+        badge.addView(col, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        body.addView(badge)
+        if (loggedIn) viewLifecycleOwner.lifecycleScope.launch {
+            val place = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.arenaPlace(points) }.getOrNull() }
+            if (place != null && isAdded) placeTv.text = "${placeTv.text}  ·  #$place v žebříčku"
+        }
+
+        // dva režimy
+        val rankedOpp = Ranked.opponent(points, me.team, Ranked.matches(ctx))
+        val modes = ui.row()
+        fun mode(title: String, sub: String, label: String, enabled: Boolean, onPreview: (() -> Unit)?, go: () -> Unit) = ui.column().apply {
+            background = WoodPanelDrawable(1.5f * ui.dp)
+            setPadding(ui.px(12f), ui.px(10f), ui.px(12f), ui.px(10f))
+            addView(ui.text(title, 22f))
+            addView(ui.text(sub, 13f, ui.inkSoft).apply { setPadding(0, ui.px(2f), 0, ui.px(8f)); minLines = 3 })
+            addView(ui.button(label, enabled) { go() })
+            onPreview?.let { p -> setOnClickListener { p() } }
+        }
+        modes.addView(mode("⚡ Rychlý", "Náhodný soupeř, o body se nehraje.", "Hrát", me.team.isNotEmpty(), null) {
+            quickPool.randomOrNull()?.let { challenge(it) }
+        }, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        modes.addView(View(ctx), LinearLayout.LayoutParams(ui.px(8f), 1))
+        val rankedSub = if (!loggedIn) "Hodnocené zápasy jen s přihlášeným účtem."
+            else "${rankedOpp.name} · ${rankedOpp.team.size}× Lv ${rankedOpp.team.first().level}\nvýhra +${Ranked.WIN} · prohra −${Ranked.LOSS}"
+        modes.addView(mode("🏆 Hodnocený", rankedSub, "Hrát", loggedIn && me.team.isNotEmpty(),
+            { stage.setRight(rankedOpp.team.firstOrNull()?.let(::sprite)) }) { challenge(rankedOpp) },
+            ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        body.addView(modes, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(4f) })
+        body.addView(ui.button("📜 Žebříček hráčů", loggedIn) { showLeaderboard(points) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(8f) })
+    }
+
+    private fun showLeaderboard(myPoints: Int) {
+        val root = view as? FrameLayout ?: return
+        val me = FirebaseRepository.currentUser?.uid
+        WorkshopMenus.show(root, "Žebříček", "Nejlepší trenéři arény") { w, b, _ ->
+            b.addView(w.text("Načítám…", 16f, w.inkSoft))
+            viewLifecycleOwner.lifecycleScope.launch {
+                val res = withContext(Dispatchers.IO) {
+                    runCatching { FirebaseRepository.arenaLeaderboard() to runCatching { FirebaseRepository.arenaPlace(myPoints) }.getOrNull() }
+                }
+                b.removeAllViews()
+                res.onSuccess { (list, place) ->
+                    if (list.isEmpty()) b.addView(w.text("Zatím nikdo nehrál hodnocený zápas. Buď první!", 16f, w.inkSoft))
+                    list.forEachIndexed { i, t ->
+                        val tier = Ranked.tierOf(t.points)
+                        val row = WorkshopMenus.card(w)
+                        if (t.id == me) row.background = BevelDrawable.slot(1.5f * w.dp)
+                        row.addView(w.text("#${i + 1}", 20f, w.inkSoft).apply { minWidth = w.px(40f) })
+                        row.addView(w.text(tier.emoji, 20f).apply { setPadding(0, 0, w.px(6f), 0) })
+                        row.addView(w.text(t.name + if (t.id == me) " (ty)" else "", 20f).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
+                            w.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                        row.addView(w.text("${t.points} b.", 20f, tier.color))
+                        b.addView(row)
+                    }
+                    if (place != null && list.none { it.id == me }) b.addView(w.text("Ty: #$place · $myPoints b.", 18f, w.ink).apply { setPadding(0, w.px(6f), 0, 0) })
+                }.onFailure { b.addView(w.text("Žebříček se nepodařilo načíst.", 16f, w.inkSoft)) }
+            }
+        }
     }
 
     private fun section(title: String, sub: String?) {

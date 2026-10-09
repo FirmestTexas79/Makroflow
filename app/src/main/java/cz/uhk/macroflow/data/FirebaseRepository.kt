@@ -711,8 +711,34 @@ object FirebaseRepository {
     /** Nahraje tým přihlášeného hráče jako jeho ducha v aréně. */
     suspend fun publishArenaGhost(trainer: cz.uhk.macroflow.pokemon.trainer.Trainer) {
         val uid = auth.currentUser?.uid ?: return
-        db.collection(ARENA).document(uid).set(cz.uhk.macroflow.pokemon.trainer.Trainers.toMap(trainer)).await()
+        // merge: body v ranku (points, rankedAt) zůstanou, jak jsou
+        db.collection(ARENA).document(uid).set(cz.uhk.macroflow.pokemon.trainer.Trainers.toMap(trainer), SetOptions.merge()).await()
     }
+
+    /** Body v ranku do cloudu (docs/adr/0079); pravidla pustí nejvýš +25 a ne častěji než po 20 s. */
+    suspend fun updateArenaPoints(points: Int) {
+        val uid = auth.currentUser?.uid ?: return
+        db.collection(ARENA).document(uid).update(mapOf(
+            "points" to points, "rankedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+        )).await()
+    }
+
+    /** Moje body v cloudu (null = ještě nehrál hodnocený zápas / dokument neexistuje). */
+    suspend fun myArenaPoints(): Int? {
+        val uid = auth.currentUser?.uid ?: return null
+        return db.collection(ARENA).document(uid).get().await().getLong("points")?.toInt()
+    }
+
+    /** Žebříček: nejlepší hráči podle bodů. */
+    suspend fun arenaLeaderboard(limit: Long = 50): List<cz.uhk.macroflow.pokemon.trainer.Trainer> =
+        db.collection(ARENA).orderBy("points", com.google.firebase.firestore.Query.Direction.DESCENDING).limit(limit)
+            .get().await().documents.mapNotNull { cz.uhk.macroflow.pokemon.trainer.Trainers.fromMap(it.id, it.data) }
+            .mapNotNull { t -> cz.uhk.macroflow.pokemon.trainer.Trainers.sanitize(t) }
+
+    /** Moje pořadí (1 = první): kolik hráčů má víc bodů + 1. */
+    suspend fun arenaPlace(points: Int): Long =
+        db.collection(ARENA).whereGreaterThan("points", points).count()
+            .get(com.google.firebase.firestore.AggregateSource.SERVER).await().count + 1
 
     /** Naposledy aktivní duchové (už ověření – neplatná data vypadnou). */
     suspend fun fetchArenaGhosts(limit: Long = 40): List<cz.uhk.macroflow.pokemon.trainer.Trainer> {
