@@ -6,6 +6,7 @@ import cz.uhk.macroflow.pokemon.PokemonLevelCalc
 import cz.uhk.macroflow.pokemon.Rarity
 import cz.uhk.macroflow.pokemon.species.SpeciesRegistry
 import cz.uhk.macroflow.pokemon.wild.MovePool
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.roundToInt
