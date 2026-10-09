@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Výška dlaždic na hlavní obrazovce – voda, trénink, vláknina, kroky (docs/adr/0074). -->
+    <dimen name="dash_tile_h">124dp</dimen>
+</resources>

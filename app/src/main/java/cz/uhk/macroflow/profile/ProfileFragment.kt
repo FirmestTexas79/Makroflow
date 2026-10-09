@@ -2,7 +2,6 @@ package cz.uhk.macroflow.profile
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -10,17 +9,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.slider.Slider
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.R
@@ -37,6 +35,10 @@ import java.util.Date
 import java.util.Locale
 
 class ProfileFragment : Fragment() {
+
+    companion object {
+        private val GOAL_LABELS = mapOf("CUT" to "HUBNUTÍ", "MAINTAIN" to "UDRŽENÍ", "BULK" to "NABÍRÁNÍ")
+    }
 
     private var selectedMultiplier: Float = 1.2f
     private var selectedGoal: String = "MAINTAIN" // ✅ Logika stavu cíle
@@ -55,9 +57,9 @@ class ProfileFragment : Fragment() {
     private lateinit var tvStepGoalValue: TextView
 
     // 🎯 Tlačítka pro cíle
-    private lateinit var btnCut: MaterialButton
-    private lateinit var btnMaintain: MaterialButton
-    private lateinit var btnBulk: MaterialButton
+    private lateinit var btnCut: ViewGroup
+    private lateinit var btnMaintain: ViewGroup
+    private lateinit var btnBulk: ViewGroup
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -92,10 +94,14 @@ class ProfileFragment : Fragment() {
         lifestyleChecks = listOf(R.id.checkLezerni, R.id.checkAktivni, R.id.checkSportovec).map { view.findViewById(it) }
         lifestyleRows.forEachIndexed { i, row -> row.setOnClickListener { selectMode(lifestyleValues[i]) } }
 
+        // míry v souhrnné kartě se mění rovnou při psaní
+        listOf(etWeight, etHeight, etAge).forEach { it.doAfterTextChanged { updateStats() } }
+        view.findViewById<TextView>(R.id.tvAppVersion).text = "Makroflow · verze ${cz.uhk.macroflow.BuildConfig.VERSION_NAME}"
+
         loadUserData()
 
         view.findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveAllData() }
-        view.findViewById<MaterialCardView>(R.id.cardOptionalMetrics).setOnClickListener { showMetricsBottomSheet() }
+        view.findViewById<View>(R.id.cardOptionalMetrics).setOnClickListener { showMetricsBottomSheet() }
 
         setupAccountSection(view)
 
@@ -109,37 +115,44 @@ class ProfileFragment : Fragment() {
     }
 
     private fun updateGoalVisuals() {
-        val activeColor = Color.parseColor("#606C38")
-        val inactiveColor = Color.parseColor("#FEFAE0")
-        val activeText = Color.WHITE
-        val inactiveText = Color.parseColor("#283618")
-
-        val buttons = mapOf("CUT" to btnCut, "MAINTAIN" to btnMaintain, "BULK" to btnBulk)
-        buttons.forEach { (key, btn) ->
-            if (key == selectedGoal) {
-                btn.backgroundTintList = ColorStateList.valueOf(activeColor)
-                btn.setTextColor(activeText)
-            } else {
-                btn.backgroundTintList = ColorStateList.valueOf(inactiveColor)
-                btn.setTextColor(inactiveText)
-            }
+        val tiles = mapOf("CUT" to btnCut, "MAINTAIN" to btnMaintain, "BULK" to btnBulk)
+        tiles.forEach { (key, tile) ->
+            val sel = key == selectedGoal
+            tile.isSelected = sel
+            val text = if (sel) Color.parseColor("#FEFAE0") else Color.parseColor("#283618")
+            for (i in 0 until tile.childCount) (tile.getChildAt(i) as? TextView)?.setTextColor(text)
         }
+        view?.findViewById<TextView>(R.id.tvHeroGoal)?.text = GOAL_LABELS[selectedGoal] ?: selectedGoal
+    }
+
+    /** Váha, výška, věk a BMI v souhrnné kartě podle toho, co je právě vyplněné. */
+    private fun updateStats() {
+        val v = view ?: return
+        fun clean(t: CharSequence?) = t.toString().trim().removeSuffix(".0").ifEmpty { "—" }   // 70.0 → 70
+        v.findViewById<TextView>(R.id.tvHeroWeight).text = clean(etWeight.text)
+        v.findViewById<TextView>(R.id.tvHeroHeight).text = clean(etHeight.text)
+        v.findViewById<TextView>(R.id.tvHeroAge).text = clean(etAge.text)
+        val w = etWeight.text.toString().replace(',', '.').toDoubleOrNull()
+        val h = etHeight.text.toString().replace(',', '.').toDoubleOrNull()?.div(100)
+        v.findViewById<TextView>(R.id.tvHeroBmi).text =
+            if (w != null && h != null && h > 0.5) "%.1f".format(Locale("cs", "CZ"), w / (h * h)) else "—"
     }
 
     private fun setupAccountSection(view: View) {
         val tvEmail    = view.findViewById<TextView>(R.id.tvUserEmail)
-        val btnSignOut = view.findViewById<MaterialButton>(R.id.btnSignOut)
+        val btnSignOut = view.findViewById<View>(R.id.btnSignOut)
+        val tvSignOut  = view.findViewById<TextView>(R.id.tvSignOut)
         val user = FirebaseRepository.currentUser
 
         val tvSync = view.findViewById<TextView>(R.id.tvSyncStatus)
         if (user != null) {
             tvEmail?.text = user.email ?: user.displayName ?: "Přihlášený uživatel"
             tvSync?.text = "☁ Data se zálohují do cloudu"
-            btnSignOut?.text = "Odhlásit se"
+            tvSignOut?.text = "Odhlásit se"
         } else {
             tvEmail?.text = "Offline režim"
             tvSync?.text = "Data jsou jen v telefonu – přihlas se pro zálohu"
-            btnSignOut?.text = "Přihlásit se"
+            tvSignOut?.text = "Přihlásit se"
         }
 
         btnSignOut?.setOnClickListener {
@@ -149,7 +162,7 @@ class ProfileFragment : Fragment() {
         }
 
         // Tlačítko smazání účtu — požadavek Google Play pro publikaci
-        val btnDeleteAccount = view.findViewById<MaterialButton>(R.id.btnDeleteAccount)
+        val btnDeleteAccount = view.findViewById<View>(R.id.btnDeleteAccount)
         btnDeleteAccount?.setOnClickListener {
             androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setTitle("Smazat účet")
@@ -206,19 +219,23 @@ class ProfileFragment : Fragment() {
             ?: "Sportovec"
         v.findViewById<TextView>(R.id.tvHeroName).text = name
         v.findViewById<TextView>(R.id.tvHeroInitial).text = name.first().uppercase()
-        fun clean(t: CharSequence?) = t.toString().removeSuffix(".0")      // 70.0 → 70
-        val w = clean(etWeight.text); val h = clean(etHeight.text); val a = clean(etAge.text)
-        v.findViewById<TextView>(R.id.tvHeroSub).text = "$w kg · $h cm · $a let"
-        v.findViewById<TextView>(R.id.tvHeroGoal).text = selectedGoal
+        v.findViewById<TextView>(R.id.tvHeroSub).text = user?.email ?: "Offline režim · data jen v telefonu"
+        updateStats()
         lifecycleScope.launch {
             val t = withContext(Dispatchers.IO) {
                 runCatching { cz.uhk.macroflow.dashboard.MacroCalculator.calculate(appContext) }.getOrNull()
             } ?: return@launch
             val root = view ?: return@launch
             root.findViewById<TextView>(R.id.tvHeroKcal).text = "%,d kcal".format(Locale("cs", "CZ"), t.calories.toInt())
-            root.findViewById<TextView>(R.id.tvHeroProtein).text = "B ${t.protein.toInt()} g"
-            root.findViewById<TextView>(R.id.tvHeroCarbs).text = "S ${t.carbs.toInt()} g"
-            root.findViewById<TextView>(R.id.tvHeroFat).text = "T ${t.fat.toInt()} g"
+            root.findViewById<TextView>(R.id.tvHeroProtein).text = "Bílkoviny ${t.protein.toInt()} g"
+            root.findViewById<TextView>(R.id.tvHeroCarbs).text = "Sacharidy ${t.carbs.toInt()} g"
+            root.findViewById<TextView>(R.id.tvHeroFat).text = "Tuky ${t.fat.toInt()} g"
+            // pruh: podíl energie z každého makra
+            val kcal = listOf(t.protein * 4, t.carbs * 4, t.fat * 9).map { it.toFloat().coerceAtLeast(0.01f) }
+            listOf(R.id.heroBarProtein, R.id.heroBarCarbs, R.id.heroBarFat).forEachIndexed { i, id ->
+                val bar = root.findViewById<View>(id)
+                bar.layoutParams = (bar.layoutParams as android.widget.LinearLayout.LayoutParams).apply { weight = kcal[i] }
+            }
         }
     }
 

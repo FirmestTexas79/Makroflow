@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Profil (záložka PROFIL). Přepracováno podle jazyka ostatních stránek (docs/adr/0018):
-    hlavička s odznakem, tmavá souhrnná karta, sekce s oddělovači a světlé karty s obrysem.
+    Profil (záložka PROFIL), přepracováno v docs/adr/0075: souhrnná karta (kdo jsem, míry, denní cíl)
+    a tři seskupené karty – Tělo, Cíl a aktivita, Účet. Jazyk je stejný jako hlavní obrazovka (0074).
 -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -21,17 +21,6 @@
         android:src="@drawable/bg_monstera_leaf_1"
         app:tint="@color/brand_dark" />
 
-    <ImageView
-        android:layout_width="130dp"
-        android:layout_height="130dp"
-        android:layout_gravity="bottom|start"
-        android:layout_marginStart="-25dp"
-        android:layout_marginBottom="140dp"
-        android:alpha="0.06"
-        android:rotation="55"
-        android:src="@drawable/bg_monstera_leaf_2"
-        app:tint="@color/brand_primary" />
-
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -47,19 +36,15 @@
             android:paddingHorizontal="20dp"
             android:paddingTop="56dp">
 
-            <!-- ═══ HLAVIČKA (stejná jako na ostatních stránkách) ═══ -->
+            <!-- ═══ HLAVIČKA ═══ -->
             <TextView
                 android:id="@+id/tvProfileBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:background="@drawable/bg_status_pill"
-                android:backgroundTint="@color/brand_primary"
-                android:letterSpacing="0.12"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="6dp"
+                android:letterSpacing="0.16"
                 android:text="@string/setup_badge_profile"
-                android:textColor="@color/brand_cream"
+                android:textColor="@color/brand_accent_deep"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
@@ -68,32 +53,30 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="2dp"
                 android:fontFamily="sans-serif-black"
-                android:lineSpacingMultiplier="0.9"
                 android:text="@string/setup_title"
                 android:textColor="@color/brand_dark"
-                android:textSize="40sp" />
+                android:textSize="34sp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:layout_marginTop="4dp"
-                android:alpha="0.75"
-                android:text="@string/setup_subtitle"
-                android:textColor="@color/brand_primary"
-                android:textSize="13sp" />
-
-            <!-- ═══ SOUHRN: kdo jsem a kolik mám dnes sníst ═══ -->
-            <com.google.android.material.card.MaterialCardView
+            <!-- ═══ SOUHRN ═══ -->
+            <FrameLayout
                 android:id="@+id/cardProfileHero"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
-                app:cardBackgroundColor="@color/brand_dark"
-                app:cardCornerRadius="26dp"
-                app:cardElevation="0dp">
+                android:layout_marginTop="18dp"
+                android:background="@drawable/bg_dash_hero"
+                android:clipChildren="true"
+                android:elevation="6dp"
+                android:outlineProvider="background">
+
+                <View
+                    android:layout_width="260dp"
+                    android:layout_height="260dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="-110dp"
+                    android:layout_marginEnd="-90dp"
+                    android:background="@drawable/bg_dash_hero_glow" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -101,6 +84,7 @@
                     android:orientation="vertical"
                     android:padding="20dp">
 
+                    <!-- kdo jsem -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -109,15 +93,14 @@
 
                         <TextView
                             android:id="@+id/tvHeroInitial"
-                            android:layout_width="54dp"
-                            android:layout_height="54dp"
-                            android:background="@drawable/bg_status_pill"
-                            android:backgroundTint="@color/brand_primary"
+                            android:layout_width="58dp"
+                            android:layout_height="58dp"
+                            android:background="@drawable/bg_profile_avatar"
                             android:fontFamily="sans-serif-black"
                             android:gravity="center"
                             android:text="M"
                             android:textColor="@color/brand_cream"
-                            android:textSize="22sp" />
+                            android:textSize="24sp" />
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -135,14 +118,14 @@
                                 android:maxLines="1"
                                 android:text="Makroflow"
                                 android:textColor="@color/brand_cream"
-                                android:textSize="18sp" />
+                                android:textSize="20sp" />
 
                             <TextView
                                 android:id="@+id/tvHeroSub"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:alpha="0.7"
+                                android:alpha="0.65"
                                 android:ellipsize="end"
                                 android:maxLines="1"
                                 android:textColor="@color/brand_cream"
@@ -153,41 +136,115 @@
                             android:id="@+id/tvHeroGoal"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:background="@drawable/bg_status_pill"
                             android:backgroundTint="@color/brand_accent_warm"
                             android:letterSpacing="0.1"
                             android:paddingHorizontal="12dp"
                             android:paddingVertical="5dp"
-                            android:text="MAINTAIN"
+                            android:text="UDRŽENÍ"
                             android:textColor="@color/brand_dark"
                             android:textSize="10sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <View
+                    <!-- míry -->
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginVertical="16dp"
-                        android:background="@color/brand_cream_alpha15" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:letterSpacing="0.14"
-                        android:text="@string/profile_hero_label"
-                        android:textColor="@color/brand_accent_warm"
-                        android:textSize="10sp"
-                        android:textStyle="bold" />
+                        android:layout_marginTop="18dp"
+                        android:background="@drawable/bg_status_pill"
+                        android:backgroundTint="#14FEFAE0"
+                        android:orientation="horizontal"
+                        android:paddingVertical="12dp">
 
-                    <TextView
-                        android:id="@+id/tvHeroKcal"
-                        android:layout_width="wrap_content"
+                        <LinearLayout style="@style/ProfStatCol">
+                            <TextView android:id="@+id/tvHeroWeight" style="@style/ProfStatValue" android:text="—" />
+                            <TextView style="@style/ProfStatLabel" android:text="KG" />
+                        </LinearLayout>
+
+                        <View style="@style/ProfStatDivider" />
+
+                        <LinearLayout style="@style/ProfStatCol">
+                            <TextView android:id="@+id/tvHeroHeight" style="@style/ProfStatValue" android:text="—" />
+                            <TextView style="@style/ProfStatLabel" android:text="CM" />
+                        </LinearLayout>
+
+                        <View style="@style/ProfStatDivider" />
+
+                        <LinearLayout style="@style/ProfStatCol">
+                            <TextView android:id="@+id/tvHeroAge" style="@style/ProfStatValue" android:text="—" />
+                            <TextView style="@style/ProfStatLabel" android:text="LET" />
+                        </LinearLayout>
+
+                        <View style="@style/ProfStatDivider" />
+
+                        <LinearLayout style="@style/ProfStatCol">
+                            <TextView android:id="@+id/tvHeroBmi" style="@style/ProfStatValue" android:text="—" />
+                            <TextView style="@style/ProfStatLabel" android:text="BMI" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- denní cíl -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:fontFamily="sans-serif-black"
-                        android:text="— kcal"
-                        android:textColor="@color/brand_cream"
-                        android:textSize="32sp" />
+                        android:layout_marginTop="18dp"
+                        android:gravity="bottom"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="6dp"
+                            android:layout_weight="1"
+                            android:letterSpacing="0.14"
+                            android:text="@string/profile_hero_label"
+                            android:textColor="@color/brand_accent_warm"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvHeroKcal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-black"
+                            android:text="— kcal"
+                            android:textColor="@color/brand_cream"
+                            android:textSize="28sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:id="@+id/heroBarProtein"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="#B5CC8E" />
+
+                        <View
+                            android:id="@+id/heroBarCarbs"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_marginHorizontal="3dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="#E9B072" />
+
+                        <View
+                            android:id="@+id/heroBarFat"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_status_pill"
+                            android:backgroundTint="#E5824A" />
+                    </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -195,389 +252,236 @@
                         android:layout_marginTop="12dp"
                         android:orientation="horizontal">
 
-                        <TextView
-                            android:id="@+id/tvHeroProtein"
-                            style="@style/ProfileMacroChip"
-                            android:backgroundTint="@color/brand_primary"
-                            android:text="B —" />
-
-                        <TextView
-                            android:id="@+id/tvHeroCarbs"
-                            style="@style/ProfileMacroChip"
-                            android:layout_marginHorizontal="8dp"
-                            android:backgroundTint="@color/brand_accent_warm"
-                            android:text="S —"
-                            android:textColor="@color/brand_dark" />
-
-                        <TextView
-                            android:id="@+id/tvHeroFat"
-                            style="@style/ProfileMacroChip"
-                            android:backgroundTint="@color/brand_accent_deep"
-                            android:text="T —" />
+                        <TextView android:id="@+id/tvHeroProtein" style="@style/ProfHeroMacro" android:drawableStart="@drawable/dash_dot_p" android:text="Bílkoviny —" />
+                        <TextView android:id="@+id/tvHeroCarbs" style="@style/ProfHeroMacro" android:drawableStart="@drawable/dash_dot_c" android:text="Sacharidy —" />
+                        <TextView android:id="@+id/tvHeroFat" style="@style/ProfHeroMacro" android:drawableStart="@drawable/dash_dot_f" android:text="Tuky —" />
                     </LinearLayout>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </FrameLayout>
 
-            <!-- ═══ ZÁKLADNÍ ÚDAJE ═══ -->
-            <TextView style="@style/ProfileSection" android:text="@string/setup_section_basic" />
+            <!-- ═══ TĚLO ═══ -->
+            <TextView style="@style/ProfGroupTitle" android:text="@string/setup_section_basic" />
 
-            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+            <LinearLayout style="@style/ProfGroupCard">
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggleGender"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMale"
+                        style="@style/ProfileToggleButton"
+                        android:text="@string/man" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFemale"
+                        style="@style/ProfileToggleButton"
+                        android:text="@string/woman" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
 
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/toggleGender"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:selectionRequired="true"
-                        app:singleSelection="true">
+                    <LinearLayout style="@style/DashMetricBox">
+                        <TextView style="@style/DashMetricLabel" android:text="VÁHA" />
+                        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="bottom" android:orientation="horizontal">
+                            <EditText android:id="@+id/etWeight" style="@style/ProfMetricInput" android:hint="0" />
+                            <TextView style="@style/DashMetricUnit" android:text="kg" />
+                        </LinearLayout>
+                    </LinearLayout>
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnMale"
-                            style="@style/ProfileToggleButton"
-                            android:text="@string/man" />
+                    <LinearLayout style="@style/DashMetricBox" android:layout_marginHorizontal="8dp">
+                        <TextView style="@style/DashMetricLabel" android:text="VÝŠKA" />
+                        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="bottom" android:orientation="horizontal">
+                            <EditText android:id="@+id/etHeight" style="@style/ProfMetricInput" android:hint="0" />
+                            <TextView style="@style/DashMetricUnit" android:text="cm" />
+                        </LinearLayout>
+                    </LinearLayout>
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnFemale"
-                            style="@style/ProfileToggleButton"
-                            android:text="@string/woman" />
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:orientation="horizontal">
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            style="@style/ProfileField"
-                            android:hint="Váha"
-                            app:suffixText="kg">
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etWeight"
-                                style="@style/ProfileFieldInput"
-                                android:inputType="numberDecimal" />
-                        </com.google.android.material.textfield.TextInputLayout>
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            style="@style/ProfileField"
-                            android:layout_marginHorizontal="8dp"
-                            android:hint="Výška"
-                            app:suffixText="cm">
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etHeight"
-                                style="@style/ProfileFieldInput"
-                                android:inputType="numberDecimal" />
-                        </com.google.android.material.textfield.TextInputLayout>
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            style="@style/ProfileField"
-                            android:hint="Věk"
-                            app:suffixText="let">
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etAge"
-                                style="@style/ProfileFieldInput"
-                                android:inputType="number" />
-                        </com.google.android.material.textfield.TextInputLayout>
+                    <LinearLayout style="@style/DashMetricBox">
+                        <TextView style="@style/DashMetricLabel" android:text="VĚK" />
+                        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="bottom" android:orientation="horizontal">
+                            <EditText android:id="@+id/etAge" style="@style/ProfMetricInput" android:hint="0" android:inputType="number" android:maxLength="3" />
+                            <TextView style="@style/DashMetricUnit" android:text="let" />
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ CÍL ═══ -->
-            <TextView style="@style/ProfileSection" android:text="@string/profile_section_goal" />
+                <View style="@style/ProfDivider" />
 
-            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout android:id="@+id/cardOptionalMetrics" style="@style/ProfRow">
+                    <TextView style="@style/ProfRowIcon" android:text="📏" />
+                    <LinearLayout style="@style/ProfileOptionTexts">
+                        <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_metrics_title" />
+                        <TextView style="@style/ProfileOptionSub" android:text="@string/profile_metrics_sub" />
+                    </LinearLayout>
+                    <ImageView style="@style/ProfRowChevron" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ═══ CÍL A AKTIVITA ═══ -->
+            <TextView style="@style/ProfGroupTitle" android:text="@string/profile_section_goal" />
+
+            <LinearLayout style="@style/ProfGroupCard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <LinearLayout android:id="@+id/btnCut" style="@style/ProfGoalTile">
+                        <TextView style="@style/ProfGoalEmoji" android:text="📉" />
+                        <TextView style="@style/ProfGoalTitle" android:text="@string/profile_goal_cut" />
+                        <TextView style="@style/ProfGoalSub" android:text="CUT" />
+                    </LinearLayout>
+
+                    <LinearLayout android:id="@+id/btnMaintain" style="@style/ProfGoalTile" android:layout_marginHorizontal="8dp">
+                        <TextView style="@style/ProfGoalEmoji" android:text="⚖️" />
+                        <TextView style="@style/ProfGoalTitle" android:text="@string/profile_goal_maintain" />
+                        <TextView style="@style/ProfGoalSub" android:text="MAINTAIN" />
+                    </LinearLayout>
+
+                    <LinearLayout android:id="@+id/btnBulk" style="@style/ProfGoalTile">
+                        <TextView style="@style/ProfGoalEmoji" android:text="📈" />
+                        <TextView style="@style/ProfGoalTitle" android:text="@string/profile_goal_bulk" />
+                        <TextView style="@style/ProfGoalSub" android:text="BULK" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <View style="@style/ProfDivider" />
+
+                <TextView style="@style/DashMetricLabel" android:layout_marginStart="4dp" android:layout_marginBottom="6dp" android:text="@string/setup_section_lifestyle" />
+
+                <LinearLayout android:id="@+id/clickLezerni" style="@style/ProfileOptionRow">
+                    <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_desk" />
+                    <LinearLayout style="@style/ProfileOptionTexts">
+                        <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_low" />
+                        <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_low_sub" />
+                    </LinearLayout>
+                    <ImageView android:id="@+id/checkLezerni" style="@style/ProfileOptionCheck" />
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/clickAktivni" style="@style/ProfileOptionRow">
+                    <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_walk" />
+                    <LinearLayout style="@style/ProfileOptionTexts">
+                        <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_mid" />
+                        <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_mid_sub" />
+                    </LinearLayout>
+                    <ImageView android:id="@+id/checkAktivni" style="@style/ProfileOptionCheck" />
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/clickSportovec" style="@style/ProfileOptionRow">
+                    <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_lift" />
+                    <LinearLayout style="@style/ProfileOptionTexts">
+                        <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_high" />
+                        <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_high_sub" />
+                    </LinearLayout>
+                    <ImageView android:id="@+id/checkSportovec" style="@style/ProfileOptionCheck" />
+                </LinearLayout>
+
+                <View style="@style/ProfDivider" />
+
+                <LinearLayout
+                    android:id="@+id/cardStepGoal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="12dp">
+                    android:paddingHorizontal="4dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnCut"
-                        style="@style/ProfileGoalButton"
-                        android:text="@string/profile_goal_cut" />
+                    <TextView
+                        style="@style/DashMetricLabel"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/setup_label_steps" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnMaintain"
-                        style="@style/ProfileGoalButton"
-                        android:layout_marginHorizontal="8dp"
-                        android:text="@string/profile_goal_maintain" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnBulk"
-                        style="@style/ProfileGoalButton"
-                        android:text="@string/profile_goal_bulk" />
+                    <TextView
+                        android:id="@+id/tvStepGoalValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_status_pill"
+                        android:backgroundTint="@color/brand_primary_alpha10"
+                        android:fontFamily="sans-serif-black"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"
+                        android:text="@string/setup_steps_default"
+                        android:textColor="@color/brand_dark"
+                        android:textSize="14sp" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ ŽIVOTNÍ STYL: tři srozumitelné volby místo kruhu ═══ -->
-            <TextView style="@style/ProfileSection" android:text="@string/setup_section_lifestyle" />
-
-            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
-
-                <LinearLayout
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderStepGoal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="8dp">
+                    android:stepSize="500"
+                    android:value="6000"
+                    android:valueFrom="2000"
+                    android:valueTo="20000"
+                    app:labelBehavior="gone"
+                    app:thumbColor="@color/brand_primary"
+                    app:tickVisible="false"
+                    app:trackColorActive="@color/brand_primary"
+                    app:trackColorInactive="@color/brand_dark_alpha12" />
+            </LinearLayout>
 
-                    <LinearLayout
-                        android:id="@+id/clickLezerni"
-                        style="@style/ProfileOptionRow">
-                        <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_desk" />
-                        <LinearLayout style="@style/ProfileOptionTexts">
-                            <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_low" />
-                            <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_low_sub" />
-                        </LinearLayout>
-                        <ImageView android:id="@+id/checkLezerni" style="@style/ProfileOptionCheck" />
-                    </LinearLayout>
+            <!-- ═══ ÚČET ═══ -->
+            <TextView style="@style/ProfGroupTitle" android:text="@string/setup_section_account" />
 
-                    <LinearLayout
-                        android:id="@+id/clickAktivni"
-                        style="@style/ProfileOptionRow">
-                        <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_walk" />
-                        <LinearLayout style="@style/ProfileOptionTexts">
-                            <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_mid" />
-                            <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_mid_sub" />
-                        </LinearLayout>
-                        <ImageView android:id="@+id/checkAktivni" style="@style/ProfileOptionCheck" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/clickSportovec"
-                        style="@style/ProfileOptionRow">
-                        <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_lift" />
-                        <LinearLayout style="@style/ProfileOptionTexts">
-                            <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_high" />
-                            <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_high_sub" />
-                        </LinearLayout>
-                        <ImageView android:id="@+id/checkSportovec" style="@style/ProfileOptionCheck" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ═══ KROKY ═══ -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardStepGoal"
-                style="@style/ProfileCard"
-                android:layout_marginTop="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="18dp"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="8dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:letterSpacing="0.1"
-                            android:text="@string/setup_label_steps"
-                            android:textColor="@color/brand_primary"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvStepGoalValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/bg_status_pill"
-                            android:backgroundTint="@color/brand_primary_alpha10"
-                            android:fontFamily="sans-serif-black"
-                            android:paddingHorizontal="12dp"
-                            android:paddingVertical="4dp"
-                            android:text="@string/setup_steps_default"
-                            android:textColor="@color/brand_dark"
-                            android:textSize="14sp" />
-                    </LinearLayout>
-
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/sliderStepGoal"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:stepSize="500"
-                        android:value="6000"
-                        android:valueFrom="2000"
-                        android:valueTo="20000"
-                        app:labelBehavior="gone"
-                        app:thumbColor="@color/brand_primary"
-                        app:tickVisible="false"
-                        app:trackColorActive="@color/brand_primary"
-                        app:trackColorInactive="@color/brand_dark_alpha12" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ═══ OBVODY ═══ -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardOptionalMetrics"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="@color/brand_dark"
-                app:cardCornerRadius="22dp"
-                app:cardElevation="0dp">
+            <LinearLayout android:id="@+id/cardAccountInfo" style="@style/ProfGroupCard" android:paddingVertical="8dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="18dp">
+                    android:padding="10dp">
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                    <TextView style="@style/ProfRowIcon" android:text="☁️" />
 
+                    <LinearLayout style="@style/ProfileOptionTexts">
                         <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:letterSpacing="0.12"
-                            android:text="@string/profile_metrics_label"
-                            android:textColor="@color/brand_accent_warm"
-                            android:textSize="10sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:fontFamily="sans-serif-black"
-                            android:text="@string/profile_metrics_title"
-                            android:textColor="@color/brand_cream"
-                            android:textSize="17sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:alpha="0.7"
-                            android:text="@string/profile_metrics_sub"
-                            android:textColor="@color/brand_cream"
-                            android:textSize="12sp" />
+                            android:id="@+id/tvUserEmail"
+                            style="@style/ProfileOptionTitle"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@string/setup_offline_mode" />
+                        <TextView android:id="@+id/tvSyncStatus" style="@style/ProfileOptionSub" />
                     </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/brand_cream" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ ÚČET ═══ -->
-            <TextView style="@style/ProfileSection" android:text="@string/setup_section_account" />
+                <View style="@style/ProfDivider" android:layout_marginVertical="4dp" />
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardAccountInfo"
-                style="@style/ProfileCard">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="@drawable/bg_status_pill"
-                            android:backgroundTint="@color/brand_primary_alpha10"
-                            android:padding="8dp"
-                            android:src="@drawable/ic_nav_profile"
-                            app:tint="@color/brand_primary" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/tvUserEmail"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="@string/setup_offline_mode"
-                                android:textColor="@color/brand_dark"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tvSyncStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="1dp"
-                                android:textColor="@color/brand_primary"
-                                android:textSize="12sp" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSignOut"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
-                        android:layout_marginTop="14dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:text="@string/setup_btn_login"
-                        android:textColor="@color/brand_dark"
-                        android:textStyle="bold"
-                        app:cornerRadius="16dp"
-                        app:icon="@drawable/ic_nav_logout"
-                        app:iconTint="@color/brand_dark"
-                        app:strokeColor="@color/brand_dark_alpha30" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnDeleteAccount"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/profile_delete_account"
-                        android:textColor="?attr/colorError"
-                        android:textSize="13sp"
-                        app:icon="@drawable/ic_delete"
-                        app:iconSize="16dp"
-                        app:iconTint="?attr/colorError" />
+                <LinearLayout android:id="@+id/btnSignOut" style="@style/ProfRow">
+                    <ImageView style="@style/ProfRowIconImg" android:src="@drawable/ic_nav_logout" />
+                    <TextView android:id="@+id/tvSignOut" style="@style/ProfRowTitle" android:text="@string/setup_btn_login" />
+                    <ImageView style="@style/ProfRowChevron" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+
+                <LinearLayout android:id="@+id/btnDeleteAccount" style="@style/ProfRow">
+                    <ImageView style="@style/ProfRowIconImg" android:backgroundTint="#1AB3261E" android:src="@drawable/ic_delete" app:tint="?attr/colorError" />
+                    <TextView style="@style/ProfRowTitle" android:text="@string/profile_delete_account" android:textColor="?attr/colorError" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvAppVersion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:alpha="0.45"
+                android:gravity="center"
+                android:letterSpacing="0.08"
+                android:textColor="@color/brand_dark"
+                android:textSize="11sp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Uložit – stejné tmavé tlačítko jako „Přidat“ ve Snacky -->
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/btnSave"
         android:layout_width="wrap_content"

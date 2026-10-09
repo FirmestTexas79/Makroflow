@@ -225,7 +225,7 @@
     <string name="setup_badge_profile">PROFIL</string>
     <string name="setup_title">Můj profil</string>
     <string name="setup_subtitle">Tvoje údaje, cíl a účet. Makra se přizpůsobí.</string>
-    <string name="setup_section_basic">ZÁKLADNÍ ÚDAJE</string>
+    <string name="setup_section_basic">TĚLO</string>
     <string name="setup_section_lifestyle">ŽIVOTNÍ STYL</string>
     <string name="unit_years">let</string>
     <string name="setup_label_steps">DENNÍ CÍL KROKŮ</string>
@@ -304,10 +304,10 @@
 
     <!-- Profil (docs/adr/0018) -->
     <string name="profile_hero_label">DENNÍ CÍL PŘÍJMU</string>
-    <string name="profile_section_goal">CÍL</string>
-    <string name="profile_goal_cut">CUT\nhubnutí</string>
-    <string name="profile_goal_maintain">MAINTAIN\nudržení</string>
-    <string name="profile_goal_bulk">BULK\nnabírání</string>
+    <string name="profile_section_goal">CÍL A AKTIVITA</string>
+    <string name="profile_goal_cut">Hubnutí</string>
+    <string name="profile_goal_maintain">Udržení</string>
+    <string name="profile_goal_bulk">Nabírání</string>
     <string name="profile_ls_low">Sedavá práce</string>
     <string name="profile_ls_low_sub">Kancelář, škola – většinu dne sedíš</string>
     <string name="profile_ls_mid">Práce v pohybu</string>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dlaždice na hlavní obrazovce (docs/adr/0074). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="24dp" />
+    <solid android:color="#FFFDF2" />
+    <stroke android:width="1dp" android:color="#1F283618" />
+</shape>

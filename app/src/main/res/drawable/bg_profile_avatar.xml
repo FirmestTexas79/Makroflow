@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Avatar v profilu (docs/adr/0075): olivový kruh s teplým prstencem. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <gradient android:angle="315" android:startColor="#E9B072" android:endColor="#BC6C25" />
+        </shape>
+    </item>
+    <item android:bottom="3dp" android:left="3dp" android:right="3dp" android:top="3dp">
+        <shape android:shape="oval">
+            <gradient android:angle="315" android:startColor="#7A8A48" android:endColor="#4B5A27" />
+        </shape>
+    </item>
+</layer-list>

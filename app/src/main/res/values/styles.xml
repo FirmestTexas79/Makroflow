@@ -201,4 +201,253 @@
         <item name="android:textSize">10sp</item>
         <item name="android:textStyle">bold</item>
     </style>
+    <!-- Hlavní obrazovka (docs/adr/0074) -->
+    <style name="DashMacroCol">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+    <style name="DashMacroLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:drawablePadding">5dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="android:textColor">#B3FEFAE0</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="DashMacroValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:textColor">@color/brand_cream</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+    <style name="DashMacroLeft">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">1dp</item>
+        <item name="android:textColor">#99FEFAE0</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+    <style name="DashTileLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textColor">@color/brand_primary</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="DashTileValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:textColor">@color/brand_dark</item>
+        <item name="android:textSize">22sp</item>
+    </style>
+    <style name="DashMetricBox">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:background">@drawable/bg_dash_metric</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">10dp</item>
+    </style>
+    <style name="DashMetricLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textColor">@color/brand_primary</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="DashMetricInput">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:background">@null</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:importantForAutofill">no</item>
+        <item name="android:inputType">numberDecimal</item>
+        <item name="android:maxLength">5</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">0dp</item>
+        <item name="android:textColor">@color/brand_dark</item>
+        <item name="android:textColorHint">@color/brand_dark_alpha30</item>
+        <item name="android:textSize">26sp</item>
+    </style>
+    <style name="DashMetricUnit">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginBottom">5dp</item>
+        <item name="android:alpha">0.55</item>
+        <item name="android:textColor">@color/brand_dark</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="DashPctLegend">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:gravity">start|center_vertical</item>
+        <item name="android:textColor">@color/brand_dark</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <!-- Profil (docs/adr/0075) -->
+    <style name="ProfStatCol">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+    <style name="ProfStatValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/brand_cream</item>
+        <item name="android:textSize">19sp</item>
+    </style>
+    <style name="ProfStatLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">1dp</item>
+        <item name="android:letterSpacing">0.14</item>
+        <item name="android:textColor">#8CFEFAE0</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="ProfStatDivider">
+        <item name="android:layout_width">1dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_marginVertical">4dp</item>
+        <item name="android:background">#26FEFAE0</item>
+    </style>
+    <style name="ProfHeroMacro">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">#D9FEFAE0</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="ProfGroupTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">6dp</item>
+        <item name="android:layout_marginTop">26dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:letterSpacing">0.16</item>
+        <item name="android:textColor">@color/brand_accent_deep</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="ProfGroupCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:background">@drawable/bg_dash_tile</item>
+        <item name="android:padding">14dp</item>
+    </style>
+    <style name="ProfMetricInput" parent="DashMetricInput">
+        <item name="android:textSize">24sp</item>
+        <item name="android:selectAllOnFocus">true</item>
+    </style>
+    <style name="ProfDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginVertical">14dp</item>
+        <item name="android:background">#14283618</item>
+    </style>
+    <style name="ProfRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:padding">10dp</item>
+        <item name="android:background">@drawable/bg_profile_row</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+    <style name="ProfRowIcon">
+        <item name="android:layout_width">42dp</item>
+        <item name="android:layout_height">42dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/bg_status_pill</item>
+        <item name="android:backgroundTint">@color/brand_primary_alpha10</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+    <style name="ProfRowIconImg" parent="ProfileOptionIcon">
+        <item name="android:layout_width">38dp</item>
+        <item name="android:layout_height">38dp</item>
+    </style>
+    <style name="ProfRowTitle">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">14dp</item>
+        <item name="android:textColor">@color/brand_dark</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="ProfRowChevron">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:alpha">0.4</item>
+        <item name="android:src">@drawable/ic_chevron_right</item>
+        <item name="tint">@color/brand_dark</item>
+    </style>
+    <style name="ProfGoalTile">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">10dp</item>
+        <item name="android:background">@drawable/bg_profile_goal</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+    <style name="ProfGoalEmoji">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">22sp</item>
+    </style>
+    <style name="ProfGoalTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:textColor">@color/brand_dark</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+    <style name="ProfGoalSub">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">1dp</item>
+        <item name="android:alpha">0.6</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textColor">@color/brand_dark</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 </resources>

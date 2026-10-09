@@ -9,8 +9,6 @@ import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -44,6 +42,11 @@ import cz.uhk.macroflow.pokemon.PokemonXpEngine
 
 class DashboardFragment : Fragment() {
 
+    private companion object {
+        /** Stravovací protokoly (hodnoty jsou uložené v profilu – názvy neměnit). */
+        val DIETS = listOf("Vyvážená" to "⚖️", "High Protein" to "💪", "Low Carb" to "🥑", "Keto" to "🥓", "Vegan" to "🌱")
+    }
+
     private lateinit var today: String
     private lateinit var waterPill: WaterPillView
     private var waterGoalMl: Int = 2500
@@ -59,7 +62,6 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val ritualOverlay = view.findViewById<MaterialCardView>(R.id.cardRitualOverlay)
         val coachCard = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
@@ -69,13 +71,16 @@ class DashboardFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             db.stepsDao().getStepsForDateFlow(today).collect { entity ->
                 val stepsToday = entity?.count ?: 0
-                tvTodaySteps?.text = stepsToday.toString()
+                tvTodaySteps?.text = num(stepsToday.toDouble())
             }
         }
 
+        setupHeader(view)
+        if (savedInstanceState == null) playEntrance(view)
+
         setupEliteToggle(view)
 
-        view.findViewById<MaterialCardView>(R.id.cardStartTraining).setOnClickListener {
+        view.findViewById<View>(R.id.cardStartTraining).setOnClickListener {
             parentFragmentManager.beginTransaction()
                 .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
                 .replace(R.id.nav_host_fragment, TrainerFragment())
@@ -83,6 +88,8 @@ class DashboardFragment : Fragment() {
                 .commit()
         }
 
+        view.findViewById<View>(R.id.tvCoachCta)?.setOnClickListener { coachCard.performClick() }
+        view.findViewById<View>(R.id.ritualScrim)?.setOnClickListener { showRitual(view, false) }
         coachCard.setOnClickListener {
             lifecycleScope.launch(Dispatchers.Main) {
                 val todayCheckIn = withContext(Dispatchers.IO) {
@@ -106,17 +113,13 @@ class DashboardFragment : Fragment() {
                     view.findViewById<Slider>(R.id.sliderHunger).value = todayCheckIn.hungerLevel.toFloat()
                 }
 
-                ritualOverlay.visibility = View.VISIBLE
-                ritualOverlay.alpha = 0f
-                ritualOverlay.animate().alpha(1f).setDuration(300).start()
+                showRitual(view, true)
             }
         }
 
         btnSave.setOnClickListener {
             saveCheckInData(view)
-            ritualOverlay.animate().alpha(0f).setDuration(200).withEndAction {
-                ritualOverlay.visibility = View.GONE
-            }.start()
+            showRitual(view, false)
         }
 
         view.findViewById<TextView>(R.id.btnFoodLog)?.setOnClickListener {
@@ -148,14 +151,6 @@ class DashboardFragment : Fragment() {
             dialog.show(parentFragmentManager, "WaterDialog")
         }
 
-        val greetingTv = view.findViewById<TextView>(R.id.tvUserGreeting)
-        FirebaseRepository.currentUser?.let { user ->
-            greetingTv?.text = "Ahoj, ${user.displayName?.substringBefore(" ") ?: "sportovče"}! 👋"
-        } ?: run {
-            greetingTv?.text = "Sleduj svůj den. Každé sousto se počítá."
-        }
-        greetingTv?.visibility = View.VISIBLE
-
         setupWorkoutCard(view)
     }
 
@@ -180,6 +175,8 @@ class DashboardFragment : Fragment() {
             val advice = MacroFlowEngine.getCoachAdvice(status, checkIn)
 
             updateCoachUI(advice)
+            updateCoachCta(view, checkIn != null)
+            updateStreak(view)
             updateMacrosUI(view, status)
             updateWaterUI(view, status)
             updateTrainingStatusUI(view, context)
@@ -287,8 +284,9 @@ class DashboardFragment : Fragment() {
         val fraction = if (waterGoalMl > 0) waterCurrentMl.toFloat() / waterGoalMl else 0f
         waterPill.progressFraction = fraction
         waterPill.goalReached = fraction >= 1f
-        waterPill.tvMain = "${waterCurrentMl} ml"
-        waterPill.tvSub = "z ${waterGoalMl} ml · 💧"
+        waterPill.tvMain = "${num(waterCurrentMl.toDouble())} ml"
+        waterPill.tvSub = "z ${num(waterGoalMl.toDouble())} ml · ${(fraction * 100).toInt().coerceAtMost(999)} %"
+        waterPill.contentDescription = "Voda ${waterCurrentMl} z ${waterGoalMl} mililitrů, klepni a přidej"
         waterPill.invalidate()
     }
 
@@ -296,7 +294,15 @@ class DashboardFragment : Fragment() {
         val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
         val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
         val type = prefs.getString("type_$dayName", "rest")?.uppercase() ?: "REST"
-        view.findViewById<TextView>(R.id.tvTrainingStatus)?.text = "DNES: $type"
+        val time = TrainingTimeManager.getTrainingTimeForToday(context)
+        val rest = type == "REST"
+        view.findViewById<TextView>(R.id.tvTrainingStatus)?.text =
+            if (rest) "🌿  ODPOČINEK" else "🏋  $type" + (time?.let { "  ·  $it" } ?: "")
+        view.findViewById<TextView>(R.id.tvDashSub)?.text = when {
+            rest -> "Dnes regeneruješ. Jídlo a spánek dělají svaly."
+            time != null -> "Dnes tě čeká ${type.lowercase().replaceFirstChar { it.uppercase() }} v $time. Ať to stojí za to."
+            else -> "Dnes je ${type.lowercase().replaceFirstChar { it.uppercase() }} den. Nastav si čas tréninku."
+        }
         updateWorkoutCard(view)
     }
 
@@ -321,112 +327,191 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    /** Dlaždice tréninku: nastavit čas / za kolik začíná / probíhá (s průběhem) / hotovo / volno. */
     private fun updateWorkoutCard(view: View) {
         val ctx = context ?: return
-        val tvTime  = view.findViewById<TextView>(R.id.tvTodayWorkoutPill) ?: return
-        val tvLabel = (tvTime.parent as? ViewGroup)?.getChildAt(0) as? TextView
+        val tvTime = view.findViewById<TextView>(R.id.tvTodayWorkoutPill) ?: return
+        val tvSub = view.findViewById<TextView>(R.id.tvWorkoutSub)
+        val tvLabel = view.findViewById<TextView>(R.id.tvWorkoutLabel)
+        val bar = view.findViewById<ProgressBar>(R.id.progressWorkout)
+        val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
+        val rest = (ctx.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE).getString("type_$dayName", "rest") ?: "rest").equals("rest", true)
         val timeStr = TrainingTimeManager.getTrainingTimeForToday(ctx)
-        if (timeStr != null) {
-            val h = timeStr.split(":")[0].toIntOrNull() ?: 0
-            val m = timeStr.split(":")[1].toIntOrNull() ?: 0
-            val endH = (h + (m + 75) / 60) % 24
-            val endM = (m + 75) % 60
-            tvTime.text = timeStr
-            tvTime.textSize = 22f
-            tvTime.setTextColor(Color.parseColor("#DDA15E"))
-            tvLabel?.text = "%02d:%02d — %02d:%02d".format(h, m, endH, endM)
-        } else {
-            tvTime.text = "Nastavit čas"
-            tvTime.textSize = 16f
-            tvTime.setTextColor(Color.parseColor("#80DDA15E"))
-            tvLabel?.text = "Dnes cvičíš v:"
+        bar?.visibility = View.GONE
+        tvTime.setTextColor(ctx.getColor(R.color.brand_cream))
+        if (timeStr == null) {
+            tvLabel?.text = if (rest) "VOLNO" else "TRÉNINK"
+            tvTime.text = if (rest) "Odpočinek" else "Nastavit čas"
+            tvTime.textSize = 20f
+            tvSub?.text = if (rest) "Regenerace je taky trénink" else "Klepni a vyber, kdy jdeš cvičit"
+            return
+        }
+        val h = timeStr.split(":")[0].toIntOrNull() ?: 0
+        val m = timeStr.split(":")[1].toIntOrNull() ?: 0
+        val startMin = h * 60 + m
+        val endMin = startMin + 75
+        val now = Calendar.getInstance().let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
+        fun hm(min: Int) = "%02d:%02d".format((min / 60) % 24, min % 60)
+        fun dur(min: Int) = if (min >= 60) "${min / 60} h ${min % 60} min" else "$min min"
+        tvTime.text = timeStr
+        tvTime.textSize = 26f
+        when {
+            now < startMin -> {
+                tvLabel?.text = "TRÉNINK"
+                tvSub?.text = "za ${dur(startMin - now)} · do ${hm(endMin)}"
+                tvTime.setTextColor(ctx.getColor(R.color.brand_accent_warm))
+            }
+            now < endMin -> {
+                tvLabel?.text = "PRÁVĚ PROBÍHÁ"
+                tvSub?.text = "ještě ${dur(endMin - now)} · do ${hm(endMin)}"
+                tvTime.setTextColor(ctx.getColor(R.color.brand_accent_warm))
+                bar?.visibility = View.VISIBLE
+                bar?.progress = ((now - startMin) * 1000 / 75)
+            }
+            else -> {
+                tvLabel?.text = "TRÉNINK HOTOVÝ"
+                tvSub?.text = "${hm(startMin)} – ${hm(endMin)} · dobrá práce"
+            }
         }
     }
 
     private fun updateMacrosUI(view: View, status: DailyStatus) {
-        view.findViewById<TextView>(R.id.tvCalories)?.text =
-            "${status.eatenCal.toInt()} / ${status.target.calories.toInt()}"
-        view.findViewById<TextView>(R.id.tvValueProtein)?.text =
-            "${status.eatenP.toInt()}g / ${status.target.protein.toInt()}g"
-        view.findViewById<TextView>(R.id.tvValueCarbs)?.text =
-            "${status.eatenS.toInt()}g / ${status.target.carbs.toInt()}g"
-        view.findViewById<TextView>(R.id.tvValueFat)?.text =
-            "${status.eatenT.toInt()}g / ${status.target.fat.toInt()}g"
+        val t = status.target
+        val left = t.calories - status.eatenCal
+        countUp(view.findViewById(R.id.tvCalories), kotlin.math.abs(left))
+        view.findViewById<TextView>(R.id.tvCaloriesLabel)?.text = if (left >= 0) "KCAL ZBÝVÁ" else "KCAL NAD CÍLEM"
+        view.findViewById<TextView>(R.id.tvCaloriesSub)?.text = "${num(status.eatenCal)} / ${num(t.calories)} kcal"
 
-        val tvFiber = view.findViewById<TextView>(R.id.tvValueFiber)
-        val eatenFiber  = status.eatenFiber
-        val targetFiber = status.target.fiber
-        val newFiberText = String.format("%.1f / %.0f g", eatenFiber, targetFiber)
-
-        if (tvFiber?.text != newFiberText) {
-            tvFiber?.animate()?.alpha(0f)?.setDuration(120)?.withEndAction {
-                tvFiber.text = newFiberText
-                if (status.fiberLeft <= 0.1) {
-                    tvFiber.setTextColor(view.context.getColor(R.color.brand_primary))
-                } else {
-                    tvFiber.setTextColor(view.context.getColor(R.color.brand_dark))
-                }
-                tvFiber.animate().alpha(1f).setDuration(250).start()
-            }?.start()
+        fun macro(valueId: Int, leftId: Int, eaten: Double, goal: Double) {
+            view.findViewById<TextView>(valueId)?.text = "${eaten.toInt()} / ${goal.toInt()} g"
+            val rest = goal - eaten
+            view.findViewById<TextView>(leftId)?.text = when {
+                goal <= 0 -> ""
+                rest > 0.5 -> "zbývá ${rest.toInt()} g"
+                rest > -goal * 0.1 -> "splněno ✓"
+                else -> "+${(-rest).toInt()} g navíc"
+            }
         }
+        macro(R.id.tvValueProtein, R.id.tvLeftProtein, status.eatenP, t.protein)
+        macro(R.id.tvValueCarbs, R.id.tvLeftCarbs, status.eatenS, t.carbs)
+        macro(R.id.tvValueFat, R.id.tvLeftFat, status.eatenT, t.fat)
 
-        animateProgressCircles(view, status)
+        fun ratio(e: Double, g: Double) = if (g > 0) (e / g).toFloat() else 0f
+        view.findViewById<MacroRingsView>(R.id.ringsMacro)?.setProgress(
+            ratio(status.eatenP, t.protein), ratio(status.eatenS, t.carbs), ratio(status.eatenT, t.fat))
+        view.findViewById<View>(R.id.cardEnergy)?.contentDescription =
+            "Energie dnes: ${num(status.eatenCal)} z ${num(t.calories)} kcal. Bílkoviny ${status.eatenP.toInt()} z ${t.protein.toInt()} gramů, " +
+                "sacharidy ${status.eatenS.toInt()} z ${t.carbs.toInt()}, tuky ${status.eatenT.toInt()} z ${t.fat.toInt()}."
+
+        view.findViewById<TextView>(R.id.tvValueFiber)?.text = String.format(Locale("cs"), "%.0f / %.0f g", status.eatenFiber, t.fiber)
+        view.findViewById<ProgressBar>(R.id.progressFiber)?.let { pb ->
+            val target = ((status.eatenFiber / t.fiber.coerceAtLeast(1.0)).coerceIn(0.0, 1.0) * 1000).toInt()
+            ObjectAnimator.ofInt(pb, "progress", pb.progress, target).setDuration(900).start()
+        }
     }
 
-    private fun animateProgressCircles(view: View, status: DailyStatus) {
-        val pbPT = view.findViewById<ProgressBar>(R.id.progressProtein_Target)
-        val pbPE = view.findViewById<ProgressBar>(R.id.progressProtein_Eaten)
-        val pbCT = view.findViewById<ProgressBar>(R.id.progressCarbs_Target)
-        val pbCE = view.findViewById<ProgressBar>(R.id.progressCarbs_Eaten)
-        val pbFT = view.findViewById<ProgressBar>(R.id.progressFat_Target)
-        val pbFE = view.findViewById<ProgressBar>(R.id.progressFat_Eaten)
+    // ── Hlavička a drobnosti (docs/adr/0074) ────────────────────────────────
 
-        val totalWeightTarget = status.target.protein + status.target.carbs + status.target.fat
-        if (totalWeightTarget <= 0) return
-
-        val fProp = (status.target.fat / totalWeightTarget).toFloat()
-        val cProp = (status.target.carbs / totalWeightTarget).toFloat()
-        val startAngle = -90f
-
-        val fTarget = (fProp * 1000).toInt()
-        val cTarget = (cProp * 1000).toInt()
-        val pTarget = 1000 - (fTarget + cTarget)
-
-        val fatRot     = startAngle
-        val carbsRot   = startAngle - (fProp * 360f)
-        val proteinRot = carbsRot - (cProp * 360f)
-
-        pbFT.rotation = fatRot;     pbFE.rotation = fatRot
-        pbCT.rotation = carbsRot;   pbCE.rotation = carbsRot
-        pbPT.rotation = proteinRot; pbPE.rotation = proteinRot
-
-        listOf(pbFT, pbCT, pbPT).forEach { it.max = 1000 }
-        pbFT.secondaryProgress = fTarget
-        pbCT.secondaryProgress = cTarget
-        pbPT.secondaryProgress = pTarget
-
-        val fCurrent = ((status.eatenT / status.target.fat).coerceAtMost(1.0) * fTarget).toInt()
-        val cCurrent = ((status.eatenS / status.target.carbs).coerceAtMost(1.0) * cTarget).toInt()
-        val pCurrent = ((status.eatenP / status.target.protein).coerceAtMost(1.0) * pTarget).toInt()
-
-        listOf(pbFE, pbCE, pbPE).forEach { it.max = 1000 }
-        ObjectAnimator.ofInt(pbFE, "progress", pbFE.progress, fCurrent).setDuration(800).start()
-        ObjectAnimator.ofInt(pbCE, "progress", pbCE.progress, cCurrent).setDuration(1000).start()
-        ObjectAnimator.ofInt(pbPE, "progress", pbPE.progress, pCurrent).setDuration(1200).start()
+    private fun setupHeader(view: View) {
+        val now = Calendar.getInstance()
+        val hour = now.get(Calendar.HOUR_OF_DAY)
+        val date = SimpleDateFormat("EEEE · d. MMMM", Locale("cs")).format(now.time).uppercase(Locale("cs"))
+        view.findViewById<TextView>(R.id.tvDashDate)?.text = date
+        view.findViewById<android.widget.ImageView>(R.id.ivDayIcon)?.setImageResource(
+            if (hour in 6..19) R.drawable.ic_line_sun else R.drawable.ic_line_moon)
+        view.findViewById<TextView>(R.id.tvUserGreeting)?.text = when (hour) {
+            in 4..9 -> "Dobré ráno"
+            in 10..11 -> "Dobré dopoledne"
+            in 12..17 -> "Dobré odpoledne"
+            in 18..21 -> "Dobrý večer"
+            else -> "Dobrou noc"
+        }
     }
+
+    /** Výzva pod tipem trenéra: rituál ještě čeká, nebo je hotový. */
+    private fun updateCoachCta(view: View, done: Boolean) {
+        val cta = view.findViewById<TextView>(R.id.tvCoachCta) ?: return
+        val ctx = cta.context
+        if (done) {
+            cta.text = "Rituál hotový  ✓"
+            cta.backgroundTintList = ColorStateList.valueOf(ctx.getColor(R.color.brand_dark_alpha10))
+            cta.setTextColor(ctx.getColor(R.color.brand_primary))
+        } else {
+            cta.text = "Ranní rituál  →"
+            cta.backgroundTintList = ColorStateList.valueOf(ctx.getColor(R.color.brand_dark))
+            cta.setTextColor(ctx.getColor(R.color.brand_cream))
+        }
+    }
+
+    /** Kolik dní v řadě je hotový ranní rituál (dnešek, nebo do včerejška, když dnes ještě ne). */
+    private fun updateStreak(view: View) {
+        val chip = view.findViewById<TextView>(R.id.tvDashStreak) ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val days = withContext(Dispatchers.IO) {
+                AppDatabase.getDatabase(chip.context).checkInDao().getAllCheckInsSync().map { it.date }.toSet()
+            }
+            var d = java.time.LocalDate.now()
+            if (d.toString() !in days) d = d.minusDays(1)
+            var n = 0
+            while (d.toString() in days) { n++; d = d.minusDays(1) }
+            chip.visibility = if (n >= 2) View.VISIBLE else View.GONE
+            chip.text = "🔥  $n ${if (n in 2..4) "dny" else "dní"} v řadě"
+        }
+    }
+
+    /** Okno ranního rituálu se ztmavením pozadí; okno lehce naskočí. */
+    private fun showRitual(view: View, show: Boolean) {
+        val card = view.findViewById<View>(R.id.cardRitualOverlay) ?: return
+        val scrim = view.findViewById<View>(R.id.ritualScrim)
+        if (show) {
+            listOf(scrim, card).forEach { it?.visibility = View.VISIBLE; it?.alpha = 0f }
+            scrim?.animate()?.alpha(1f)?.setDuration(220)?.start()
+            card.scaleX = 0.94f; card.scaleY = 0.94f
+            card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(280)
+                .setInterpolator(android.view.animation.OvershootInterpolator(1.4f)).start()
+        } else {
+            scrim?.animate()?.alpha(0f)?.setDuration(200)?.withEndAction { scrim.visibility = View.GONE }?.start()
+            card.animate().alpha(0f).scaleX(0.96f).scaleY(0.96f).setDuration(200).withEndAction { card.visibility = View.GONE }.start()
+        }
+    }
+
+    /** Karty při otevření postupně vyjedou zespodu. */
+    private fun playEntrance(view: View) {
+        val box = view.findViewById<ViewGroup>(R.id.dashboardScroll) ?: return
+        val dy = 28 * resources.displayMetrics.density
+        for (i in 0 until box.childCount) {
+            val c = box.getChildAt(i)
+            if (c.visibility != View.VISIBLE) continue
+            c.alpha = 0f; c.translationY = dy
+            c.animate().alpha(1f).translationY(0f).setStartDelay(60L * i).setDuration(420)
+                .setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+        }
+    }
+
+    /** Číslo se dopočítá z předchozí hodnoty (mezery v tisících). */
+    private fun countUp(tv: TextView?, value: Double) {
+        tv ?: return
+        val from = (tv.tag as? Double) ?: 0.0
+        tv.tag = value
+        android.animation.ValueAnimator.ofFloat(from.toFloat(), value.toFloat()).apply {
+            duration = 900; interpolator = android.view.animation.DecelerateInterpolator(1.8f)
+            addUpdateListener { tv.text = num((it.animatedValue as Float).toDouble()) }
+            start()
+        }
+    }
+
+    private fun num(v: Double) = String.format(Locale("cs"), "%,d", v.toInt()).replace('\u00A0', ' ').replace('\u202F', ' ')
 
     private fun setupEliteToggle(view: View) {
-        val cardEliteOptions = view.findViewById<MaterialCardView>(R.id.cardEliteOptions)
+        val cardEliteOptions = view.findViewById<View>(R.id.cardEliteOptions)
         val switchElite = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchEliteMode)
         val etWrist     = view.findViewById<EditText>(R.id.etEliteWrist)
         val etBodyFat   = view.findViewById<EditText>(R.id.etEliteBF)
-        val autoDietType = view.findViewById<AutoCompleteTextView>(R.id.autoDietType)
 
         val db = AppDatabase.getDatabase(requireContext())
         var isInitialLoading = true
 
         applySwitchStyles(switchElite)
-        setupDietAdapter(autoDietType)
 
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val profile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
@@ -447,7 +532,7 @@ class DashboardFragment : Fragment() {
                 if (profile.bodyFatPercentage > 0)    etBodyFat?.setText(profile.bodyFatPercentage.toString())
 
                 val diet = profile.dietType ?: "Vyvážená"
-                autoDietType?.setText(diet, false)
+                renderDietChips(view, diet) { isInitialLoading }
                 updateMacroPreview(view, diet)
 
                 isInitialLoading = false
@@ -469,17 +554,9 @@ class DashboardFragment : Fragment() {
             }
         }
 
-        autoDietType?.setOnItemClickListener { parent, _, pos, _ ->
-            if (!isInitialLoading) {
-                val selected = parent.getItemAtPosition(pos).toString()
-                updateMacroPreview(view, selected)
-                saveEliteField(true) { it.copy(dietType = selected) }
-            }
-        }
     }
 
     private fun updateMacroPreview(view: View, dietType: String) {
-        val pieChart = view.findViewById<PieChartView>(R.id.pieChartMacro) ?: return
         val tvP = view.findViewById<TextView>(R.id.tvProteinPct)
         val tvS = view.findViewById<TextView>(R.id.tvCarbPct)
         val tvT = view.findViewById<TextView>(R.id.tvFatPct)
@@ -494,10 +571,51 @@ class DashboardFragment : Fragment() {
         val s = (kcalS / sum * 100).toFloat()
         val t = (kcalT / sum * 100).toFloat()
 
-        pieChart.setRatios(p, s, t)
-        tvP?.text = "B: ${p.toInt()}%"
-        tvS?.text = "S: ${s.toInt()}%"
-        tvT?.text = "T: ${t.toInt()}%"
+        // pruh: šířky segmentů = podíly energie, plynule se přelijí
+        listOf(R.id.barProtein to p, R.id.barCarbs to s, R.id.barFat to t).forEach { (id, w) ->
+            val seg = view.findViewById<View>(id) ?: return@forEach
+            val lp = seg.layoutParams as android.widget.LinearLayout.LayoutParams
+            android.animation.ValueAnimator.ofFloat(lp.weight, w.coerceAtLeast(0.5f)).apply {
+                duration = 450; interpolator = android.view.animation.DecelerateInterpolator()
+                addUpdateListener { lp.weight = it.animatedValue as Float; seg.layoutParams = lp }
+                start()
+            }
+        }
+        tvP?.text = "Bílkoviny ${p.toInt()} %"
+        tvS?.text = "Sacharidy ${s.toInt()} %"
+        tvT?.text = "Tuky ${t.toInt()} %"
+    }
+
+    /** Stravovací protokol jako řada čipů (dřív rozbalovací seznam). */
+    private fun renderDietChips(view: View, selected: String, loading: () -> Boolean) {
+        val box = view.findViewById<android.widget.LinearLayout>(R.id.llDietChips) ?: return
+        val ctx = box.context
+        val d = resources.displayMetrics.density
+        box.removeAllViews()
+        DIETS.forEach { (name, emoji) ->
+            val on = name == selected
+            box.addView(TextView(ctx).apply {
+                text = "$emoji  $name"
+                textSize = 13f
+                typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.NORMAL)
+                setTextColor(ctx.getColor(if (on) R.color.brand_cream else R.color.brand_dark))
+                gravity = android.view.Gravity.CENTER
+                setPadding((16 * d).toInt(), 0, (16 * d).toInt(), 0)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 100 * d
+                    if (on) setColor(ctx.getColor(R.color.brand_dark))
+                    else { setColor(android.graphics.Color.TRANSPARENT); setStroke((1 * d).toInt(), ctx.getColor(R.color.brand_dark_alpha20)) }
+                }
+                contentDescription = "Protokol $name" + if (on) ", vybráno" else ""
+                setOnClickListener {
+                    if (on || loading()) return@setOnClickListener
+                    it.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    renderDietChips(view, name, loading)
+                    updateMacroPreview(view, name)
+                    saveEliteField(true) { p -> p.copy(dietType = name) }
+                }
+            }, android.widget.LinearLayout.LayoutParams(-2, (38 * d).toInt()).apply { marginEnd = (8 * d).toInt() })
+        }
     }
 
     private fun itToDouble(text: Any?): Double =
@@ -514,19 +632,6 @@ class DashboardFragment : Fragment() {
         switch.thumbTintList = ColorStateList(states, thumbColors)
     }
 
-    private fun setupDietAdapter(autoComplete: AutoCompleteTextView?) {
-        val options = listOf("Vyvážená", "Low Carb", "Keto", "Vegan", "High Protein")
-        val adapter = object : ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, options) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                return (super.getView(position, convertView, parent) as TextView).apply {
-                    setTextColor(Color.parseColor("#283618"))
-                    setPadding(48, 40, 48, 40)
-                }
-            }
-        }
-        autoComplete?.setAdapter(adapter)
-    }
-
     private fun setupSwitchListener(
         view: View,
         switch: com.google.android.material.switchmaterial.SwitchMaterial,
@@ -539,7 +644,8 @@ class DashboardFragment : Fragment() {
                 optionsCard.alpha = 0f
                 optionsCard.animate().alpha(1f).setDuration(300).withEndAction {
                     val scrollView = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.dashboardScrollView)
-                    scrollView?.post { scrollView.smoothScrollTo(0, optionsCard.bottom) }
+                    val card = view.findViewById<View>(R.id.cardArchitect)
+                    scrollView?.post { scrollView.smoothScrollTo(0, (card?.bottom ?: 0) - scrollView.height + (140 * resources.displayMetrics.density).toInt()) }
                 }.start()
             } else {
                 optionsCard.animate().alpha(0f).setDuration(250).withEndAction {
