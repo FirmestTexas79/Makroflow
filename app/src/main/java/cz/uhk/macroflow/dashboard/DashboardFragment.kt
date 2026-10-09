@@ -9,8 +9,6 @@ import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -43,6 +41,11 @@ import cz.uhk.macroflow.data.UserProfileEntity
 import cz.uhk.macroflow.pokemon.PokemonXpEngine
 
 class DashboardFragment : Fragment() {
+
+    private companion object {
+        /** Stravovací protokoly (hodnoty jsou uložené v profilu – názvy neměnit). */
+        val DIETS = listOf("Vyvážená" to "⚖️", "High Protein" to "💪", "Low Carb" to "🥑", "Keto" to "🥓", "Vegan" to "🌱")
+    }
 
     private lateinit var today: String
     private lateinit var waterPill: WaterPillView
@@ -281,8 +284,9 @@ class DashboardFragment : Fragment() {
         val fraction = if (waterGoalMl > 0) waterCurrentMl.toFloat() / waterGoalMl else 0f
         waterPill.progressFraction = fraction
         waterPill.goalReached = fraction >= 1f
-        waterPill.tvMain = "${waterCurrentMl} ml"
-        waterPill.tvSub = "z ${waterGoalMl} ml · 💧"
+        waterPill.tvMain = "${num(waterCurrentMl.toDouble())} ml"
+        waterPill.tvSub = "z ${num(waterGoalMl.toDouble())} ml · ${(fraction * 100).toInt().coerceAtMost(999)} %"
+        waterPill.contentDescription = "Voda ${waterCurrentMl} z ${waterGoalMl} mililitrů, klepni a přidej"
         waterPill.invalidate()
     }
 
@@ -323,25 +327,51 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    /** Dlaždice tréninku: nastavit čas / za kolik začíná / probíhá (s průběhem) / hotovo / volno. */
     private fun updateWorkoutCard(view: View) {
         val ctx = context ?: return
-        val tvTime  = view.findViewById<TextView>(R.id.tvTodayWorkoutPill) ?: return
-        val tvLabel = (tvTime.parent as? ViewGroup)?.getChildAt(0) as? TextView
+        val tvTime = view.findViewById<TextView>(R.id.tvTodayWorkoutPill) ?: return
+        val tvSub = view.findViewById<TextView>(R.id.tvWorkoutSub)
+        val tvLabel = view.findViewById<TextView>(R.id.tvWorkoutLabel)
+        val bar = view.findViewById<ProgressBar>(R.id.progressWorkout)
+        val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
+        val rest = (ctx.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE).getString("type_$dayName", "rest") ?: "rest").equals("rest", true)
         val timeStr = TrainingTimeManager.getTrainingTimeForToday(ctx)
-        if (timeStr != null) {
-            val h = timeStr.split(":")[0].toIntOrNull() ?: 0
-            val m = timeStr.split(":")[1].toIntOrNull() ?: 0
-            val endH = (h + (m + 75) / 60) % 24
-            val endM = (m + 75) % 60
-            tvTime.text = timeStr
-            tvTime.textSize = 22f
-            tvTime.setTextColor(Color.parseColor("#DDA15E"))
-            tvLabel?.text = "%02d:%02d — %02d:%02d".format(h, m, endH, endM)
-        } else {
-            tvTime.text = "Nastavit čas"
-            tvTime.textSize = 16f
-            tvTime.setTextColor(Color.parseColor("#80DDA15E"))
-            tvLabel?.text = "Dnes cvičíš v:"
+        bar?.visibility = View.GONE
+        tvTime.setTextColor(ctx.getColor(R.color.brand_cream))
+        if (timeStr == null) {
+            tvLabel?.text = if (rest) "VOLNO" else "TRÉNINK"
+            tvTime.text = if (rest) "Odpočinek" else "Nastavit čas"
+            tvTime.textSize = 20f
+            tvSub?.text = if (rest) "Regenerace je taky trénink" else "Klepni a vyber, kdy jdeš cvičit"
+            return
+        }
+        val h = timeStr.split(":")[0].toIntOrNull() ?: 0
+        val m = timeStr.split(":")[1].toIntOrNull() ?: 0
+        val startMin = h * 60 + m
+        val endMin = startMin + 75
+        val now = Calendar.getInstance().let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
+        fun hm(min: Int) = "%02d:%02d".format((min / 60) % 24, min % 60)
+        fun dur(min: Int) = if (min >= 60) "${min / 60} h ${min % 60} min" else "$min min"
+        tvTime.text = timeStr
+        tvTime.textSize = 26f
+        when {
+            now < startMin -> {
+                tvLabel?.text = "TRÉNINK"
+                tvSub?.text = "za ${dur(startMin - now)} · do ${hm(endMin)}"
+                tvTime.setTextColor(ctx.getColor(R.color.brand_accent_warm))
+            }
+            now < endMin -> {
+                tvLabel?.text = "PRÁVĚ PROBÍHÁ"
+                tvSub?.text = "ještě ${dur(endMin - now)} · do ${hm(endMin)}"
+                tvTime.setTextColor(ctx.getColor(R.color.brand_accent_warm))
+                bar?.visibility = View.VISIBLE
+                bar?.progress = ((now - startMin) * 1000 / 75)
+            }
+            else -> {
+                tvLabel?.text = "TRÉNINK HOTOVÝ"
+                tvSub?.text = "${hm(startMin)} – ${hm(endMin)} · dobrá práce"
+            }
         }
     }
 
@@ -473,17 +503,15 @@ class DashboardFragment : Fragment() {
     private fun num(v: Double) = String.format(Locale("cs"), "%,d", v.toInt()).replace('\u00A0', ' ').replace('\u202F', ' ')
 
     private fun setupEliteToggle(view: View) {
-        val cardEliteOptions = view.findViewById<MaterialCardView>(R.id.cardEliteOptions)
+        val cardEliteOptions = view.findViewById<View>(R.id.cardEliteOptions)
         val switchElite = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchEliteMode)
         val etWrist     = view.findViewById<EditText>(R.id.etEliteWrist)
         val etBodyFat   = view.findViewById<EditText>(R.id.etEliteBF)
-        val autoDietType = view.findViewById<AutoCompleteTextView>(R.id.autoDietType)
 
         val db = AppDatabase.getDatabase(requireContext())
         var isInitialLoading = true
 
         applySwitchStyles(switchElite)
-        setupDietAdapter(autoDietType)
 
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val profile = db.userProfileDao().getProfileSync() ?: UserProfileEntity(id = 1)
@@ -504,7 +532,7 @@ class DashboardFragment : Fragment() {
                 if (profile.bodyFatPercentage > 0)    etBodyFat?.setText(profile.bodyFatPercentage.toString())
 
                 val diet = profile.dietType ?: "Vyvážená"
-                autoDietType?.setText(diet, false)
+                renderDietChips(view, diet) { isInitialLoading }
                 updateMacroPreview(view, diet)
 
                 isInitialLoading = false
@@ -526,17 +554,9 @@ class DashboardFragment : Fragment() {
             }
         }
 
-        autoDietType?.setOnItemClickListener { parent, _, pos, _ ->
-            if (!isInitialLoading) {
-                val selected = parent.getItemAtPosition(pos).toString()
-                updateMacroPreview(view, selected)
-                saveEliteField(true) { it.copy(dietType = selected) }
-            }
-        }
     }
 
     private fun updateMacroPreview(view: View, dietType: String) {
-        val pieChart = view.findViewById<PieChartView>(R.id.pieChartMacro) ?: return
         val tvP = view.findViewById<TextView>(R.id.tvProteinPct)
         val tvS = view.findViewById<TextView>(R.id.tvCarbPct)
         val tvT = view.findViewById<TextView>(R.id.tvFatPct)
@@ -551,10 +571,51 @@ class DashboardFragment : Fragment() {
         val s = (kcalS / sum * 100).toFloat()
         val t = (kcalT / sum * 100).toFloat()
 
-        pieChart.setRatios(p, s, t)
-        tvP?.text = "B: ${p.toInt()}%"
-        tvS?.text = "S: ${s.toInt()}%"
-        tvT?.text = "T: ${t.toInt()}%"
+        // pruh: šířky segmentů = podíly energie, plynule se přelijí
+        listOf(R.id.barProtein to p, R.id.barCarbs to s, R.id.barFat to t).forEach { (id, w) ->
+            val seg = view.findViewById<View>(id) ?: return@forEach
+            val lp = seg.layoutParams as android.widget.LinearLayout.LayoutParams
+            android.animation.ValueAnimator.ofFloat(lp.weight, w.coerceAtLeast(0.5f)).apply {
+                duration = 450; interpolator = android.view.animation.DecelerateInterpolator()
+                addUpdateListener { lp.weight = it.animatedValue as Float; seg.layoutParams = lp }
+                start()
+            }
+        }
+        tvP?.text = "Bílkoviny ${p.toInt()} %"
+        tvS?.text = "Sacharidy ${s.toInt()} %"
+        tvT?.text = "Tuky ${t.toInt()} %"
+    }
+
+    /** Stravovací protokol jako řada čipů (dřív rozbalovací seznam). */
+    private fun renderDietChips(view: View, selected: String, loading: () -> Boolean) {
+        val box = view.findViewById<android.widget.LinearLayout>(R.id.llDietChips) ?: return
+        val ctx = box.context
+        val d = resources.displayMetrics.density
+        box.removeAllViews()
+        DIETS.forEach { (name, emoji) ->
+            val on = name == selected
+            box.addView(TextView(ctx).apply {
+                text = "$emoji  $name"
+                textSize = 13f
+                typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.NORMAL)
+                setTextColor(ctx.getColor(if (on) R.color.brand_cream else R.color.brand_dark))
+                gravity = android.view.Gravity.CENTER
+                setPadding((16 * d).toInt(), 0, (16 * d).toInt(), 0)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 100 * d
+                    if (on) setColor(ctx.getColor(R.color.brand_dark))
+                    else { setColor(android.graphics.Color.TRANSPARENT); setStroke((1 * d).toInt(), ctx.getColor(R.color.brand_dark_alpha20)) }
+                }
+                contentDescription = "Protokol $name" + if (on) ", vybráno" else ""
+                setOnClickListener {
+                    if (on || loading()) return@setOnClickListener
+                    it.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    renderDietChips(view, name, loading)
+                    updateMacroPreview(view, name)
+                    saveEliteField(true) { p -> p.copy(dietType = name) }
+                }
+            }, android.widget.LinearLayout.LayoutParams(-2, (38 * d).toInt()).apply { marginEnd = (8 * d).toInt() })
+        }
     }
 
     private fun itToDouble(text: Any?): Double =
@@ -571,19 +632,6 @@ class DashboardFragment : Fragment() {
         switch.thumbTintList = ColorStateList(states, thumbColors)
     }
 
-    private fun setupDietAdapter(autoComplete: AutoCompleteTextView?) {
-        val options = listOf("Vyvážená", "Low Carb", "Keto", "Vegan", "High Protein")
-        val adapter = object : ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, options) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                return (super.getView(position, convertView, parent) as TextView).apply {
-                    setTextColor(Color.parseColor("#283618"))
-                    setPadding(48, 40, 48, 40)
-                }
-            }
-        }
-        autoComplete?.setAdapter(adapter)
-    }
-
     private fun setupSwitchListener(
         view: View,
         switch: com.google.android.material.switchmaterial.SwitchMaterial,
@@ -596,7 +644,8 @@ class DashboardFragment : Fragment() {
                 optionsCard.alpha = 0f
                 optionsCard.animate().alpha(1f).setDuration(300).withEndAction {
                     val scrollView = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.dashboardScrollView)
-                    scrollView?.post { scrollView.smoothScrollTo(0, optionsCard.bottom) }
+                    val card = view.findViewById<View>(R.id.cardArchitect)
+                    scrollView?.post { scrollView.smoothScrollTo(0, (card?.bottom ?: 0) - scrollView.height + (140 * resources.displayMetrics.density).toInt()) }
                 }.start()
             } else {
                 optionsCard.animate().alpha(0f).setDuration(250).withEndAction {

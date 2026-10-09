@@ -9,12 +9,12 @@ import android.view.animation.LinearInterpolator
 import kotlin.math.*
 
 /**
- * WaterPillView — živý glassmorphism pill pro dashboard.
+ * Dlaždice vody na hlavní obrazovce (docs/adr/0074) – stejný tvar jako ostatní dlaždice.
  *
- * - Plynoucí sinusoidní vlna s výškou dle % splnění
- * - Klidový stav: pomalá táhlá vlna
- * - Dehydratace (4h+ bez pití): trhané, nervózní vlny
- * - 100% achievement: zlatý gradient + stoupající bublinky
+ * - světle modrá hladina stoupá podle splnění, plyne sinusoidní vlnou,
+ * - text vlevo nahoře je tmavý, takže je čitelný na krému i na vodě,
+ * - dehydratace (4 h bez pití): trhané vlny a štítek „napij se“,
+ * - 100 %: zlatý rámeček a stoupající bublinky.
  */
 class WaterPillView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -56,9 +56,9 @@ class WaterPillView @JvmOverloads constructor(
     }
 
     // ── Barvy ─────────────────────────────────────────────────────────
-    private val waterColor   = Color.parseColor("#4A8FA8")
-    private val waterColor2  = Color.parseColor("#3A7A93")
-    private val glassStroke  = Color.parseColor("#4A8FA8")
+    private val waterColor   = Color.parseColor("#BFE2EC")
+    private val waterColor2  = Color.parseColor("#93CADB")
+    private val glassStroke  = Color.parseColor("#1F283618")
     private val goldStart    = Color.parseColor("#C8923A")
     private val goldEnd      = Color.parseColor("#E8B84B")
     private val waveHighlight= Color.argb(77, 255, 255, 255)  // 30% bílá
@@ -68,7 +68,7 @@ class WaterPillView @JvmOverloads constructor(
     // ── Paints ────────────────────────────────────────────────────────
     private val waterPaint  = Paint(Paint.ANTI_ALIAS_FLAG)
     private val wave2Paint  = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(60, 74, 143, 168)
+        color = Color.argb(70, 120, 186, 207)
         style = Paint.Style.FILL
     }
     private val glassPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -81,17 +81,25 @@ class WaterPillView @JvmOverloads constructor(
         alpha = 60
     }
     private val bgPaint     = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val dp = resources.displayMetrics.density
+    private val sp = resources.displayMetrics.scaledDensity
     private val textPaint   = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 36f
-        typeface = Typeface.DEFAULT_BOLD
-        textAlign = Paint.Align.CENTER
+        color = Color.parseColor("#283618")
+        textSize = 22f * sp
+        typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
     }
     private val labelPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(180, 255, 255, 255)
-        textSize = 22f
-        textAlign = Paint.Align.CENTER
+        color = Color.parseColor("#2E6F86")
+        textSize = 10f * sp
+        typeface = Typeface.DEFAULT_BOLD
+        letterSpacing = 0.12f
     }
+    private val subPaint    = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(160, 40, 54, 24)
+        textSize = 11f * sp
+    }
+    private val chipPaint   = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(60, 74, 143, 168) }
+    private val emojiPaint  = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 14f * sp; textAlign = Paint.Align.CENTER }
     private val bubblePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#E8B84B")
         style = Paint.Style.FILL
@@ -140,7 +148,8 @@ class WaterPillView @JvmOverloads constructor(
 
     private fun getWaterY(): Float {
         val usableH = height.toFloat()
-        return usableH * (1f - progressFraction.coerceIn(0.05f, 0.95f))
+        // hladina od spodku dlaždice; i prázdná sklenice má malou „louži“, ať je poznat, co to je
+        return usableH * (1f - (0.08f + progressFraction.coerceIn(0f, 1f) * 0.84f))
     }
 
     // ── Kreslení ──────────────────────────────────────────────────────
@@ -149,11 +158,11 @@ class WaterPillView @JvmOverloads constructor(
 
         val w = width.toFloat()
         val h = height.toFloat()
-        val r = h / 2f  // pill radius
+        val r = 24f * dp  // stejné rohy jako ostatní dlaždice
         val rect = RectF(0f, 0f, w, h)
 
         // 1. Pozadí pillu — matné sklo
-        bgPaint.color = Color.argb(40, 254, 250, 224)  // #FEFAE0 @ 15%
+        bgPaint.color = Color.parseColor("#FFFDF2")
         canvas.drawRoundRect(rect, r, r, bgPaint)
 
         // 2. Ořez na tvar pillu
@@ -217,19 +226,25 @@ class WaterPillView @JvmOverloads constructor(
         } else {
             glassPaint.shader = null
             glassPaint.color = glassStroke
-            glassPaint.alpha = 120
+            glassPaint.strokeWidth = 1f * dp
         }
         canvas.drawRoundRect(RectF(1.5f, 1.5f, w-1.5f, h-1.5f), r-1f, r-1f, glassPaint)
 
-        // 9. Text — ml / cíl
-        val mlText = "${(progressFraction * 1000).toInt()}"  // placeholder, nastavuje DashboardFragment
-        canvas.drawText(tvMain, w / 2f, h * 0.48f, textPaint)
-        canvas.drawText(tvSub,  w / 2f, h * 0.72f, labelPaint)
+        // 9. Text vlevo nahoře jako u ostatních dlaždic: ikona, štítek, množství, cíl
+        val pad = 16f * dp
+        val chipR = 14f * dp
+        canvas.drawCircle(pad + chipR, pad + chipR, chipR, chipPaint)
+        canvas.drawText("💧", pad + chipR, pad + chipR + emojiPaint.textSize * 0.36f, emojiPaint)
+        labelPaint.color = if (isDehydrated && !goalReached) Color.parseColor("#BC6C25") else Color.parseColor("#2E6F86")
+        val label = when { goalReached -> "VODA · SPLNĚNO"; isDehydrated -> "VODA · NAPIJ SE"; else -> "VODA" }
+        canvas.drawText(label, pad + chipR * 2 + 8f * dp, pad + chipR + labelPaint.textSize * 0.36f, labelPaint)
+        canvas.drawText(tvMain, pad, pad + chipR * 2 + 10f * dp + textPaint.textSize * 0.9f, textPaint)
+        canvas.drawText(tvSub, pad, pad + chipR * 2 + 10f * dp + textPaint.textSize * 0.9f + 6f * dp + subPaint.textSize, subPaint)
     }
 
     // Text properties nastavované zvenku
     var tvMain: String = "0 ml"
-    var tvSub:  String = "💧 HYDRATACE"
+    var tvSub:  String = "z 2 500 ml"
 
     // ── Wave path buildery ─────────────────────────────────────────────
     private fun buildWavePath(

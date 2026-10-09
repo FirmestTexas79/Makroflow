@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Políčko s měřenou hodnotou v Metabolickém architektovi (docs/adr/0074). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="18dp" />
+    <solid android:color="#14283618" />
+</shape>
