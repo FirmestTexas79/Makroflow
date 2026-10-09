@@ -84,7 +84,7 @@ internal fun PokemonBattleView.centerGb(onPlayer: Boolean): PointF =
     else PointF(112f + gs.introOffset * 100f, 54f - enemySpriteHeight() / 2f)
 
 internal fun PokemonBattleView.drawStatusFx(canvas: Canvas) {
-    if (fxList.isEmpty() || !::gs.isInitialized) return
+    if (fxList.isEmpty() || !gsReady) return
     val sc = scale; val t = now()
     for (f in fxList.toList()) {
         val age = t - f.born

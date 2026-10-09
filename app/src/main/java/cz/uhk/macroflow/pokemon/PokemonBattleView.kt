@@ -63,12 +63,14 @@ class PokemonBattleView @JvmOverloads constructor(
     internal var dstR  = RectF()
 
     internal lateinit var gs: BattleState
+    /** Stav souboje je načtený (lateinit nejde ověřit z rozšiřujících funkcí v jiných souborech). */
+    internal val gsReady: Boolean get() = ::gs.isInitialized
     internal val handler = Handler(Looper.getMainLooper())
     // ── Makroball: poloha a stav animace (souřadnice herního plátna 160 × 144) ──
     internal var ball: cz.uhk.macroflow.pokemon.balls.Makroball = cz.uhk.macroflow.pokemon.balls.Makroball.MAKRO
     internal var ballShown = false
-    internal var ballCx = 0f; private var ballCy = 0f
-    internal var ballRot = 0f; private var ballOpen = 0f
+    internal var ballCx = 0f; internal var ballCy = 0f
+    internal var ballRot = 0f; internal var ballOpen = 0f
     /** 0 = Makromon normálně, 1 = celý vtažený do ballu (světlo). */
     internal var enemyAbsorb = 0f
     internal var captureBeam = 0f
@@ -102,7 +104,7 @@ class PokemonBattleView @JvmOverloads constructor(
 
     internal val absorbPaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
     internal val beamPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    internal var flashOn = false; private var cursorOn = true
+    internal var flashOn = false; internal var cursorOn = true
     internal var busy = false
     internal var pendingAction: (() -> Unit)? = null
 

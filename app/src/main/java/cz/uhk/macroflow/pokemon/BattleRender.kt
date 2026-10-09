@@ -116,7 +116,7 @@ internal fun PokemonBattleView.gbY(y: Float) = dstR.top  + y * scale
 
 internal fun PokemonBattleView.drawSpritesOverlay(canvas: Canvas) {
     val sc = scale
-    if (sc <= 0f || !::gs.isInitialized) return
+    if (sc <= 0f || !gsReady) return
     val animOffset = (gs.introOffset * 100f) * sc
 
     val mf = moveFrame; val ma = moveAnim
@@ -497,7 +497,7 @@ internal fun PokemonBattleView.drawShinyGlow(canvas: Canvas, cx: Float, cy: Floa
 }
 
 internal fun PokemonBattleView.drawSparkles(canvas: Canvas) {
-    if (sparkles.isEmpty() || !::gs.isInitialized) return
+    if (sparkles.isEmpty() || !gsReady) return
     val sc = scale
     val t = now()
     val c = enemyCenterGb()
