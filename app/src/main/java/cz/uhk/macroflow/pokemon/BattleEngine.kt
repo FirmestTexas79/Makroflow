@@ -102,22 +102,21 @@ object BattleEngine {
      */
     private val CHART: Map<MakromonType, Map<MakromonType, Float>> = run {
         fun m(vararg p: Pair<MakromonType, Float>) = p.toMap()
-        val T = MakromonType
         mapOf(
-            T.NORMAL to m(T.GHOST to 0f),
-            T.FIRE to m(T.GRASS to 2f, T.BUG to 2f, T.FIRE to .5f, T.WATER to .5f, T.DRAGON to .5f),
-            T.WATER to m(T.FIRE to 2f, T.GROUND to 2f, T.WATER to .5f, T.GRASS to .5f, T.DRAGON to .5f),
-            T.GRASS to m(T.WATER to 2f, T.GROUND to 2f, T.FIRE to .5f, T.GRASS to .5f, T.POISON to .5f,
-                T.FLYING to .5f, T.BUG to .5f, T.DRAGON to .5f),
-            T.ELECTRIC to m(T.WATER to 2f, T.FLYING to 2f, T.ELECTRIC to .5f, T.GRASS to .5f, T.DRAGON to .5f, T.GROUND to 0f),
-            T.BUG to m(T.GRASS to 2f, T.PSYCHIC to 2f, T.FIRE to .5f, T.FLYING to .5f, T.GHOST to .5f, T.POISON to .5f, T.FAIRY to .5f),
-            T.FLYING to m(T.GRASS to 2f, T.BUG to 2f, T.ELECTRIC to .5f),
-            T.GHOST to m(T.GHOST to 2f, T.PSYCHIC to 2f, T.NORMAL to 0f),
-            T.GROUND to m(T.FIRE to 2f, T.ELECTRIC to 2f, T.POISON to 2f, T.GRASS to .5f, T.BUG to .5f, T.FLYING to 0f),
-            T.PSYCHIC to m(T.POISON to 2f, T.PSYCHIC to .5f),
-            T.DRAGON to m(T.DRAGON to 2f, T.FAIRY to 0f),
-            T.POISON to m(T.GRASS to 2f, T.FAIRY to 2f, T.POISON to .5f, T.GROUND to .5f, T.GHOST to .5f),
-            T.FAIRY to m(T.DRAGON to 2f, T.FIRE to .5f, T.POISON to .5f)
+            MakromonType.NORMAL to m(MakromonType.GHOST to 0f),
+            MakromonType.FIRE to m(MakromonType.GRASS to 2f, MakromonType.BUG to 2f, MakromonType.FIRE to .5f, MakromonType.WATER to .5f, MakromonType.DRAGON to .5f),
+            MakromonType.WATER to m(MakromonType.FIRE to 2f, MakromonType.GROUND to 2f, MakromonType.WATER to .5f, MakromonType.GRASS to .5f, MakromonType.DRAGON to .5f),
+            MakromonType.GRASS to m(MakromonType.WATER to 2f, MakromonType.GROUND to 2f, MakromonType.FIRE to .5f, MakromonType.GRASS to .5f, MakromonType.POISON to .5f,
+                MakromonType.FLYING to .5f, MakromonType.BUG to .5f, MakromonType.DRAGON to .5f),
+            MakromonType.ELECTRIC to m(MakromonType.WATER to 2f, MakromonType.FLYING to 2f, MakromonType.ELECTRIC to .5f, MakromonType.GRASS to .5f, MakromonType.DRAGON to .5f, MakromonType.GROUND to 0f),
+            MakromonType.BUG to m(MakromonType.GRASS to 2f, MakromonType.PSYCHIC to 2f, MakromonType.FIRE to .5f, MakromonType.FLYING to .5f, MakromonType.GHOST to .5f, MakromonType.POISON to .5f, MakromonType.FAIRY to .5f),
+            MakromonType.FLYING to m(MakromonType.GRASS to 2f, MakromonType.BUG to 2f, MakromonType.ELECTRIC to .5f),
+            MakromonType.GHOST to m(MakromonType.GHOST to 2f, MakromonType.PSYCHIC to 2f, MakromonType.NORMAL to 0f),
+            MakromonType.GROUND to m(MakromonType.FIRE to 2f, MakromonType.ELECTRIC to 2f, MakromonType.POISON to 2f, MakromonType.GRASS to .5f, MakromonType.BUG to .5f, MakromonType.FLYING to 0f),
+            MakromonType.PSYCHIC to m(MakromonType.POISON to 2f, MakromonType.PSYCHIC to .5f),
+            MakromonType.DRAGON to m(MakromonType.DRAGON to 2f, MakromonType.FAIRY to 0f),
+            MakromonType.POISON to m(MakromonType.GRASS to 2f, MakromonType.FAIRY to 2f, MakromonType.POISON to .5f, MakromonType.GROUND to .5f, MakromonType.GHOST to .5f),
+            MakromonType.FAIRY to m(MakromonType.DRAGON to 2f, MakromonType.FIRE to .5f, MakromonType.POISON to .5f)
         )
     }
 

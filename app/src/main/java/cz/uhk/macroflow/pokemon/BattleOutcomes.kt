@@ -319,8 +319,8 @@ internal fun PokemonBattleView.awardXpToActiveMakromon(xpAmount: Int) {
         handler.post {
             // Herní oznámení (docs/adr/0080): XP s postupem levelu, při novém levelu ještě jedno
             val GT = cz.uhk.macroflow.pokemon.skills.ui.GameToast
-            GT.show(context, GT.Kind.XP, "+$xpAmount XP", makromon.name, PokemonLevelCalc.progressToNextLevel(makromon.xp))
-            if (makromon.level > oldLevel) GT.show(context, GT.Kind.LEVEL, "LEVEL ${makromon.level}!", "${makromon.name} zesílil")
+            GT.show(context, cz.uhk.macroflow.pokemon.skills.ui.GameToast.Kind.XP, "+$xpAmount XP", makromon.name, PokemonLevelCalc.progressToNextLevel(makromon.xp))
+            if (makromon.level > oldLevel) GT.show(context, cz.uhk.macroflow.pokemon.skills.ui.GameToast.Kind.LEVEL, "LEVEL ${makromon.level}!", "${makromon.name} zesílil")
 
             // --- KLÍČOVÁ ZMĚNA ---
             // Zavoláme pouze refresh lišty v MainActivity,

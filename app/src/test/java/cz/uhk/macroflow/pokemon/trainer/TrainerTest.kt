@@ -136,12 +136,11 @@ class TrainerTest {
 
     @Test
     fun typeChartImmunitiesDealNoDamage() {
-        val T = MakromonType
-        assertEquals(0f, BattleEngine.getTypeEffectiveness(T.GROUND, T.FLYING))
-        assertEquals(0f, BattleEngine.getTypeEffectiveness(T.ELECTRIC, T.GROUND))
-        assertEquals(2f, BattleEngine.getTypeEffectiveness(T.GROUND, T.ELECTRIC))
-        assertEquals(.5f, BattleEngine.getTypeEffectiveness(T.FIRE, T.DRAGON))
-        assertEquals(1f, BattleEngine.getTypeEffectiveness(T.NORMAL, T.FIRE))
-        assertEquals(0, BattleEngine.calcDamage(10, 80, 50, 50, T.NORMAL, T.GHOST))
+        assertEquals(0f, BattleEngine.getTypeEffectiveness(MakromonType.GROUND, MakromonType.FLYING))
+        assertEquals(0f, BattleEngine.getTypeEffectiveness(MakromonType.ELECTRIC, MakromonType.GROUND))
+        assertEquals(2f, BattleEngine.getTypeEffectiveness(MakromonType.GROUND, MakromonType.ELECTRIC))
+        assertEquals(.5f, BattleEngine.getTypeEffectiveness(MakromonType.FIRE, MakromonType.DRAGON))
+        assertEquals(1f, BattleEngine.getTypeEffectiveness(MakromonType.NORMAL, MakromonType.FIRE))
+        assertEquals(0, BattleEngine.calcDamage(10, 80, 50, 50, MakromonType.NORMAL, MakromonType.GHOST))
     }
 }
