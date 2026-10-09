@@ -64,10 +64,30 @@ object Arena {
 
     data class Record(val wins: Int, val losses: Int)
 
+    private val REPORTS = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /** Kód trenéra: 6 znaků odvozených z uid (stejná abeceda jako u výměn), aby šlo vyzvat konkrétního hráče. */
+    fun trainerCode(uid: String): String {
+        val a = cz.uhk.macroflow.pokemon.trade.Trading.ALPHABET
+        var h = uid.fold(1125899906842597L) { acc, c -> 31 * acc + c.code }
+        return (1..6).map { val i = ((h ushr 1) % a.length).toInt(); h = h / a.length xor (h shl 7); a[i] }.joinToString("")
+    }
+
+    /** Zpráva o souboji proti tvému duchovi. [attackerWon] = vyzyvatel vyhrál. */
+    data class Report(val id: String, val attacker: String, val attackerName: String, val attackerWon: Boolean, val at: Long)
+
+    private const val SEEN = "arena_reports_seen"
+    fun reportsSeen(ctx: Context) = prefs(ctx).getLong(SEEN, 0L)
+    fun markReportsSeen(ctx: Context, at: Long) { if (at > reportsSeen(ctx)) prefs(ctx).edit().putLong(SEEN, at).apply() }
+
     fun record(ctx: Context): Record = prefs(ctx).let { Record(it.getInt(WINS, 0), it.getInt(LOSSES, 0)) }
 
     /** Zapíše výsledek; vrátí penízky za výhru (0, pokud už dnes nad tímhle trenérem vyhrál). */
     fun recordResult(ctx: Context, t: Trainer, won: Boolean, today: LocalDate = LocalDate.now(), pay: Boolean = true): Int {
+        // zpráva pro majitele ducha (docs/adr/0081): „X porazil tvého ducha“ / „tvůj duch porazil X“
+        if (t.kind == Trainer.Kind.GHOST && cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) REPORTS.launch {
+            runCatching { cz.uhk.macroflow.data.FirebaseRepository.reportArenaResult(t.id, arenaName(ctx, cz.uhk.macroflow.data.FirebaseRepository.currentUser?.displayName), won) }
+        }
         val p = prefs(ctx)
         if (!won) { p.edit().putInt(LOSSES, p.getInt(LOSSES, 0) + 1).apply(); return 0 }
         val tag = "$today|${t.id}"

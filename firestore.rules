@@ -32,7 +32,7 @@ service cloud.firestore {
     // dopočítá z druhu a levelu a data navíc sama ověří.
     match /arena/{userId} {
       function shape(d) {
-        return d.keys().hasOnly(['name', 'kind', 'team', 'power', 'updatedAt', 'v', 'points', 'rankedAt'])
+        return d.keys().hasOnly(['name', 'code', 'kind', 'team', 'power', 'updatedAt', 'v', 'points', 'rankedAt'])
           && d.name is string && d.name.size() <= 16
           && d.team is list && d.team.size() >= 1 && d.team.size() <= 6
           && d.power is int && d.power <= 180;
@@ -52,6 +52,21 @@ service cloud.firestore {
                     && shape(request.resource.data) && request.resource.data.get('points', 0) == 0;
       allow update: if request.auth != null && request.auth.uid == userId
                     && shape(request.resource.data) && pointsOk();
+    }
+
+    // ── Zprávy o obraně ducha (docs/adr/0081) ────────────────────────
+    // Vyzyvatel zapíše výsledek souboje proti cizímu duchovi; číst ho smí
+    // jen on a majitel ducha, upravovat nikdo, smazat oba.
+    match /arena_results/{id} {
+      allow read, delete: if request.auth != null
+                          && (resource.data.defender == request.auth.uid || resource.data.attacker == request.auth.uid);
+      allow create: if request.auth != null
+                    && request.resource.data.attacker == request.auth.uid
+                    && request.resource.data.defender != request.auth.uid
+                    && request.resource.data.keys().hasOnly(['attacker', 'attackerName', 'defender', 'won', 'at'])
+                    && request.resource.data.attackerName is string && request.resource.data.attackerName.size() <= 16
+                    && request.resource.data.won is bool
+                    && request.resource.data.at == request.time;
     }
 
     // ── Výměny Makromonů (docs/adr/0077) ─────────────────────────────

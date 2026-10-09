@@ -86,6 +86,7 @@ object Trainers {
 
     fun toMap(t: Trainer): Map<String, Any> = mapOf(
         "name" to t.name,
+        "code" to Arena.trainerCode(t.id),
         "kind" to t.kind.name,
         "team" to t.team.map { mapOf("s" to it.speciesId, "l" to it.level, "m" to it.moves, "sh" to it.shiny) },
         "power" to t.power,

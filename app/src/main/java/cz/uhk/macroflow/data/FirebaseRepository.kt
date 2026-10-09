@@ -723,6 +723,37 @@ object FirebaseRepository {
         )).await()
     }
 
+    // ── Zprávy o obraně ducha a vyzvání kódem (docs/adr/0081) ──
+
+    private const val RESULTS = "arena_results"
+
+    suspend fun reportArenaResult(defender: String, attackerName: String, attackerWon: Boolean) {
+        val uid = auth.currentUser?.uid ?: return
+        if (defender == uid) return
+        db.collection(RESULTS).add(mapOf(
+            "attacker" to uid, "attackerName" to attackerName.take(16), "defender" to defender,
+            "won" to attackerWon, "at" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+        )).await()
+    }
+
+    /** Posledních 20 soubojů proti mému duchovi, nejnovější první (řazení v telefonu – bez složeného indexu). */
+    suspend fun arenaReports(): List<cz.uhk.macroflow.pokemon.trainer.Arena.Report> {
+        val uid = auth.currentUser?.uid ?: return emptyList()
+        return db.collection(RESULTS).whereEqualTo("defender", uid).limit(40).get().await().documents.mapNotNull { d ->
+            cz.uhk.macroflow.pokemon.trainer.Arena.Report(d.id, d.getString("attacker") ?: return@mapNotNull null,
+                d.getString("attackerName") ?: "Trenér", d.getBoolean("won") ?: false, d.getTimestamp("at")?.toDate()?.time ?: 0L)
+        }.sortedByDescending { it.at }.take(20)
+    }
+
+    suspend fun arenaGhost(uid: String): cz.uhk.macroflow.pokemon.trainer.Trainer? =
+        db.collection(ARENA).document(uid).get().await().let { cz.uhk.macroflow.pokemon.trainer.Trainers.fromMap(it.id, it.data) }
+            ?.copy(kind = cz.uhk.macroflow.pokemon.trainer.Trainer.Kind.GHOST)?.let(cz.uhk.macroflow.pokemon.trainer.Trainers::sanitize)
+
+    suspend fun arenaGhostByCode(code: String): cz.uhk.macroflow.pokemon.trainer.Trainer? =
+        db.collection(ARENA).whereEqualTo("code", code).limit(1).get().await().documents.firstOrNull()
+            ?.let { cz.uhk.macroflow.pokemon.trainer.Trainers.fromMap(it.id, it.data) }
+            ?.copy(kind = cz.uhk.macroflow.pokemon.trainer.Trainer.Kind.GHOST)?.let(cz.uhk.macroflow.pokemon.trainer.Trainers::sanitize)
+
     /** Moje body v cloudu (null = ještě nehrál hodnocený zápas / dokument neexistuje). */
     suspend fun myArenaPoints(): Int? {
         val uid = auth.currentUser?.uid ?: return null
@@ -811,6 +842,10 @@ object FirebaseRepository {
 
         // Duch v aréně (docs/adr/0076)
         try { db.collection(ARENA).document(uid).delete().await() } catch (e: Exception) { e.printStackTrace() }
+        // Zprávy o soubojích, kde jsem obránce nebo útočník (docs/adr/0081)
+        for (field in listOf("defender", "attacker")) try {
+            db.collection(RESULTS).whereEqualTo(field, uid).get().await().documents.forEach { it.reference.delete().await() }
+        } catch (e: Exception) { e.printStackTrace() }
 
         // Smazání hlavního dokumentu uživatele
         try {

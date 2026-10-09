@@ -118,6 +118,7 @@ class ArenaFragment : Fragment() {
 
             body.removeAllViews()
             renderMe(me)
+            val reportBox = ui.column(); body.addView(reportBox)
             quickPool = ai
             renderModes(me, user != null)
             val tradeBox = ui.column(); body.addView(tradeBox)
@@ -133,6 +134,7 @@ class ArenaFragment : Fragment() {
                 return@launch
             }
             ghostBox.addView(note("Načítám duchy…"))
+            viewLifecycleOwner.lifecycleScope.launch { renderReports(reportBox) }
             val before = Ranked.points(ctx)
             val ghosts = withContext(Dispatchers.IO) {
                 runCatching {
@@ -205,10 +207,68 @@ class ArenaFragment : Fragment() {
             else -> "👻 Tvůj duch hájí arénu, i když nehraješ."
         }
         card.addView(ui.text(status, 14f, 0xFFE8CFA0.toInt()).apply { setPadding(0, ui.px(6f), 0, 0) })
+        FirebaseRepository.currentUser?.uid?.let { uid ->
+            card.addView(ui.text("Tvůj kód trenéra: ${cz.uhk.macroflow.pokemon.trade.Trading.pretty(Arena.trainerCode(uid))}", 16f, 0xFFF2C94A.toInt())
+                .apply { setPadding(0, ui.px(4f), 0, 0) })
+        }
         body.addView(card)
         if (FirebaseRepository.currentUser != null) viewLifecycleOwner.lifecycleScope.launch {
             val place = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.arenaPlace(points) }.getOrNull() }
             if (place != null && isAdded) (placeStat.getChildAt(0) as android.widget.TextView).text = "#$place"
+        }
+    }
+
+    /** Zprávy o soubojích proti tvému duchovi (docs/adr/0081); nové zvýrazněné, u proher odveta. */
+    private suspend fun renderReports(box: LinearLayout) {
+        val ctx = requireContext().applicationContext
+        val list = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.arenaReports() }.getOrDefault(emptyList()) }
+        if (!isAdded || list.isEmpty()) return
+        val seen = Arena.reportsSeen(ctx)
+        val newCount = list.count { it.at > seen }
+        box.addView(ui.text(if (newCount > 0) "ZPRÁVY Z ARÉNY · $newCount NOVÉ" else "ZPRÁVY Z ARÉNY", 20f, ui.cream).apply {
+            background = ArenaUi.ribbon(0xFF6B4A8A.toInt(), ui.dp); setPadding(ui.px(12f), ui.px(4f), ui.px(22f), ui.px(5f))
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(16f); bottomMargin = ui.px(6f) })
+        list.take(5).forEach { rep ->
+            val row = WorkshopMenus.card(ui).apply { if (rep.at > seen) background = BevelDrawable.slot(1.5f * ui.dp) }
+            val lost = rep.attackerWon     // vyzyvatel vyhrál = tvůj duch prohrál
+            row.addView(ui.text(if (lost) "💥" else "🛡", 24f).apply { setPadding(0, 0, ui.px(8f), 0) })
+            row.addView(ui.text(if (lost) "${rep.attackerName} porazil tvého ducha" else "Tvůj duch porazil ${rep.attackerName}", 17f).apply { maxLines = 2 },
+                ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            if (lost) row.addView(ui.text("ODVETA", 15f, ui.cream, Gravity.CENTER).apply {
+                background = ArenaUi.tile(0xFF8A5AB0.toInt(), 0xFF4B2F66.toInt(), ui.dp, 8f)
+                setPadding(ui.px(10f), ui.px(7f), ui.px(10f), ui.px(8f))
+                setOnClickListener { revenge(rep.attacker) }
+            })
+            box.addView(row)
+        }
+        Arena.markReportsSeen(ctx, list.maxOf { it.at })
+    }
+
+    private fun revenge(uid: String) = viewLifecycleOwner.lifecycleScope.launch {
+        val g = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.arenaGhost(uid) }.getOrNull() }
+        if (g == null) Toast.makeText(requireContext(), "Tenhle hráč zatím nemá ducha v aréně.", Toast.LENGTH_SHORT).show() else challenge(g)
+    }
+
+    /** Vyzvat konkrétního hráče podle jeho kódu trenéra. */
+    private fun challengeByCode() {
+        val root = view as? FrameLayout ?: return
+        WorkshopMenus.show(root, "Vyzvat kamaráda", "Opiš kód trenéra z jeho Arény.") { w, b, close ->
+            val input = EditText(requireContext()).apply {
+                hint = "ABC DEF"; textSize = 26f; typeface = w.font; setTextColor(w.ink); gravity = Gravity.CENTER
+                filters = arrayOf(InputFilter.LengthFilter(8), InputFilter.AllCaps()); setSingleLine()
+            }
+            b.addView(input)
+            b.addView(w.button("Najít a vyzvat") {
+                val code = cz.uhk.macroflow.pokemon.trade.Trading.normalizeCode(input.text.toString())
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val g = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.arenaGhostByCode(code) }.getOrNull() }
+                    when {
+                        g == null -> Toast.makeText(requireContext(), "Hráče s tímhle kódem jsem nenašel.", Toast.LENGTH_SHORT).show()
+                        g.id == FirebaseRepository.currentUser?.uid -> Toast.makeText(requireContext(), "To je tvůj vlastní kód 🙂", Toast.LENGTH_SHORT).show()
+                        else -> { close(); challenge(g) }
+                    }
+                }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = w.px(8f) })
         }
     }
 
@@ -254,6 +314,15 @@ class ArenaFragment : Fragment() {
             addView(ui.text("›", 28f, 0xFFC9A26B.toInt()))
             if (loggedIn) setOnClickListener { showLeaderboard(points) }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) })
+        body.addView(ui.row().apply {
+            background = ArenaUi.plaque(ui.dp)
+            setPadding(ui.px(14f), ui.px(10f), ui.px(14f), ui.px(10f))
+            alpha = if (loggedIn && hasTeam) 1f else 0.5f
+            addView(ui.text("🎯", 24f, ui.cream).apply { setPadding(0, 0, ui.px(10f), 0) })
+            addView(ui.text("VYZVAT KAMARÁDA KÓDEM", 22f, ui.cream), ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(ui.text("›", 28f, 0xFFC9A26B.toInt()))
+            if (loggedIn && hasTeam) setOnClickListener { challengeByCode() }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(8f) })
     }
 
     private fun showLeaderboard(myPoints: Int) {
