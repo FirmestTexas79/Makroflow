@@ -92,6 +92,8 @@ class PokemonBattleView @JvmOverloads constructor(
     )
     internal val party = mutableListOf<PartyMember>()
     internal var partyIdx = 0
+    /** Tréninkový bonus (docs/adr/0082). */
+    internal var bonus = TrainingBonus.NONE
     /** Menu týmu je vynucené (bojující Makromon omdlel) – nejde zavřít. */
     internal var partyForced = false
     internal var partyMenu = false
@@ -153,10 +155,12 @@ class PokemonBattleView @JvmOverloads constructor(
 
             // Útoky chyceného Makromona (uložená sada), jinak základní útoky druhu; typ = typ druhu
             val playerBase = BattleFactory.createById(mId)
-            val playerWithStats = createPlayerMakromon(mId, playerLevel).copy(
+            val tb = TrainingBonus.current(context)
+            fun boosted(m: Makromon) = m.copy(attack = (m.attack * tb.attackMultiplier).toInt())
+            val playerWithStats = boosted(createPlayerMakromon(mId, playerLevel).copy(
                 moves = cz.uhk.macroflow.pokemon.wild.MovePool.resolve(caughtEntity?.moveListStr.orEmpty(), playerBase.moves),
                 type = playerBase.speciesType
-            )
+            ))
 
             // Trenér: celý tým najednou, statistiky z druhu a levelu (docs/adr/0076)
             val trainerTeam = trainer?.team?.map { cz.uhk.macroflow.pokemon.trainer.Trainers.toBattle(it) to it.shiny }.orEmpty()
@@ -190,10 +194,10 @@ class PokemonBattleView @JvmOverloads constructor(
 
             val restMembers = teamRest.map { e ->
                 val base = BattleFactory.createById(e.makromonId)
-                PartyMember(e.id, createPlayerMakromon(e.makromonId, e.level).copy(
+                PartyMember(e.id, boosted(createPlayerMakromon(e.makromonId, e.level).copy(
                     moves = cz.uhk.macroflow.pokemon.wild.MovePool.resolve(e.moveListStr, base.moves),
                     type = base.speciesType
-                ), e.isShiny)
+                )), e.isShiny)
             }
 
             handler.post {
@@ -208,6 +212,11 @@ class PokemonBattleView @JvmOverloads constructor(
                     ballCount = currentPokeballs
                 )
                 ballCounts.putAll(counts)
+                bonus = tb
+                if (tb.active) cz.uhk.macroflow.pokemon.skills.ui.GameToast.show(context, cz.uhk.macroflow.pokemon.skills.ui.GameToast.Kind.INFO,
+                    "💪 Tréninkový bonus", listOfNotNull(
+                        "+10 % útok".takeIf { tb.trained }, "+15 % chytání".takeIf { tb.trained && trainer == null }, "🛡 makro štít".takeIf { tb.shield }
+                    ).joinToString(" · "))
                 medCounts.putAll(meds)
                 gs.isEnemyShiny  = enemyIsShiny
                 gs.isPlayerShiny = playerIsShiny

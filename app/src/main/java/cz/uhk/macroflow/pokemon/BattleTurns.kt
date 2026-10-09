@@ -210,7 +210,16 @@ internal fun PokemonBattleView.applyMoveEffect(isPlayer: Boolean, mv: Move, stat
     }
     if (eff.kind.isStatChange) { applyStatChange(isPlayer, eff, statusOnly); return }
     val def = monOf(!isPlayer)
-    when (cz.uhk.macroflow.pokemon.status.StatusRules.tryInflict(condOf(!isPlayer), typeOf(def), eff, rng)) {
+    val res = cz.uhk.macroflow.pokemon.status.StatusRules.tryInflict(condOf(!isPlayer), typeOf(def), eff, rng)
+    // makro štít (docs/adr/0082): první stav na tvůj tým se v souboji zruší
+    if (res == cz.uhk.macroflow.pokemon.status.InflictResult.APPLIED && !isPlayer && bonus.shield
+        && eff.kind != cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH) {
+        bonus.shield = false
+        condOf(true).apply { if (eff.kind == cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE) confusedTurns = 0 else { major = null; sleepTurns = 0 } }
+        say("MACRO SHIELD", "BLOCKED IT!") { afterAction(isPlayer) }
+        return
+    }
+    when (res) {
         cz.uhk.macroflow.pokemon.status.InflictResult.APPLIED -> {
             if (eff.kind == cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH) { afterAction(isPlayer); return }
             statusFx(!isPlayer, eff.kind)

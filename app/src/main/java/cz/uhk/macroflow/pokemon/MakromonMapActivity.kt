@@ -398,7 +398,7 @@ class MakromonMapActivity : AppCompatActivity() {
         }
         // Aréna: souboje s trenéry a duchy hráčů, výměny (docs/adr/0078)
         findViewById<ImageButton>(R.id.btnArena).setOnClickListener {
-            if (supportFragmentManager.backStackEntryCount == 0) replaceMapContent(cz.uhk.macroflow.pokemon.trainer.ArenaFragment())
+            if (supportFragmentManager.backStackEntryCount == 0) { it.foreground = null; replaceMapContent(cz.uhk.macroflow.pokemon.trainer.ArenaFragment()) }
         }
         // Ladění shiny (jen debug build): podržením deníku bude příští setkání shiny
         // Ladicí menu (jen debug build): podržení deníku
@@ -428,9 +428,31 @@ class MakromonMapActivity : AppCompatActivity() {
         // Energie: nový den po aspoň 4 h pauze doplní bar (docs/adr/0065)
         staminaBar.set(cz.uhk.macroflow.pokemon.stamina.StaminaStore.onEnter(this), animate = false)
         collectStamina()
+        refreshArenaBadge()
         startRestTimer()
         // AFK těžba / kácení: po návratu ukázat, co se za tu dobu udělalo (docs/adr/0035)
         mapWorld.postDelayed({ reportAfk() }, 700)
+    }
+
+    /** Červená tečka na tlačítku Arény, když někdo vyzval tvého ducha (docs/adr/0081). */
+    private fun refreshArenaBadge() {
+        val btn = findViewById<ImageButton>(R.id.btnArena)
+        lifecycleScope.launch {
+            val show = kotlinx.coroutines.withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.trainer.Arena.hasNewReports(this@MakromonMapActivity) }
+            btn.foreground = if (show) ArenaBadge(resources.displayMetrics.density) else null
+        }
+    }
+
+    private class ArenaBadge(private val dp: Float) : android.graphics.drawable.Drawable() {
+        private val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFE5392F.toInt() }
+        private val rim = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFEFAE0.toInt() }
+        override fun draw(c: android.graphics.Canvas) {
+            val x = bounds.right - 9 * dp; val y = bounds.top + 9 * dp
+            c.drawCircle(x, y, 7 * dp, rim); c.drawCircle(x, y, 5.5f * dp, fill)
+        }
+        override fun setAlpha(a: Int) {}
+        override fun setColorFilter(f: android.graphics.ColorFilter?) {}
+        @Deprecated("Deprecated in Java") override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
     }
 
     /** Energie za dnešní zápisy ve funkční části (tabulka A, docs/adr/0065); připíše jen nové. */

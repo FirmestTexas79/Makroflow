@@ -81,6 +81,42 @@ object Arena {
     fun reportsSeen(ctx: Context) = prefs(ctx).getLong(SEEN, 0L)
     fun markReportsSeen(ctx: Context, at: Long) { if (at > reportsSeen(ctx)) prefs(ctx).edit().putLong(SEEN, at).apply() }
 
+    // ── Kamarádi: hráči vyzvaní kódem, uložení v telefonu (docs/adr/0081) ──
+
+    data class Friend(val uid: String, val name: String)
+    private const val FRIENDS = "arena_friends"
+    const val FRIENDS_MAX = 20
+
+    fun friends(ctx: Context): List<Friend> = prefs(ctx).getString(FRIENDS, null).orEmpty().lines()
+        .mapNotNull { l -> l.split('\t').takeIf { it.size == 2 }?.let { Friend(it[0], it[1]) } }
+
+    private fun saveFriends(ctx: Context, l: List<Friend>) =
+        prefs(ctx).edit().putString(FRIENDS, l.joinToString("\n") { "${it.uid}\t${it.name.replace('\t', ' ').replace('\n', ' ')}" }).apply()
+
+    /** Přidá nebo aktualizuje jméno; nejnovější první. */
+    fun addFriend(ctx: Context, f: Friend) = saveFriends(ctx, (listOf(f) + friends(ctx).filter { it.uid != f.uid }).take(FRIENDS_MAX))
+    fun removeFriend(ctx: Context, uid: String) = saveFriends(ctx, friends(ctx).filter { it.uid != uid })
+
+    // ── Obranný tým: kdo hájí tvého ducha (docs/adr/0082); prázdné = aktuální tým ──
+
+    private const val DEFENSE = "arena_defense"
+    fun defense(ctx: Context): List<Int> = prefs(ctx).getString(DEFENSE, null).orEmpty().split(',').mapNotNull { it.trim().toIntOrNull() }
+    fun setDefense(ctx: Context, ids: List<Int>) = prefs(ctx).edit().putString(DEFENSE, ids.take(Trainers.MAX_TEAM).joinToString(",")).apply()
+
+    private var latestReport = 0L
+    private var latestCheckedAt = 0L
+
+    /** Odznak na tlačítku Arény: jsou zprávy, které jsi ještě neviděl? Dotaz nejvýš jednou za 10 min. */
+    suspend fun hasNewReports(ctx: Context): Boolean {
+        if (!cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) return false
+        val now = System.currentTimeMillis()
+        if (now - latestCheckedAt > 10 * 60_000L) {
+            latestCheckedAt = now
+            latestReport = runCatching { cz.uhk.macroflow.data.FirebaseRepository.arenaReports().maxOfOrNull { it.at } }.getOrNull() ?: latestReport
+        }
+        return latestReport > reportsSeen(ctx)
+    }
+
     fun record(ctx: Context): Record = prefs(ctx).let { Record(it.getInt(WINS, 0), it.getInt(LOSSES, 0)) }
 
     /** Zapíše výsledek; vrátí penízky za výhru (0, pokud už dnes nad tímhle trenérem vyhrál). */

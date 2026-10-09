@@ -18,7 +18,6 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.button.MaterialButton
 import com.google.firebase.firestore.ListenerRegistration
 import cz.uhk.macroflow.R
 import cz.uhk.macroflow.data.FirebaseRepository
@@ -41,18 +40,26 @@ class TradeSheet(private val host: Fragment, private val onFinished: () -> Unit)
     private val dp = ctx.resources.displayMetrics.density
     private val font: Typeface? = runCatching { ResourcesCompat.getFont(ctx, R.font.jersey_15) }.getOrNull()
     private val dialog = BottomSheetDialog(ctx)
-    private val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(px(20), px(18), px(20), px(28)) }
+    private val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(px(8), px(4), px(8), px(12)) }
     private var listener: ListenerRegistration? = null
     private var applying = false
     private val me get() = FirebaseRepository.currentUser?.uid
 
-    private val cream = Color.parseColor("#FEFAE0")
-    private val dark = Color.parseColor("#283618")
-    private val olive = Color.parseColor("#606C38")
-    private val rust = Color.parseColor("#BC6C25")
+    // dřevěný styl jako ostatní menu Makrosvěta (docs/adr/0082)
+    private val cream = 0xFFFEFAE0.toInt()
+    private val dark = 0xFF3B2A1A.toInt()
+    private val olive = 0xFF7A5C3E.toInt()
+    private val rust = 0xFFBC6C25.toInt()
 
     init {
-        dialog.setContentView(ScrollView(ctx).apply { setBackgroundColor(cream); addView(body) })
+        dialog.setContentView(ScrollView(ctx).apply {
+            background = cz.uhk.macroflow.pokemon.skills.ui.WoodPanelDrawable(3f * dp)
+            isVerticalScrollBarEnabled = false
+            addView(body)
+        })
+        dialog.setOnShowListener {
+            dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(Color.TRANSPARENT)
+        }
         dialog.setOnDismissListener { listener?.remove(); listener = null; onFinished() }
     }
 
@@ -100,7 +107,7 @@ class TradeSheet(private val host: Fragment, private val onFinished: () -> Unit)
     private fun enterCode() {
         screen("Mám kód", "Opiš kód z kamarádova telefonu.")
         val input = EditText(ctx).apply {
-            hint = "ABC DEF"; textSize = 30f; typeface = font; gravity = Gravity.CENTER
+            hint = "ABC DEF"; textSize = 30f; typeface = font; gravity = Gravity.CENTER; setTextColor(dark); setHintTextColor(0x667A5C3E)
             filters = arrayOf(InputFilter.LengthFilter(8), InputFilter.AllCaps())
             setSingleLine()
         }
@@ -173,7 +180,7 @@ class TradeSheet(private val host: Fragment, private val onFinished: () -> Unit)
         when (Trading.phase(t)) {
             Trading.Phase.OPEN -> {
                 screen("Kód výměny", "Ukaž ho kamarádovi – v Aréně dá „Mám kód“.")
-                body.addView(text(Trading.pretty(code), 64f, dark, font).apply { gravity = Gravity.CENTER; letterSpacing = 0.12f })
+                body.addView(text(Trading.pretty(code), 50f, dark, font).apply { gravity = Gravity.CENTER; letterSpacing = 0.12f })
                 body.addView(text("Čekám, až se připojí…", 13f, olive).apply { gravity = Gravity.CENTER; setPadding(0, 0, 0, px(12)) })
                 mine?.let { body.addView(monCard(it, "NABÍZÍŠ")) }
                 body.addView(button("Zrušit výměnu", primary = false) { cancel(code) })
@@ -234,17 +241,18 @@ class TradeSheet(private val host: Fragment, private val onFinished: () -> Unit)
 
     // ── Prvky ──
 
-    private fun text(s: String, size: Float, color: Int, tf: Typeface? = null) = TextView(ctx).apply {
-        text = s; textSize = size; setTextColor(color); tf?.let { typeface = it }
+    private fun text(s: String, size: Float, color: Int, tf: Typeface? = font) = TextView(ctx).apply {
+        text = s; textSize = size * 1.25f; setTextColor(color); tf?.let { typeface = it }; includeFontPadding = false
     }
 
-    private fun button(label: String, primary: Boolean, onClick: () -> Unit) = MaterialButton(ctx).apply {
-        text = label; isAllCaps = false; textSize = 15f
-        insetTop = 0; insetBottom = 0; cornerRadius = px(16)
-        backgroundTintList = android.content.res.ColorStateList.valueOf(if (primary) dark else Color.TRANSPARENT)
-        setTextColor(if (primary) cream else dark)
-        if (!primary) { strokeWidth = px(1); strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#4D283618")) }
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, px(52)).also { it.topMargin = px(10) }
+    /** Hlavní akce = zelená herní dlaždice, vedlejší = dřevěné tlačítko. */
+    private fun button(label: String, primary: Boolean, onClick: () -> Unit) = TextView(ctx).apply {
+        text = label.uppercase(); textSize = 20f; typeface = font; gravity = Gravity.CENTER; setTextColor(cream)
+        background = if (primary) cz.uhk.macroflow.pokemon.trainer.ArenaUi.tile(0xFF6E9E3A.toInt(), 0xFF3D5A1E.toInt(), dp)
+            else cz.uhk.macroflow.pokemon.skills.ui.WoodPanelDrawable(1.5f * dp, parchment = false)
+        setShadowLayer(0.01f, dp, dp, 0x99000000.toInt())
+        setPadding(px(12), px(10), px(12), px(11))
+        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also { it.topMargin = px(10) }
         setOnClickListener { onClick() }
     }
 
@@ -256,20 +264,22 @@ class TradeSheet(private val host: Fragment, private val onFinished: () -> Unit)
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(px(14), px(12), px(14), px(12))
-            background = GradientDrawable().apply { cornerRadius = 20 * dp; setColor(Color.parseColor("#FFFDF2")); setStroke(px(1), Color.parseColor("#1F283618")) }
+            background = cz.uhk.macroflow.pokemon.skills.ui.BevelDrawable.slot(1.5f * dp)
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also { it.topMargin = px(8) }
             val res = sp?.let { ctx.resources.getIdentifier(it.sprite, "drawable", ctx.packageName) } ?: 0
             addView(ImageView(ctx).apply {
                 layoutParams = LinearLayout.LayoutParams(px(56), px(56))
-                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.parseColor("#14283618")) }
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x33BC6C25); setStroke(px(2), rust) }
                 setPadding(px(6), px(6), px(6), px(6))
-                if (res != 0) setImageResource(res)
-                (drawable as? BitmapDrawable)?.isFilterBitmap = false
+                val bmp = if (res != 0) (ctx.resources.getDrawable(res, null) as? BitmapDrawable)?.bitmap else null
+                if (bmp != null) setImageBitmap(if (o.shiny) cz.uhk.macroflow.pokemon.shiny.ShinySprites.recolor(bmp, sp!!.id) else bmp)
             })
             addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(px(14), 0, 0, 0)
-                label?.let { addView(text(it, 10f, rust).apply { letterSpacing = 0.14f; setTypeface(typeface, Typeface.BOLD) }) }
+                label?.let { addView(text(it, 10f, cream).apply {
+                    background = cz.uhk.macroflow.pokemon.trainer.ArenaUi.pill(rust, dp); setPadding(px(8), px(2), px(8), px(3))
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)) }
                 addView(text((sp?.displayName ?: o.speciesId) + if (o.shiny) " ✦" else "", 24f, dark, font))
                 addView(text("Lv ${o.level}" + if (o.moves.isNotEmpty()) " · " + o.moves.joinToString(", ") { it.lowercase() } else "", 12f, olive))
                 evolvesTo?.let { id -> addView(text("✨ Výměnou se vyvine v ${SpeciesRegistry.byId(id)?.displayName}!", 12f, rust)) }

@@ -104,20 +104,28 @@ class ArenaFragment : Fragment() {
         return ids.mapNotNull { dao.getMakromonById(it) }.take(Trainers.MAX_TEAM)
     }
 
+    /** Obranný tým (docs/adr/0082): uložený výběr, jinak aktuální tým. */
+    private fun loadDefense(fallback: List<CapturedMakromonEntity>): List<CapturedMakromonEntity> {
+        val dao = AppDatabase.getDatabase(requireContext().applicationContext).capturedMakromonDao()
+        return Arena.defense(requireContext()).mapNotNull { dao.getMakromonById(it) }.ifEmpty { fallback }
+    }
+
     private fun load(publish: Boolean) {
         if (!isAdded || view == null) return
         val ctx = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
             val user = FirebaseRepository.currentUser
             val mons = withContext(Dispatchers.IO) { loadTeam() }
+            val defMons = withContext(Dispatchers.IO) { loadDefense(mons) }
             val me = Arena.snapshot(user?.uid ?: "local", Arena.arenaName(ctx, user?.displayName), mons, System.currentTimeMillis())
+            val guard = me.copy(team = Arena.snapshot(me.id, me.name, defMons, me.updatedAt).team)
             myTeam = me.team
             val ai = Arena.aiTrainers(me.team, LocalDate.now().toEpochDay())
             // vlevo se střídá celý tvůj tým, vpravo vedoucí Makromoni možných soupeřů rychlého zápasu
             stage.setFighters(sprites(me.team), sprites(ai.mapNotNull { it.team.firstOrNull() }))
 
             body.removeAllViews()
-            renderMe(me)
+            renderMe(me, guard)
             val reportBox = ui.column(); body.addView(reportBox)
             quickPool = ai
             renderModes(me, user != null)
@@ -138,7 +146,7 @@ class ArenaFragment : Fragment() {
             val before = Ranked.points(ctx)
             val ghosts = withContext(Dispatchers.IO) {
                 runCatching {
-                    if (publish && me.team.isNotEmpty()) FirebaseRepository.publishArenaGhost(me)
+                    if (publish && me.team.isNotEmpty()) FirebaseRepository.publishArenaGhost(guard)
                     runCatching { Ranked.syncFromCloud(ctx, FirebaseRepository.myArenaPoints()) }
                     FirebaseRepository.fetchArenaGhosts()
                 }
@@ -160,7 +168,7 @@ class ArenaFragment : Fragment() {
     private var myPower = 1
 
     /** Karta tvého týmu: erb ranku, jméno, body s postupem, pořadí a tým (docs/adr/0080). */
-    private fun renderMe(me: Trainer) {
+    private fun renderMe(me: Trainer, guard: Trainer) {
         val ctx = requireContext()
         myPower = me.power.coerceAtLeast(1)
         val points = Ranked.points(ctx)
@@ -201,6 +209,17 @@ class ArenaFragment : Fragment() {
             .forEach { stats.addView(it, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)) }
         card.addView(stats)
         card.addView(teamRow(me.team, 46f))
+        if (FirebaseRepository.currentUser != null && me.team.isNotEmpty()) {
+            val def = ui.row().apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, ui.px(8f), 0, 0) }
+            def.addView(ui.text("🛡 OBRANA", 15f, 0xFFC9A26B.toInt()).apply { setPadding(0, 0, ui.px(8f), 0) })
+            def.addView(teamRow(guard.team, 30f), ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            def.addView(ui.text("UPRAVIT", 14f, ui.cream, Gravity.CENTER).apply {
+                background = ArenaUi.tile(0xFF6B4A8A.toInt(), 0xFF4B2F66.toInt(), ui.dp, 8f)
+                setPadding(ui.px(10f), ui.px(6f), ui.px(10f), ui.px(7f))
+                setOnClickListener { editDefense() }
+            })
+            card.addView(def)
+        }
         val status = when {
             me.team.isEmpty() -> "Nemáš tým – nejdřív chyť Makromona."
             FirebaseRepository.currentUser == null -> "Offline: bojuješ jen s trenéry arény."
@@ -265,7 +284,7 @@ class ArenaFragment : Fragment() {
                     when {
                         g == null -> Toast.makeText(requireContext(), "Hráče s tímhle kódem jsem nenašel.", Toast.LENGTH_SHORT).show()
                         g.id == FirebaseRepository.currentUser?.uid -> Toast.makeText(requireContext(), "To je tvůj vlastní kód 🙂", Toast.LENGTH_SHORT).show()
-                        else -> { close(); challenge(g) }
+                        else -> { Arena.addFriend(requireContext(), Arena.Friend(g.id, g.name)); close(); challenge(g) }
                     }
                 }
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = w.px(8f) })
@@ -323,6 +342,74 @@ class ArenaFragment : Fragment() {
             addView(ui.text("›", 28f, 0xFFC9A26B.toInt()))
             if (loggedIn && hasTeam) setOnClickListener { challengeByCode() }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(8f) })
+        if (loggedIn && hasTeam) renderFriends()
+    }
+
+    /** Kamarádi vyzvaní kódem: klepnutí = souboj s jeho aktuálním duchem, podržení = odebrat. */
+    private fun renderFriends() {
+        val ctx = requireContext()
+        val list = Arena.friends(ctx)
+        if (list.isEmpty()) return
+        body.addView(ui.text("👥 KAMARÁDI", 16f, ui.inkSoft).apply { setPadding(ui.px(2f), ui.px(10f), 0, ui.px(4f)) })
+        val row = ui.row()
+        list.forEach { f ->
+            row.addView(ui.text("⚔ ${f.name}", 17f, ui.cream, Gravity.CENTER).apply {
+                background = ArenaUi.tile(0xFF6B4A8A.toInt(), 0xFF4B2F66.toInt(), ui.dp, 18f)
+                setPadding(ui.px(12f), ui.px(6f), ui.px(12f), ui.px(7f))
+                setOnClickListener { revenge(f.uid) }
+                setOnLongClickListener {
+                    Arena.removeFriend(ctx, f.uid); (parent as? ViewGroup)?.removeView(this)
+                    Toast.makeText(ctx, "${f.name} odebrán z kamarádů.", Toast.LENGTH_SHORT).show(); true
+                }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { rightMargin = ui.px(8f) })
+        }
+        body.addView(android.widget.HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(row) })
+    }
+
+    /** Výběr obranného týmu: až 6 Makromonů v pořadí klepnutí. */
+    private fun editDefense() {
+        val root = view as? FrameLayout ?: return
+        val ctx = requireContext()
+        WorkshopMenus.show(root, "Obranný tým", "Kdo hájí tvého ducha, když nehraješ. Klepni v pořadí, max ${Trainers.MAX_TEAM}.") { w, b, close ->
+            val all = AppDatabase.getDatabase(ctx.applicationContext).capturedMakromonDao().getAllCaught().sortedByDescending { it.level }
+            val picked = Arena.defense(ctx).filter { id -> all.any { it.id == id } }.toMutableList()
+            val cells = HashMap<Int, android.widget.TextView>()
+            fun refresh() = cells.forEach { (id, badge) ->
+                val i = picked.indexOf(id)
+                badge.text = if (i >= 0) "${i + 1}" else ""
+                badge.visibility = if (i >= 0) View.VISIBLE else View.GONE
+                (badge.parent as View).alpha = if (i >= 0 || picked.size < Trainers.MAX_TEAM) 1f else 0.45f
+            }
+            all.chunked(4).forEach { chunk ->
+                val r = w.row()
+                chunk.forEach { e ->
+                    val cell = FrameLayout(ctx).apply { background = BevelDrawable.slot(1.5f * w.dp) }
+                    cell.addView(ImageView(ctx).apply {
+                        setImageBitmap(sprite(TrainerMon(e.makromonId, e.level, emptyList(), e.isShiny)))
+                        scaleType = ImageView.ScaleType.FIT_CENTER; val p = w.px(6f); setPadding(p, p, p, p)
+                    }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                    cell.addView(w.text("Lv ${e.level}", 12f, w.inkSoft, Gravity.CENTER),
+                        FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+                    val badge = w.text("", 14f, w.cream, Gravity.CENTER).apply { background = ArenaUi.pill(0xFF6B4A8A.toInt(), w.dp) }
+                    cell.addView(badge, FrameLayout.LayoutParams(w.px(22f), w.px(22f), Gravity.TOP or Gravity.END))
+                    cells[e.id] = badge
+                    cell.setOnClickListener {
+                        if (e.id in picked) picked.remove(e.id) else if (picked.size < Trainers.MAX_TEAM) picked.add(e.id)
+                        refresh()
+                    }
+                    r.addView(cell, LinearLayout.LayoutParams(0, w.px(72f), 1f).apply { setMargins(w.px(3f), w.px(3f), w.px(3f), w.px(3f)) })
+                }
+                repeat(4 - chunk.size) { r.addView(View(ctx), LinearLayout.LayoutParams(0, 1, 1f)) }
+                b.addView(r)
+            }
+            refresh()
+            b.addView(w.button("Uložit obranu") {
+                Arena.setDefense(ctx, picked); close(); load(publish = true)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = w.px(10f) })
+            b.addView(w.button("Bránit aktuálním týmem") {
+                Arena.setDefense(ctx, emptyList()); close(); load(publish = true)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = w.px(6f) })
+        }
     }
 
     private fun showLeaderboard(myPoints: Int) {

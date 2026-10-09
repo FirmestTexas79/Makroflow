@@ -92,7 +92,7 @@ internal fun PokemonBattleView.onBallHit() {
 internal fun PokemonBattleView.startWobbleBall() {
     val baseMultiplier  = BattleFactory.catchMultiplier(gs.enemy)
     // Spící / paralyzovaný / otrávený soupeř se chytá snáz
-    val finalMultiplier = baseMultiplier * ball.catchMultiplier * cz.uhk.macroflow.pokemon.status.StatusRules.catchBonus(enemyCond)
+    val finalMultiplier = baseMultiplier * ball.catchMultiplier * cz.uhk.macroflow.pokemon.status.StatusRules.catchBonus(enemyCond) * bonus.catchMultiplier
     val (success, wobbles) = BattleEngine.calcCaptureResult(gs.enemy, finalMultiplier)
     gs.captureSuccess = success; gs.wobbleCount = wobbles; gs.wobbleDone = 0
     gs.phase = BattlePhase.BALL_WOBBLE
