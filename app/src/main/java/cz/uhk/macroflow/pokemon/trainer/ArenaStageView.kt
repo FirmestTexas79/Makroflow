@@ -19,10 +19,14 @@ import kotlin.math.sin
  */
 class ArenaStageView(context: Context) : View(context) {
 
+    companion object { private const val SWAP_MS = 2600L }
+
     private var bg: Bitmap? = null
     private var extra = -1
-    private var left: Bitmap? = null
-    private var right: Bitmap? = null
+    /** Makromoni na písku se po chvíli střídají (tvůj tým vlevo, soupeř/soupeři vpravo). */
+    private var left: List<Bitmap> = emptyList()
+    private var right: List<Bitmap> = emptyList()
+    private var rightSince = 0L
     private val crisp = Paint().apply { isFilterBitmap = false }
     private val smooth = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = true }
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x55000000 }
@@ -34,8 +38,8 @@ class ArenaStageView(context: Context) : View(context) {
     var stageHeight = 0
         private set
 
-    fun setFighters(l: Bitmap?, r: Bitmap?) { left = l; right = r; invalidate() }
-    fun setRight(r: Bitmap?) { right = r; invalidate() }
+    fun setFighters(l: List<Bitmap>, r: List<Bitmap>) { left = l; setRight(r) }
+    fun setRight(r: List<Bitmap>) { right = r; rightSince = System.currentTimeMillis(); invalidate() }
 
     override fun onAttachedToWindow() { super.onAttachedToWindow(); handler.post(tick) }
     override fun onDetachedFromWindow() { handler.removeCallbacksAndMessages(null); super.onDetachedFromWindow() }
@@ -71,12 +75,23 @@ class ArenaStageView(context: Context) : View(context) {
         // oba na stejné úrovni: soupeř na svém valu, ty naproti zrcadlově
         val footY = (extra + Arenas.ENEMY_Y) * k
         val size = 108f * k
-        drawFighter(c, left, Arenas.PLAYER_X * k, footY + 6f * k, size, mirror = true, bob = sin(t * 3.1f) * 2.2f * k)
-        drawFighter(c, right, Arenas.ENEMY_X * k, footY, size, mirror = false, bob = sin(t * 3.1f + 1.7f) * 2.2f * k)
+        val now = System.currentTimeMillis()
+        drawFighter(c, pick(left, now - start), Arenas.PLAYER_X * k, footY + 6f * k, size, mirror = true, bob = sin(t * 3.1f) * 2.2f * k)
+        drawFighter(c, pick(right, now - rightSince + 1300), Arenas.ENEMY_X * k, footY, size, mirror = false, bob = sin(t * 3.1f + 1.7f) * 2.2f * k)
     }
 
-    private fun drawFighter(c: Canvas, bmp: Bitmap?, cx: Float, footY: Float, h: Float, mirror: Boolean, bob: Float) {
-        bmp ?: return
+    /** Kdo právě stojí na písku a jak moc je vidět (krátké prolnutí při výměně). */
+    private fun pick(list: List<Bitmap>, ms: Long): Pair<Bitmap, Float>? {
+        if (list.isEmpty()) return null
+        val slot = ms / SWAP_MS
+        val inSlot = (ms % SWAP_MS).toFloat()
+        val a = if (list.size == 1) 1f else minOf(1f, inSlot / 250f, (SWAP_MS - inSlot) / 250f)
+        return list[(slot % list.size).toInt()] to a.coerceIn(0f, 1f)
+    }
+
+    private fun drawFighter(c: Canvas, who: Pair<Bitmap, Float>?, cx: Float, footY: Float, h: Float, mirror: Boolean, bob: Float) {
+        val (bmp, alpha) = who ?: return
+        smooth.alpha = (alpha * 255).toInt(); shadow.alpha = (alpha * 0x55).toInt()
         val w = h * bmp.width / bmp.height
         c.drawOval(cx - w * 0.38f, footY - h * 0.05f, cx + w * 0.38f, footY + h * 0.05f, shadow)
         val r = RectF(cx - w / 2f, footY - h + bob, cx + w / 2f, footY + bob)

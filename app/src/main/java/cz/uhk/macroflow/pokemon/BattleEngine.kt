@@ -96,57 +96,40 @@ object BattleEngine {
         )
     }
 
-    fun getTypeEffectiveness(moveType: MakromonType, defenderType: MakromonType): Float {
-        return when (moveType) {
-            MakromonType.FIRE -> when (defenderType) {
-                MakromonType.GRASS, MakromonType.BUG -> 2.0f
-                MakromonType.WATER, MakromonType.FIRE -> 0.5f
-                else -> 1.0f
-            }
-            MakromonType.WATER -> when (defenderType) {
-                MakromonType.FIRE, MakromonType.GROUND -> 2.0f
-                MakromonType.WATER, MakromonType.GRASS -> 0.5f
-                else -> 1.0f
-            }
-            MakromonType.GRASS -> when (defenderType) {
-                MakromonType.WATER, MakromonType.GROUND -> 2.0f
-                MakromonType.FIRE, MakromonType.GRASS, MakromonType.FLYING, MakromonType.BUG -> 0.5f
-                else -> 1.0f
-            }
-            MakromonType.ELECTRIC -> when (defenderType) {
-                MakromonType.WATER, MakromonType.FLYING -> 2.0f
-                MakromonType.GRASS, MakromonType.ELECTRIC -> 0.5f
-                MakromonType.GROUND -> 0.0f
-                else -> 1.0f
-            }
-            MakromonType.NORMAL -> when (defenderType) {
-                MakromonType.GHOST -> 0.0f
-                else -> 1.0f
-            }
-            MakromonType.FAIRY -> when (defenderType) {
-                MakromonType.DRAGON -> 2.0f
-                MakromonType.FIRE, MakromonType.POISON -> 0.5f
-                else -> 1.0f
-            }
-            MakromonType.DRAGON -> when (defenderType) {
-                MakromonType.DRAGON -> 2.0f
-                MakromonType.FAIRY -> 0.0f
-                else -> 1.0f
-            }
-            MakromonType.GHOST -> when (defenderType) {
-                MakromonType.GHOST, MakromonType.PSYCHIC -> 2.0f
-                MakromonType.NORMAL -> 0.0f
-                else -> 1.0f
-            }
-            else -> 1.0f
-        }
+    /**
+     * Účinnost typů podle tabulky Pokémonů (jen typy, které Makromoni mají). 2 = super účinný,
+     * 0.5 = málo účinný, 0 = bez účinku; co v tabulce není, je 1.
+     */
+    private val CHART: Map<MakromonType, Map<MakromonType, Float>> = run {
+        fun m(vararg p: Pair<MakromonType, Float>) = p.toMap()
+        val T = MakromonType
+        mapOf(
+            T.NORMAL to m(T.GHOST to 0f),
+            T.FIRE to m(T.GRASS to 2f, T.BUG to 2f, T.FIRE to .5f, T.WATER to .5f, T.DRAGON to .5f),
+            T.WATER to m(T.FIRE to 2f, T.GROUND to 2f, T.WATER to .5f, T.GRASS to .5f, T.DRAGON to .5f),
+            T.GRASS to m(T.WATER to 2f, T.GROUND to 2f, T.FIRE to .5f, T.GRASS to .5f, T.POISON to .5f,
+                T.FLYING to .5f, T.BUG to .5f, T.DRAGON to .5f),
+            T.ELECTRIC to m(T.WATER to 2f, T.FLYING to 2f, T.ELECTRIC to .5f, T.GRASS to .5f, T.DRAGON to .5f, T.GROUND to 0f),
+            T.BUG to m(T.GRASS to 2f, T.PSYCHIC to 2f, T.FIRE to .5f, T.FLYING to .5f, T.GHOST to .5f, T.POISON to .5f, T.FAIRY to .5f),
+            T.FLYING to m(T.GRASS to 2f, T.BUG to 2f, T.ELECTRIC to .5f),
+            T.GHOST to m(T.GHOST to 2f, T.PSYCHIC to 2f, T.NORMAL to 0f),
+            T.GROUND to m(T.FIRE to 2f, T.ELECTRIC to 2f, T.POISON to 2f, T.GRASS to .5f, T.BUG to .5f, T.FLYING to 0f),
+            T.PSYCHIC to m(T.POISON to 2f, T.PSYCHIC to .5f),
+            T.DRAGON to m(T.DRAGON to 2f, T.FAIRY to 0f),
+            T.POISON to m(T.GRASS to 2f, T.FAIRY to 2f, T.POISON to .5f, T.GROUND to .5f, T.GHOST to .5f),
+            T.FAIRY to m(T.DRAGON to 2f, T.FIRE to .5f, T.POISON to .5f)
+        )
     }
+
+    fun getTypeEffectiveness(moveType: MakromonType, defenderType: MakromonType): Float =
+        CHART[moveType]?.get(defenderType) ?: 1f
 
     fun calcDamage(level: Int, power: Int, atk: Int, def: Int, moveType: MakromonType, defenderType: MakromonType): Int {
         if (power == 0) return 0
         val base = ((2.0 * level / 5.0 + 2.0) * power * (atk.toDouble() / def.toDouble()) / 50.0 + 2.0)
         val rng = 0.85 + Random.nextDouble() * 0.15
         val typeMultiplier = getTypeEffectiveness(moveType, defenderType)
+        if (typeMultiplier == 0f) return 0          // bez účinku
         return max(1, floor(base * rng * typeMultiplier).toInt())
     }
 

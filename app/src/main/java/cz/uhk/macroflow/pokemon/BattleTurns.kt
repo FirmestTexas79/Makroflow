@@ -184,7 +184,16 @@ internal fun PokemonBattleView.useMove(isPlayer: Boolean, mv: Move) {
                     hurt(!isPlayer, dmg); invalidate()
                     handler.postDelayed({
                         if (def.currentHp <= 0) { if (isPlayer) enemyFainted() else playerFainted() }
-                        else say("IT DEALT", "$dmg DAMAGE!") { applyMoveEffect(isPlayer, mv, statusOnly = false) }
+                        else {
+                            // účinnost typu (docs/adr/0080): super / málo účinný / bez účinku
+                            val eff = BattleEngine.getTypeEffectiveness(mv.type, typeOf(def))
+                            when {
+                                eff == 0f -> say("IT DOESNT AFFECT", def.name) { afterAction(isPlayer) }
+                                eff > 1f -> say("SUPER EFFECTIVE!", "$dmg DAMAGE!") { applyMoveEffect(isPlayer, mv, statusOnly = false) }
+                                eff < 1f -> say("NOT VERY EFFECTIVE", "$dmg DAMAGE...") { applyMoveEffect(isPlayer, mv, statusOnly = false) }
+                                else -> say("IT DEALT", "$dmg DAMAGE!") { applyMoveEffect(isPlayer, mv, statusOnly = false) }
+                            }
+                        }
                     }, 400)
                 }
             }

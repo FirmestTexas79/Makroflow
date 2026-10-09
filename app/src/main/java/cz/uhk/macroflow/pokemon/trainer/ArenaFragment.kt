@@ -64,8 +64,13 @@ class ArenaFragment : Fragment() {
         head.addView(ui.text("Souboje trenérů", 18f, 0xFFFFF2C8.toInt(), Gravity.CENTER).apply { setShadowLayer(0.01f, 2 * ui.dp, 2 * ui.dp, 0xFF3B2A1A.toInt()) })
         root.addView(head, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP)
             .apply { topMargin = ui.px(44f) })
-        root.addView(ui.text("✕", 28f, ui.cream, Gravity.CENTER).apply {
+        root.addView(ImageView(ctx).apply {
             background = WoodPanelDrawable(1.5f * ui.dp, parchment = false)
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setColorFilter(ui.cream)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setPadding(ui.px(11f), ui.px(11f), ui.px(11f), ui.px(11f))
+            contentDescription = "Zavřít"
             setOnClickListener { parentFragmentManager.popBackStack() }
         }, FrameLayout.LayoutParams(ui.px(48f), ui.px(48f), Gravity.TOP or Gravity.END).apply { topMargin = ui.px(44f); rightMargin = ui.px(16f) })
 
@@ -107,7 +112,8 @@ class ArenaFragment : Fragment() {
             val me = Arena.snapshot(user?.uid ?: "local", Arena.arenaName(ctx, user?.displayName), mons, System.currentTimeMillis())
             myTeam = me.team
             val ai = Arena.aiTrainers(me.team, LocalDate.now().toEpochDay())
-            stage.setFighters(me.team.firstOrNull()?.let(::sprite), ai.getOrNull(1)?.team?.firstOrNull()?.let(::sprite))
+            // vlevo se střídá celý tvůj tým, vpravo vedoucí Makromoni možných soupeřů rychlého zápasu
+            stage.setFighters(sprites(me.team), sprites(ai.mapNotNull { it.team.firstOrNull() }))
 
             body.removeAllViews()
             renderMe(me)
@@ -218,7 +224,7 @@ class ArenaFragment : Fragment() {
         val rankedSub = if (!loggedIn) "Hodnocené zápasy jen s přihlášeným účtem."
             else "${rankedOpp.name} · ${rankedOpp.team.size}× Lv ${rankedOpp.team.first().level}\nvýhra +${Ranked.WIN} · prohra −${Ranked.LOSS}"
         modes.addView(mode("🏆 Hodnocený", rankedSub, "Hrát", loggedIn && me.team.isNotEmpty(),
-            { stage.setRight(rankedOpp.team.firstOrNull()?.let(::sprite)) }) { challenge(rankedOpp) },
+            { stage.setRight(sprites(rankedOpp.team)) }) { challenge(rankedOpp) },
             ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         body.addView(modes, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(4f) })
         body.addView(ui.button("📜 Žebříček hráčů", loggedIn) { showLeaderboard(points) },
@@ -272,7 +278,7 @@ class ArenaFragment : Fragment() {
         card.addView(info, ui.lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         card.addView(ui.button("Vyzvat") { challenge(t) })
         // klepnutí na kartu: soupeř nastoupí na písek naproti tvému parťákovi
-        card.setOnClickListener { stage.setRight(t.team.firstOrNull()?.let(::sprite)) }
+        card.setOnClickListener { stage.setRight(sprites(t.team)) }
         return card
     }
 
@@ -293,6 +299,8 @@ class ArenaFragment : Fragment() {
         }
         return row
     }
+
+    private fun sprites(team: List<TrainerMon>): List<Bitmap> = team.mapNotNull(::sprite)
 
     private fun sprite(m: TrainerMon): Bitmap? = spriteCache.getOrPut("${m.speciesId}${m.shiny}") {
         val sp = SpeciesRegistry.byId(m.speciesId) ?: return@getOrPut null
