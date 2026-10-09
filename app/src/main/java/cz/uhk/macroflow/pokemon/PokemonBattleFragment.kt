@@ -269,18 +269,25 @@ class PokemonBattleFragment : Fragment() {
         val ghost = trainer.kind == cz.uhk.macroflow.pokemon.trainer.Trainer.Kind.GHOST
         fun band(text: String, sub: String, color: Int, top: Boolean) = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = if (top) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.END or Gravity.CENTER_VERTICAL
+            gravity = Gravity.CENTER
             setBackgroundColor(color)
-            setPadding((28 * dp).toInt(), 0, (28 * dp).toInt(), 0)
+            // pruh přesahuje displej o 40 dp na každou stranu → texty odsazené dovnitř, na střed
+            setPadding((64 * dp).toInt(), 0, (64 * dp).toInt(), 0)
             rotation = -6f
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, (120 * dp).toInt(),
                 if (top) Gravity.TOP else Gravity.BOTTOM).also {
                 it.leftMargin = (-40 * dp).toInt(); it.rightMargin = (-40 * dp).toInt()
                 if (top) it.topMargin = (150 * dp).toInt() else it.bottomMargin = (190 * dp).toInt()
             }
-            addView(TextView(ctx).apply { this.text = sub; textSize = 15f; typeface = font; setTextColor(Color.parseColor("#CCFEFAE0")); letterSpacing = 0.15f })
-            addView(TextView(ctx).apply { this.text = text; textSize = 40f; typeface = font; setTextColor(Color.parseColor("#FEFAE0"))
-                setShadowLayer(0f, 3 * dp, 3 * dp, Color.parseColor("#66000000")) })
+            addView(TextView(ctx).apply { this.text = sub; textSize = 15f; typeface = font; gravity = Gravity.CENTER
+                setTextColor(Color.parseColor("#CCFEFAE0")); letterSpacing = 0.15f })
+            // dlouhé jméno se zmenší, aby se vešlo celé
+            addView(TextView(ctx).apply {
+                this.text = text; typeface = font; gravity = Gravity.CENTER; maxLines = 1
+                setTextColor(Color.parseColor("#FEFAE0"))
+                setShadowLayer(0.01f, 3 * dp, 3 * dp, Color.parseColor("#66000000"))
+                setAutoSizeTextTypeUniformWithConfiguration(18, 40, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (52 * dp).toInt()))
         }
         val enemyBand = band(trainer.battleName, if (ghost) "DUCH TRENÉRA" else "TRENÉR",
             Color.parseColor(if (ghost) "#4B3F72" else "#8E2F23"), top = true)
