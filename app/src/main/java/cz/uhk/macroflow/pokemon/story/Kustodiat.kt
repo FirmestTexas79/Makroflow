@@ -26,7 +26,7 @@ object Dossiers {
             "{4|Jediný pár druhů, který chyběl při prvním sčítání.} {6|Vznikl až po něm. Někdo tedy truchlí dál.}"
         "012" -> "Klasifikace: NÁDOBA, pokus č. {4|2}. Vazba na tělo subjektu: {3|aktivní}." to
             "{5|Pokus č. 1 ztracen (viz spis 019).} {6|Nepřipustit opakování. Kalibraci vést pozvolna.}"
-        "013", "014", "015", "016", "017", "018" -> "Forma nádoby po kalibraci podle návyků subjektu." to
+        "013", "014", "015", "016", "017", "018", "041" -> "Forma nádoby po kalibraci podle návyků subjektu." to
             "{4|Kalibrace proběhla podle protokolu.} {5|Stabilita nižší než u formy 019.}"
         "019" -> "SPIS UZAVŘEN. {4|Pokus č. 1.}" to
             "{5|Přetvořen bez souhlasu Řádu.} {6|Oči odebrány a uloženy v sektorech S-7 a S-2.} {99|Viz sen D-7.}"

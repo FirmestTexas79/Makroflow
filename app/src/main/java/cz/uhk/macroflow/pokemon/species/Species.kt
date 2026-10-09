@@ -569,6 +569,17 @@ object SpeciesRegistry {
             spawns = listOf(Spawn(COMMON, ALL_WILD)),
             type = MakromonType.FAIRY,
             family = DropFamily.FAIRY
+        ),
+
+        // 41 - Psychirra (psychická veverka – evoluce Spirry, docs/adr/0083)
+        Species("041", "PSYCHIRRA", "Psychirra", "PSYCHO / EVOLUCE",
+            desc = "Psychická evoluce Spirry. Ocas se jí stočil do hvězdné spirály a třetí oko na čele vidí, jak ses vyspal. Má ráda klidná rána – Spirra se v ni promění, když spolu každé ráno uděláte check-in.",
+            hint = "Vyvine se ze Spirry, se kterou každé ráno uděláš check-in.",
+            stats = Stats(hp = 38, atk = 52, def = 36, spd = 62),
+            moves = { listOf(attackTackle(), attackPsychic(), attackHypnosis()) },
+            type = MakromonType.PSYCHIC,
+            spawns = listOf(Spawn(EPIC, ALL_WILD, listOf(Conditions.NIGHT_ONLY))),
+            family = DropFamily.FAIRY
         )
 
     ) }

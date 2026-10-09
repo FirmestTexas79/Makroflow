@@ -28,7 +28,8 @@ object SpirraEvolution {
         VERDIRRA("015", "Verdirra", 3, "3 dny za sebou vlákninu v rozmezí 90–140 % cíle"),
         SHADIRRA("016", "Shadirra", 10, "Zapiš 10 jídel v noci (21:00–4:59)"),
         CHARMIRRA("017", "Charmirra", 100_000, "Nachoď 100 000 kroků"),
-        GLACIRRA("018", "Glacirra", 200, "Zapiš 200 sérií do tréninkového deníku")
+        GLACIRRA("018", "Glacirra", 200, "Zapiš 200 sérií do tréninkového deníku"),
+        PSYCHIRRA("041", "Psychirra", 14, "Udělej 14 ranních check-inů")
     }
 
     /** Jeden den, kdy byla Spirra aktivním parťákem. */
@@ -40,7 +41,9 @@ object SpirraEvolution {
         val fiberTargetG: Double = 0.0,
         val nightMeals: Int = 0,
         val steps: Int = 0,
-        val workoutSets: Int = 0
+        val workoutSets: Int = 0,
+        /** 1 = ten den ranní check-in (váha, spánek, energie, nálada). */
+        val checkIn: Int = 0
     )
 
     fun isNight(time: String): Boolean {
@@ -71,7 +74,8 @@ object SpirraEvolution {
             Branch.VERDIRRA to bestFiberStreak(unique),
             Branch.SHADIRRA to unique.sumOf { it.nightMeals },
             Branch.CHARMIRRA to unique.sumOf { it.steps },
-            Branch.GLACIRRA to unique.sumOf { it.workoutSets }
+            Branch.GLACIRRA to unique.sumOf { it.workoutSets },
+            Branch.PSYCHIRRA to unique.sumOf { it.checkIn }
         )
     }
 
@@ -118,6 +122,7 @@ object SpirraEvolution {
             Branch.SHADIRRA -> "$v / ${b.goal} jídel"
             Branch.CHARMIRRA -> "${thousands(v)} / ${thousands(b.goal)} kroků"
             Branch.GLACIRRA -> "$v / ${b.goal} sérií"
+            Branch.PSYCHIRRA -> "$v / ${b.goal} check-inů"
         }
     }
 
@@ -125,15 +130,15 @@ object SpirraEvolution {
 
     fun encode(d: Day): String = listOf(
         d.date.toString(), d.burnedKcal, d.waterMl, (d.fiberG * 10).roundToInt(), (d.fiberTargetG * 10).roundToInt(),
-        d.nightMeals, d.steps, d.workoutSets
+        d.nightMeals, d.steps, d.workoutSets, d.checkIn
     ).joinToString("|")
 
     fun decode(s: String): Day? {
         val f = s.split('|')
-        if (f.size < 8) return null
+        if (f.size < 9) return null   // starší záznam bez check-inu → přepočítat
         return runCatching {
             Day(LocalDate.parse(f[0]), f[1].toInt(), f[2].toInt(), f[3].toInt() / 10.0, f[4].toInt() / 10.0,
-                f[5].toInt(), f[6].toInt(), f[7].toInt())
+                f[5].toInt(), f[6].toInt(), f[7].toInt(), f[8].toInt())
         }.getOrNull()
     }
 

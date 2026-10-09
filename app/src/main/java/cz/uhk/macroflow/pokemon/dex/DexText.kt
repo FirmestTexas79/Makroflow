@@ -43,6 +43,7 @@ object DexText {
         "016"               -> "Vyvine se ze Spirry, se kterou si večer zdravě zamlsáš. Má ráda noční svačinky."
         "017"               -> "Vyvine se ze Spirry, se kterou nachodíš spoustu kilometrů. Má ráda dlouhé procházky."
         "018"               -> "Vyvine se ze Spirry, se kterou poctivě dřeš v posilovně. Má ráda každou zapsanou sérii."
+        "041"               -> "Vyvine se ze Spirry, se kterou každé ráno uděláš check-in. Má ráda klidná rána a dobrý spánek."
         "019"               -> "Tajná evoluce Spirry. Ani Spirra neví, jak se jí stát – zatím ji jde jen ulovit."
         "020"               -> "Finlet je velmi běžný. Hledej ho všude kolem sebe."
         "021"               -> "Serpfin se vyvine z Finleta na levelu 8. Věř procesu!"

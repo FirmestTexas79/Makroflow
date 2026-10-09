@@ -79,7 +79,8 @@ object SpirraBond {
             fiberTargetG = targets?.fiber ?: 0.0,
             nightMeals = food.count { SpirraEvolution.isNight(it.time) },
             steps = steps,
-            workoutSets = runCatching { db.workoutDao().betweenSync(d, d).size }.getOrDefault(0)
+            workoutSets = runCatching { db.workoutDao().betweenSync(d, d).size }.getOrDefault(0),
+            checkIn = runCatching { if (db.checkInDao().getCheckInByDateSync(d) != null) 1 else 0 }.getOrDefault(0)
         )
     }
 }

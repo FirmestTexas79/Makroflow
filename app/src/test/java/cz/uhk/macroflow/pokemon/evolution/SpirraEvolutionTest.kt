@@ -64,9 +64,19 @@ class SpirraEvolutionTest {
         assertEquals("1 250 / 5 000 kcal", SpirraEvolution.progressText(Branch.FLAMIRRA, 1250))
         assertEquals("12,5 / 25 l", SpirraEvolution.progressText(Branch.AQUIRRA, 12_500))
         assertEquals("100 000 / 100 000 kroků", SpirraEvolution.progressText(Branch.CHARMIRRA, 140_000))
-        val d = Day(d0, 321, 2750, 31.5, 30.0, 2, 8123, 14)
+        assertEquals("3 / 14 check-inů", SpirraEvolution.progressText(Branch.PSYCHIRRA, 3))
+        val d = Day(d0, 321, 2750, 31.5, 30.0, 2, 8123, 14, checkIn = 1)
         assertEquals(d, SpirraEvolution.decode(SpirraEvolution.encode(d)))
         assertEquals(null, SpirraEvolution.decode("rozbité"))
+        // starý záznam bez check-inu se nepoužije, den se přepočítá
+        assertEquals(null, SpirraEvolution.decode("2026-01-01|1|2|3|4|5|6|7"))
+    }
+
+    @Test
+    fun psychirraFromMorningCheckIns() {
+        val days = (0 until 14).map { Day(d0.plusDays(it.toLong()), checkIn = 1) }
+        assertEquals(null, SpirraEvolution.evolveInto(days.take(13), 12))
+        assertEquals(Branch.PSYCHIRRA, SpirraEvolution.evolveInto(days, 12))
     }
 
     // ── Level 12 a první splněná cesta (docs/adr/0055) ──
