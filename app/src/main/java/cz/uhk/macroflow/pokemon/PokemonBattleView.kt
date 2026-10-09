@@ -129,7 +129,7 @@ class PokemonBattleView @JvmOverloads constructor(
         // --- 🌍 NAČTENÍ AKTUÁLNÍHO BIOMU ---
         val biomeStr = prefs.getString("LAST_BIOME", BiomeType.TOWN.name)
         val currentBiome = BiomeType.valueOf(biomeStr!!)
-        startArena(if (trainer != null) BiomeType.TOWN else currentBiome)
+        if (trainer != null) startArena(cz.uhk.macroflow.pokemon.arena.ArenaTheme.COLOSSEUM) else startArena(currentBiome)
 
         Thread {
             val db = AppDatabase.getDatabase(context)
@@ -254,8 +254,10 @@ class PokemonBattleView @JvmOverloads constructor(
     }
 
     /** Vykreslí 3D arénu lokace na pozadí (trvá desítky až stovky ms – běží během intra). */
-    private fun startArena(biome: BiomeType) {
-        arenaTheme = cz.uhk.macroflow.pokemon.arena.ArenaTheme.fromBiome(biome.name)
+    private fun startArena(biome: BiomeType) = startArena(cz.uhk.macroflow.pokemon.arena.ArenaTheme.fromBiome(biome.name))
+
+    private fun startArena(theme: cz.uhk.macroflow.pokemon.arena.ArenaTheme) {
+        arenaTheme = theme
         arenaSeed = Random.nextInt(1_000_000)
         maybeRenderArena()
     }
@@ -316,6 +318,7 @@ class PokemonBattleView @JvmOverloads constructor(
         cz.uhk.macroflow.pokemon.arena.ArenaTheme.CAVE_OPEN, cz.uhk.macroflow.pokemon.arena.ArenaTheme.CAVE_MAZE -> 0xFF0A080C.toInt() to 0xFF2E2B2C.toInt()
         cz.uhk.macroflow.pokemon.arena.ArenaTheme.WATER -> 0xFFB8DCF0.toInt() to 0xFF2A74AA.toInt()
         cz.uhk.macroflow.pokemon.arena.ArenaTheme.MEADOW -> 0xFFB8DCF0.toInt() to 0xFF58A03A.toInt()
+        cz.uhk.macroflow.pokemon.arena.ArenaTheme.COLOSSEUM -> 0xFFF2D6A8.toInt() to 0xFFD2AE74.toInt()
     }
 
     private fun maybeStartIntro() {

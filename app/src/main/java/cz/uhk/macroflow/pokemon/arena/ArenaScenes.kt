@@ -1,12 +1,15 @@
 package cz.uhk.macroflow.pokemon.arena
 
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
 /** Vzhled arény podle lokace (docs/adr/0038). */
 enum class ArenaTheme {
-    TOWN, MEADOW, FOREST, MOUNTAINS, CAVE_OPEN, CAVE_MAZE, WATER;
+    TOWN, MEADOW, FOREST, MOUNTAINS, CAVE_OPEN, CAVE_MAZE, WATER,
+    /** Gladiátorská aréna pro souboje s trenéry (docs/adr/0078). */
+    COLOSSEUM;
 
     companion object {
         fun fromBiome(name: String?): ArenaTheme = when (name) {
@@ -66,6 +69,22 @@ object M {
     val RAIL = Mat(Pattern.METAL, c(0xFF3A3C40), c(0xFF6E737A), c(0xFF9AA0A8))
     val MUSHROOM = Mat(Pattern.MUSHROOM, c(0xFF8A2218), c(0xFFC0392B), c(0xFFD9534A), c(0xFFF4EDE0))
     val LILY = Mat(Pattern.LILY, c(0xFF2E6B2A), c(0xFF3E8A36), c(0xFF5AA64A))
+    // aréna (docs/adr/0078)
+    val ARENA_SAND = Mat(Pattern.SAND, c(0xFFB8925A), c(0xFFD2AE74), c(0xFFDDBC84), c(0xFFE8CC98))
+    val SANDSTONE = Mat(Pattern.STONE, c(0xFF9C7A52), c(0xFFC4A274), c(0xFFD2B286), c(0xFFDCC096))
+    val SANDSTONE_DARK = Mat(Pattern.STONE, c(0xFF6E5236), c(0xFF8A6A46), c(0xFF967552), c(0xFFA4835E))
+    val MARBLE = Mat(Pattern.PLASTER, c(0xFFC8C0B0), c(0xFFE8E2D4), c(0xFFF2EDE2), c(0xFFDAD3C4))
+    val ARCH_SHADOW = Mat(Pattern.STONE, c(0xFF1E1610), c(0xFF2C2118), c(0xFF34281E), c(0xFF3C2E22))
+    val BANNER_RED = Mat(Pattern.PLASTER, c(0xFF6E1A14), c(0xFF9E2A1E), c(0xFFB43626), c(0xFF8A2218))
+    val CLOTH = listOf(
+        Mat(Pattern.PLASTER, c(0xFF7A2A20), c(0xFFA83A2C), c(0xFFB84A38), c(0xFF94342A)),
+        Mat(Pattern.PLASTER, c(0xFF2A4470), c(0xFF3A5E96), c(0xFF4A70A8), c(0xFF34548A)),
+        Mat(Pattern.PLASTER, c(0xFF8A7A30), c(0xFFC2A848), c(0xFFD2BA5A), c(0xFFB09A40)),
+        Mat(Pattern.PLASTER, c(0xFF3A5A2A), c(0xFF52783A), c(0xFF628A48), c(0xFF4A6E34)),
+        Mat(Pattern.PLASTER, c(0xFFB0A898), c(0xFFE0D8C8), c(0xFFECE6D8), c(0xFFD0C8B8)),
+        Mat(Pattern.PLASTER, c(0xFF5A3A6E), c(0xFF7A5294), c(0xFF8A62A4), c(0xFF6A4884))
+    )
+    val SKIN = Mat(Pattern.PLASTER, c(0xFF9A6A48), c(0xFFC8946A), c(0xFFD4A47C), c(0xFFB88460))
     val REED = Mat(Pattern.LEAF, c(0xFF4A6A26), c(0xFF6A8C34), c(0xFF86A844), c(0xFFA8B45A))
 }
 
@@ -114,6 +133,7 @@ object Arenas {
         ArenaTheme.CAVE_OPEN -> Builder(seed).caveOpen()
         ArenaTheme.CAVE_MAZE -> Builder(seed).caveMaze()
         ArenaTheme.WATER -> Builder(seed).water()
+        ArenaTheme.COLOSSEUM -> Builder(seed).colosseum()
     }
 
     /** Pás mezi kamerou a Makromony – nic vysokého tam nesmí stát. */
@@ -296,6 +316,110 @@ object Arenas {
             range(90f, 14f, 26f, Mat(Pattern.STONE, c(0xFF7890A6), c(0xFF849CB2), c(0xFF8EA6BA), c(0xFF9AB0C4)), M.SNOW)
             return scene(Atmosphere(c(0xFF5FA6E6), c(0xFFD6ECF6), c(0xFFD6ECF6), 18f, 170f, 0.8f,
                 light = c(0xFFFFF4E2), ambient = 0.66f, sun = V3(-1f, 1.1f, 0.15f), lights = lights))
+        }
+
+        // ── Gladiátorská aréna (docs/adr/0078) ──
+        fun colosseum(): Scene {
+            ground(M.ARENA_SAND)
+            // stopy v písku: tmavší a světlejší skvrny, vyhrabané kruhy
+            repeat(60) {
+                val x = r(-14f, 22f); val z = r(-3f, 17f)
+                box(x, 0f, z, x + r(0.4f, 1.6f), 0.02f, z + r(0.3f, 1f), if (rnd.nextFloat() > 0.5f) M.SAND else M.DIRT, shadow = false)
+            }
+            // nízký písečný val soupeře
+            box(E.x - 1.7f, 0f, E.z - 1.2f, E.x + 1.7f, PEDESTAL, E.z + 1.8f, M.ARENA_SAND)
+
+            // ovál arény kolem obou bojovníků; za kamerou nic (výhled zůstane volný)
+            val cx = (E.x + P.x) / 2f; val cz = P.z + 1f
+            val R = 18.5f
+            fun ring(r0: Float, r1: Float, y0: Float, y1: Float, m: Mat, stepDeg: Float = 4f, skip: (Float) -> Boolean = { false }) {
+                var a = -14f
+                while (a <= 194f) {
+                    if (!skip(a)) {
+                        val rad = Math.toRadians(a.toDouble())
+                        val rm = (r0 + r1) / 2f
+                        val x = cx + rm * cos(rad).toFloat(); val z = cz + rm * sin(rad).toFloat()
+                        val half = maxOf((r1 - r0) / 2f, rm * Math.toRadians(stepDeg.toDouble()).toFloat() / 2f + 0.05f)
+                        box(x - half, y0, z - half, x + half, y1, z + half, m)
+                    }
+                    a += stepDeg
+                }
+            }
+            val gate = { a: Float -> abs(a - 90f) < 7f }
+            // podium – zeď kolem písku, uprostřed vzadu brána
+            ring(R, R + 1.2f, 0f, 2.6f, M.SANDSTONE, skip = gate)
+            ring(R - 0.25f, R + 1.4f, 2.6f, 2.95f, M.MARBLE)
+            // brána: tmavý průchod, mříž a oblouk
+            val gz = cz + R
+            box(cx - 2.2f, 0f, gz + 0.6f, cx + 2.2f, 2.6f, gz + 1.8f, M.ARCH_SHADOW)
+            var gx = cx - 2f
+            while (gx <= cx + 2f) { box(gx - 0.07f, 0f, gz + 0.3f, gx + 0.07f, 2.6f, gz + 0.45f, M.METAL); gx += 0.5f }
+            box(cx - 2.2f, 1.6f, gz + 0.3f, cx + 2.2f, 1.75f, gz + 0.45f, M.METAL)
+            box(cx - 2.6f, 0f, gz - 0.1f, cx - 2.1f, 2.6f, gz + 1.2f, M.SANDSTONE_DARK)
+            box(cx + 2.1f, 0f, gz - 0.1f, cx + 2.6f, 2.6f, gz + 1.2f, M.SANDSTONE_DARK)
+            // prapory na podiu
+            var ba = 10f
+            while (ba < 175f) {
+                if (abs(ba - 90f) > 12f) {
+                    val rad = Math.toRadians(ba.toDouble())
+                    val bx = cx + (R - 0.05f) * cos(rad).toFloat(); val bz = cz + (R - 0.05f) * sin(rad).toFloat()
+                    box(bx - 0.45f, 0.7f, bz - 0.45f, bx + 0.45f, 2.55f, bz + 0.45f, M.BANNER_RED, shadow = false)
+                    box(bx - 0.46f, 2.25f, bz - 0.46f, bx + 0.46f, 2.4f, bz + 0.46f, M.GOLD, shadow = false)
+                }
+                ba += 22f
+            }
+            // hlediště: stupně, na nich diváci
+            for (i in 0 until 6) {
+                val r0 = R + 1.2f + i * 1.15f
+                val top = 2.95f + (i + 1) * 0.75f
+                ring(r0, r0 + 1.15f, 2.95f, top, if (i % 2 == 0) M.SANDSTONE else M.SANDSTONE_DARK)
+                var a = -12f
+                while (a <= 192f) {
+                    if (rnd.nextFloat() < 0.62f) {
+                        val rad = Math.toRadians((a + r(-1.2f, 1.2f)).toDouble())
+                        val rr = r0 + 0.55f
+                        val x = cx + rr * cos(rad).toFloat(); val z = cz + rr * sin(rad).toFloat()
+                        val cloth = M.CLOTH[rnd.nextInt(M.CLOTH.size)]
+                        box(x - 0.24f, top, z - 0.2f, x + 0.24f, top + 0.62f, z + 0.2f, cloth)
+                        box(x - 0.15f, top + 0.62f, z - 0.15f, x + 0.15f, top + 0.92f, z + 0.15f, M.SKIN)
+                    }
+                    a += 3.2f
+                }
+            }
+            // vnější zeď s arkádami (dvě patra oblouků)
+            val outer = R + 1.2f + 6 * 1.15f
+            ring(outer, outer + 1.4f, 0f, 13.5f, M.SANDSTONE)
+            var aa = -10f
+            while (aa <= 190f) {
+                val rad = Math.toRadians(aa.toDouble())
+                val x = cx + (outer - 0.05f) * cos(rad).toFloat(); val z = cz + (outer - 0.05f) * sin(rad).toFloat()
+                for ((y0, y1) in listOf(8.0f to 10.2f, 11.0f to 12.7f)) {
+                    box(x - 0.55f, y0, z - 0.55f, x + 0.55f, y1, z + 0.55f, M.ARCH_SHADOW, shadow = false)
+                    box(x - 0.7f, y1, z - 0.7f, x + 0.7f, y1 + 0.18f, z + 0.7f, M.MARBLE, shadow = false)
+                }
+                aa += 6f
+            }
+            ring(outer - 0.2f, outer + 1.6f, 13.5f, 14f, M.MARBLE)
+            // plachty (velarium) nahoře vzadu
+            var va = 40f
+            while (va <= 140f) {
+                val rad = Math.toRadians(va.toDouble())
+                val x = cx + (outer - 1.5f) * cos(rad).toFloat(); val z = cz + (outer - 1.5f) * sin(rad).toFloat()
+                box(x - 1.2f, 14f, z - 1.2f, x + 1.2f, 14.25f, z + 1.2f, if ((va / 20).toInt() % 2 == 0) M.BANNER_RED else M.MARBLE, shadow = false)
+                va += 10f
+            }
+            // ohniště po stranách
+            for (a in listOf(28f, 62f, 118f, 152f)) {
+                val rad = Math.toRadians(a.toDouble())
+                val x = cx + (R - 1.4f) * cos(rad).toFloat(); val z = cz + (R - 1.4f) * sin(rad).toFloat()
+                if (!free(x, z, 0.8f)) continue
+                box(x - 0.22f, 0f, z - 0.22f, x + 0.22f, 1.5f, z + 0.22f, M.METAL)
+                box(x - 0.5f, 1.5f, z - 0.5f, x + 0.5f, 1.75f, z + 0.5f, M.METAL)
+                box(x - 0.35f, 1.75f, z - 0.35f, x + 0.35f, 2.2f, z + 0.35f, M.LAMP, shadow = false)
+                lights.add(PointLight(V3(x, 2.1f, z), c(0xFFFFB45A), 4f, 0.45f))
+            }
+            return scene(Atmosphere(c(0xFF4F8ED6), c(0xFFF2D6A8), c(0xFFF0D8B0), 24f, 170f, 0.6f,
+                light = c(0xFFFFEAC8), ambient = 0.62f, sun = V3(-0.9f, 1f, -0.25f), lights = lights))
         }
 
         fun house(x0: Float, z0: Float, w: Float, wall: Mat, roof: Mat, h: Float) {
