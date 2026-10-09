@@ -113,8 +113,8 @@ class ArenaFragment : Fragment() {
         val trade = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.getTrade(code) }.getOrNull() }
         if (!isAdded) return
         when {
-            trade == null || T.phase(trade) == T.Phase.CANCELLED -> { TS.clearPending(ctx); btn.visibility = View.GONE }
-            T.phase(trade) == T.Phase.DONE -> {
+            trade == null || T.phase(trade) == cz.uhk.macroflow.pokemon.trade.Trading.Phase.CANCELLED -> { TS.clearPending(ctx); btn.visibility = View.GONE }
+            T.phase(trade) == cz.uhk.macroflow.pokemon.trade.Trading.Phase.DONE -> {
                 val got = withContext(Dispatchers.IO) { runCatching { TS.applyIfDone(ctx, trade, uid) }.getOrNull() }
                 btn.visibility = View.GONE
                 got?.let { Toast.makeText(ctx, "Výměna dokončena – ${it.name} je tvůj!", Toast.LENGTH_LONG).show() }
