@@ -68,23 +68,24 @@ service cloud.firestore {
                     && request.resource.data.keys().hasOnly(['a', 'aName', 'offerA', 'b', 'bName', 'offerB', 'state',
                          'confirmA', 'confirmB', 'appliedA', 'appliedB', 'createdAt', 'v']);
 
-      allow update: if request.auth != null && (
-          // připojení druhého hráče s nabídkou
-          (resource.data.state == 'open' && resource.data.b == null && me() != resource.data.a
-            && request.resource.data.b == me() && request.resource.data.state == 'offered'
-            && changed().hasOnly(['b', 'bName', 'offerB', 'state']))
-          // potvrzení vlastní strany
-          || (resource.data.state == 'offered' && me() == resource.data.a
-            && changed().hasOnly(['confirmA']) && request.resource.data.confirmA == true)
-          || (resource.data.state == 'offered' && me() == resource.data.b
-            && changed().hasOnly(['confirmB']) && request.resource.data.confirmB == true)
-          // zápis, že si hráč hotovou výměnu provedl u sebe
-          || (bothConfirmed() && me() == resource.data.a && changed().hasOnly(['appliedA']))
-          || (bothConfirmed() && me() == resource.data.b && changed().hasOnly(['appliedB']))
-          // zrušení, dokud nepotvrdili oba
-          || (party() && !bothConfirmed() && resource.data.state != 'cancelled'
-            && changed().hasOnly(['state']) && request.resource.data.state == 'cancelled')
-      );
+      // připojení druhého hráče s nabídkou
+      allow update: if request.auth != null && resource.data.state == 'open' && resource.data.b == null
+                    && me() != resource.data.a && request.resource.data.b == me()
+                    && request.resource.data.state == 'offered'
+                    && changed().hasOnly(['b', 'bName', 'offerB', 'state']);
+      // potvrzení vlastní strany
+      allow update: if request.auth != null && resource.data.state == 'offered' && me() == resource.data.a
+                    && changed().hasOnly(['confirmA']) && request.resource.data.confirmA == true;
+      allow update: if request.auth != null && resource.data.state == 'offered' && me() == resource.data.b
+                    && changed().hasOnly(['confirmB']) && request.resource.data.confirmB == true;
+      // zápis, že si hráč hotovou výměnu provedl u sebe
+      allow update: if request.auth != null && bothConfirmed() && me() == resource.data.a
+                    && changed().hasOnly(['appliedA']);
+      allow update: if request.auth != null && bothConfirmed() && me() == resource.data.b
+                    && changed().hasOnly(['appliedB']);
+      // zrušení, dokud nepotvrdili oba
+      allow update: if request.auth != null && party() && !bothConfirmed() && resource.data.state != 'cancelled'
+                    && changed().hasOnly(['state']) && request.resource.data.state == 'cancelled';
       allow delete: if false;
     }
 
