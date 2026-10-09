@@ -199,7 +199,8 @@ object CollectionPages {
         val inTeam = m.id in team
         val active = m.caughtDate == activeCaughtDate
         val date = java.time.Instant.ofEpochMilli(m.caughtDate).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-        WorkshopMenus.show(root, m.name + if (m.isShiny) " ✦" else "", "Chycen ${date.dayOfMonth}. ${date.monthValue}. ${date.year}") { ui, body, close ->
+        val origin = if (m.otName.isNotBlank()) "Z výměny od ${m.otName} · " else "Chycen "
+        WorkshopMenus.show(root, m.name + if (m.isShiny) " ✦" else "", "$origin${date.dayOfMonth}. ${date.monthValue}. ${date.year}") { ui, body, close ->
             val top = ui.row()
             val frame = FrameLayout(ui.ctx).apply { background = BevelDrawable.navy(2f * ui.dp, selected = active) }
             frame.addView(sprite(ui, m.makromonId, m.name, 72f, shiny = m.isShiny), FrameLayout.LayoutParams(ui.px(72f), ui.px(72f), Gravity.CENTER))

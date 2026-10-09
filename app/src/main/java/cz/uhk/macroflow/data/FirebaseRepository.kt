@@ -363,7 +363,8 @@ object FirebaseRepository {
             "level" to makromon.level,
             "xp" to makromon.xp,
             "moves" to makromon.moveListStr,
-            "uid" to makromon.uid
+            "uid" to makromon.uid,
+            "otName" to makromon.otName
         )
         userDoc().collection("captured_makromons").document(makromon.caughtDate.toString())
             .set(data, SetOptions.merge()).await()
@@ -383,7 +384,8 @@ object FirebaseRepository {
                 level       = (doc.getLong("level") ?: 1L).toInt(),
                 xp          = (doc.getLong("xp") ?: 0L).toInt(),
                 moveListStr = doc.getString("moves") ?: "",
-                uid         = doc.getString("uid") ?: java.util.UUID.randomUUID().toString()
+                uid         = doc.getString("uid") ?: java.util.UUID.randomUUID().toString(),
+                otName      = doc.getString("otName") ?: ""
             )
         }
     }
@@ -721,6 +723,51 @@ object FirebaseRepository {
             .map { it.copy(kind = cz.uhk.macroflow.pokemon.trainer.Trainer.Kind.GHOST) }
             .mapNotNull(cz.uhk.macroflow.pokemon.trainer.Trainers::sanitize)
     }
+
+    // ========== VÝMĚNY (docs/adr/0077) ==========
+
+    private const val TRADES = "trades"
+
+    private fun permissionDenied(e: Exception) =
+        (e as? com.google.firebase.firestore.FirebaseFirestoreException)?.code ==
+            com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED
+
+    /** Založí výměnu pod kódem; false = kód už je obsazený (pravidla nedovolí přepsat cizí výměnu). */
+    suspend fun createTrade(code: String, data: Map<String, Any?>): Boolean = try {
+        db.collection(TRADES).document(code).set(data).await(); true
+    } catch (e: Exception) { if (permissionDenied(e)) false else throw e }
+
+    /** Výměna podle kódu; null = neexistuje nebo k ní hráč nemá přístup. */
+    suspend fun getTrade(code: String): cz.uhk.macroflow.pokemon.trade.Trade? = try {
+        db.collection(TRADES).document(code).get().await().let { cz.uhk.macroflow.pokemon.trade.Trading.fromMap(code, it.data) }
+    } catch (e: Exception) { if (permissionDenied(e)) null else throw e }
+
+    suspend fun joinTrade(code: String, name: String, offer: cz.uhk.macroflow.pokemon.trade.TradeOffer) {
+        val uid = auth.currentUser?.uid ?: return
+        db.collection(TRADES).document(code).update(mapOf(
+            "b" to uid, "bName" to name.take(16),
+            "offerB" to cz.uhk.macroflow.pokemon.trade.Trading.offerToMap(offer),
+            "state" to cz.uhk.macroflow.pokemon.trade.Trading.OFFERED
+        )).await()
+    }
+
+    suspend fun confirmTrade(code: String, role: cz.uhk.macroflow.pokemon.trade.Trading.Role) {
+        db.collection(TRADES).document(code).update(if (role == cz.uhk.macroflow.pokemon.trade.Trading.Role.A) "confirmA" else "confirmB", true).await()
+    }
+
+    suspend fun markTradeApplied(code: String, role: cz.uhk.macroflow.pokemon.trade.Trading.Role) {
+        db.collection(TRADES).document(code).update(if (role == cz.uhk.macroflow.pokemon.trade.Trading.Role.A) "appliedA" else "appliedB", true).await()
+    }
+
+    suspend fun cancelTrade(code: String) {
+        db.collection(TRADES).document(code).update("state", cz.uhk.macroflow.pokemon.trade.Trading.CANCELLED).await()
+    }
+
+    /** Živé změny výměny (druhý hráč se připojil, potvrdil…). */
+    fun listenTrade(code: String, onChange: (cz.uhk.macroflow.pokemon.trade.Trade?) -> Unit) =
+        db.collection(TRADES).document(code).addSnapshotListener { snap, _ ->
+            onChange(snap?.let { cz.uhk.macroflow.pokemon.trade.Trading.fromMap(code, it.data) })
+        }
 
     suspend fun deleteAllUserData() {
         val uid = auth.currentUser?.uid ?: return

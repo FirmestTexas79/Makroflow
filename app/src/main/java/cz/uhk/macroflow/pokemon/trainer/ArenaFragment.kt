@@ -41,6 +41,8 @@ class ArenaFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.findViewById<TextView>(R.id.tvArenaName).setOnClickListener { editName() }
+        view.findViewById<View>(R.id.btnTradeOffer).setOnClickListener { cz.uhk.macroflow.pokemon.trade.TradeSheet(this) { load(false) }.startOffer() }
+        view.findViewById<View>(R.id.btnTradeJoin).setOnClickListener { cz.uhk.macroflow.pokemon.trade.TradeSheet(this) { load(false) }.startJoin() }
         requireActivity().supportFragmentManager.addOnBackStackChangedListener(backStackListener)
         load(publish = true)
     }
@@ -60,6 +62,7 @@ class ArenaFragment : Fragment() {
     }
 
     private fun load(publish: Boolean) {
+        if (!isAdded || view == null) return
         val ctx = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
             val user = FirebaseRepository.currentUser
@@ -72,6 +75,7 @@ class ArenaFragment : Fragment() {
 
             val empty = view?.findViewById<TextView>(R.id.tvGhostsEmpty) ?: return@launch
             val status = view?.findViewById<TextView>(R.id.tvGhostStatus) ?: return@launch
+            if (user != null) resumeTrade(user.uid)
             if (user == null) {
                 status.text = "Přihlas se a tvůj tým začne hájit arénu proti ostatním hráčům."
                 empty.text = "Duchové ostatních hráčů jsou vidět po přihlášení."
@@ -95,6 +99,30 @@ class ArenaFragment : Fragment() {
                 empty.visibility = View.VISIBLE
                 empty.text = "Duchy se nepodařilo načíst. Zkus to znovu později."
                 if (publish) status.text = "Tvého ducha se nepodařilo nahrát."
+            }
+        }
+    }
+
+    /** Rozpracovaná výměna: dokončí potvrzenou, uklidí zrušenou, jinak nabídne pokračování. */
+    private suspend fun resumeTrade(uid: String) {
+        val TS = cz.uhk.macroflow.pokemon.trade.TradeStore
+        val T = cz.uhk.macroflow.pokemon.trade.Trading
+        val ctx = requireContext().applicationContext
+        val btn = view?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnTradeResume) ?: return
+        val code = TS.pendingCode(ctx) ?: run { btn.visibility = View.GONE; return }
+        val trade = withContext(Dispatchers.IO) { runCatching { FirebaseRepository.getTrade(code) }.getOrNull() }
+        if (!isAdded) return
+        when {
+            trade == null || T.phase(trade) == T.Phase.CANCELLED -> { TS.clearPending(ctx); btn.visibility = View.GONE }
+            T.phase(trade) == T.Phase.DONE -> {
+                val got = withContext(Dispatchers.IO) { runCatching { TS.applyIfDone(ctx, trade, uid) }.getOrNull() }
+                btn.visibility = View.GONE
+                got?.let { Toast.makeText(ctx, "Výměna dokončena – ${it.name} je tvůj!", Toast.LENGTH_LONG).show() }
+            }
+            else -> {
+                btn.text = "Pokračovat ve výměně ${T.pretty(code)}"
+                btn.visibility = View.VISIBLE
+                btn.setOnClickListener { cz.uhk.macroflow.pokemon.trade.TradeSheet(this) { load(false) }.resume(code) }
             }
         }
     }

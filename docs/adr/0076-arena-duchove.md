@@ -37,5 +37,5 @@ AI trenérům (dnes tři v aréně, později trenéři v příběhu).
 
 ## Co zatím ne
 
-- Výměny (potřebují serverovou transakci – Cloud Functions), real-time PvP, srovnávání levelů,
+- Výměny řeší 0077. Real-time PvP, srovnávání levelů,
   počítadlo obran ducha (zápis do cizího dokumentu by potřeboval další pravidla).

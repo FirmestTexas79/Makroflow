@@ -79,10 +79,11 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
 
-        /** v41: stálé ID chyceného Makromona (docs/adr/0076); stávající dostanou náhodné. */
+        /** v41: stálé ID chyceného Makromona (docs/adr/0076, stávající dostanou náhodné) a původní trenér (0077). */
         val MIGRATION_40_41 = object : Migration(40, 41) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `captured_pokemon` ADD COLUMN `uid` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `captured_pokemon` ADD COLUMN `otName` TEXT NOT NULL DEFAULT ''")
                 db.execSQL(
                     "UPDATE `captured_pokemon` SET `uid` = lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || " +
                         "substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(6))) WHERE `uid` = ''"

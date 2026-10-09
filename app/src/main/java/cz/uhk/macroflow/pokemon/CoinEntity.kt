@@ -45,7 +45,9 @@ data class CapturedMakromonEntity(
     var level: Int = 1,
     var xp: Int = 0,
     /** Stálé ID napříč telefony a cloudem (docs/adr/0076) – základ pro arénu a budoucí výměny. */
-    var uid: String = java.util.UUID.randomUUID().toString()
+    var uid: String = java.util.UUID.randomUUID().toString(),
+    /** Původní trenér – jméno hráče, od kterého Makromon přišel výměnou (docs/adr/0077); "" = vlastní úlovek. */
+    var otName: String = ""
 )
 
 @Dao
@@ -73,6 +75,9 @@ interface CapturedMakromonDao {
 
     @Query("DELETE FROM captured_pokemon")
     fun deleteAllCapturedLocally()
+
+    @Query("SELECT * FROM captured_pokemon WHERE uid = :uid LIMIT 1")
+    fun getByUid(uid: String): CapturedMakromonEntity?
 
     @Query("SELECT * FROM captured_pokemon WHERE caughtDate = :timestamp LIMIT 1")
     fun getMakromonByCaughtDate(timestamp: Long): CapturedMakromonEntity?

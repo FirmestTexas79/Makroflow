@@ -77,6 +77,7 @@ object PocketActions {
     /** Pustí Makromona (smaže ho). Zamčeného ne. */
     fun release(ctx: Context, m: CapturedMakromonEntity): Boolean {
         if (m.isLocked) return false
+        if (m.uid == cz.uhk.macroflow.pokemon.trade.TradeStore.pendingUid(ctx)) return false   // je nabídnutý ve výměně
         val wasActive = activeCaughtDate(ctx) == m.caughtDate
         AppDatabase.getDatabase(ctx).capturedMakromonDao().deleteMakromon(m)
         SkillStore.saveTeam(ctx, Team.remove(SkillStore.team(ctx), m.id))

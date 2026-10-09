@@ -61,7 +61,9 @@ data class Species(
     /** Výška spritu soupeře v souboji (GB pixely). */
     val battleHeight: Float = 28f,
     /** Strážce: vlastní číslo, jméno a sprite, ale statistiky a útoky druhu [guardianOf]. */
-    val guardianOf: String? = null
+    val guardianOf: String? = null,
+    /** Výměnou se vyvine v tento druh (docs/adr/0077); null = výměna nic nemění. */
+    val tradeEvolvesTo: String? = null
 ) {
     /** Název obrázku: makromon_36_tynafi. */
     val sprite: String get() = "makromon_${id.takeLast(2)}_${name.lowercase()}"

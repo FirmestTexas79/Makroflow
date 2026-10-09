@@ -46,5 +46,47 @@ service cloud.firestore {
                             && request.resource.data.power <= 180;
     }
 
+
+    // ── Výměny Makromonů (docs/adr/0077) ─────────────────────────────
+    // A založí výměnu s nabídkou, B se připojí kódem se svou. Každý smí
+    // měnit jen svou část; potvrzenou výměnu (obě strany) už nejde zrušit.
+    match /trades/{code} {
+      function me() { return request.auth.uid; }
+      function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+      function party() { return me() == resource.data.a || me() == resource.data.b; }
+      function bothConfirmed() { return resource.data.confirmA == true && resource.data.confirmB == true; }
+
+      // volnou výměnu (bez druhého hráče) přečte každý, kdo zná kód
+      allow read: if request.auth != null && (resource.data.b == null || party());
+
+      allow create: if request.auth != null
+                    && request.resource.data.a == me()
+                    && request.resource.data.b == null
+                    && request.resource.data.state == 'open'
+                    && request.resource.data.confirmA == false && request.resource.data.confirmB == false
+                    && request.resource.data.appliedA == false && request.resource.data.appliedB == false
+                    && request.resource.data.keys().hasOnly(['a', 'aName', 'offerA', 'b', 'bName', 'offerB', 'state',
+                         'confirmA', 'confirmB', 'appliedA', 'appliedB', 'createdAt', 'v']);
+
+      allow update: if request.auth != null && (
+          // připojení druhého hráče s nabídkou
+          (resource.data.state == 'open' && resource.data.b == null && me() != resource.data.a
+            && request.resource.data.b == me() && request.resource.data.state == 'offered'
+            && changed().hasOnly(['b', 'bName', 'offerB', 'state']))
+          // potvrzení vlastní strany
+          || (resource.data.state == 'offered' && me() == resource.data.a
+            && changed().hasOnly(['confirmA']) && request.resource.data.confirmA == true)
+          || (resource.data.state == 'offered' && me() == resource.data.b
+            && changed().hasOnly(['confirmB']) && request.resource.data.confirmB == true)
+          // zápis, že si hráč hotovou výměnu provedl u sebe
+          || (bothConfirmed() && me() == resource.data.a && changed().hasOnly(['appliedA']))
+          || (bothConfirmed() && me() == resource.data.b && changed().hasOnly(['appliedB']))
+          // zrušení, dokud nepotvrdili oba
+          || (party() && !bothConfirmed() && resource.data.state != 'cancelled'
+            && changed().hasOnly(['state']) && request.resource.data.state == 'cancelled')
+      );
+      allow delete: if false;
+    }
+
   }
 }
