@@ -4,6 +4,7 @@ import android.content.Context
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.FirebaseRepository
 import cz.uhk.macroflow.pokemon.CapturedMakromonEntity
+import cz.uhk.macroflow.pokemon.boost.RareBoost
 import cz.uhk.macroflow.pokemon.skills.SkillStore
 import cz.uhk.macroflow.pokemon.skills.Team
 import kotlinx.coroutines.launch
@@ -93,5 +94,33 @@ object PocketActions {
         if (!SkillStore.consume(ctx, BagItems.LURE_LAMP, 1)) return false
         p.edit().putBoolean("ghostPlateActive", true).apply()
         return true
+    }
+
+    /** Výsledek [feedBoost]. */
+    sealed class FeedResult {
+        /** Makromon měl [oldLevel], teď má [newLevel]; [evolveLevel] je level evoluce druhu (0 = nevyvíjí se). */
+        data class Fed(val oldLevel: Int, val newLevel: Int, val xp: Int, val evolveLevel: Int) : FeedResult()
+        /** Makromon už je na maximálním levelu – předmět zůstal v batohu. */
+        object AtMaxLevel : FeedResult()
+        /** Nakopávač v batohu není (nebo ho mezitím někdo spotřeboval). */
+        object NoItem : FeedResult()
+    }
+
+    /**
+     * Rare nakopávač (docs/adr/0074): spotřebuje jeden kus a zvedne Makromonovi XP / level.
+     * Level nikdy neklesne a na maximálním levelu se nic nespotřebuje. Volat mimo hlavní vlákno.
+     */
+    fun feedBoost(ctx: Context, boost: RareBoost, m: CapturedMakromonEntity): FeedResult {
+        if (!boost.canUse(m.level, m.xp)) return FeedResult.AtMaxLevel
+        if (!SkillStore.consume(ctx, boost.id, 1)) return FeedResult.NoItem
+        val db = AppDatabase.getDatabase(ctx)
+        val oldLevel = maxOf(m.level, cz.uhk.macroflow.pokemon.PokemonLevelCalc.levelFromXp(m.xp))
+        val out = boost.apply(m.level, m.xp)
+        m.level = out.level
+        m.xp = out.xp
+        db.capturedMakromonDao().updateMakromon(m)
+        if (FirebaseRepository.isLoggedIn) scope.launch { runCatching { FirebaseRepository.uploadCapturedMakromon(m) } }
+        val evolveLevel = db.makrodexEntryDao().getEntry(m.makromonId)?.evolveLevel ?: 0
+        return FeedResult.Fed(oldLevel, out.level, out.xp, evolveLevel)
     }
 }

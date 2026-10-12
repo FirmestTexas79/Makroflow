@@ -291,7 +291,31 @@ object CollectionPages {
                     body.addView(sheet, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ui.px(10f) })
                 }
                 BagItems.Action.USE -> body.addView(wide(ui, "Použít") { close(); onUse(item) })
+                BagItems.Action.FEED -> body.addView(wide(ui, "Dát Makromonovi") { close(); onUse(item) })
                 BagItems.Action.NONE -> {}
+            }
+        }
+    }
+
+    /**
+     * Výběr Makromona pro nakopávač (docs/adr/0074): řádek na každého, tým první, pak podle levelu.
+     * Makromoni na maximálním levelu jsou zašedlí.
+     */
+    fun pickMakromon(root: FrameLayout, boost: cz.uhk.macroflow.pokemon.boost.RareBoost,
+                     mons: List<CapturedMakromonEntity>, team: List<Int>, onPick: (CapturedMakromonEntity) -> Unit) {
+        WorkshopMenus.show(root, boost.label, "Komu to dáš?") { ui, body, close ->
+            if (mons.isEmpty()) {
+                body.addView(ui.text("Kapsa je prázdná – nejdřív nějakého Makromona chyť.", 16f, ui.inkSoft))
+                return@show
+            }
+            val sorted = mons.sortedWith(compareBy<CapturedMakromonEntity> { team.indexOf(it.id).let { i -> if (i < 0) Int.MAX_VALUE else i } }
+                .thenByDescending { it.level }.thenBy { it.name })
+            sorted.forEach { m ->
+                val usable = boost.canUse(m.level, m.xp)
+                val star = if (m.id in team) "★ " else ""
+                body.addView(wide(ui, "$star${m.name}  ·  Lv ${m.level}" + if (usable) "" else "  (max)", enabled = usable) {
+                    close(); onPick(m)
+                })
             }
         }
     }

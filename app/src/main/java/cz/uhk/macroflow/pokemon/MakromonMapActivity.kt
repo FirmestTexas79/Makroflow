@@ -2045,7 +2045,10 @@ class MakromonMapActivity : AppCompatActivity() {
             "🍄 Soulord poražen (otevře háj)",
             "🌕 Bdění u oltáře splněno (noc)",
             "🗝 Reset Zapomenutého háje",
-            "🎬 Přehrát úvod do Makrosvěta"
+            "🎬 Přehrát úvod do Makrosvěta",
+            "🥣 +5× Rare Oatmeal (+250 XP)",
+            "💪 +5× Rare Preworkout (+1 level)",
+            "🥫 +5× Rare White Monster (+3 levely)"
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("Debug – Makrosvět")
@@ -2106,9 +2109,20 @@ class MakromonMapActivity : AppCompatActivity() {
                     }
                     11 -> debugResetGrove()
                     12 -> IntroFlyoverView.play(findViewById(android.R.id.content))
+                    13, 14, 15 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 13])
                 }
             }
             .show()
+    }
+
+    /** Rare nakopávače do batohu (docs/adr/0074): 5 ks, použití v deníku → Batoh → Nakopávače. */
+    private fun debugGiveBoost(boost: cz.uhk.macroflow.pokemon.boost.RareBoost) {
+        lifecycleScope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.skills.SkillStore.add(applicationContext, boost.id, 5)
+            }
+            showMapToast("⚡ Debug: +5× ${boost.label} v batohu")
+        }
     }
 
     /** Tajný háj od začátku (quest, příznaky, deník). */

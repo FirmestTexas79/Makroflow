@@ -292,13 +292,14 @@ class InventoryFragment : Fragment() {
 
             val ball = cz.uhk.macroflow.pokemon.balls.Makroball.from(item.itemId)
             val med = cz.uhk.macroflow.pokemon.status.MedItem.from(item.itemId)
+            val rare = cz.uhk.macroflow.pokemon.boost.RareBoost.from(item.itemId)   // docs/adr/0074
             val crystal = cz.uhk.macroflow.pokemon.cave.CrystalColor.fromItem(item.itemId)
             val resource = cz.uhk.macroflow.pokemon.skills.Resource.from(item.itemId)
             val gear = cz.uhk.macroflow.pokemon.skills.Gear.from(item.itemId)
             val heart = item.itemId == cz.uhk.macroflow.pokemon.story.ForestHeart.ITEM_ID   // docs/adr/0045
             val diary = item.itemId == cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_ID   // docs/adr/0046
             val pages = item.itemId == cz.uhk.macroflow.pokemon.story.Insight.PAGES_ITEM     // docs/adr/0047
-            holder.tvName.text = ball?.label ?: med?.label ?: crystal?.label ?: resource?.label ?: gear?.label ?: when (item.itemId) {
+            holder.tvName.text = ball?.label ?: med?.label ?: rare?.label ?: crystal?.label ?: resource?.label ?: gear?.label ?: when (item.itemId) {
                 cz.uhk.macroflow.pokemon.story.ForestHeart.ITEM_ID -> cz.uhk.macroflow.pokemon.story.ForestHeart.LABEL
                 cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_ID -> cz.uhk.macroflow.pokemon.story.SecretGrove.DIARY_LABEL
                 cz.uhk.macroflow.pokemon.story.Insight.PAGES_ITEM -> cz.uhk.macroflow.pokemon.story.Insight.PAGES_LABEL
@@ -339,6 +340,9 @@ class InventoryFragment : Fragment() {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(crystal,
                     cz.uhk.macroflow.pokemon.cave.Crystals.iconPixels(crystal), cz.uhk.macroflow.pokemon.cave.Crystals.H,
                     (64 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (rare != null) {
+                holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(rare, rare.pixels,
+                    cz.uhk.macroflow.pokemon.boost.RareBoost.SIZE, (64 * holder.itemView.resources.displayMetrics.density).toInt()))
             } else if (med != null) {
                 holder.ivSprite.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(med, med.pixels, cz.uhk.macroflow.pokemon.status.MedItem.SIZE, (64 * holder.itemView.resources.displayMetrics.density).toInt()))
             } else if (ball != null) {
@@ -405,6 +409,10 @@ class InventoryFragment : Fragment() {
                         .setMessage(crystal.description)
                         .setPositiveButton("OK", null)
                         .show()
+                    return@setOnClickListener
+                }
+                if (rare != null) {
+                    Toast.makeText(requireContext(), "${rare.label}: ${rare.description} Dáš ho v deníku: Batoh → Nakopávače.", Toast.LENGTH_LONG).show()
                     return@setOnClickListener
                 }
                 if (med != null) {
