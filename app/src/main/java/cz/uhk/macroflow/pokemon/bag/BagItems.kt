@@ -1,6 +1,7 @@
 package cz.uhk.macroflow.pokemon.bag
 
 import cz.uhk.macroflow.pokemon.balls.Makroball
+import cz.uhk.macroflow.pokemon.boost.RareBoost
 import cz.uhk.macroflow.pokemon.cave.CrystalColor
 import cz.uhk.macroflow.pokemon.cave.Crystals
 import cz.uhk.macroflow.pokemon.skills.Gear
@@ -21,7 +22,7 @@ import cz.uhk.macroflow.pokemon.story.SecretGrove
 object BagItems {
 
     enum class Pocket(val label: String) {
-        BALLS("Makrobally"), MEDS("Lékárnička"), GEAR("Vybavení"), KEY("Klíčové předměty"), OTHER("Ostatní")
+        BALLS("Makrobally"), MEDS("Lékárnička"), BOOST("Nakopávače"), GEAR("Vybavení"), KEY("Klíčové předměty"), OTHER("Ostatní")
     }
 
     enum class Action {
@@ -30,7 +31,9 @@ object BagItems {
         /** Čte se (listy, deník strážce). */
         READ,
         /** Dá se použít hned (Spooky Plate). */
-        USE
+        USE,
+        /** Dá se dát vybranému Makromonovi z Kapsy (nakopávače, docs/adr/0074). */
+        FEED
     }
 
     data class Item(
@@ -55,6 +58,9 @@ object BagItems {
         Makroball.from(itemId)?.let { return Item(it.id, it.label, it.description, Pocket.BALLS, it.pixels, Makroball.SIZE) }
         MedItem.from(itemId)?.let {
             return Item(it.id, it.label, it.description + " Použiješ v souboji přes ITEM → LÉKÁRNIČKA.", Pocket.MEDS, it.pixels, MedItem.SIZE)
+        }
+        RareBoost.from(itemId)?.let {
+            return Item(it.id, it.label, it.description, Pocket.BOOST, it.pixels, RareBoost.SIZE, Action.FEED)
         }
         Gear.from(itemId)?.let {
             return Item(it.id, it.label, it.description + " Nasadíš v deníku: Postava → vybavení.", Pocket.GEAR, GearArt.gearIcon(it), GearArt.ICON)

@@ -213,7 +213,44 @@ class QuestJournalFragment : Fragment() {
                         toast(if (ok) "👻 Spooky Plate aktivován!" else "Spooky Plate už je aktivní.")
                         renderBag()
                     }
+                    cz.uhk.macroflow.pokemon.boost.RareBoost.from(item.id)?.let { feedBoost(it) }
                 })
+        }
+    }
+
+    /** Rare nakopávač (docs/adr/0074): výběr Makromona z Kapsy, použití, případně evoluce. */
+    private fun feedBoost(boost: cz.uhk.macroflow.pokemon.boost.RareBoost) {
+        val ctx = context?.applicationContext ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (mons, team) = withContext(Dispatchers.IO) {
+                AppDatabase.getDatabase(ctx).capturedMakromonDao().getAllCaught() to cz.uhk.macroflow.pokemon.skills.SkillStore.team(ctx)
+            }
+            if (!isAdded) return@launch
+            cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.pickMakromon(rootView as FrameLayout, boost, mons, team) { m ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val result = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.bag.PocketActions.feedBoost(ctx, boost, m) }
+                    if (!isAdded) return@launch
+                    when (result) {
+                        cz.uhk.macroflow.pokemon.bag.PocketActions.FeedResult.AtMaxLevel -> toast("${m.name} je na maximálním levelu.")
+                        cz.uhk.macroflow.pokemon.bag.PocketActions.FeedResult.NoItem -> toast("${boost.label} už nemáš.")
+                        is cz.uhk.macroflow.pokemon.bag.PocketActions.FeedResult.Fed -> {
+                            toast(if (result.newLevel > result.oldLevel) "⚡ ${m.name} má level ${result.newLevel}!"
+                                else "⚡ ${m.name} získal zkušenosti.")
+                            renderBag()
+                            if (m.makromonId == cz.uhk.macroflow.pokemon.evolution.SpirraEvolution.SPIRRA_ID) {
+                                (activity as? androidx.appcompat.app.AppCompatActivity)?.let { cz.uhk.macroflow.pokemon.evolution.SpirraEvolutionFlow.check(it) }
+                            } else if (cz.uhk.macroflow.pokemon.boost.RareBoost.evolutionDue(result.oldLevel, result.newLevel, result.evolveLevel)) {
+                                val target = MakromonGrowthManager.getProfile(m.makromonId)?.evolutionToId.orEmpty()
+                                if (target.isNotEmpty()) {
+                                    val move = MakromonGrowthManager.getNewMoveForLevel(target, result.evolveLevel)
+                                        ?: MakromonGrowthManager.getNewMoveForLevel(target, 1)
+                                    EvolutionDialog(requireContext(), m.id, m.makromonId, target, move) { renderBag() }.show()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
