@@ -2046,9 +2046,9 @@ class MakromonMapActivity : AppCompatActivity() {
             "🌕 Bdění u oltáře splněno (noc)",
             "🗝 Reset Zapomenutého háje",
             "🎬 Přehrát úvod do Makrosvěta",
-            "🥣 +5× Rare Oatmeal (+250 XP)",
-            "💪 +5× Rare Preworkout (+1 level)",
-            "🥫 +5× Rare White Monster (+3 levely)"
+            "🍫 +5× Proteinová tyčinka (+250 XP)",
+            "💪 +5× Preworkout (+1 level)",
+            "🥫 +5× Bílý Monster (+3 levely)"
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("Debug – Makrosvět")
@@ -2115,7 +2115,7 @@ class MakromonMapActivity : AppCompatActivity() {
             .show()
     }
 
-    /** Rare nakopávače do batohu (docs/adr/0074): 5 ks, použití v deníku → Batoh → Nakopávače. */
+    /** Nakopávače do batohu (docs/adr/0086): 5 ks, použití v deníku → Batoh → Nakopávače. */
     private fun debugGiveBoost(boost: cz.uhk.macroflow.pokemon.boost.RareBoost) {
         lifecycleScope.launch {
             kotlinx.coroutines.withContext(Dispatchers.IO) {

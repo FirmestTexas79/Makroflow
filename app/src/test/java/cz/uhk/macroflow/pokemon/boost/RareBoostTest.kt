@@ -25,16 +25,16 @@ class RareBoostTest {
         }
     }
 
-    @Test fun oatmealAddsXpAndLevelFollowsTheCurve() {
-        val o = RareBoost.OATMEAL.apply(level = 1, xp = 0)
+    @Test fun proteinBarAddsXpAndLevelFollowsTheCurve() {
+        val o = RareBoost.PROTEIN_BAR.apply(level = 1, xp = 0)
         assertEquals(250, o.xp)
         assertEquals(PokemonLevelCalc.levelFromXp(250), o.level)
         assertEquals(o.level - 1, o.levelsGained)
     }
 
-    @Test fun oatmealKeepsLevelOfOlderCatchesWithZeroXp() {
+    @Test fun proteinBarKeepsLevelOfOlderCatchesWithZeroXp() {
         // chycený Makromon levelu 7 má XP 0 – nesmí spadnout zpátky
-        val o = RareBoost.OATMEAL.apply(level = 7, xp = 0)
+        val o = RareBoost.PROTEIN_BAR.apply(level = 7, xp = 0)
         assertEquals(PokemonLevelCalc.xpForLevel(7) + 250, o.xp)
         assertTrue(o.level >= 7)
     }
@@ -68,9 +68,9 @@ class RareBoostTest {
         }
     }
 
-    @Test fun oatmealAtTopOfCurveCapsLevel() {
+    @Test fun proteinBarAtTopOfCurveCapsLevel() {
         val max = PokemonLevelCalc.MAX_LEVEL
-        val o = RareBoost.OATMEAL.apply(max - 1, PokemonLevelCalc.xpForLevel(max - 1))
+        val o = RareBoost.PROTEIN_BAR.apply(max - 1, PokemonLevelCalc.xpForLevel(max - 1))
         assertTrue(o.level <= max)
     }
 
@@ -91,7 +91,7 @@ class RareBoostTest {
             assertEquals(it.label, item.label)
             assertEquals(item.size * item.size, item.pixels.size)
         }
-        val p = BagItems.pockets(mapOf(RareBoost.OATMEAL.id to 3, RareBoost.WHITE_MONSTER.id to 0))
+        val p = BagItems.pockets(mapOf(RareBoost.PROTEIN_BAR.id to 3, RareBoost.WHITE_MONSTER.id to 0))
         assertEquals(listOf(BagItems.Pocket.BOOST), p.keys.toList())
         assertEquals(3, p.getValue(BagItems.Pocket.BOOST).single().second)
     }

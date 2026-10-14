@@ -298,7 +298,7 @@ object CollectionPages {
     }
 
     /**
-     * Výběr Makromona pro nakopávač (docs/adr/0074): řádek na každého, tým první, pak podle levelu.
+     * Výběr Makromona pro nakopávač (docs/adr/0086): řádek na každého, tým první, pak podle levelu.
      * Makromoni na maximálním levelu jsou zašedlí.
      */
     fun pickMakromon(root: FrameLayout, boost: cz.uhk.macroflow.pokemon.boost.RareBoost,

@@ -292,7 +292,7 @@ class InventoryFragment : Fragment() {
 
             val ball = cz.uhk.macroflow.pokemon.balls.Makroball.from(item.itemId)
             val med = cz.uhk.macroflow.pokemon.status.MedItem.from(item.itemId)
-            val rare = cz.uhk.macroflow.pokemon.boost.RareBoost.from(item.itemId)   // docs/adr/0074
+            val rare = cz.uhk.macroflow.pokemon.boost.RareBoost.from(item.itemId)   // docs/adr/0086
             val crystal = cz.uhk.macroflow.pokemon.cave.CrystalColor.fromItem(item.itemId)
             val resource = cz.uhk.macroflow.pokemon.skills.Resource.from(item.itemId)
             val gear = cz.uhk.macroflow.pokemon.skills.Gear.from(item.itemId)

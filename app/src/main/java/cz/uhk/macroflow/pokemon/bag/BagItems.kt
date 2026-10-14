@@ -32,7 +32,7 @@ object BagItems {
         READ,
         /** Dá se použít hned (Spooky Plate). */
         USE,
-        /** Dá se dát vybranému Makromonovi z Kapsy (nakopávače, docs/adr/0074). */
+        /** Dá se dát vybranému Makromonovi z Kapsy (nakopávače, docs/adr/0086). */
         FEED
     }
 

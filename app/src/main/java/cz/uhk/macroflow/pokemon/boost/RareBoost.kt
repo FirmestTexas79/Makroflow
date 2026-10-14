@@ -2,11 +2,11 @@ package cz.uhk.macroflow.pokemon.boost
 
 import cz.uhk.macroflow.pokemon.PokemonLevelCalc
 
-/** Kolik XP dá Rare Oatmeal. */
-private const val OATMEAL_XP = 250
+/** Kolik XP dá proteinová tyčinka. */
+private const val PROTEIN_BAR_XP = 250
 
 /**
- * Nakopávače (docs/adr/0074): vzácné předměty, kterými hráč rovnou zvedne Makromonovi XP nebo levely
+ * Nakopávače (docs/adr/0086): vzácné předměty, kterými hráč rovnou zvedne Makromonovi XP nebo levely
  * (obdoba Rare Candy). Nakopávač se dá z Batohu v deníku, vybere se Makromon z Kapsy.
  *
  * Ladění: síla každého nakopávače je jen tady v [effect] – nikde jinde se čísla nepočítají.
@@ -20,28 +20,28 @@ enum class RareBoost(
     private val grid: List<String>,
     private val colors: Map<Char, Long>
 ) {
-    OATMEAL(
-        "item_rare_oatmeal", "Rare Oatmeal",
-        "Vydatná snídaně šampionů. Makromon z ní dostane $OATMEAL_XP XP.",
-        Effect.Xp(OATMEAL_XP),
+    PROTEIN_BAR(
+        "item_rare_protein_bar", "Proteinová tyčinka",
+        "Poctivá tyčinka do kapsy. Makromon z ní dostane $PROTEIN_BAR_XP XP.",
+        Effect.Xp(PROTEIN_BAR_XP),
         listOf(
-            "..Y......Y..",
-            "...Y....Y...",
-            "..OOOOOOOO..",
-            ".OOoOOOoOOO.",
-            "KOOOOoOOOOOK",
-            "KKKKKKKKKKKK",
-            "KBBBBBBBBBBK",
-            ".KBBBBBBBBK.",
-            "..KBBBBBBK..",
-            "...KKKKKK...",
+            "............",
+            "............",
+            "............",
+            "KK.KKKKKK.KK",
+            "KRKRWWWWRKRK",
+            ".RRRWbbWRRR.",
+            "KrKRWWWWRKrK",
+            "KK.KKKKKK.KK",
+            "............",
+            "............",
             "............",
             "............"
         ),
-        mapOf('K' to 0xFF3A2A1A, 'O' to 0xFFE8D2A0, 'o' to 0xFFC9A66B, 'B' to 0xFF8E5A3C, 'Y' to 0xFFFFD54F)
+        mapOf('K' to 0xFF3A2A1A, 'R' to 0xFFE53935, 'r' to 0xFFB71C1C, 'W' to 0xFFF4EBDD, 'b' to 0xFF6D4C41)
     ),
     PREWORKOUT(
-        "item_rare_preworkout", "Rare Preworkout",
+        "item_rare_preworkout", "Preworkout",
         "Kdo si ho dá, nezastaví se. Makromon rovnou získá +1 level.",
         Effect.Levels(1),
         listOf(
@@ -61,7 +61,7 @@ enum class RareBoost(
         mapOf('K' to 0xFF1E1030, 'W' to 0xFFF4F7FA, 'R' to 0xFFE53935, 'P' to 0xFF8E44AD, 'p' to 0xFF5E2B76, 'Y' to 0xFFFFE066)
     ),
     WHITE_MONSTER(
-        "item_rare_white_monster", "Rare White Monster",
+        "item_rare_white_monster", "Bílý Monster",
         "Plechovka, po které se svět zrychlí. Makromon rovnou získá +3 levely.",
         Effect.Levels(3),
         listOf(
@@ -88,6 +88,9 @@ enum class RareBoost(
         /** Zvedne level rovnou; postup v novém levelu začíná od nuly (jako Rare Candy). */
         data class Levels(val levels: Int) : Effect()
     }
+
+    /** Cena v obchodě (Makro penízky). */
+    val price: Int get() = when (this) { PROTEIN_BAR -> 120; PREWORKOUT -> 300; WHITE_MONSTER -> 800 }
 
     /** Výsledek použití: nový level, nové XP a o kolik levelů to Makromona posunulo. */
     data class Outcome(val level: Int, val xp: Int, val levelsGained: Int)

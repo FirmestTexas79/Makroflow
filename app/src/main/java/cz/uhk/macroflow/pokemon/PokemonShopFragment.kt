@@ -33,7 +33,9 @@ data class ShopProduct(
     /** Lék na stavy – ikonka z vlastního pixel artu. */
     val med: cz.uhk.macroflow.pokemon.status.MedItem? = null,
     /** Semínko (docs/adr/0034) – ikonka z pixel artu surovin. */
-    val resource: cz.uhk.macroflow.pokemon.skills.Resource? = null
+    val resource: cz.uhk.macroflow.pokemon.skills.Resource? = null,
+    /** Nakopávač – XP / levely Makromonovi (docs/adr/0086). */
+    val boost: cz.uhk.macroflow.pokemon.boost.RareBoost? = null
 )
 
 class PokemonShopFragment : Fragment() {
@@ -50,6 +52,8 @@ class PokemonShopFragment : Fragment() {
         ShopProduct(b.id, "${b.label} (${b.packSize}x)", b.description, b.price, b.packSize, "", 0, b)
     } + cz.uhk.macroflow.pokemon.status.MedItem.entries.map { m ->
         ShopProduct(m.id, m.label, m.description, m.price, 1, "", 0, med = m)
+    } + cz.uhk.macroflow.pokemon.boost.RareBoost.entries.map { r ->
+        ShopProduct(r.id, r.label, r.description, r.price, 1, "", 0, boost = r)
     } + listOf(
         ShopProduct("lure_lamp", "Spooky Plate", "Zvedne spawn Gengara v noci.", 150, 1, "https://img.pokemondb.net/sprites/items/spooky-plate.png", 1),
         ShopProduct("lure_protein", "Black Belt", "Zaručí spawn Machampa.", 100, 1, "https://img.pokemondb.net/sprites/items/black-belt.png", 1),
@@ -129,7 +133,10 @@ class PokemonShopFragment : Fragment() {
             val ball = product.ball
             val med = product.med
             val res = product.resource
-            if (res != null) {
+            val boost = product.boost
+            if (boost != null) {
+                holder.ivIcon.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(boost, boost.pixels, cz.uhk.macroflow.pokemon.boost.RareBoost.SIZE, (48 * holder.itemView.resources.displayMetrics.density).toInt()))
+            } else if (res != null) {
                 holder.ivIcon.setImageBitmap(cz.uhk.macroflow.pokemon.balls.BallSprites.pixelIcon(res,
                     cz.uhk.macroflow.pokemon.skills.SkillArt.resourceIcon(res), cz.uhk.macroflow.pokemon.skills.SkillArt.ITEM,
                     (48 * holder.itemView.resources.displayMetrics.density).toInt()))

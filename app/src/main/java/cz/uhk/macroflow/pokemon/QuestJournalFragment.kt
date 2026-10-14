@@ -218,7 +218,7 @@ class QuestJournalFragment : Fragment() {
         }
     }
 
-    /** Rare nakopávač (docs/adr/0074): výběr Makromona z Kapsy, použití, případně evoluce. */
+    /** Rare nakopávač (docs/adr/0086): výběr Makromona z Kapsy, použití, případně evoluce. */
     private fun feedBoost(boost: cz.uhk.macroflow.pokemon.boost.RareBoost) {
         val ctx = context?.applicationContext ?: return
         viewLifecycleOwner.lifecycleScope.launch {

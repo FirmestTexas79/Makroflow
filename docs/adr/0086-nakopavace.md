@@ -1,9 +1,9 @@
-# 0074 – Rare nakopávače (XP a levely Makromonům)
+# 0086 – Nakopávače (XP a levely Makromonům)
 
-Stav: přijato (2026-10-12)
+Stav: přijato (2026-10-12, do `MULTI` 2026-10-14; původně na větvi `feature/rare-nakopavace` jako 0074)
 
 - Nové vzácné předměty jako Rare Candy, jen v duchu aplikace – energie a doplňky (`pokemon/boost/RareBoost`):
-  **Rare Oatmeal** (+250 XP), **Rare Preworkout** (+1 level), **Rare White Monster** (+3 levely).
+  **Proteinová tyčinka** (+250 XP), **Preworkout** (+1 level), **Bílý Monster** (+3 levely).
   Síla každého je na jednom místě (`RareBoost.effect`), takže ladění je změna jednoho čísla.
 - Pravidla: level nikdy neklesne; levelový nakopávač nastaví XP na začátek nového levelu (postup od nuly),
   XP nakopávač jde přes `PokemonLevelCalc.gain` (stará chycení s levelem z divočiny a XP 0 nespadnou).
@@ -14,5 +14,5 @@ Stav: přijato (2026-10-12)
   `RareBoost.evolutionDue`), Spirra jde přes `SpirraEvolutionFlow`, aby zůstala volba větve na hráči.
 - Starý inventář (`InventoryFragment`) nakopávače jen zobrazí (název, ikona) a odkáže do deníku.
 - Ladění (debug build): podržení deníku → tři nové položky dají +5 ks daného nakopávače do batohu.
-- Zatím se nedají koupit ani získat ve hře (zdroj – drop, odměna za questy, vzácná nabídka obchodu – je
-  otevřená otázka, viz zadání „postupně“); předmět je jinak plně hratelný.
+- Zdroj: **obchod** (záložka s Makrobally a léky) – tyčinka 120, preworkout 300, Bílý Monster 800 penízků
+  (`RareBoost.price`). Za souboj padá 1–5 penízků, takže levelové nakopávače zůstávají vzácné.

@@ -107,7 +107,7 @@ object PocketActions {
     }
 
     /**
-     * Rare nakopávač (docs/adr/0074): spotřebuje jeden kus a zvedne Makromonovi XP / level.
+     * Rare nakopávač (docs/adr/0086): spotřebuje jeden kus a zvedne Makromonovi XP / level.
      * Level nikdy neklesne a na maximálním levelu se nic nespotřebuje. Volat mimo hlavní vlákno.
      */
     fun feedBoost(ctx: Context, boost: RareBoost, m: CapturedMakromonEntity): FeedResult {
