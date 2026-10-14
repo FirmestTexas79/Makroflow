@@ -71,7 +71,14 @@ object WandererFactory {
 
         // ── AXLU (031) ────────────────────────────────────────────────
         // Tvář aplikace – mythic, fialový smoke
-        WandererConfig("031", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "031", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) }
+        WandererConfig("031", 2.0f, { ctx, view, sc -> StandardWanderer(ctx, view, "031", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
+
+        // ── NOVÍ MAKROMONI (docs/adr/0084) ────────────────────────────
+        WandererConfig("033", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "033", sc, HeavyTransitionEffect()) }) { HeavyTransitionEffect() },
+        WandererConfig("043", 1.8f, { ctx, view, sc -> StandardWanderer(ctx, view, "043", sc, SmokeTransitionEffect(true)) }) { SmokeTransitionEffect(true) },
+        WandererConfig("044", 1.8f, { ctx, view, sc -> StandardWanderer(ctx, view, "044", sc) }) { SmokeTransitionEffect(false) },
+        WandererConfig("045", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "045", sc, HeavyTransitionEffect()) }) { HeavyTransitionEffect() },
+        WandererConfig("047", 2.2f, { ctx, view, sc -> StandardWanderer(ctx, view, "047", sc, HeavyTransitionEffect()) }) { HeavyTransitionEffect() }
     )
 
     private val configMap by lazy { CONFIGS.associateBy { it.makromonId } }

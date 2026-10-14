@@ -219,6 +219,9 @@ class StandardWanderer(
         "010","011"  -> 2200L  // Kuličky – levitují pomalu
         "012"        -> 2400L  // Spirra – normální
         "031"        -> 2000L  // Axlu – svižný
+        "033", "045", "047" -> 3000L  // Mysnor, Krystalos, Magmor – těžcí
+        "043"        -> 2900L  // Kendl – cupitá jako svíčka
+        "042"        -> 2200L  // Hunfrey – sebevědomý krok
         else         -> 2500L
     }
 
@@ -229,6 +232,8 @@ class StandardWanderer(
         "012"        -> 1500L to 3500L   // Spirra – živá
         "010","011"  -> 2000L to 5000L   // Kuličky – klidné
         "031"        -> 1000L to 3000L   // Axlu – zvědavý
+        "033", "045", "047" -> 4000L to 9000L  // těžcí – rádi stojí
+        "042"        -> 2500L to 5000L   // Hunfrey – plánuje
         else         -> 1500L to 4000L
     }
 
@@ -323,6 +328,8 @@ class StandardWanderer(
         "012", "031" -> 0.45f           // Spirra, Axlu – zvědaví
         "022", "023" -> 0.40f           // Mycit – nervózní, ale zvědavý
         "019", "003" -> 0.50f           // letci to mají nejsnazší
+        "044" -> 0.45f                  // Gemak – rád se kutálí přes tlačítko
+        "033", "045", "047" -> 0.18f    // těžcí – líní
         else -> 0.30f
     }
 
@@ -453,6 +460,14 @@ class StandardWanderer(
 
             // Axlu – svižné levitování
             "031" -> walkFloat(fromX, toX)
+
+            // Noví Makromoni (docs/adr/0084)
+            "032" -> walkNervous(fromX, toX)                   // Mysnic – cupitá
+            "033", "045", "047" -> walkHeavy(fromX, toX)       // Mysnor, Krystalos, Magmor – dupou
+            "041" -> walkFloat(fromX, toX)                     // Psychirra – levituje
+            "042" -> walkBouncy(fromX, toX, bounceHeight = 4f) // Hunfrey – klidný sebejistý krok
+            "043" -> walkBouncy(fromX, toX, bounceHeight = 3f) // Kendl – svíčka poskakuje
+            "044" -> walkBouncy(fromX, toX, bounceHeight = 5f) // Gemak – batolí se
 
             else -> walkDefault(fromX, toX)
         }
@@ -666,6 +681,12 @@ class StandardWanderer(
             "022", "023" -> crossTrampoline(fromFx, toFx, o)                          // Mycit – trampolína
             "030" -> crossClimb(fromFx, toFx, o, heavy = true)                        // Gudwin – těžce přeleze
             "031" -> crossBubble(fromFx, toFx, o)                                     // Axlu – přeletí v bublině
+            "032" -> crossClimb(fromFx, toFx, o, heavy = false)                       // Mysnic – přeleze
+            "033", "045", "047" -> crossClimb(fromFx, toFx, o, heavy = true)          // těžcí – přelezou, tlačítko se otřese
+            "041" -> crossHover(fromFx, toFx, o)                                      // Psychirra – přepluje silou mysli
+            "042" -> crossPerch(fromFx, toFx, o)                                      // Hunfrey – vyleze nahoru a rozhlédne se
+            "043" -> crossPhase(fromFx, toFx, o)                                      // Kendl – projde skrz jako přízrak
+            "044" -> crossRoll(fromFx, toFx, o)                                       // Gemak – stočí se do klubka a přejede
             else -> crossJump(fromFx, toFx, o, spin = false, embers = false)
         }
     }
@@ -1080,6 +1101,13 @@ class StandardWanderer(
             "027", "028", "029" -> startPhantilIdle()
             "030" -> startGudwinIdle()
             "031" -> startAxluIdle()
+            "033" -> startStoneIdle(sparkle = null)
+            "041" -> startPsychirraIdle()
+            "042" -> startHunfreyIdle()
+            "043" -> startKendlIdle()
+            "044" -> startStoneIdle(sparkle = Color.parseColor("#4DD0E1"))
+            "045" -> startStoneIdle(sparkle = Color.parseColor("#4DD0E1"), heavy = true)
+            "047" -> startMagmorIdle()
             else  -> startDefaultIdle()
         }
     }
@@ -1249,6 +1277,219 @@ class StandardWanderer(
         }
     }
 
+
+    // ─────────────────────────────────────────
+    // NOVÍ MAKROMONI (docs/adr/0084)
+    // ─────────────────────────────────────────
+
+    /** Malá částice: kolečko (nebo obdélník) v barvě, vyletí o [dy] a zmizí. */
+    private fun puff(parent: ViewGroup, x0: Float, y0: Float, color: Int, sizeDp: Float, dx: Float, dy: Float, ms: Long, rect: Boolean = false, grow: Float = 1f) {
+        val v = View(context).apply {
+            background = GradientDrawable().apply { shape = if (rect) GradientDrawable.RECTANGLE else GradientDrawable.OVAL; setColor(color) }
+            layoutParams = ViewGroup.LayoutParams((sizeDp * dp).toInt(), ((if (rect) sizeDp * 2.5f else sizeDp) * dp).toInt())
+            x = x0; y = y0; if (rect) rotation = Random.nextFloat() * 360f
+        }
+        parent.addView(v)
+        v.animate().translationXBy(dx * dp).translationYBy(dy * dp).scaleX(grow).scaleY(grow).alpha(0f)
+            .setDuration(ms).withEndAction { parent.removeView(v) }.start()
+    }
+
+    /** Opakované částice během klidu (dokud běží tahle idle animace). */
+    private fun scheduleIdleFx(gen: Int = idleGeneration, minMs: Long, maxMs: Long, fx: (ViewGroup) -> Unit) {
+        if (!running || gen != idleGeneration) return
+        (pokemonView.parent as? ViewGroup)?.let(fx)
+        handler.postDelayed({ scheduleIdleFx(gen, minMs, maxMs, fx) }, Random.nextLong(minMs, maxMs))
+    }
+
+    /** Mysnor / Gemak / Krystalos: pomalé dýchání pod krunýřem, krystaly občas zajiskří. */
+    private fun startStoneIdle(sparkle: Int?, heavy: Boolean = false): Animator {
+        val d = if (heavy) 2600L else 2000L
+        val breathe = ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.03f, baseScale).apply { duration = d; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        if (sparkle != null) scheduleIdleFx(minMs = 900, maxMs = 2200) { p ->
+            val sp = TextView(context).apply {
+                text = "✦"; textSize = 9f; setTextColor(if (Random.nextInt(3) == 0) Color.parseColor("#FF9E40") else sparkle)
+                x = pokemonView.x + pokemonView.width * (0.2f + Random.nextFloat() * 0.6f); y = pokemonView.y + pokemonView.height * (0.15f + Random.nextFloat() * 0.3f); alpha = 0f
+            }
+            p.addView(sp)
+            sp.animate().alpha(1f).scaleX(1.4f).scaleY(1.4f).setDuration(250).withEndAction {
+                sp.animate().alpha(0f).scaleX(0.6f).scaleY(0.6f).setDuration(350).withEndAction { p.removeView(sp) }.start()
+            }.start()
+        }
+        breathe.start(); return breathe
+    }
+
+    /** Psychirra: vznáší se, pomalu se točí spirála energie (fialové a růžové jiskry). */
+    private fun startPsychirraIdle(): Animator {
+        val levitate = ObjectAnimator.ofFloat(pokemonView, "translationY", targetTranslationY - 10f * dp, targetTranslationY - 2f * dp).apply { duration = 1800; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.REVERSE; interpolator = AccelerateDecelerateInterpolator() }
+        val tilt = ObjectAnimator.ofFloat(pokemonView, "rotation", -3f, 3f).apply { duration = 2600; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.REVERSE; interpolator = AccelerateDecelerateInterpolator() }
+        var a = 0.0
+        scheduleIdleFx(minMs = 160, maxMs = 260) { p ->
+            a += 0.9
+            val r = pokemonView.width * 0.42f
+            val cx = pokemonView.x + pokemonView.width / 2f; val cy = pokemonView.y + pokemonView.height * 0.5f
+            puff(p, cx + cos(a).toFloat() * r, cy + sin(a).toFloat() * r * 0.5f, if (Random.nextBoolean()) Color.parseColor("#C86BE8") else Color.parseColor("#FF6EC7"), 4f, 0f, -14f, 700)
+        }
+        return AnimatorSet().apply { playTogether(levitate, tilt); start() }
+    }
+
+    /** Hunfrey: stojí v klidu a občas si prohlédne kartu – otočí se a nad hlavou mu problikne karta. */
+    private fun startHunfreyIdle(): Animator {
+        val breathe = ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.03f, baseScale).apply { duration = 2200; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        scheduleIdleFx(minMs = 3500, maxMs = 7000) { p ->
+            val card = View(context).apply {
+                background = GradientDrawable().apply { cornerRadius = 2 * dp; setColor(Color.parseColor("#26A69A")); setStroke((1.5f * dp).toInt(), Color.parseColor("#FFF8E1")) }
+                layoutParams = ViewGroup.LayoutParams((10 * dp).toInt(), (14 * dp).toInt())
+                x = pokemonView.x + pokemonView.width * (if (facingRight) 0.75f else 0.15f); y = pokemonView.y + pokemonView.height * 0.2f; alpha = 0f
+            }
+            p.addView(card)
+            card.animate().alpha(1f).translationYBy(-14f * dp).rotationY(360f).setDuration(700).withEndAction {
+                card.animate().alpha(0f).setDuration(300).withEndAction { p.removeView(card) }.start()
+            }.start()
+        }
+        breathe.start(); return breathe
+    }
+
+    /** Kendl: plamínek se třese (svíčka se natahuje a smršťuje), stoupá modrý dým. */
+    private fun startKendlIdle(): Animator {
+        val flicker = ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.05f, baseScale * 0.98f, baseScale * 1.03f, baseScale).apply { duration = 900; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        val glow = ObjectAnimator.ofFloat(pokemonView, "alpha", 1f, 0.88f, 1f).apply { duration = 1300; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        scheduleIdleFx(minMs = 250, maxMs = 550) { p ->
+            val cx = pokemonView.x + pokemonView.width / 2f
+            puff(p, cx + (Random.nextFloat() - 0.5f) * 8f * dp, pokemonView.y + pokemonView.height * 0.08f,
+                if (Random.nextBoolean()) Color.parseColor("#6FC3FF") else Color.parseColor("#B388FF"), 4f, (Random.nextFloat() - 0.5f) * 10f, -22f, 650)
+        }
+        return AnimatorSet().apply { playTogether(flicker, glow); start() }
+    }
+
+    /** Magmor: sopka na zádech dýmá, občas vyletí jiskra; tělo pomalu „žhne“. */
+    private fun startMagmorIdle(): Animator {
+        val breathe = ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.04f, baseScale).apply { duration = 2400; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
+        scheduleIdleFx(minMs = 300, maxMs = 700) { p ->
+            val vx = pokemonView.x + pokemonView.width * (if (facingRight) 0.3f else 0.7f)
+            val vy = pokemonView.y + pokemonView.height * 0.05f
+            if (Random.nextInt(4) == 0) puff(p, vx, vy, if (Random.nextBoolean()) Color.parseColor("#FF6D00") else Color.parseColor("#FFD600"), 3f, (Random.nextFloat() - 0.5f) * 16f, -26f, 600)
+            else puff(p, vx, vy, Color.parseColor("#80757575"), 7f, (if (facingRight) 8f else -8f), -24f, 1100, grow = 2.2f)
+        }
+        breathe.start(); return breathe
+    }
+
+    /** Gemak: stočí se do klubka a přejede přes tlačítko – kutálí se po jeho povrchu. */
+    private fun crossRoll(fromFx: Float, toFx: Float, o: Obstacle) {
+        val g = groundFeetY()
+        val dir = if (toFx > fromFx) 1f else -1f
+        squash({
+            path(walkDuration, LinearInterpolator(), { p ->
+                val fx = lerp(fromFx, toFx, p)
+                placeFeet(fx, g - surfaceLift(fx, o))
+                pokemonView.rotation = dir * 720f * p
+                pokemonView.scaleY = baseScale * 0.8f
+            }) {
+                pokemonView.rotation = 0f; pokemonView.scaleY = baseScale
+                (pokemonView.parent as? ViewGroup)?.let { p -> repeat(5) { puff(p, feetX(), groundFeetY() - 4 * dp, Color.parseColor("#4DD0E1"), 3f, (Random.nextFloat() - 0.5f) * 40f, -20f, 450, rect = true) } }
+                onCrossingDone()
+            }
+        }, amount = 0.7f)
+    }
+
+    /** Mysnic / Mysnor / Gemak: schová se pod krunýř (přikrčí se), chvíli počká a vykoukne. */
+    private fun shellTuckReaction(sparkle: Int?) {
+        stopWobble(); moveAnim?.cancel()
+        val fs = facingSign()
+        pokemonView.animate().scaleY(baseScale * 0.72f).scaleX(fs * baseScale * 1.1f).translationY(targetTranslationY + 6f * dp).setDuration(120).withEndAction {
+            handler.postDelayed({
+                pokemonView.animate().scaleY(baseScale).scaleX(fs * baseScale).translationY(targetTranslationY).setDuration(260)
+                    .setInterpolator(OvershootInterpolator()).withEndAction { if (running) startWobble() }.start()
+            }, 700)
+        }.start()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        repeat(6) { puff(parent, feetX() + (Random.nextFloat() - 0.5f) * 30f * dp, groundFeetY() - 4 * dp, sparkle ?: Color.parseColor("#A1887F"), 4f, (Random.nextFloat() - 0.5f) * 30f, -14f, 500) }
+    }
+
+    /** Psychirra: vlna psychické energie (prstenec). */
+    private fun ringReaction(color: Int) {
+        stopWobble(); moveAnim?.cancel()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        repeat(2) { i ->
+            handler.postDelayed({
+                if (!running) return@postDelayed
+                val ring = View(context).apply {
+                    background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.TRANSPARENT); setStroke((3 * dp).toInt(), color) }
+                    val sz = pokemonView.width / 2
+                    layoutParams = ViewGroup.LayoutParams(sz, sz); x = pokemonView.x + pokemonView.width / 4f; y = pokemonView.y + pokemonView.height / 4f
+                }
+                parent.addView(ring)
+                ring.animate().scaleX(4f).scaleY(4f).alpha(0f).setDuration(700).withEndAction { parent.removeView(ring) }.start()
+            }, i * 220L)
+        }
+        pokemonView.animate().translationY(targetTranslationY - 14f * dp).setDuration(250).withEndAction {
+            pokemonView.animate().translationY(targetTranslationY).setDuration(400).withEndAction { if (running) startWobble() }.start()
+        }.start()
+    }
+
+    /** Hunfrey: hodí magickou kartu, která se zatočí a rozprskne v jiskry. */
+    private fun cardThrowReaction() {
+        stopWobble(); moveAnim?.cancel()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val dir = if (facingRight) 1f else -1f
+        val card = View(context).apply {
+            background = GradientDrawable().apply { cornerRadius = 2 * dp; setColor(Color.parseColor("#26A69A")); setStroke((1.5f * dp).toInt(), Color.parseColor("#FFF8E1")) }
+            layoutParams = ViewGroup.LayoutParams((10 * dp).toInt(), (14 * dp).toInt())
+            x = pokemonView.x + pokemonView.width / 2f; y = pokemonView.y + pokemonView.height * 0.4f
+        }
+        parent.addView(card)
+        card.animate().translationXBy(dir * 70f * dp).translationYBy(-20f * dp).rotation(dir * 720f).setDuration(450).withEndAction {
+            repeat(6) { puff(parent, card.x, card.y, if (it % 2 == 0) Color.parseColor("#4DD0E1") else Color.parseColor("#FFF59D"), 3f, (Random.nextFloat() - 0.5f) * 40f, (Random.nextFloat() - 0.5f) * 40f, 450) }
+            parent.removeView(card)
+        }.start()
+        ObjectAnimator.ofFloat(pokemonView, "rotation", 0f, dir * 8f, 0f).apply { duration = 300; start() }
+        if (running) handler.postDelayed({ startWobble() }, 350)
+    }
+
+    /** Kendl: plamen vzplane – vyšlehne sloup modrého ohně. */
+    private fun kendlFlareReaction() {
+        stopWobble(); moveAnim?.cancel()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val cx = pokemonView.x + pokemonView.width / 2f; val top = pokemonView.y + pokemonView.height * 0.05f
+        repeat(10) { i ->
+            handler.postDelayed({
+                if (running) puff(parent, cx + (Random.nextFloat() - 0.5f) * 10f * dp, top,
+                    if (i % 3 == 0) Color.parseColor("#E1F5FE") else Color.parseColor("#4FC3F7"), 6f, (Random.nextFloat() - 0.5f) * 14f, -55f, 550, grow = 0.4f)
+            }, i * 35L)
+        }
+        ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.15f, baseScale).apply { duration = 350; start() }
+        if (running) handler.postDelayed({ startWobble() }, 400)
+    }
+
+    /** Krystalos: zatřese se a vystřelí krystalové střepy. */
+    private fun crystalBurstReaction() {
+        stopWobble(); moveAnim?.cancel()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        shakeView(pokemonView)
+        val cx = pokemonView.x + pokemonView.width / 2f; val cy = pokemonView.y + pokemonView.height * 0.3f
+        repeat(8) { i ->
+            val a = Math.toRadians(-180.0 + i * 25.0)
+            puff(parent, cx, cy, if (i % 3 == 0) Color.parseColor("#FF9E40") else Color.parseColor("#4DD0E1"), 4f,
+                cos(a).toFloat() * 55f, sin(a).toFloat() * 45f, 550, rect = true)
+        }
+        if (running) handler.postDelayed({ startWobble() }, 450)
+    }
+
+    /** Magmor: sopka na zádech vybuchne – oblak kouře a déšť jisker. */
+    private fun eruptionReaction() {
+        stopWobble(); moveAnim?.cancel()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        shakeView(pokemonView)
+        val vx = pokemonView.x + pokemonView.width * (if (facingRight) 0.3f else 0.7f); val vy = pokemonView.y
+        repeat(5) { puff(parent, vx, vy, Color.parseColor("#99616161"), 9f, (Random.nextFloat() - 0.5f) * 20f, -40f, 1000, grow = 2.5f) }
+        repeat(10) { i ->
+            handler.postDelayed({
+                if (running) puff(parent, vx, vy, if (i % 2 == 0) Color.parseColor("#FF6D00") else Color.parseColor("#FFD600"), 4f,
+                    (Random.nextFloat() - 0.5f) * 70f, -30f - Random.nextFloat() * 30f, 650)
+            }, i * 30L)
+        }
+        if (running) handler.postDelayed({ startWobble() }, 500)
+    }
+
     private fun startDefaultIdle(): Animator {
         val breathe = ObjectAnimator.ofFloat(pokemonView, "scaleY", baseScale, baseScale * 1.05f, baseScale).apply { duration = 1800; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART }
         breathe.start(); return breathe
@@ -1280,6 +1521,13 @@ class StandardWanderer(
             "027", "028", "029" -> ghostTapReaction()
             "030" -> snorlaxPoke()
             "031" -> axluTapReaction()
+            "032", "033" -> shellTuckReaction(null)
+            "041" -> ringReaction(Color.parseColor("#C86BE8"))
+            "042" -> cardThrowReaction()
+            "043" -> kendlFlareReaction()
+            "044" -> shellTuckReaction(Color.parseColor("#4DD0E1"))
+            "045" -> crystalBurstReaction()
+            "047" -> eruptionReaction()
             else  -> defaultTapReaction()
         }
     }

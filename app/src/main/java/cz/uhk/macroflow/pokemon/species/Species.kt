@@ -309,7 +309,7 @@ object SpeciesRegistry {
         ),
 
         // 21 - Serpfin (obří rybohadí monstrum)
-        Species("021", "SERPFIN", "Serfin", "VODA / SÍLA",
+        Species("021", "SERPFIN", "Serpfin", "VODA / SÍLA",
             desc = "Obří rybohadí monstrum. Důkaz že konzistence přináší brutální transformaci.",
             hint = "Finlet se vyvine na levelu 8. Věř procesu!",
             stats = Stats(hp = 65, atk = 25, def = 20, spd = 15),
@@ -576,10 +576,99 @@ object SpeciesRegistry {
             desc = "Psychická evoluce Spirry. Ocas se jí stočil do hvězdné spirály a třetí oko na čele vidí, jak ses vyspal. Má ráda klidná rána – Spirra se v ni promění, když spolu každé ráno uděláte check-in.",
             hint = "Vyvine se ze Spirry, se kterou každé ráno uděláš check-in.",
             stats = Stats(hp = 38, atk = 52, def = 36, spd = 62),
-            moves = { listOf(attackTackle(), attackPsychic(), attackHypnosis()) },
+            moves = { listOf(attackPsychic(), attackTackle(), attackHypnosis()) },
             type = MakromonType.PSYCHIC,
             spawns = listOf(Spawn(EPIC, ALL_WILD, listOf(Conditions.NIGHT_ONLY))),
             family = DropFamily.FAIRY
+        ),
+
+        // 42 - Hunfrey (světaznalý lišák s batohem a sběratelskou kartou)
+        Species("042", "HUNFREY", "Hunfrey", "NORMÁLNÍ / STRATÉG",
+            desc = "Zcestovalý lišák, který má v batohu svitky plné složitých architektur a v ruce svírá vzácnou magickou kartu. Každý svůj krok i tah pečlivě plánuje.",
+            hint = "Nejčastěji se objevuje ve městě, kde zrovna rýsuje plány na další dalekou cestu.",
+            stats = Stats(hp = 50, atk = 35, def = 45, spd = 40),
+            moves = { listOf(
+                attackTackle(),
+                attackSandAttack(),
+                Move("STRATEGIC PLAY", MakromonType.PSYCHIC, 0, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF)),
+                Move("MAGIC CARD", MakromonType.FAIRY, 45, 100, 20)
+            ) },
+            spawns = listOf(Spawn(RARE, listOf(TOWN))),
+            family = DropFamily.NORMAL,
+            catchRate = 0.7f,
+            battleHeight = 36f
+        ),
+
+        // 43 - Kendl (duchařská svíčka s modrým plamenem)
+        Species("043", "KENDL", "Kendl", "DUCH / OHEŇ",
+            desc = "Záhadná oživlá svíčka s jedním okem. Její modrý plamen nepálí, ale živí se spálenými nočními kaloriemi. Čím víc do toho večer šlápneš, tím jasněji září.",
+            hint = "Kendl se zjevuje pouze ve tmě. Zkus večerní trénink a check-in po 19:00.",
+            stats = Stats(hp = 40, atk = 45, def = 50, spd = 30),
+            moves = { listOf(
+                attackNightShade(),
+                attackEmber(),
+                attackConfuseRay(),
+                attackWillOWisp()
+            ) },
+            type = MakromonType.GHOST,
+            spawns = listOf(Spawn(RARE, ALL_WILD, listOf(Conditions.NIGHT_ONLY))),
+            family = DropFamily.GHOST,
+            catchRate = 0.7f,
+            battleHeight = 26f // Je to svíčka, takže bude spíš menší
+        ),
+
+        // 44 - Gemak (malý luskoun s krystaly)
+        Species("044", "GEMAK", "Gemak", "ZEMĚ / KÁMEN",
+            desc = "Malý tvor s krunýřem, na kterém mu rostou ostré krystaly. Aby jeho krystaly rostly, potřebuje pevnou a těžkou zátěž. Rád sleduje, jak zvedáš železo.",
+            hint = "Gemak se rád zdržuje v Horách, obzvlášť když poctivě plníš své silové tréninky.",
+            stats = Stats(hp = 45, atk = 40, def = 55, spd = 20),
+            moves = { listOf(
+                Move("CRYSTAL SHARD", MakromonType.GROUND, 35, 100, 30),
+                attackTackle(),
+                attackHarden(),
+                attackSandAttack()
+            ) },
+            type = MakromonType.GROUND,
+            evolves = Evolve("045", 10),
+            spawns = listOf(Spawn(COMMON, listOf(MOUNTAINS))),
+            family = DropFamily.NORMAL,
+            catchRate = 0.8f
+        ),
+
+        // 45 - Krystalos (vyvinutý luskoun s velkými krystaly)
+        Species("045", "KRYSTALOS", "Krystalos", "ZEMĚ / SÍLA",
+            desc = "Evoluce Gemaka. Krystaly mu prorostly celým krunýřem a dodávají mu obrovskou odolnost. Je ztělesněním hrubé síly a nezlomné vůle.",
+            hint = "Gemak se vyvine na levelu 10, pokud nepolevíš ve svém tréninkovém plánu.",
+            stats = Stats(hp = 75, atk = 65, def = 90, spd = 30),
+            moves = { listOf(
+                Move("ROCK SLIDE", MakromonType.GROUND, 75, 90, 10),
+                attackHarden(),
+                Move("CRYSTAL BASH", MakromonType.GROUND, 85, 95, 15),
+                Move("BOULDER GUARD", MakromonType.GROUND, 0, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))
+            ) },
+            type = MakromonType.GROUND,
+            spawns = listOf(Spawn(RARE, listOf(MOUNTAINS), listOf(Conditions.MinCheckInCount(10)))),
+            family = DropFamily.NORMAL,
+            catchRate = 0.6f,
+            battleHeight = 38f
+        ),
+
+        // 47 - Magmor (vulkanický ještěr s dýmající sopkou na zádech)
+        Species("047", "MAGMOR", "Magmor", "OHEŇ / ZEMĚ",
+            desc = "Zrozen z chladnoucí lávy a sopečného popela. Kouřící vulkán na jeho zádech je přímým ukazatelem jeho vnitřní teploty. Čím víc kalorií a energie spálíš, tím víc se rozpálí.",
+            hint = "Magmor žije v hlubinách a kráterech Hor. Většinou se ukáže, až když pořádně rozžhavíš svůj metabolismus.",
+            stats = Stats(hp = 58, atk = 55, def = 65, spd = 25),
+            moves = { listOf(
+                attackEmber(),
+                attackTackle(),
+                Move("ROCK SLIDE", MakromonType.GROUND, 75, 90, 10),
+                attackFlamethrower()
+            ) },
+            type = MakromonType.FIRE,
+            spawns = listOf(Spawn(RARE, listOf(MOUNTAINS))),
+            family = DropFamily.FIRE,
+            catchRate = 0.65f,
+            battleHeight = 32f // Kratší nožičky a podsadité tělo
         )
 
     ) }

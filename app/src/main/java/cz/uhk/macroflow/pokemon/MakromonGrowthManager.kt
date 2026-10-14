@@ -354,6 +354,75 @@ object MakromonGrowthManager {
                 LearnableMove(20, BattleFactory.attackHydroPump()),
                 LearnableMove(25, BattleFactory.attackMoonblast())
             )
+        ),
+
+        // ── NOVÍ MAKROMONI (docs/adr/0084) ───────────────────────────
+        // Psychirra (041) – vyvine se ze Spirry od levelu 12
+        "041" to MakromonGrowthProfile(
+            makrodexId = "041",
+            movesLearnedAt = listOf(
+                LearnableMove(14, BattleFactory.attackConfuseRay()),
+                LearnableMove(17, BattleFactory.attackDazzlingGleam()),
+                LearnableMove(22, BattleFactory.attackShadowBall()),
+                LearnableMove(28, Move("MIND SPIRAL", MakromonType.PSYCHIC, 110, 85, 5, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE, 30)))
+            )
+        ),
+        // Hunfrey (042) – nevyvíjí se, stratég
+        "042" to MakromonGrowthProfile(
+            makrodexId = "042",
+            movesLearnedAt = listOf(
+                LearnableMove(4,  BattleFactory.attackLeer()),
+                LearnableMove(7,  BattleFactory.attackQuickAttack()),
+                LearnableMove(10, BattleFactory.attackSlash()),
+                LearnableMove(13, BattleFactory.attackPsychic()),
+                LearnableMove(17, BattleFactory.attackPlayRough()),
+                LearnableMove(21, BattleFactory.attackHypnosis()),
+                LearnableMove(25, Move("MASTER PLAN", MakromonType.PSYCHIC, 110, 85, 5, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_DEF, 30)))
+            )
+        ),
+        // Kendl (043) – nevyvíjí se, noční svíčka
+        "043" to MakromonGrowthProfile(
+            makrodexId = "043",
+            movesLearnedAt = listOf(
+                LearnableMove(4,  BattleFactory.attackSmokescreen()),
+                LearnableMove(6,  BattleFactory.attackHex()),
+                LearnableMove(9,  BattleFactory.attackShadowBall()),
+                LearnableMove(13, BattleFactory.attackFlamethrower()),
+                LearnableMove(17, Move("WAX SHELL", MakromonType.NORMAL, 0, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_DEF))),
+                LearnableMove(22, Move("BLUE INFERNO", MakromonType.GHOST, 100, 85, 5, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.BURN, 30)))
+            )
+        ),
+        // Gemak (044) -> Krystalos (045) na levelu 10
+        "044" to MakromonGrowthProfile(
+            makrodexId = "044",
+            movesLearnedAt = listOf(
+                LearnableMove(3, BattleFactory.attackMudSlap()),
+                LearnableMove(5, BattleFactory.attackBite()),
+                LearnableMove(7, Move("CRYSTAL ROLL", MakromonType.GROUND, 60, 95, 20)),
+                LearnableMove(9, BattleFactory.attackDig())
+            )
+        ),
+        "045" to MakromonGrowthProfile(
+            makrodexId = "045",
+            movesLearnedAt = listOf(
+                LearnableMove(12, BattleFactory.attackCrunch()),
+                LearnableMove(15, Move("CRYSTAL ROLL", MakromonType.GROUND, 60, 95, 20)),
+                LearnableMove(18, BattleFactory.attackEarthquake()),
+                LearnableMove(24, Move("GEM STORM", MakromonType.GROUND, 110, 80, 5, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.FLINCH, 20)))
+            )
+        ),
+        // Magmor (047) – nevyvíjí se (číslo 046 je volné pro případný předvývoj)
+        "047" to MakromonGrowthProfile(
+            makrodexId = "047",
+            movesLearnedAt = listOf(
+                LearnableMove(3,  BattleFactory.attackSmokescreen()),
+                LearnableMove(5,  BattleFactory.attackMudSlap()),
+                LearnableMove(8,  BattleFactory.attackFireFang()),
+                LearnableMove(11, BattleFactory.attackDig()),
+                LearnableMove(15, BattleFactory.attackHeatWave()),
+                LearnableMove(19, BattleFactory.attackEarthquake()),
+                LearnableMove(25, Move("ERUPTION", MakromonType.FIRE, 120, 85, 5, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.BURN, 20)))
+            )
         )
     )
 
