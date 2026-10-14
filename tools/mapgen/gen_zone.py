@@ -58,7 +58,7 @@ NODES = {
     ("CAVE_MAZE", "vychod_dolu"): (26, 466), ("CAVE_MAZE", "vstup_doly"): (26, 269),
     ("CAVE_OPEN", "vychod_jeskyne"): (75, 428),
     ("MINES", "zpet_do_stoly"): (75, 530), ("MINES", "vendelin"): (54, 458),
-    ("SKY_PASS", "vstup_ze_svatyne"): (80, 424),
+    ("SKY_PASS", "vstup_ze_svatyne"): (80, 424), ("SKY_PASS", "plosina"): (116, 222),
 }
 
 # spoje: (lokace, uzel, směr ven) ↔ (lokace, uzel, směr ven); směr určuje tvar křivky
@@ -97,7 +97,7 @@ SEA = (61, 125, 181); SEA_LIGHT = (111, 165, 212); FOAM = (205, 232, 245)
 SAND = (232, 212, 154); SAND_DARK = (196, 170, 112)
 
 NPC = {"TOWN": "gudwin", "MEADOW": "meadow_npc", "MOUNTAINS": "kral_mlsak", "FOREST": "mytina",
-       "MINES": "vendelin", "HIDDEN_GROVE": "oltar"}
+       "MINES": "vendelin", "HIDDEN_GROVE": "oltar", "SKY_PASS": "plosina"}
 # hlava NPC: obrázek a čtvercový výřez hlavy (px zdroje)
 HEADS = {
     "TOWN": ("gudwin_oliver", (40, 0, 260, 220)),
@@ -106,6 +106,7 @@ HEADS = {
     "FOREST": ("makromon_23_mydrus", (100, 10, 460, 370)),
     "MINES": ("npc_vendelin", (100, 0, 430, 330)),
     "HIDDEN_GROVE": ("npc_elderan", (100, 20, 420, 340)),
+    "SKY_PASS": ("npc_hunfrey", (56, 0, 296, 240)),   # Hunfrey u Brány světů (docs/adr/0085)
 }
 
 
