@@ -2696,10 +2696,28 @@ class MakromonMapActivity : AppCompatActivity() {
             if (StoryFlags.isSet(this, SecretGrove.RELEASED_KEY))
                 body.addView(ui.text(SecretGrove.GATE_RUNES_LINE, 17f, ui.olive).apply { setPadding(0, ui.px(2f), 0, ui.px(6f)) })
             board.missing?.let { body.addView(ui.text("Chybí: $it 🍃", 19f, ui.rust).apply { setPadding(0, ui.px(4f), 0, ui.px(6f)) }) }
-            body.addView(ui.button("Rozumím") { close() }.apply {
+            body.addView(ui.button("Rozumím") { close(); afterGateBoard() }.apply {
                 layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     .apply { topMargin = ui.px(8f) }
             })
+        }
+    }
+
+    /**
+     * Po přečtení tabule u brány: čeká-li Hunfrey na runy (2. fáze, docs/adr/0085), fáze se splní hned
+     * a Hunfrey runy vyloží – dřív se to stalo až při dalším oslovení a hráč myslel, že se nic nestalo.
+     */
+    private fun afterGateBoard() {
+        if (currentBiome != BiomeType.SKY_PASS) return
+        val H = cz.uhk.macroflow.pokemon.story.Hunfrey
+        lifecycleScope.launch {
+            val p = kotlinx.coroutines.withContext(Dispatchers.IO) { db.questDao().getQuestById(H.QUEST_ID) }
+            if (p == null || p.isCompleted || p.currentStageIndex != H.RUNES_STAGE) return@launch
+            if (questManager.getActiveQuestId() == H.QUEST_ID) questManager.recheck()   // splní fázi a Hunfrey promluví
+            else {
+                questManager.loadQuest(H.QUEST_ID)                                      // splní fázi potichu…
+                mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 300)  // …a Hunfrey promluví
+            }
         }
     }
 

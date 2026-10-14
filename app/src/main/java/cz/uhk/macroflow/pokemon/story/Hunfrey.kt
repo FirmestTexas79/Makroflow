@@ -19,6 +19,8 @@ object Hunfrey {
     const val Y = 226
     const val HEIGHT = 26
 
+    /** Fáze, ve které čeká, až si hráč přečte runy na bráně (index). */
+    const val RUNES_STAGE = 1
     /** Fáze, ve které radí, jak získat Srdce Hvozdu (index). */
     const val ADVICE_STAGE = 2
 

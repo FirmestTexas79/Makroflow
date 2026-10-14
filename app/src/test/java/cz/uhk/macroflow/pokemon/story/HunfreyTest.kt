@@ -29,7 +29,7 @@ class HunfreyTest {
         assertTrue(q.side)
         assertEquals(3, q.stages.size)
         assertEquals(SkyPass.CLAWS_NODE, q.stages[0].targetId)
-        assertEquals(RequirementType.STORY_FLAG, q.stages[1].requirementType)
+        assertEquals(RequirementType.STORY_FLAG, q.stages[Hunfrey.RUNES_STAGE].requirementType)
         assertEquals(SkyPass.GATE_SEEN_KEY, q.stages[1].targetId)
         assertEquals(SkyPass.HEART_PLACED_KEY, q.stages[Hunfrey.ADVICE_STAGE].targetId)
         assertTrue(q.stages.all { it.speakerName == Hunfrey.NAME })
