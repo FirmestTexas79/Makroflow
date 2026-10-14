@@ -15,4 +15,4 @@ Stav: přijato (2026-10-14), větev `MULTI`
      aktuální fáze; Srdce v batohu → vlož ho do lůžka.
 - Lore: kartu „našel ve Městě“ a na rubu má razítko S-7 (stopa Kustodiátu, ADR k bibli příběhu).
   Drakirra „neutíkala před tebou, ale před něčím, co viděla vedle tebe“ – ladí s bible (viděla Spirru / nádobu).
-- Kdo bránu otevře dřív, než Hunfreye osloví, má quest hned splněný a slyší rovnou rozloučení.
+- Kdo už tabuli četl nebo bránu otevřel, než Hunfreye oslovil, má 2. (a 3.) fázi splněnou hned po rýhách.
