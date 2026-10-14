@@ -61,7 +61,9 @@ class QuestManager(
      * Odpracované minuty od začátku fáze v každé dovednosti (docs/adr/0050): (dovednosti, začátek fáze ms)
      * → Skill.id na minuty. Volá se na IO vlákně.
      */
-    private val afkMinutesProvider: ((List<String>, Long) -> Map<String, Int>)? = null
+    private val afkMinutesProvider: ((List<String>, Long) -> Map<String, Int>)? = null,
+    /** Připomínka podle stavu hry místo pevné (questId, index fáze) → text; null = běžná připomínka (docs/adr/0085). */
+    private val hintProvider: ((String, Int) -> String?)? = null
 ) {
     private var activeQuest: QuestDefinition? = null
     private var currentProgress: QuestProgressEntity? = null
@@ -313,7 +315,7 @@ class QuestManager(
         }
         val introSeen = introSeenIndex(quest.id) >= progress.currentStageIndex
         var text = if (!playerInitiated || !introSeen) stage.text
-            else (crackProvider?.invoke(quest.id)?.let { it + "\n\n" } ?: "") + QuestProgression.reminder(stage, progress.metadata)
+            else (crackProvider?.invoke(quest.id)?.let { it + "\n\n" } ?: "") + (hintProvider?.invoke(quest.id, progress.currentStageIndex) ?: QuestProgression.reminder(stage, progress.metadata))
         // odměna za předchozí fázi zazní jako první
         pendingRewardLine?.let { text = it + "\n\n" + stage.text; pendingRewardLine = null }
         markIntroSeen(quest.id, progress.currentStageIndex)

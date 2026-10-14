@@ -24,6 +24,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import cz.uhk.macroflow.BuildConfig
 import coil.ImageLoader
+import coil.load
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import cz.uhk.macroflow.R
@@ -165,7 +166,7 @@ class MakromonMapActivity : AppCompatActivity() {
             it.requestLayout()
         }
 
-        val imageLoader = ImageLoader.Builder(this).components {
+        imageLoader = ImageLoader.Builder(this).components {
             if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory()) else add(GifDecoder.Factory())
         }.build()
 
@@ -259,7 +260,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 else { items.forEach { (id, n) -> SS.consume(applicationContext, id, n) }; true }
             },
             // Praskliny ve fasádě (docs/adr/0047): postava občas na zlomek věty zaváhá
-            crackProvider = { qid -> Insight.crack(qid, StoryFlags.insight(applicationContext), kotlin.random.Random.nextInt(100)) }
+            crackProvider = { qid -> Insight.crack(qid, StoryFlags.insight(applicationContext), kotlin.random.Random.nextInt(100)) },
+            // Hunfrey radí podle postupu hráče, jak získat Srdce Hvozdu (docs/adr/0085)
+            hintProvider = { qid, idx -> if (qid == cz.uhk.macroflow.pokemon.story.Hunfrey.QUEST_ID && idx == cz.uhk.macroflow.pokemon.story.Hunfrey.ADVICE_STAGE) hunfreyAdvice() else null }
         )
 
         // PROPOJENÍ: Když se v manageru změní progres (např. onMealLogged), refreshneme UI
@@ -850,7 +853,12 @@ class MakromonMapActivity : AppCompatActivity() {
                     "Drakirra tudy odletěla – stopy míří dolů, nad korunami Hvozdu.")
                 SkyPass.CAIRN_NODE -> showMapToast("🪨 Mužík z plochých kamenů. Poutníci sem pokládají kámen pro štěstí na cestě mezi světy.\n" +
                     "Na tom nejvyšším je vyrytý list.")
-                SkyPass.VISTA_NODE, SkyPass.LEDGE_NODE -> vistaShot()
+                SkyPass.VISTA_NODE -> vistaShot()
+                // Hunfrey na plošině vedle brány (docs/adr/0085)
+                cz.uhk.macroflow.pokemon.story.Hunfrey.NODE -> {
+                    questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Hunfrey.QUEST_ID)
+                    mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150)
+                }
                 "camp" -> restAtCamp()
                 "rozcesti_hory" -> showMapToast("🪧 ↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku")
                 "starter_bush" -> {
@@ -1277,6 +1285,8 @@ class MakromonMapActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────────────────────────
 
     private val db by lazy { AppDatabase.getDatabase(this) }
+    /** Coil s podporou GIFů – portréty v dialozích a animovaní NPC na mapě (Hunfrey). */
+    private lateinit var imageLoader: ImageLoader
 
     /** Postup příběhu krystalů (příznaky v GamePrefs + krystaly v inventáři). */
     private suspend fun loadLegend(): LegendProgress = kotlinx.coroutines.withContext(Dispatchers.IO) {
@@ -1290,7 +1300,7 @@ class MakromonMapActivity : AppCompatActivity() {
             clearDecor()
             val cave = BiomeRegistry.definition(currentBiome)?.cave
             when {
-                currentBiome == BiomeType.SKY_PASS -> placeSkyPassDecor()
+                currentBiome == BiomeType.SKY_PASS -> { placeSkyPassDecor(); placeHunfrey() }
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
                 currentBiome == BiomeType.HIDDEN_GROVE -> placeGroveDecor()
                 currentBiome == BiomeType.MINES -> { placeMinesDecor(); placeEncounterGlows(cave!!); placeGatherSpots(); placeVendelin() }
@@ -1353,6 +1363,40 @@ class MakromonMapActivity : AppCompatActivity() {
      * Živý Nebeský průsmyk (docs/adr/0044): třpytivý závoj v Bráně světů, pulzující lůžko
      * pro Srdce Hvozdu a obláčky plující přes moře mraků nad údolím.
      */
+    /** Hunfrey na plošině vpravo od brány – animovaný GIF (docs/adr/0085). */
+    private fun placeHunfrey() {
+        if (worldScale <= 0) return
+        val s = worldScale.toFloat()
+        val H = cz.uhk.macroflow.pokemon.story.Hunfrey
+        val size = (H.HEIGHT * s).toInt()
+        val npc = ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(size, size)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            x = H.X * s - size / 2f; y = H.Y * s - size * 0.97f; elevation = 2f
+            contentDescription = H.NAME
+        }
+        npc.load(R.drawable.npc_hunfrey, imageLoader)
+        addDecor(npc)
+    }
+
+    /** Rada Hunfreye podle postupu: úkoly pro vstup do Hvozdu, quest Mydruse, Srdce v batohu. */
+    private fun hunfreyAdvice(): String {
+        val quests = db.questDao().getAllQuests()
+        val done = cz.uhk.macroflow.pokemon.cave.ForestMap.completedTasks(quests.map { p ->
+            Triple(cz.uhk.macroflow.pokemon.quests.QuestRegistry.byId(p.questId)?.stages?.size ?: 0, p.currentStageIndex, p.isCompleted)
+        })
+        val fp = quests.firstOrNull { it.questId == "forest_heart" }
+        val forest = fp?.takeIf { !it.isCompleted }?.let { p ->
+            cz.uhk.macroflow.pokemon.quests.QuestRegistry.byId("forest_heart")?.stages?.getOrNull(p.currentStageIndex)
+                ?.let { cz.uhk.macroflow.pokemon.story.Hunfrey.ForestStage(p.currentStageIndex, it.title, it.hint) }
+        }
+        return cz.uhk.macroflow.pokemon.story.Hunfrey.advice(
+            hasHeart = cz.uhk.macroflow.pokemon.skills.SkillStore.count(this, ForestHeart.ITEM_ID) > 0,
+            heartPlaced = StoryFlags.isSet(this, SkyPass.HEART_PLACED_KEY),
+            tasksDone = done, tasksNeeded = cz.uhk.macroflow.pokemon.cave.ForestMap.REQUIRED_TASKS,
+            forest = forest, forestDone = fp?.isCompleted == true)
+    }
+
     private fun placeSkyPassDecor() {
         if (worldScale <= 0) return
         val s = worldScale.toFloat()

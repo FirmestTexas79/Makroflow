@@ -480,7 +480,44 @@ object QuestRegistry {
     )
 
     /** Pořadí v deníku: hlavní kapitoly v pořadí příběhu, pak vedlejší linky, pak tajné. */
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, MINES_QUEST, SECRET_GROVE_QUEST) }
+    // ── Hunfrey u Brány světů (docs/adr/0085) ──
+    private const val HUNFREY = cz.uhk.macroflow.pokemon.story.Hunfrey.NAME
+
+    val HUNFREY_QUEST = QuestDefinition(
+        id = cz.uhk.macroflow.pokemon.story.Hunfrey.QUEST_ID,
+        chapter = "🧭 BRÁNA SVĚTŮ",
+        side = true,
+        farewell = cz.uhk.macroflow.pokemon.story.Hunfrey.FAREWELL,
+        stages = listOf(
+            QuestStage(
+                title = "Poutník u brány",
+                text = cz.uhk.macroflow.pokemon.story.Hunfrey.INTRO,
+                speakerResId = R.drawable.npc_hunfrey, speakerName = HUNFREY,
+                requirementType = RequirementType.VISIT_NODE, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.cave.SkyPass.CLAWS_NODE,
+                hint = cz.uhk.macroflow.pokemon.story.Hunfrey.CLAWS_HINT
+            ),
+            QuestStage(
+                title = "Runy na bráně",
+                text = cz.uhk.macroflow.pokemon.story.Hunfrey.RUNES,
+                speakerResId = R.drawable.npc_hunfrey, speakerName = HUNFREY,
+                // splní se přečtením tabule u brány; Hunfrey pak při oslovení vysvětlí runy
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.cave.SkyPass.GATE_SEEN_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.Hunfrey.RUNES_HINT
+            ),
+            QuestStage(
+                title = "Srdce pro bránu",
+                text = cz.uhk.macroflow.pokemon.story.Hunfrey.HEART,
+                speakerResId = R.drawable.npc_hunfrey, speakerName = HUNFREY,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.cave.SkyPass.HEART_PLACED_KEY
+                // připomínku skládá Hunfrey.advice podle postupu hráče (MakromonMapActivity.hintProvider)
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, MINES_QUEST, HUNFREY_QUEST, SECRET_GROVE_QUEST) }
 
     /** Pořadí kapitoly v deníku (neznámé na konec). */
     fun journalOrder(id: String): Int {
