@@ -11,7 +11,7 @@ import org.junit.Test
 /** Noví Makromoni (docs/adr/0084): vývoj, učení útoků a typ podpisového útoku. */
 class NewSpeciesTest {
 
-    private val NEW = listOf("033", "041", "042", "043", "044", "045", "047")
+    private val NEW = listOf("033", "036", "037", "038", "039", "040", "041", "042", "043", "044", "045", "047")
 
     @Test
     fun everyNewSpeciesLearnsMovesThatResolve() {
@@ -29,6 +29,11 @@ class NewSpeciesTest {
         val lvl = SpeciesRegistry.byId("044")!!.evolves!!.level
         assertTrue(MakromonGrowthManager.getProfile("045")!!.movesLearnedAt.all { it.level >= lvl })
         assertTrue(MakromonGrowthManager.getProfile("041")!!.movesLearnedAt.all { it.level > 12 })
+        for ((from, to) in listOf("036" to "037", "038" to "039")) {
+            val evo = SpeciesRegistry.byId(from)!!.evolves!!
+            assertEquals(to, evo.to)
+            assertTrue("$to se učí před vývojem", MakromonGrowthManager.getProfile(to)!!.movesLearnedAt.all { it.level >= evo.level })
+        }
         // Krystalos umí i to, co se naučil jako Gemak
         assertTrue(MovePool.pool("045", 12).any { it.name == "DIG" })
     }

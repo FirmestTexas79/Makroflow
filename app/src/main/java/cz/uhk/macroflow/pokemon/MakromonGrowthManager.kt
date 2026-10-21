@@ -367,6 +367,55 @@ object MakromonGrowthManager {
                 LearnableMove(28, Move("MIND SPIRAL", MakromonType.PSYCHIC, 110, 85, 5, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.CONFUSE, 30)))
             )
         ),
+        // Tynafi (036) -> Tynafior (037) na levelu 8
+        "036" to MakromonGrowthProfile(
+            makrodexId = "036",
+            movesLearnedAt = listOf(
+                LearnableMove(3, BattleFactory.attackEmber()),
+                LearnableMove(5, BattleFactory.attackBite()),
+                LearnableMove(7, BattleFactory.attackSmokescreen())
+            )
+        ),
+        "037" to MakromonGrowthProfile(
+            makrodexId = "037",
+            movesLearnedAt = listOf(
+                LearnableMove(10, BattleFactory.attackSlash()),
+                LearnableMove(13, BattleFactory.attackCrunch()),
+                LearnableMove(16, BattleFactory.attackFireBlast()),
+                LearnableMove(22, Move("WILDFIRE MANE", MakromonType.FIRE, 100, 90, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.BURN, 30)))
+            )
+        ),
+        // Johnsova (038) -> Grifben (039) na levelu 10
+        "038" to MakromonGrowthProfile(
+            makrodexId = "038",
+            movesLearnedAt = listOf(
+                LearnableMove(3, BattleFactory.attackGust()),
+                LearnableMove(5, BattleFactory.attackQuickAttack()),
+                LearnableMove(7, BattleFactory.attackHypnosis()),
+                LearnableMove(9, BattleFactory.attackWingAttack())
+            )
+        ),
+        "039" to MakromonGrowthProfile(
+            makrodexId = "039",
+            movesLearnedAt = listOf(
+                LearnableMove(12, BattleFactory.attackFuryAttack()),
+                LearnableMove(15, Move("STATIC FEATHERS", MakromonType.ELECTRIC, 0, 100, 15, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.RAISE_ATK))),
+                LearnableMove(18, Move("STORM DIVE", MakromonType.FLYING, 100, 90, 10)),
+                LearnableMove(24, Move("THUNDERSTORM", MakromonType.ELECTRIC, 110, 80, 5, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.PARALYZE, 30)))
+            )
+        ),
+        // Lumivix (040) – nevyvíjí se
+        "040" to MakromonGrowthProfile(
+            makrodexId = "040",
+            movesLearnedAt = listOf(
+                LearnableMove(4,  BattleFactory.attackBabyDollEyes()),
+                LearnableMove(6,  BattleFactory.attackQuickAttack()),
+                LearnableMove(10, BattleFactory.attackDazzlingGleam()),
+                LearnableMove(14, BattleFactory.attackPlayRough()),
+                LearnableMove(18, BattleFactory.attackMoonblast()),
+                LearnableMove(24, Move("CRYSTAL WINGS", MakromonType.FAIRY, 100, 95, 10, effect = cz.uhk.macroflow.pokemon.status.MoveEffect(cz.uhk.macroflow.pokemon.status.EffectKind.LOWER_DEF, 20)))
+            )
+        ),
         // Hunfrey (042) – nevyvíjí se, stratég
         "042" to MakromonGrowthProfile(
             makrodexId = "042",

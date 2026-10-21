@@ -31,3 +31,16 @@ Stav: přijato (2026-10-14), větev `MULTI`
 | Gemak | batolí se | krystaly jiskří | stočí se do klubka a přejede | schová se do krunýře, jiskry |
 | Krystalos | dupe | dýchá, krystaly jiskří | těžce přeleze | otřese se a vystřelí střepy |
 | Magmor | dupe | sopka na zádech dýmá, občas jiskra | těžce přeleze | erupce: kouř a déšť jisker |
+
+## Doplněno 2026-10-21: Tynafi, Tynafior, Johnsova, Grifben, Lumivix
+- **Typ v souboji**: Tynafi a Tynafior neměli `type` a první útok byl TACKLE → v souboji byli NORMÁLNÍ.
+  Teď OHEŇ (FIRE FANG / FLAMETHROWER první). Johnsova byla podle SAND ATTACK zemní → BLESK s novým
+  podpisovým THUNDER SHOCK. Grifben má první THUNDERBOLT, Lumivix CHARM.
+- **Učení útoků**: Tynafi 3 EMBER, 5 BITE, 7 SMOKESCREEN · Tynafior 10 SLASH, 13 CRUNCH, 16 FIRE BLAST,
+  22 WILDFIRE MANE (popálení 30 %) · Johnsova 3 GUST, 5 QUICK ATTACK, 7 HYPNOSIS, 9 WING ATTACK ·
+  Grifben 12 FURY ATTACK, 15 STATIC FEATHERS (+útok), 18 STORM DIVE, 24 THUNDERSTORM (paralýza 30 %) ·
+  Lumivix 4 BABY-DOLL, 6 QUICK ATTACK, 10 DAZZL.GLEAM, 14 PLAY ROUGH, 18 MOONBLAST, 24 CRYSTAL WINGS.
+- **Lišta**: Tynafi/Tynafior plamínky v srsti, skok s jiskrami, klepnutí = plamen · Johnsova/Grifben
+  natáčí hlavu, jiskry v peří, přelet, klepnutí = výboj (Grifben větší a čechrá si peří) ·
+  Lumivix poskakuje a jiskří, přeplachtí, klepnutí = víla jiskry.
+- Statistiky těchto pěti jsou stále v „malé“ stupnici – řeší samostatný úkol vyvážení.

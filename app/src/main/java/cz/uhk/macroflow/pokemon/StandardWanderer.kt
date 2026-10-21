@@ -329,6 +329,7 @@ class StandardWanderer(
         "022", "023" -> 0.40f           // Mycit – nervózní, ale zvědavý
         "019", "003" -> 0.50f           // letci to mají nejsnazší
         "044" -> 0.45f                  // Gemak – rád se kutálí přes tlačítko
+        "036", "040" -> 0.40f           // Tynafi, Lumivix – hraví
         "033", "045", "047" -> 0.18f    // těžcí – líní
         else -> 0.30f
     }
@@ -468,6 +469,11 @@ class StandardWanderer(
             "042" -> walkBouncy(fromX, toX, bounceHeight = 4f) // Hunfrey – klidný sebejistý krok
             "043" -> walkBouncy(fromX, toX, bounceHeight = 3f) // Kendl – svíčka poskakuje
             "044" -> walkBouncy(fromX, toX, bounceHeight = 5f) // Gemak – batolí se
+            "036" -> walkBouncy(fromX, toX, bounceHeight = 9f) // Tynafi – rozdováděné štěně
+            "037" -> walkBouncy(fromX, toX, bounceHeight = 5f) // Tynafior – hrdý klus
+            "038" -> walkBouncy(fromX, toX, bounceHeight = 4f) // Johnsova – sovička cupitá
+            "039" -> walkBouncy(fromX, toX, bounceHeight = 6f) // Grifben – pérové kroky
+            "040" -> walkBouncy(fromX, toX, bounceHeight = 7f) // Lumivix – lehký poskok
 
             else -> walkDefault(fromX, toX)
         }
@@ -687,6 +693,9 @@ class StandardWanderer(
             "042" -> crossPerch(fromFx, toFx, o)                                      // Hunfrey – vyleze nahoru a rozhlédne se
             "043" -> crossPhase(fromFx, toFx, o)                                      // Kendl – projde skrz jako přízrak
             "044" -> crossRoll(fromFx, toFx, o)                                       // Gemak – stočí se do klubka a přejede
+            "036", "037" -> crossJump(fromFx, toFx, o, spin = false, embers = true)   // Tynafi/Tynafior – skok s jiskrami
+            "038", "039" -> crossFly(fromFx, toFx, o)                                 // Johnsova/Grifben – přeletí
+            "040" -> crossHover(fromFx, toFx, o)                                      // Lumivix – přeplachtí na krystalových křídlech
             else -> crossJump(fromFx, toFx, o, spin = false, embers = false)
         }
     }
@@ -1108,6 +1117,10 @@ class StandardWanderer(
             "044" -> startStoneIdle(sparkle = Color.parseColor("#4DD0E1"))
             "045" -> startStoneIdle(sparkle = Color.parseColor("#4DD0E1"), heavy = true)
             "047" -> startMagmorIdle()
+            "036", "037" -> startFlamirraIdle()          // plamínky v srsti
+            "038" -> startSparkIdle(heavy = false)
+            "039" -> startSparkIdle(heavy = true)
+            "040" -> startLumivixIdle()
             else  -> startDefaultIdle()
         }
     }
@@ -1299,6 +1312,52 @@ class StandardWanderer(
         if (!running || gen != idleGeneration) return
         (pokemonView.parent as? ViewGroup)?.let(fx)
         handler.postDelayed({ scheduleIdleFx(gen, minMs, maxMs, fx) }, Random.nextLong(minMs, maxMs))
+    }
+
+
+    /** Johnsova / Grifben: sedí, občas natočí hlavu, peřím přeskakují jiskry. Grifben si navíc čechrá peří. */
+    private fun startSparkIdle(heavy: Boolean): Animator {
+        val tilt = ObjectAnimator.ofFloat(pokemonView, "rotation", 0f, 0f, 7f, 7f, 0f, 0f, -5f, 0f).apply {
+            duration = if (heavy) 5200L else 4200L; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART
+        }
+        val fs = facingSign()
+        val ruffle = ObjectAnimator.ofFloat(pokemonView, "scaleX", fs * baseScale, fs * baseScale, fs * baseScale * 1.06f, fs * baseScale).apply {
+            duration = 3000; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART
+        }
+        scheduleIdleFx(minMs = if (heavy) 300 else 600, maxMs = if (heavy) 800 else 1500) { p ->
+            val x = pokemonView.x + pokemonView.width * (0.2f + Random.nextFloat() * 0.6f)
+            val y = pokemonView.y + pokemonView.height * (0.3f + Random.nextFloat() * 0.4f)
+            puff(p, x, y, if (Random.nextBoolean()) Color.parseColor("#FFE066") else Color.parseColor("#B3E5FC"), 2.5f,
+                (Random.nextFloat() - 0.5f) * 16f, -10f, 300, rect = true)
+        }
+        return AnimatorSet().apply { if (heavy) playTogether(tilt, ruffle) else play(tilt); start() }
+    }
+
+    /** Lumivix: lehké vznášení, krystalová křídla jiskří růžově a fialově. */
+    private fun startLumivixIdle(): Animator {
+        val bob = ObjectAnimator.ofFloat(pokemonView, "translationY", targetTranslationY, targetTranslationY - 5f * dp, targetTranslationY).apply {
+            duration = 1700; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART; interpolator = AccelerateDecelerateInterpolator()
+        }
+        scheduleFairySparkles()
+        bob.start(); return bob
+    }
+
+    /** Johnsova / Grifben: výboj – blesky odletí do všech stran, Makromon se načepýří. */
+    private fun sparkReaction(big: Boolean) {
+        stopWobble(); moveAnim?.cancel()
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val cx = pokemonView.x + pokemonView.width / 2f; val cy = pokemonView.y + pokemonView.height * 0.45f
+        val n = if (big) 12 else 8
+        repeat(n) { i ->
+            val a = Math.toRadians(i * 360.0 / n)
+            puff(parent, cx, cy, if (i % 2 == 0) Color.parseColor("#FFE066") else Color.parseColor("#FFFFFF"), 3f,
+                cos(a).toFloat() * (if (big) 70f else 50f), sin(a).toFloat() * (if (big) 70f else 50f), 380, rect = true)
+        }
+        val fs = facingSign()
+        pokemonView.animate().scaleX(fs * baseScale * 1.15f).scaleY(baseScale * 1.15f).setDuration(90).withEndAction {
+            pokemonView.animate().scaleX(fs * baseScale).scaleY(baseScale).setDuration(220).setInterpolator(OvershootInterpolator())
+                .withEndAction { if (running) startWobble() }.start()
+        }.start()
     }
 
     /** Mysnor / Gemak / Krystalos: pomalé dýchání pod krunýřem, krystaly občas zajiskří. */
@@ -1528,6 +1587,10 @@ class StandardWanderer(
             "044" -> shellTuckReaction(Color.parseColor("#4DD0E1"))
             "045" -> crystalBurstReaction()
             "047" -> eruptionReaction()
+            "036", "037" -> fireBreathReaction()
+            "038" -> sparkReaction(big = false)
+            "039" -> sparkReaction(big = true)
+            "040" -> fairySparkleReaction()
             else  -> defaultTapReaction()
         }
     }

@@ -504,11 +504,12 @@ object SpeciesRegistry {
             hint = "Potkáš ho v divočině.",
             stats = Stats(hp = 32, atk = 14, def = 8, spd = 15),
             moves = { listOf(
-                attackTackle(),
                 attackFireFang(),
+                attackTackle(),
                 attackFuryAttack(),
                 attackCharm()
             ) },
+            type = MakromonType.FIRE,
             evolves = Evolve("037", 8),
             spawns = listOf(Spawn(COMMON, ALL_WILD))
         ),
@@ -518,11 +519,12 @@ object SpeciesRegistry {
             hint = "Vyvine se z Tynafiho na levelu 8.",
             stats = Stats(hp = 60, atk = 20, def = 30, spd = 20, level = 8),
             moves = { listOf(
-                attackTackle(),
                 attackFlamethrower(),
+                attackTackle(),
                 attackFuryAttack(),
                 attackHeatWave()
             ) },
+            type = MakromonType.FIRE,
             spawns = listOf(Spawn(COMMON, ALL_WILD))
         ),
 
@@ -531,11 +533,13 @@ object SpeciesRegistry {
             hint = "Hledej v Horách.",
             stats = Stats(hp = 35, atk = 12, def = 12, spd = 15),
             moves = { listOf(
+                attackThunderShock(),
                 attackSandAttack(),
                 attackThunderbolt(),
                 attackScratch(),
                 attackConfuseRay()
             ) },
+            type = MakromonType.ELECTRIC,
             evolves = Evolve("039", 10),
             spawns = listOf(Spawn(COMMON, listOf(MOUNTAINS)))
         ),
@@ -546,8 +550,8 @@ object SpeciesRegistry {
             hint = "Grifben se vyvine z Johnsovy na levelu 10. Vzácně krouží i nad Horami.",
             stats = Stats(hp = 62, atk = 24, def = 22, spd = 26, level = 10),
             moves = { listOf(
-                attackWingAttack(),
                 attackThunderbolt(),
+                attackWingAttack(),
                 attackSlash(),
                 attackLeer()
             ) },
@@ -562,8 +566,8 @@ object SpeciesRegistry {
             hint = "Potkáš ho v divočině.",
             stats = Stats(hp = 35, atk = 12, def = 12, spd = 15),
             moves = { listOf(
-                attackTackle(),
                 attackCharm(),
+                attackTackle(),
                 attackBite()
             ) },
             spawns = listOf(Spawn(COMMON, ALL_WILD)),
