@@ -83,9 +83,34 @@ def house(w=48, wall_h=24, rows=6, roof_pal=ROOF_RED, wall="plaster", shut="gree
         stones(s, 2, w - 3, y0, y1, h=4, w=(5, 8), seed=seed, tone=1)
     else:
         base = PL if wall != "ochre" else [c(0xA88A5C), c(0xCCAA72), c(0xE6C890), c(0xF4DEAA)]
+        rr = np.random.default_rng(seed * 7 + 1)
         for yy in range(y0, y1 + 1):
+            v = (yy - y0) / max(1, wall_h)
             for xx in range(2, w - 2):
-                s.px(xx, yy, base[2] if yy > y0 + 1 else base[0])
+                col = base[0] if yy <= y0 + 1 else base[1] if yy <= y0 + 3 else base[2]
+                n = ((xx * 73 + yy * 151 + seed * 31) % 17)
+                if yy > y0 + 3 and n == 0:
+                    col = base[1]                                    # skvrny v omítce
+                elif yy > y0 + 3 and n == 1 and v < 0.6:
+                    col = base[3]
+                if v > 0.82 and (xx + yy) % 2 == 0:
+                    col = base[1]                                    # zašpinění u země
+                s.px(xx, yy, col)
+        # odpadlá omítka – cihly
+        for _ in range(2):
+            bx = int(rr.integers(4, max(5, w - 14))); by = int(rr.integers(y0 + 5, max(y0 + 6, y1 - 6)))
+            for yy in range(by, by + 4):
+                for xx in range(bx, bx + 6 - abs(yy - by - 1)):
+                    if 2 < xx < w - 3:
+                        brick = (xx + (yy % 2) * 2) % 4 == 0 or yy % 2 == 0
+                        s.px(xx, yy, c(0x8A4A36) if brick else c(0xB4644A))
+        # nároží z kvádrů
+        for qx in (2, w - 6):
+            for i, yy in enumerate(range(y0 + 2, y1 - 1, 4)):
+                ww = 4 if i % 2 == 0 else 3
+                x0q = qx if qx == 2 else qx + (4 - ww)
+                s.rect(x0q, yy, x0q + ww - 1, yy + 2, STN[3]); s.hline(x0q, x0q + ww - 1, yy, STN[4])
+                s.hline(x0q, x0q + ww - 1, yy + 3, STN[1])
         if wall == "timber":
             for bx in (2, w // 2, w - 3):
                 s.vline(bx, y0, y1, WD[1])
@@ -155,40 +180,83 @@ def venka_house():
 
 
 def fountain():
-    """Velká kašna 72 × 48 na střed náměstí: osmiboká kamenná nádrž, horní mísa, socha s vahami, proudy vody."""
-    s = Spr(72, 48)
-    WATER = [c(0x2A6A98), c(0x3A86B8), c(0x6AAED6), c(0xC8E8F8)]
-    cx = 35.5
-    for y in range(14, 48):
-        for x in range(72):
-            d = ((x - cx) / 35) ** 2 + ((y - 32) / 15) ** 2
-            din = ((x - cx) / 30) ** 2 + ((y - 31) / 11.5) ** 2
-            if d > 1:
+    """
+    Kašna 80 × 64: osmiboká kamenná nádrž s reliéfními panely, na podstavci bílá socha zahalené postavy,
+    která drží nad hlavou VELKÉ zlaté váhy – z obou misek teče voda do nádrže.
+    """
+    W, H = 80, 70
+    s = Spr(W, H)
+    WATER = [c(0x24608E), c(0x3480B2), c(0x5EA6D2), c(0xCDEBFA)]
+    GOLD = [c(0x7A5A16), c(0xB8902E), c(0xE6C258), c(0xFFF0A8)]
+    MARB = [c(0x8E8A92), c(0xB8B4BC), c(0xDCD8DE), c(0xF6F4F6)]
+    cx, cy = 39.5, 46
+    def octa(x, y, rx, ry):
+        dx, dy = abs(x - cx) / rx, abs(y - cy) / ry
+        return max(dx, dy, (dx + dy) / 1.38) <= 1
+    for y in range(28, H):
+        for x in range(W):
+            if not octa(x, y, 39, 15):
                 continue
-            if din <= 1:
-                s.px(x, y, WATER[1] if (x + y * 3) % 9 else WATER[2])
-                if (x * 5 + y * 11) % 97 == 0:
+            if octa(x, y, 33, 11):
+                k = 1 if (x + y * 3) % 11 else 2
+                if ((x - cx) ** 2 / 900 + (y - cy) ** 2 / 100) < 0.25 and (x + y) % 5 == 0:
+                    k = 2
+                s.px(x, y, WATER[k])
+                if (x * 5 + y * 11) % 89 == 0:
                     s.px(x, y, WATER[3])
-            elif y < 32:
-                s.px(x, y, STN[4] if d > 0.93 or din < 1.12 else STN[3])
+            elif y < cy:
+                s.px(x, y, MARB[3] if not octa(x, y, 37.5, 14) else MARB[2])       # horní hrana obruby
             else:
-                s.px(x, y, STN[2] if (int(x) // 6 + y // 3) % 2 else STN[1])
-            if y >= 38 and d > 0.82:
-                s.px(x, y, STN[2] if (x // 7) % 2 else STN[1])
-    # horní mísa na sloupu
-    s.rect(32, 12, 39, 32, STN[3]); s.vline(32, 12, 32, STN[4]); s.vline(39, 12, 32, STN[1])
-    s.ellipse(cx, 14, 13, 4.5, STN[3]); s.ellipse(cx, 13.5, 11, 3.2, WATER[1]); s.hline(26, 46, 18, STN[1])
-    # socha: postava s vahami
-    s.rect(33, 2, 38, 12, c(0xC8C2B6)); s.vline(33, 2, 12, c(0xE6E2D8)); s.ellipse(cx, 1.5, 2.2, 2, c(0xE6E2D8))
-    s.hline(26, 45, 4, c(0xB8902E)); s.vline(26, 5, 6, c(0xB8902E)); s.vline(45, 5, 6, c(0xB8902E))
-    s.hline(24, 28, 7, c(0xE6C258)); s.hline(43, 47, 7, c(0xE6C258))
-    # proudy z mísy do nádrže
-    for (x0, x1) in ((24, 18), (47, 53)):
-        for i in range(10):
-            x = x0 + (x1 - x0) * i // 9; y = 17 + i * i // 6
-            s.px(x, y, WATER[3]); s.px(x, y + 1, WATER[2])
+                s.px(x, y, MARB[2] if not octa(x, y, 37.5, 14) else MARB[1])
+    # přední stěna nádrže s reliéfními panely (pod spodní hranou obruby)
+    for x in range(W):
+        ys = [y for y in range(28, H - 7) if octa(x, y, 39, 15)]
+        if not ys:
+            continue
+        yb = max(ys)
+        if yb < cy + 4:
+            continue
+        for k in range(1, 7):
+            y = yb + k
+            panel = (x // 10) % 2
+            col = MARB[1] if panel else MARB[2]
+            if x % 10 == 0 or k == 6:
+                col = MARB[0]
+            if 3 < x % 10 < 7 and k == 3:
+                col = GOLD[1]
+            s.px(x, y, col)
+    # podstavec
+    for y in range(24, 50):
+        for x in range(33, 47):
+            k = 3 if x < 36 else 2 if x < 43 else 1
+            s.px(x, y, MARB[k])
+    s.hline(31, 48, 24, MARB[3]); s.hline(31, 48, 25, MARB[1]); s.hline(32, 47, 49, MARB[0])
+    # socha: zahalená postava – hlava s páskou, ramena, roucho se záhyby, ruce vzhůru
+    for y in range(11, 24):
+        half = 3 + (y - 11) // 4
+        for x in range(int(cx - half), int(cx + half) + 1):
+            fold = (x - int(cx - half)) % 3 == 0 and y > 14
+            s.px(x, y, MARB[1] if fold else MARB[3] if x < cx - 1 else MARB[2] if x < cx + 2 else MARB[1])
+    s.rect(35, 10, 44, 12, MARB[2]); s.hline(35, 44, 10, MARB[3])            # ramena
+    s.ellipse(cx, 7.5, 2.8, 2.8, MARB[3]); s.hline(37, 42, 7, c(0x4A4650))  # hlava, páska přes oči
+    s.line(35, 10, 33, 4, MARB[2], w=2); s.line(44, 10, 46, 4, MARB[1], w=2) # paže drží vahadlo
+    # VELKÉ váhy nad hlavou: sloupek, vahadlo, řetízky, misky
+    s.vline(39, 0, 5, GOLD[2]); s.vline(40, 0, 5, GOLD[1]); s.rect(38, 0, 41, 1, GOLD[3])
+    s.rect(17, 3, 62, 6, GOLD[1]); s.hline(17, 62, 3, GOLD[3]); s.hline(17, 62, 4, GOLD[2])
+    for px0 in (19, 60):
+        s.line(px0, 6, px0 - 5, 13, GOLD[0]); s.line(px0, 6, px0 + 5, 13, GOLD[0])
+        for k in range(4):
+            s.hline(px0 - 6 + k, px0 + 6 - k, 14 + k, GOLD[2] if k == 0 else GOLD[1] if k < 3 else GOLD[0])
+        s.hline(px0 - 5, px0 + 5, 14, GOLD[3])
     from pix import outline as _o
-    return _o(s, K)
+    _o(s, K)
+    for px0 in (19, 60):
+        for i in range(20):
+            x = px0 + (1 if px0 > 39 else -1) * (i // 6)
+            s.px(x, 18 + i, WATER[3] if i % 3 else WATER[2]); s.px(x + (1 if px0 > 39 else -1), 18 + i, WATER[2])
+        for (dx, dy) in ((-3, 37), (3, 37), (-1, 38), (2, 38)):
+            s.px(px0 + (2 if px0 > 39 else -2) + dx, dy, WATER[3])     # čeření pod proudem
+    return s
 
 
 def bunting(w):
@@ -462,13 +530,31 @@ def shed():
     return outline(s, K)
 
 
-def balustrade(w):
-    s = Spr(w, 14)
-    s.rect(0, 0, w - 1, 2, STN[4]); s.hline(0, w - 1, 2, STN[2])
-    for x in range(1, w - 1, 5):
-        s.rect(x, 3, x + 2, 10, STN[3]); s.vline(x + 2, 3, 10, STN[1]); s.rect(x - 1 if x > 0 else 0, 5, x + 3, 6, STN[3])
-    s.rect(0, 11, w - 1, 13, STN[2]); s.hline(0, w - 1, 11, STN[3])
-    return outline(s, K)
+def balustrade(w, lamps=True):
+    """Kamenné zábradlí w × 24: madlo se světlou hranou, kuželkové balustry, každých 24 px sloupek
+    s hlavicí (na každém druhém lucerna), sokl."""
+    s = Spr(w, 24)
+    top = 8
+    for x in range(w):                                             # madlo
+        s.px(x, top, STN[4]); s.px(x, top + 1, STN[3]); s.px(x, top + 2, STN[2]); s.px(x, top + 3, STN[1])
+    for x in range(2, w - 2, 4):                                   # balustry (kuželky)
+        prof = [1, 2, 2, 1, 1, 2, 3, 3, 2, 1]
+        for i, half in enumerate(prof):
+            y = top + 4 + i
+            for dx in range(-half + 1, half + 1):
+                s.px(x + dx, y, STN[3] if dx <= 0 else STN[1])
+    for x in range(w):                                             # sokl
+        s.px(x, top + 14, STN[3]); s.px(x, top + 15, STN[2])
+    for i, px0 in enumerate(range(0, w, 24)):                      # sloupky
+        for y in range(top - 3, top + 16):
+            for x in range(px0, min(w, px0 + 5)):
+                s.px(x, y, STN[4] if x == px0 else STN[2] if x < px0 + 4 else STN[1])
+        s.rect(px0 - 1, top - 4, px0 + 5, top - 3, STN[4]); s.hline(px0 - 1, px0 + 5, top - 2, STN[1])
+        if lamps and i % 2 == 0:
+            s.rect(px0 + 1, top - 9, px0 + 3, top - 5, c(0x2A2426)); s.px(px0 + 2, top - 7, c(0xFFD27A)); s.px(px0 + 2, top - 8, c(0xFFF2B0))
+            s.px(px0 + 2, top - 10, c(0x2A2426))
+    from pix import outline as _o
+    return _o(s, K)
 
 
 def elevator():

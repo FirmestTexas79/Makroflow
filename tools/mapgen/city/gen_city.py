@@ -17,7 +17,7 @@ import city_parts as C, pix, tiles, objects  # noqa: E402
 from pix import c, Spr  # noqa: E402
 from pixart import STN, stones  # noqa: E402
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "v5"
+VER = sys.argv[1] if len(sys.argv) > 1 else "v6"
 AW, AH = 384, 656
 T = 16
 VOID_Y = 600
@@ -27,6 +27,11 @@ img = np.zeros((AH, AW, 4), np.uint8)
 for r in range(AH // T):
     for q in range(AW // T):
         img[r * T:(r + 1) * T, q * T:(q + 1) * T] = tiles.ground(int(rng.choice([0, 0, 0, 1])), LUSH).a
+
+# za hradbou (nad ní) je Popelavá pláň: popel místo trávy
+for r in range(0, 6):
+    for q in range(AW // T):
+        img[r * T:(r + 1) * T, q * T:(q + 1) * T] = tiles.ground(int(rng.choice([0, 1, 1, 2]))).a
 
 # ── ulice: křivky (Catmull-Rom) s proměnnou šířkou ──
 def cr(t, p0, p1, p2, p3):
@@ -163,7 +168,7 @@ for (x, y) in ((314, 250), (322, 250)):
     place(C.barrel(), x, y)
 place(C.crate(), 246, 252)
 # náměstí
-place(C.fountain(), SQ[0], SQ[1] + 26)
+place(C.fountain(), SQ[0], SQ[1] + 36)
 for (x, y, cl, g) in ((140, 300, "red", "apples"), (244, 300, "blue", "bread"), (140, 372, "green", "apples"), (244, 372, "red", "bread")):
     place(C.stall(cl, g), x, y)
 for (x, y) in ((160, 386), (224, 386)):
@@ -190,9 +195,9 @@ house(258, 556, w=40, wall_h=24, roof_pal=C.ROOF_SLATE, wall="stone", shut="red"
 place(C.shed(), 352, 548)
 # okraj propasti
 place(C.cliff_edge(AW), 192, VOID_Y + 34, z=0, cast=False)
-place(C.balustrade(140), 74, VOID_Y - 2, cast=False)
-place(C.balustrade(170), 300, VOID_Y - 2, cast=False)
-place(C.elevator(), 168, VOID_Y + 12, cast=False)
+place(C.balustrade(152), 76, VOID_Y + 2, cast=False)       # zábradlí přes celou šířku, mezera jen u výtahu
+place(C.balustrade(200), 288, VOID_Y + 2, cast=False)
+place(C.elevator(), 170, VOID_Y + 14, cast=False)
 # stromy B/W: husté okraje, park, kolem Arény a věže
 TREES = [(x, y) for y in range(130, 600, 22) for x in (6, 378)]
 TREES += [(22, 214), (40, 226), (18, 260), (40, 270), (24, 296), (150, 440), (130, 470), (236, 470), (256, 500),
