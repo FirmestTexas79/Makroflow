@@ -8,6 +8,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ashplain"))
 from pix import Spr, c, outline, blobs  # noqa: E402
 from objects import OUT, BARK, STONE, WOOD  # noqa: E402
+from pixart import K, STN, WD, ROOF, PL, GLASS, MOSS, stones, shingles, box_outline, from_ascii  # noqa: E402
 
 LEAF = [c(0x22381E), c(0x386030), c(0x528A42), c(0x74AE5A)]
 APPLE = [c(0x8A1E1A), c(0xC8362A), c(0xF06A50)]
@@ -57,85 +58,186 @@ def old_apple_tree():
 
 
 def stone_wall(w):
-    """Suchá kamenná zídka w × 14: oblé kameny, mech na vršku."""
-    s = Spr(w, 14)
-    r = np.random.default_rng(w)
-    x = 0
-    row_y = [(2, 6), (7, 6)]
-    for (y0, h) in row_y:
-        x = -int(r.integers(0, 4))
-        while x < w:
-            bw = int(r.integers(5, 9))
-            for yy in range(y0, y0 + h):
-                for xx in range(x, x + bw):
-                    e = (xx - x) in (0, bw - 1) or yy in (y0, y0 + h - 1)
-                    k = 0 if e and yy == y0 + h - 1 else 1 if e else 3 if yy < y0 + 2 else 2
-                    s.px(xx, yy, STONE[k])
-            x += bw
-    for xx in range(w):                                              # mech
-        if (xx * 5) % 7 < 3:
-            s.px(xx, 2, LEAF[2]); s.px(xx, 3, LEAF[1])
-    return outline(s, OUT)
+    """Kamenná zídka w × 18: stříška z plochých kamenů, pod ní řady jednotlivě stínovaných kamenů, mech."""
+    s = Spr(w, 18)
+    stones(s, 0, w - 1, 5, 16, h=4, w=(5, 9), seed=w)
+    for x in range(w):                                             # plochá stříška zídky
+        s.px(x, 2, STN[4]); s.px(x, 3, STN[3]); s.px(x, 4, STN[1])
+        if x % 7 == 0:
+            s.px(x, 3, STN[1])
+    s.hline(0, w - 1, 1, K); s.hline(0, w - 1, 17, K); s.vline(0, 1, 17, K); s.vline(w - 1, 1, 17, K)
+    for x in range(2, w - 2):                                      # mech přes stříšku
+        if (x * 5) % 11 < 4:
+            s.px(x, 1, MOSS[1]); s.px(x, 2, MOSS[2])
+            if (x * 3) % 7 == 0:
+                s.px(x, 0, MOSS[0])
+        if (x * 7) % 13 == 0:
+            s.px(x, 5, MOSS[1]); s.px(x, 6, MOSS[0])               # mech stékající do spár
+    return s
 
 
-def gate_open():
-    """Otevřená dřevěná vrátka 34 × 20 (dvě křídla vyklopená ke zdi) se sloupky."""
-    s = Spr(34, 20)
-    for px0 in (0, 29):
-        s.rect(px0, 0, px0 + 4, 19, STONE[2]); s.rect(px0, 0, px0 + 4, 2, STONE[3]); s.px(px0 + 2, 0, STONE[4])
-    for (x0, d) in ((5, 1), (28, -1)):
-        for i in range(6):
-            x = x0 + i * d
-            s.vline(x, 6 - i // 2, 17 - i // 3, WOOD[2] if i % 2 else WOOD[3])
-        s.line(x0, 8, x0 + 5 * d, 6, WOOD[1]); s.line(x0, 14, x0 + 5 * d, 13, WOOD[1])
-    return outline(s, OUT)
+def gate_pillar(cap_moss=True):
+    """Kamenný sloupek brány 12 × 30 s jehlancovou hlavicí."""
+    s = Spr(12, 30)
+    stones(s, 1, 10, 9, 28, h=4, w=(4, 6), seed=31)
+    for y in range(2, 9):                                          # hlavice
+        half = (y - 1) // 1.4
+        for x in range(int(6 - half), int(6 + half) + 1):
+            if 0 <= x < 12:
+                s.px(x, y, STN[4] if x < 6 else STN[2])
+    s.hline(0, 11, 8, STN[3]); s.hline(0, 11, 9, STN[1])
+    s.px(5, 1, STN[4]); s.px(6, 1, STN[3])
+    from pix import outline as _o
+    _o(s, K)
+    if cap_moss:
+        s.px(3, 8, MOSS[2]); s.px(4, 8, MOSS[1]); s.px(8, 8, MOSS[1])
+    return s
+
+
+def gate_leaf(flip=False):
+    """Otevřené křídlo vrátek 10 × 18 (prkna, příčky, kování) – natočené ke sloupku."""
+    rows = [
+        "kkk.......",
+        "kvkk......",
+        "kVvWkk....",
+        "kVvWWwkk..",
+        "kVvWWwWwk.",
+        "kVvWWwWwk.",
+        "kNNNNNNNk.",
+        "kVvWWwWwk.",
+        "kVvWWwWwk.",
+        "kVvWWwWwk.",
+        "kVvWWwWwk.",
+        "kNNNNNNNk.",
+        "kVvWWwWwk.",
+        "kVvWWwWwk.",
+        "kVvWWwWwk.",
+        "kVvWWwWwk.",
+        "kkkkkkkkk.",
+        "..........",
+    ]
+    pal = {"k": K, "v": WD[3], "V": WD[4], "W": WD[2], "w": WD[1], "N": c(0x3A3A44)}
+    sp = from_ascii(rows, pal)
+    if flip:
+        sp.a = sp.a[:, ::-1].copy()
+    return sp
 
 
 def well():
-    """Studna 22 × 26: kamenná obruba, dřevěná stříška, rumpál a vědro."""
-    s = Spr(22, 26)
-    s.ellipse(11, 20, 10, 5, STONE[2]); s.ellipse(11, 19, 7.5, 3.2, c(0x12161C))
-    for a in range(0, 360, 30):
-        x = 11 + 9.5 * math.cos(math.radians(a)); y = 20 + 4.6 * math.sin(math.radians(a))
-        s.px(round(x), round(y), STONE[1])
-    for x in range(1, 21):
-        s.px(x, 20 + (1 if 3 < x < 18 else 0) + 3, STONE[1])
-    s.rect(2, 6, 3, 19, WOOD[2]); s.rect(18, 6, 19, 19, WOOD[1])
-    for y in range(0, 7):
-        w = 4 + y * 2
-        for x in range(11 - w // 2 - 1, 11 + w // 2 + 2):
-            s.px(x, y, WOOD[3] if y % 2 else WOOD[2])
-    s.hline(4, 17, 9, WOOD[1]); s.rect(9, 10, 12, 13, WOOD[2]); s.hline(9, 12, 10, STONE[2])
-    return outline(s, OUT)
+    """Studna 26 × 32: válcová kamenná obruba, tmavá voda s odleskem, sloupky, šindelová stříška, rumpál s vědrem."""
+    s = Spr(26, 32)
+    # obruba – válec: přední stěna z kamenů, horní hrana jako elipsa
+    stones(s, 2, 23, 20, 30, h=4, w=(4, 6), seed=7)
+    for y in range(20, 31):                                        # stín válce vpravo, světlo vlevo
+        for x in range(2, 24):
+            t = (x - 13) / 11
+            if t > 0.45 and s.a[y, x, 3]:
+                s.a[y, x, :3] = (s.a[y, x, :3] * 0.72).astype(np.uint8)
+            elif t < -0.55 and s.a[y, x, 3]:
+                s.a[y, x, :3] = np.minimum(255, s.a[y, x, :3] * 1.12).astype(np.uint8)
+    for y in range(16, 22):
+        for x in range(2, 24):
+            d = ((x - 12.5) / 11) ** 2 + ((y - 19.5) / 3.6) ** 2
+            if d <= 1:
+                s.px(x, y, STN[4] if d > 0.62 and y < 19 else STN[3] if d > 0.62 else c(0x101820))
+    s.px(9, 19, GLASS[2]); s.px(10, 19, GLASS[3]); s.px(15, 20, GLASS[1])          # odlesk vody
+    # sloupky a příčka s rumpálem
+    for px0 in (3, 21):
+        s.rect(px0, 6, px0 + 1, 18, WD[2]); s.vline(px0, 6, 18, WD[3])
+    s.rect(4, 9, 21, 10, WD[2]); s.hline(4, 21, 9, WD[3])
+    s.rect(11, 8, 14, 11, WD[1]); s.vline(12, 11, 14, c(0xC8B08A))                 # rumpál a lano
+    s.rect(10, 15, 14, 18, WD[2]); s.hline(10, 14, 15, STN[3]); s.px(10, 16, WD[3]) # vědro
+    shingles(s, [(0, 10, 15), (2, 6, 19), (4, 2, 23)])
+    s.hline(1, 24, 7, ROOF[0])
+    from pix import outline as _o
+    return _o(s, K)
 
 
-def hive():
-    """Dřevěný úl 12 × 16 se stříškou a česnem."""
-    s = Spr(12, 16)
-    s.rect(1, 5, 10, 14, c(0xD8C080)); s.rect(1, 5, 2, 14, c(0xF0DCA0)); s.hline(1, 10, 9, c(0xA8904E))
-    for y in range(0, 5):
-        s.hline(y // 2, 11 - y // 2, 4 - y, c(0x8A5A3A) if y else c(0xA87050))
-    s.rect(5, 12, 6, 13, c(0x2A1E14))
-    s.rect(1, 15, 10, 15, WOOD[1])
-    return outline(s, OUT)
+def skep():
+    """Slaměný úl (koš) 14 × 16 na dřevěném podstavci – vodorovné prstence slámy, česno."""
+    rows = [
+        "....kkkkkk....",
+        "...kOYYOOOk...",
+        "..kOYOOOOOok..",
+        "..knoooooonk..",
+        ".kOYOOOOOOOok.",
+        ".knoooooooonk.",
+        "kOYOOOOOOOOOok",
+        "knoooooooonnnk",
+        "kOYOOOOOOOOOok",
+        "knoooookkonnnk",
+        "kOOOOOkddkOOok",
+        "kkkkkkkkkkkkkk",
+        ".kVWWWWWWWWwk.",
+        ".kwwwwwwwwwwk.",
+        "..kw......wk..",
+        "..kk......kk..",
+    ]
+    pal = {"k": K, "O": c(0xD8B058), "Y": c(0xF4DC8C), "o": c(0xAE8636), "n": c(0x86621E), "d": c(0x140C06),
+           "V": WD[4], "W": WD[3], "w": WD[1]}
+    return from_ascii(rows, pal)
 
 
-def hut():
-    """Zahradníkova bouda 40 × 38: prkenné stěny, šikmá střecha z šindele, dveře, lucerna."""
-    s = Spr(40, 38)
-    for y in range(0, 16):
-        inset = max(0, (15 - y) // 2)
-        for x in range(inset, 40 - inset):
-            s.px(x, y, c(0x6E4A2E) if (y % 3) == 0 else c(0x8E6440) if (x + y // 3) % 5 else c(0x7A5436))
-    s.hline(0, 39, 15, c(0x3A2414))
-    for y in range(16, 37):
-        for x in range(2, 38):
-            s.px(x, y, WOOD[3] if x % 5 else WOOD[1])
-    s.rect(16, 22, 24, 36, WOOD[1]); s.rect(17, 23, 23, 36, c(0x4A3220)); s.px(22, 30, c(0xC8A050))
-    s.rect(5, 21, 12, 27, c(0x2A3240)); s.hline(5, 12, 24, WOOD[1]); s.vline(8, 21, 27, WOOD[1])
-    s.rect(28, 20, 30, 24, c(0x2A2426)); s.px(29, 22, c(0xFFD27A))               # lucerna
-    s.rect(1, 37, 38, 37, STONE[1])
-    return outline(s, OUT)
+def cottage():
+    """
+    Zahradníkova chalupa 50 × 50 (hrázděná): šindelová střecha s hřebenáčem a kamenným komínem,
+    okapový stín, bílá omítka v dřevěném rámu se vzpěrami, okno s truhlíkem, klenuté dveře,
+    lucerna, kamenná podezdívka a schod. Každý prvek má vlastní obrys.
+    """
+    s = Spr(50, 50)
+    # střecha: řady šindelů, každá o kus širší
+    rows = []
+    for i, y in enumerate(range(4, 22, 3)):
+        rows.append((y, 9 - i * 1 - (i > 2), 40 + i * 1 + (i > 2)))
+    shingles(s, rows)
+    s.hline(9, 40, 3, STN[4]); s.hline(9, 40, 2, K)                       # hřebenáč
+    for (y, x0, x1) in rows:
+        s.px(x0 - 1, y, K); s.px(x0 - 1, y + 1, K); s.px(x0 - 1, y + 2, K)
+        s.px(x1 + 1, y, K); s.px(x1 + 1, y + 1, K); s.px(x1 + 1, y + 2, K)
+    s.hline(1, 48, 22, ROOF[0]); s.hline(1, 48, 23, K)                    # okap
+    # komín (přes střechu)
+    stones(s, 35, 40, 0, 9, h=3, w=(3, 3), seed=5)
+    box_outline(s, 34, 0, 41, 10); s.hline(35, 40, 1, STN[4]); s.hline(34, 41, 10, ROOF[0])
+    # stěna: omítka + hrázdění
+    for y in range(24, 45):
+        for x in range(3, 47):
+            s.px(x, y, PL[2] if y > 26 else PL[0] if y == 24 else PL[1])   # okapový stín nahoře
+    for bx in (3, 4, 24, 25, 45, 46):
+        s.vline(bx, 24, 44, WD[1] if bx % 2 else WD[2])
+    s.hline(3, 46, 34, WD[2]); s.hline(3, 46, 35, WD[1])
+    s.line(5, 44, 12, 36, WD[2], w=2); s.line(44, 33, 38, 26, WD[2], w=2)   # vzpěry
+    # okno vlevo
+    s.rect(8, 26, 20, 33, WD[3]); s.rect(9, 27, 19, 32, GLASS[1])
+    s.rect(9, 27, 13, 29, GLASS[2]); s.px(10, 27, GLASS[3]); s.px(9, 28, GLASS[3])
+    s.vline(14, 27, 32, WD[1]); s.hline(9, 19, 30, WD[1])
+    box_outline(s, 8, 26, 20, 33)
+    s.rect(7, 34, 21, 37, WD[2]); s.hline(7, 21, 34, WD[4]); box_outline(s, 7, 34, 21, 37)   # truhlík
+    for i, x in enumerate(range(8, 21, 2)):
+        s.px(x, 33, c(0xE8546A) if i % 2 else c(0xF4D060)); s.px(x + 1, 33, MOSS[2])
+    # dveře s obloukem
+    for y in range(28, 45):
+        for x in range(29, 40):
+            arch = y < 31 and ((x - 34) ** 2 / 30 + (31 - y) ** 2 / 9) > 1
+            if arch:
+                continue
+            s.px(x, y, WD[2] if (x - 29) % 3 else WD[1])
+            if x in (29, 39) or y == 44:
+                s.px(x, y, K)
+    for x in range(29, 40):
+        for y in range(27, 31):
+            if abs(((x - 34) ** 2 / 30 + (31 - y) ** 2 / 9) - 1) < 0.35:
+                s.px(x, y, K)
+    s.hline(30, 38, 37, WD[0]); s.px(37, 38, c(0xE0B040))                # kování, klika
+    # lucerna
+    s.rect(42, 28, 44, 32, c(0x2A2426)); s.px(43, 29, c(0xFFF2B0)); s.px(43, 30, c(0xFFD27A)); s.px(43, 31, c(0xE89A3A))
+    s.px(43, 27, K)
+    # podezdívka a schod
+    stones(s, 2, 47, 45, 48, h=4, w=(4, 7), seed=9)
+    s.rect(29, 45, 40, 47, STN[3]); s.hline(29, 40, 45, STN[4])
+    box_outline(s, 2, 24, 47, 49)
+    for y in range(24, 50):
+        s.px(1, y, (0, 0, 0, 0)); s.px(48, y, (0, 0, 0, 0))
+    return s
 
 
 def basket():
@@ -157,4 +259,4 @@ def ladder():
 
 
 def parts():
-    return [fruit_tree(0), fruit_tree(3), old_apple_tree(), stone_wall(48), gate_open(), well(), hive(), hut(), basket(), ladder()]
+    return [fruit_tree(0), fruit_tree(3), old_apple_tree(), stone_wall(48), gate_pillar(), gate_leaf(), gate_leaf(True), well(), skep(), cottage(), basket(), ladder()]

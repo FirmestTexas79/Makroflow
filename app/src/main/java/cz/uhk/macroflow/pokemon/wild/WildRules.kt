@@ -22,6 +22,7 @@ object WildLevels {
         // Doly jsou hlouběji než jeskyně (docs/adr/0049)
         BiomeType.MINES -> (8..14).associateWith { 1 }
         BiomeType.ASH_PLAIN, BiomeType.QUIET_ORCHARD -> (12..18).associateWith { 1 }
+        BiomeType.ECHO_CANYON -> (14..20).associateWith { 1 }
     }
 
     fun range(biome: BiomeType): IntRange = weights(biome).keys.let { it.min()..it.max() }

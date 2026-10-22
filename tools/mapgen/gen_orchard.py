@@ -8,7 +8,7 @@ Ztichlý sad (Akt II, docs/adr/0089) – otevírá se jen v noci. Stejné sklád
   2. objekty (orchard/sad_objects.py + popelavé stromy z ashplain/objects.py na okraji),
   3. složení podle mřížky 10 × 20, pak NOC: celé přebarvení do měsíčního světla a nakonec
      zdroje světla (zlatá jablka Staré jabloně, lucerna na boudě, měsíc v jezírku).
-Hráč přijde shora otevřenými vrátky v zídce (z Popelavé pláně) a jde dolů ke Staré jabloni.
+Hráč přijde zprava branou mezi sloupky (z Popelavé pláně jde doleva) a pokračuje dolů ke Staré jabloni.
 
 NODES / EDGES jsou ZDROJ PRAVDY i pro QuietOrchard.kt (MAP).
 """
@@ -32,8 +32,8 @@ CELL = 2
 rng = np.random.default_rng(89)
 
 NODES = {
-    "vstup_ze_plane": (80, 50),
-    "s1": (80, 96), "s2": (80, 160), "s3": (40, 160), "s4": (120, 160),
+    "vstup_ze_plane": (152, 80),
+    "s1": (80, 80), "s2": (80, 160), "s3": (40, 160), "s4": (120, 160),
     "jezirko_sad": (64, 214), "ule": (120, 216), "studna": (96, 232),
     "s5": (80, 248), "stara_jablon": (52, 292), "trava_sad": (28, 270), "bouda": (124, 300),
 }
@@ -47,7 +47,7 @@ TG = [c(0x14200E), c(0x2A4220), c(0x406432), c(0x5E8A48), c(0x86B266)]
 
 # ── 1) podklad ──
 path = np.zeros((ROWS, COLS), bool)
-for (q0, q1, r0, r1) in ((4, 5, 2, 15), (2, 7, 9, 10)):
+for (q0, q1, r0, r1) in ((4, 9, 4, 5), (4, 5, 4, 15), (2, 7, 9, 10)):
     path[r0:r1 + 1, q0:q1 + 1] = True
 img = np.zeros((AH, AW, 4), np.uint8)
 block = np.zeros((AH, AW), bool)
@@ -86,26 +86,30 @@ def place(spr, cx, by, foot=None, shade=True):
 # tmavý les za zídkou a zídka s vrátky
 for i, x in enumerate(range(-4, AW + 16, 18)):
     place(objects.tree(100 + i), x, 30 + (i % 2) * 3, None)
-place(S.stone_wall(64), 32, 44, None, False)
-place(S.stone_wall(64), 128, 44, None, False)
-place(S.gate_open(), 80, 44, None, False)
+place(S.stone_wall(160), 80, 46, None, False)
+# brána vpravo: sloupky nad a pod cestou, vyklopená křídla
+place(S.gate_pillar(), 150, 62, (12, 6), False)
+place(S.gate_pillar(), 150, 108, (12, 6), False)
+place(S.gate_leaf(True), 140, 62, (8, 3), False)
+place(S.gate_leaf(True), 140, 108, (8, 3), False)
 # ovocné stromy ve dvou řadách podél cesty
-for i, (x, y) in enumerate(((26, 92), (52, 96), (108, 92), (134, 96), (26, 136), (52, 140), (108, 136), (134, 140))):
+for i, (x, y) in enumerate(((26, 92), (52, 96), (26, 136), (52, 140), (108, 136), (134, 140))):
     place(S.fruit_tree(i), x, y, (8, 5))
 place(S.ladder(), 40, 136, (4, 2))
 place(S.basket(), 62, 146, (8, 3))
-place(S.basket(), 98, 104, (8, 3))
+place(S.basket(), 116, 112, (8, 3))
 # úly, studna
 for i, (x, y) in enumerate(((112, 208), (126, 212), (140, 206))):
-    place(S.hive(), x, y, (8, 3))
+    place(S.skep(), x, y, (10, 3))
 place(S.well(), 96, 228, (16, 6))
 # Stará jabloň a bouda
 place(S.old_apple_tree(), 80, 300, (12, 6))
-place(S.hut(), 128, 290, (38, 14), False)
+place(S.cottage(), 126, 300, (46, 18), False)
 # okrajové stromy
 for i, y in enumerate(range(70, 340, 20)):
     place(objects.tree(i + 7), 4 + (i % 2) * 3, y, (12, 6))
-    place(objects.tree(i + 77), 156 - (i % 2) * 3, y, (12, 6))
+    if not 54 <= y <= 120:                                      # vstup zprava (z pláně se jde doleva)
+        place(objects.tree(i + 77), 156 - (i % 2) * 3, y, (12, 6))
 for (x, y) in ((24, 322), (140, 330), (96, 334)):
     place(S.fruit_tree(x), x, y, (8, 5))
 
@@ -119,7 +123,7 @@ for (spr, cx, by, foot, shade) in sorted(placed, key=lambda p: p[2]):
 
 # ── 3) NOC: přebarvení do měsíčního světla, pak zdroje světla ──
 day = img.copy()
-EMISSIVE = {tuple(int(v) for v in col[:3]) for col in S.GOLD + [c(0xFFD27A)]}
+EMISSIVE = {tuple(int(v) for v in col[:3]) for col in S.GOLD + [c(0xFFD27A), c(0xFFF2B0)]}
 rgb = img[:, :, :3].astype(np.float64)
 lum = rgb @ np.array([0.3, 0.55, 0.15])
 night = rgb * np.array([0.40, 0.50, 0.80]) + np.array([8, 12, 30]) + (lum[..., None] > 150) * np.array([2, 4, 8]) - (lum[..., None] > 170) * np.array([14, 14, 10])
@@ -144,7 +148,7 @@ def glow(cx, cy, r, col, k):
 
 for (x, y) in lights[::2]:
     glow(x, y, 4, (255, 210, 120), 0.35)
-glow(137, 270, 20, (255, 200, 110), 0.5)                                    # lucerna boudy
+glow(144, 280, 20, (255, 200, 110), 0.5)                                    # lucerna boudy
 # měsíc v jezírku
 for (dx, dy, col) in ((0, 0, 0xEEF4FF), (1, 0, 0xEEF4FF), (-1, 0, 0xC8D8F0), (2, 0, 0xC8D8F0), (0, -1, 0xC8D8F0), (1, -1, 0xEEF4FF), (0, 1, 0xA8C0E0), (1, 1, 0xA8C0E0)):
     img[206 + dy, 38 + dx] = c(col)
@@ -152,9 +156,9 @@ for (x, y) in ((30, 212), (33, 212), (44, 210), (47, 210)):
     img[y, x] = c(0x7898C0)
 
 # ── 4) mapa chůze ──
-block[:44, :] = True
-block[:46, 66:94] = False
-block[44:, :T] = True; block[44:, -T:] = True
+block[:46, :] = True
+block[46:, :T] = True; block[46:, -T:] = True
+block[64:96, -T:] = False                                     # vstup zprava mezi sloupky
 walk = ~block
 os.makedirs(RES, exist_ok=True)
 Image.fromarray(img[:, :, :3]).save(os.path.join(RES, "quiet_orchard.png"))

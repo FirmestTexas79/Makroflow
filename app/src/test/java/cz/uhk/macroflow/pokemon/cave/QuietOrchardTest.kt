@@ -18,6 +18,8 @@ class QuietOrchardTest {
         assertEquals("ASH_PLAIN", sad.parentBiome)
         assertTrue(AshPlain.MAP.node(sad.mountainNode) != null)
         assertTrue(sad.mountainNode in AshPlain.ACTION_NODES)
+        assertTrue(sad.node(QuietOrchard.ENTRY_NODE)!!.x > 140)          // z pláně se jde doleva → vstup zprava
+        assertTrue(AshPlain.MAP.node(sad.mountainNode)!!.x < 20)
     }
 
     @Test fun mistaMajiOblastKlepnutiATexty() {

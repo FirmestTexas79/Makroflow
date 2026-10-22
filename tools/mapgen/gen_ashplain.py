@@ -33,19 +33,19 @@ rng = np.random.default_rng(88)
 NODES = {
     "vstup_z_brany": (80, 78),
     "n1": (80, 112), "cedule": (52, 100), "n2": (48, 112), "duny": (112, 160),
-    "n3": (48, 192), "k_sadu": (10, 192), "ohniste": (40, 236), "n4": (96, 192), "hajek": (124, 256),
+    "n3": (48, 192), "k_sadu": (10, 192), "ohniste": (40, 236), "n4": (96, 192), "ke_kanonu": (150, 192), "hajek": (124, 256),
     "n5": (96, 272), "meznik": (112, 300), "n6": (64, 272), "sutiny": (36, 326), "pole": (124, 326),
     "n7": (64, 336), "brana_mesta": (80, 432),
 }
 EDGES = [
     ("vstup_z_brany", "n1"), ("n1", "cedule"), ("n1", "n2"), ("n1", "duny"), ("n2", "n3"),
-    ("n3", "ohniste"), ("n3", "k_sadu"), ("n3", "n4"), ("n4", "hajek"), ("n4", "n5"), ("n5", "meznik"), ("n5", "n6"),
+    ("n3", "ohniste"), ("n3", "k_sadu"), ("n3", "n4"), ("n4", "hajek"), ("n4", "ke_kanonu"), ("n4", "n5"), ("n5", "meznik"), ("n5", "n6"),
     ("n6", "sutiny"), ("n6", "n7"), ("n7", "pole"), ("n7", "brana_mesta"),
 ]
 
 # ── 1) podklad: tráva, cesta, římsy, skála nahoře ──
 path = np.zeros((ROWS, COLS), bool)
-for (q0, q1, r0, r1) in ((4, 5, 4, 6), (2, 5, 6, 7), (2, 3, 7, 11), (0, 6, 11, 12), (5, 6, 12, 16),
+for (q0, q1, r0, r1) in ((4, 5, 4, 6), (2, 5, 6, 7), (2, 3, 7, 11), (0, 9, 11, 12), (5, 6, 12, 16),
                          (3, 6, 16, 17), (3, 4, 17, 20), (3, 5, 20, 21), (4, 5, 21, 27)):
     path[r0:r1 + 1, q0:q1 + 1] = True
 LEDGES = [(6, 6, 8), (15, 1, 2), (17, 7, 8)]          # (řádek, od sloupce, do sloupce)
@@ -110,8 +110,9 @@ for (x, y) in ((60, 210), (100, 236), (24, 130), (104, 344)):
 for i, y in enumerate(range(64, 360, 18)):
     if not 268 <= y <= 330 and not 176 <= y <= 214:             # dům a odbočka do sadu
         place(O.tree(i), 6 + (i % 2) * 3, y, (12, 6))
-    place(O.tree(i + 50), 154 - (i % 2) * 3, y, (12, 6))
-for (x, y) in ((22, 64), (138, 64), (22, 150), (138, 200)):
+    if not 176 <= y <= 214:                                     # odbočka do kaňonu
+        place(O.tree(i + 50), 154 - (i % 2) * 3, y, (12, 6))
+for (x, y) in ((22, 64), (138, 64), (22, 150)):
     place(O.tree(int(x * 3 + y)), x, y, (12, 6))
 
 for (spr, cx, by, foot, shade) in sorted(placed, key=lambda p: p[2]):
@@ -135,6 +136,7 @@ block[348:448, :] |= cm
 # ── 3) mapa chůze ──
 block[48:380, :T] = True; block[48:380, -T:] = True   # stromová hranice
 block[178:206, :T] = False                             # odbočka do Ztichlého sadu (vlevo)
+block[178:206, -T:] = False                            # odbočka do Ozvěnového kaňonu (vpravo)
 walk = ~block
 
 os.makedirs(RES, exist_ok=True)

@@ -150,7 +150,7 @@ class PokemonBattleFragment : Fragment() {
             BiomeType.valueOf(gamePrefs.getString("LAST_BIOME", BiomeType.TOWN.name) ?: BiomeType.TOWN.name)
         }.getOrDefault(BiomeType.TOWN)
         val introOverlay = if (trainer != null) buildTrainerIntro(ctx, dp, battleContent, trainer) else when (biome) {
-            BiomeType.MOUNTAINS, BiomeType.ASH_PLAIN -> buildMountainIntro(ctx, dp, battleContent)
+            BiomeType.MOUNTAINS, BiomeType.ASH_PLAIN, BiomeType.ECHO_CANYON -> buildMountainIntro(ctx, dp, battleContent)
             BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE, BiomeType.MINES -> buildCaveIntro(ctx, dp, battleContent)
             BiomeType.WATER, BiomeType.LAKE -> buildWaterIntro(ctx, dp, battleContent)
             BiomeType.FOREST, BiomeType.QUIET_ORCHARD -> buildForestIntro(ctx, dp, battleContent)

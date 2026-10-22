@@ -35,7 +35,7 @@ class Spr:
         self.rect(x, y0, x, y1, col)
 
     def line(self, x0, y0, x1, y1, col, w=1):
-        n = max(abs(x1 - x0), abs(y1 - y0), 1)
+        n = max(int(round(max(abs(x1 - x0), abs(y1 - y0)))), 1)
         for i in range(n + 1):
             t = i / n
             x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t

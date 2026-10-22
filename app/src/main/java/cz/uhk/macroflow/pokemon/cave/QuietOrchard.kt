@@ -1,7 +1,7 @@
 package cz.uhk.macroflow.pokemon.cave
 
 /**
- * Ztichlý sad (Akt II, docs/adr/0089): noční sad za zídkou vlevo od Popelavé pláně. Otevírá se jen
+ * Ztichlý sad (Akt II, docs/adr/0089): noční sad vlevo od Popelavé pláně – vchází se do něj zprava branou mezi sloupky. Otevírá se jen
  * v noci (19:00–5:00). Uzly a hrany kopírují tools/mapgen/gen_orchard.py – ZDROJ PRAVDY je v obou místech.
  */
 object QuietOrchard {
@@ -20,8 +20,8 @@ object QuietOrchard {
     val MAP = CaveMap(
         artW = 160, artH = 320,
         nodes = listOf(
-            CaveNode(ENTRY_NODE, 80, 50),
-            CaveNode("s1", 80, 96), CaveNode("s2", 80, 160), CaveNode("s3", 40, 160), CaveNode("s4", 120, 160),
+            CaveNode(ENTRY_NODE, 152, 80),
+            CaveNode("s1", 80, 80), CaveNode("s2", 80, 160), CaveNode("s3", 40, 160), CaveNode("s4", 120, 160),
             CaveNode("jezirko_sad", 64, 214), CaveNode("ule", 120, 216), CaveNode(WELL_NODE, 96, 232),
             CaveNode("s5", 80, 248), CaveNode("stara_jablon", 52, 292), CaveNode("trava_sad", 28, 270), CaveNode(HUT_NODE, 124, 300)
         ),
@@ -37,13 +37,13 @@ object QuietOrchard {
         parentBiome = "ASH_PLAIN",
         isCave = false,
         tapAreas = mapOf(
-            ENTRY_NODE to Triple(80, 36, 16),
+            ENTRY_NODE to Triple(150, 80, 14),
             "jezirko_sad" to Triple(34, 210, 22),
             "ule" to Triple(126, 202, 18),
             WELL_NODE to Triple(96, 216, 10),
             "stara_jablon" to Triple(80, 270, 24),
             "trava_sad" to Triple(28, 272, 18),
-            HUT_NODE to Triple(128, 272, 18)
+            HUT_NODE to Triple(126, 278, 22)
         )
     )
 
@@ -52,7 +52,7 @@ object QuietOrchard {
     const val CLOSED_TEXT = "🌙 Za zídkou je sad, ale vrátka jsou za dne zavřená a cesta tone v mlze.\n" +
         "Ztichlý sad se otevírá jen v noci (19:00–5:00)."
     const val WELL_TEXT = "🪣 Studna je hluboká a voda v ní stojí bez jediné vlnky. Když se nakloníš, odraz se pohne o chvilku později než ty."
-    const val HUT_TEXT = "🏚 Zahradníkova bouda. Na stole leží seznam stromů a u každého je škrtnuté jméno.\n" +
+    const val HUT_TEXT = "🏚 Zahradníkova chalupa. Na stole leží seznam stromů a u každého je škrtnuté jméno.\n" +
         "Lucerna svítí, ale nikdo tu není. Košík jablek je ještě teplý."
 
     fun emptyEncounterText(node: String): String? = when (node) {

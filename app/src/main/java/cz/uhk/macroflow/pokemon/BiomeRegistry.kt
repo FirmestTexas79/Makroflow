@@ -22,7 +22,9 @@ enum class BiomeType {
     /** Popelavá pláň za Branou světů (Akt II, docs/adr/0088). */
     ASH_PLAIN,
     /** Ztichlý sad vlevo od pláně, jen v noci (docs/adr/0089). */
-    QUIET_ORCHARD
+    QUIET_ORCHARD,
+    /** Ozvěnový kaňon vpravo od pláně (docs/adr/0090). */
+    ECHO_CANYON
 }
 
 object BiomeRegistry {
@@ -131,7 +133,9 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.ASH_PLAIN, R.drawable.ash_plain, graphOf(cz.uhk.macroflow.pokemon.cave.AshPlain.MAP), questId = null,
                 cave = cz.uhk.macroflow.pokemon.cave.AshPlain.MAP),
             BiomeDefinition(BiomeType.QUIET_ORCHARD, R.drawable.quiet_orchard, graphOf(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP), questId = null,
-                cave = cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP)
+                cave = cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP),
+            BiomeDefinition(BiomeType.ECHO_CANYON, R.drawable.echo_canyon, graphOf(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP), questId = null,
+                cave = cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP)
         ).associateBy { it.type }
     }
 
