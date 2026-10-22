@@ -3,6 +3,7 @@ Díl 1 – POZADÍ Popelavé pláně: dlaždice 16 × 16 px ve stylu kapesních 
 Popelavá tráva (3 varianty), vysoká suchá tráva (místa setkání), cesta (kreslí se podle masky
 buněk, se zaoblenými rohy a tmavším lemem), terénní stupeň (římsa) a skalní stěna.
 """
+import math
 import numpy as np
 from pix import Spr, c, outline
 
@@ -168,3 +169,89 @@ def draw_ledge(img, row, q0, q1):
 
 def parts():
     return [ground(0), ground(1), ground(2), tall_grass(), rock_wall()]
+
+
+CLUMPS = [
+    ["...4...",
+     "..o3o.4",
+     ".4o3oo3",
+     ".3o2o3o",
+     "o2o2o2o",
+     "o22222o",
+     ".o222o.",
+     "..ooo.."],
+    ["4.....4",
+     "3o.4.o3",
+     "o3o3o3o",
+     "o2o3o2o",
+     ".o222o.",
+     ".o212o.",
+     "..ooo.."],
+    ["..4.4..",
+     ".434343",
+     ".o3o3o.",
+     ".o2o2o.",
+     "o2o2o2o",
+     ".o222o.",
+     "..ooo.."],
+]
+
+
+def grass_patch(cx, cy, rx, ry, seed):
+    """Nepravidelná (organická) maska porostu: elipsa s vlnitým okrajem."""
+    r = np.random.default_rng(seed)
+    ph = r.uniform(0, 6.28, 3)
+    def inside(x, y):
+        ang = math.atan2((y - cy) / ry, (x - cx) / rx)
+        wob = 1 + 0.12 * math.sin(3 * ang + ph[0]) + 0.08 * math.sin(5 * ang + ph[1]) + 0.05 * math.sin(9 * ang + ph[2])
+        return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= wob * wob
+    return inside
+
+
+def draw_tall_grass(img, inside, box, seed=0):
+    """
+    Vysoká suchá tráva / obilí: tmavší podklad podle masky a přes něj trsy na posunuté mřížce
+    s náhodným odchýlením a třemi tvary – okraj porostu je díky tomu měkký, ne čtverečkový.
+    """
+    r = np.random.default_rng(seed)
+    x0, y0, x1, y1 = box
+    H, W = img.shape[:2]
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            if 0 <= x < W and 0 <= y < H and inside(x, y):
+                img[y, x] = TG[1] if (x + y) % 3 else TG[2]
+    tufts = []
+    for gy, y in enumerate(range(y0 - 4, y1 + 4, 5)):
+        for x in range(x0 - 4 + (gy % 2) * 3, x1 + 4, 6):
+            jx, jy = x + int(r.integers(-1, 2)), y + int(r.integers(-1, 2))
+            if inside(jx, jy + 3):
+                tufts.append((jy, jx, int(r.integers(0, len(CLUMPS)))))
+    for (y, x, k) in sorted(tufts):
+        pat = CLUMPS[k]
+        for yy, row in enumerate(pat):
+            for xx, ch in enumerate(row):
+                if ch == ".":
+                    continue
+                X, Y = x - 3 + xx, y - len(pat) + 3 + yy
+                if 0 <= X < W and 0 <= Y < H:
+                    img[Y, X] = TG[0] if ch == "o" else TG[int(ch)]
+
+
+def draw_cobbles(img, inside, box, seed=3):
+    """Stará dlažba (oválné kočičí hlavy) – před branou města."""
+    r = np.random.default_rng(seed)
+    x0, y0, x1, y1 = box
+    stone = [c(0x4A443C), c(0x6E675C), c(0x8E8678), c(0xAEA696), c(0xCAC2B2)]
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            if not inside(x, y):
+                continue
+            row = y // 4
+            off = (row % 2) * 3
+            bx, by = (x + off) % 6, y % 4
+            if by == 0 or bx == 0:
+                col = stone[0] if (x + y) % 2 else stone[1]
+            else:
+                k = (((x + off) // 6 * 31 + row * 17) % 3)
+                col = stone[2 + (k == 2)] if by > 1 else stone[3 + (k == 2)]
+            img[y, x] = col
