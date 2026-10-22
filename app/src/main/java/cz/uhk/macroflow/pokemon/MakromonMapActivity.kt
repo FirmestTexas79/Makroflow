@@ -1311,7 +1311,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.SKY_PASS -> { placeSkyPassDecor(); placeHunfrey() }
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
                 currentBiome == BiomeType.HIDDEN_GROVE -> placeGroveDecor()
-                currentBiome == BiomeType.ASH_PLAIN -> Unit       // místa setkání = vysoká tráva v mapě
+                // místa setkání = vysoká tráva v mapě; přes ni padá popel a z ohniště jiskří
+                currentBiome == BiomeType.ASH_PLAIN -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.AshFxView(this@MakromonMapActivity, worldScale).apply {
+                    layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artH * worldScale)
+                })
                 currentBiome == BiomeType.MINES -> { placeMinesDecor(); placeEncounterGlows(cave!!); placeGatherSpots(); placeVendelin() }
                 cave != null -> {
                     placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots()
