@@ -98,7 +98,8 @@ class MakromonMapActivity : AppCompatActivity() {
         cz.uhk.macroflow.pokemon.cave.CaveMaps.ALL.flatMap { it.encounterNodes } +
         cz.uhk.macroflow.pokemon.cave.ForestMap.MAP.encounterNodes +
         cz.uhk.macroflow.pokemon.cave.MinesMap.MAP.encounterNodes +
-        cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.encounterNodes
+        cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.encounterNodes +
+        cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.encounterNodes
 
     /** Přechod mezi mapami. */
     private enum class MapTransition { NONE, FADE, CAVE_IN, CAVE_OUT,
@@ -110,7 +111,7 @@ class MakromonMapActivity : AppCompatActivity() {
         const val EXTRA_PORTAL = "portal"
         private const val DOUBLE_CLICK_TIME = 300L
         /** Lokace s vlastní scénou přechodu (docs/adr/0042). */
-        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS", "HIDDEN_GROVE", "ASH_PLAIN")
+        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS", "HIDDEN_GROVE", "ASH_PLAIN", "QUIET_ORCHARD")
         /** Dosah klepnutí na uzel v podílu obrazovky. */
         private const val TAP_RADIUS = 0.1f
         /** V jeskyních a lese jsou body husté a mezi nimi se chodí volně – menší dosah. */
@@ -124,7 +125,7 @@ class MakromonMapActivity : AppCompatActivity() {
         ) + cz.uhk.macroflow.pokemon.cave.SkyPass.ACTION_NODES +
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
-            cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         // Mydrus zapomíná (docs/adr/0057)
@@ -829,7 +830,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     (if (StoryFlags.isSet(this, Vendelin.BOOK_SIGNED_KEY)) Vendelin.DOOR_HANDWRITING else ""))
                 Vendelin.NODE -> { questManager.loadQuest(Vendelin.QUEST_ID); mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150) }
                 Vendelin.BOOK_NODE -> onMinerBook()
-                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu", cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE -> BiomeRegistry.definition(currentBiome)?.cave?.let {
+                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu", cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE -> BiomeRegistry.definition(currentBiome)?.cave?.let {
                     walkInto(BiomeType.valueOf(it.parentBiome), it.mountainNode,
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
@@ -861,6 +862,13 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_TEXT +
                     if (Insight.level(StoryFlags.all(this)) >= 3) cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_TEXT_INSIGHT else "")
                 cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_TEXT)
+                // Ztichlý sad (docs/adr/0089) – jen v noci
+                cz.uhk.macroflow.pokemon.cave.QuietOrchard.PLAIN_NODE ->
+                    if (cz.uhk.macroflow.pokemon.cave.QuietOrchard.isOpen(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)))
+                        walkInto(BiomeType.QUIET_ORCHARD, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE, MapTransition.FADE)
+                    else showMapToast(cz.uhk.macroflow.pokemon.cave.QuietOrchard.CLOSED_TEXT)
+                cz.uhk.macroflow.pokemon.cave.QuietOrchard.WELL_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.QuietOrchard.WELL_TEXT)
+                cz.uhk.macroflow.pokemon.cave.QuietOrchard.HUT_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.QuietOrchard.HUT_TEXT)
                 // Hunfrey na plošině vedle brány (docs/adr/0085)
                 cz.uhk.macroflow.pokemon.story.Hunfrey.NODE -> {
                     questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Hunfrey.QUEST_ID)
@@ -941,7 +949,7 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
-    private fun emptyEncounterText(node: String): String = cz.uhk.macroflow.pokemon.cave.AshPlain.emptyEncounterText(node) ?: when (node) {
+    private fun emptyEncounterText(node: String): String = cz.uhk.macroflow.pokemon.cave.AshPlain.emptyEncounterText(node) ?: cz.uhk.macroflow.pokemon.cave.QuietOrchard.emptyEncounterText(node) ?: when (node) {
         "jezirko" -> "Na hladině podzemního jezírka se jen zavlnil odraz hub. Zkus to znovu."
         "houby" -> "Svítící houby pomalu pulzují… nikdo tu není. Zkus to znovu."
         "krystaly_j", "balvany_j" -> "Mezi kameny to jen zapraskalo. Zkus to znovu."
@@ -1085,6 +1093,7 @@ class MakromonMapActivity : AppCompatActivity() {
             val firstSkyVisit = newBiome == BiomeType.SKY_PASS && !StoryFlags.isSet(this, SkyPass.VISITED_KEY)
             if (newBiome == BiomeType.SKY_PASS) StoryFlags.set(this, SkyPass.VISITED_KEY)
             if (newBiome == BiomeType.ASH_PLAIN) StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.AshPlain.VISITED_KEY)
+            if (newBiome == BiomeType.QUIET_ORCHARD) StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.QuietOrchard.VISITED_KEY)
             if (newBiome == BiomeType.FOREST) {
                 val ctx = applicationContext
                 lifecycleScope.launch {
@@ -1314,6 +1323,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 // místa setkání = vysoká tráva v mapě; přes ni padá popel a z ohniště jiskří
                 currentBiome == BiomeType.ASH_PLAIN -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.AshFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artH * worldScale)
+                })
+                currentBiome == BiomeType.QUIET_ORCHARD -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.OrchardFxView(this@MakromonMapActivity, worldScale).apply {
+                    layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artH * worldScale)
                 })
                 currentBiome == BiomeType.MINES -> { placeMinesDecor(); placeEncounterGlows(cave!!); placeGatherSpots(); placeVendelin() }
                 cave != null -> {

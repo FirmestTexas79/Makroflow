@@ -18,7 +18,7 @@ P = dict(base=c(0xC6BA9E), shade=c(0xB2A68A), edge=c(0x8E8068), dark=c(0x72664E)
 R = [c(0x2E2A26), c(0x4C463E), c(0x6E665C), c(0x8C8478), c(0xB0A898), c(0xCCC4B4)]
 
 
-def ground(variant=0):
+def ground(variant=0, G=G):
     s = Spr(T, T)
     s.a[:] = G[2]
     rng = np.random.default_rng(10 + variant)
@@ -208,7 +208,7 @@ def grass_patch(cx, cy, rx, ry, seed):
     return inside
 
 
-def draw_tall_grass(img, inside, box, seed=0):
+def draw_tall_grass(img, inside, box, seed=0, TG=TG):
     """
     Vysoká suchá tráva / obilí: tmavší podklad podle masky a přes něj trsy na posunuté mřížce
     s náhodným odchýlením a třemi tvary – okraj porostu je díky tomu měkký, ne čtverečkový.

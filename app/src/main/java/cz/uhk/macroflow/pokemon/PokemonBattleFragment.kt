@@ -153,7 +153,7 @@ class PokemonBattleFragment : Fragment() {
             BiomeType.MOUNTAINS, BiomeType.ASH_PLAIN -> buildMountainIntro(ctx, dp, battleContent)
             BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE, BiomeType.MINES -> buildCaveIntro(ctx, dp, battleContent)
             BiomeType.WATER, BiomeType.LAKE -> buildWaterIntro(ctx, dp, battleContent)
-            BiomeType.FOREST -> buildForestIntro(ctx, dp, battleContent)
+            BiomeType.FOREST, BiomeType.QUIET_ORCHARD -> buildForestIntro(ctx, dp, battleContent)
             else -> buildIntroOverlay(ctx, dp, battleContent, biome)
         }
         root.addView(introOverlay)

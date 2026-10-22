@@ -18,14 +18,14 @@ object AshPlain {
         nodes = listOf(
             CaveNode(ENTRY_NODE, 80, 78),
             CaveNode("n1", 80, 112), CaveNode(SIGN_NODE, 52, 100), CaveNode("n2", 48, 112), CaveNode("duny", 112, 160),
-            CaveNode("n3", 48, 192), CaveNode("ohniste", 40, 236), CaveNode("n4", 96, 192), CaveNode("hajek", 124, 256),
+            CaveNode("n3", 48, 192), CaveNode(QuietOrchard.PLAIN_NODE, 10, 192), CaveNode("ohniste", 40, 236), CaveNode("n4", 96, 192), CaveNode("hajek", 124, 256),
             CaveNode("n5", 96, 272), CaveNode(MILESTONE_NODE, 112, 300), CaveNode("n6", 64, 272),
             CaveNode("sutiny", 36, 326), CaveNode("pole", 124, 326),
             CaveNode("n7", 64, 336), CaveNode(CITY_GATE_NODE, 80, 432)
         ),
         edges = listOf(
             ENTRY_NODE to "n1", "n1" to SIGN_NODE, "n1" to "n2", "n1" to "duny", "n2" to "n3",
-            "n3" to "ohniste", "n3" to "n4", "n4" to "hajek", "n4" to "n5", "n5" to MILESTONE_NODE, "n5" to "n6",
+            "n3" to "ohniste", "n3" to QuietOrchard.PLAIN_NODE, "n3" to "n4", "n4" to "hajek", "n4" to "n5", "n5" to MILESTONE_NODE, "n5" to "n6",
             "n6" to "sutiny", "n6" to "n7", "n7" to "pole", "n7" to CITY_GATE_NODE
         ),
         exitNode = ENTRY_NODE,
@@ -37,6 +37,7 @@ object AshPlain {
         isCave = false,
         tapAreas = mapOf(
             ENTRY_NODE to Triple(80, 36, 26),
+            QuietOrchard.PLAIN_NODE to Triple(8, 192, 12),
             CITY_GATE_NODE to Triple(80, 422, 16),
             SIGN_NODE to Triple(52, 80, 8),
             MILESTONE_NODE to Triple(112, 284, 8),
@@ -49,7 +50,7 @@ object AshPlain {
     )
 
     /** Uzly, které něco dělají mimo divoká setkání. */
-    val ACTION_NODES = setOf(ENTRY_NODE, SIGN_NODE, MILESTONE_NODE, CITY_GATE_NODE)
+    val ACTION_NODES = setOf(ENTRY_NODE, SIGN_NODE, MILESTONE_NODE, CITY_GATE_NODE, QuietOrchard.PLAIN_NODE)
 
     const val SIGN_TEXT = "🪧 Cedule je ohořelá. Šipka ukazuje k bílým hradbám a pod ní jde přečíst jen:\n„OZVĚNA – vítejte zpět.“"
     const val MILESTONE_TEXT = "🪨 Kamenný mezník. Na čele je vytesané „S“ a pod ním číslo, které někdo pečlivě oškrábal."

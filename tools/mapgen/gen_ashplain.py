@@ -33,19 +33,19 @@ rng = np.random.default_rng(88)
 NODES = {
     "vstup_z_brany": (80, 78),
     "n1": (80, 112), "cedule": (52, 100), "n2": (48, 112), "duny": (112, 160),
-    "n3": (48, 192), "ohniste": (40, 236), "n4": (96, 192), "hajek": (124, 256),
+    "n3": (48, 192), "k_sadu": (10, 192), "ohniste": (40, 236), "n4": (96, 192), "hajek": (124, 256),
     "n5": (96, 272), "meznik": (112, 300), "n6": (64, 272), "sutiny": (36, 326), "pole": (124, 326),
     "n7": (64, 336), "brana_mesta": (80, 432),
 }
 EDGES = [
     ("vstup_z_brany", "n1"), ("n1", "cedule"), ("n1", "n2"), ("n1", "duny"), ("n2", "n3"),
-    ("n3", "ohniste"), ("n3", "n4"), ("n4", "hajek"), ("n4", "n5"), ("n5", "meznik"), ("n5", "n6"),
+    ("n3", "ohniste"), ("n3", "k_sadu"), ("n3", "n4"), ("n4", "hajek"), ("n4", "n5"), ("n5", "meznik"), ("n5", "n6"),
     ("n6", "sutiny"), ("n6", "n7"), ("n7", "pole"), ("n7", "brana_mesta"),
 ]
 
 # ── 1) podklad: tráva, cesta, římsy, skála nahoře ──
 path = np.zeros((ROWS, COLS), bool)
-for (q0, q1, r0, r1) in ((4, 5, 4, 6), (2, 5, 6, 7), (2, 3, 7, 11), (2, 6, 11, 12), (5, 6, 12, 16),
+for (q0, q1, r0, r1) in ((4, 5, 4, 6), (2, 5, 6, 7), (2, 3, 7, 11), (0, 6, 11, 12), (5, 6, 12, 16),
                          (3, 6, 16, 17), (3, 4, 17, 20), (3, 5, 20, 21), (4, 5, 21, 27)):
     path[r0:r1 + 1, q0:q1 + 1] = True
 LEDGES = [(6, 6, 8), (15, 1, 2), (17, 7, 8)]          # (řádek, od sloupce, do sloupce)
@@ -62,7 +62,7 @@ tiles.draw_path(img, path)
 apron = lambda x, y: (60 <= x <= 99 and 352 <= y < 448) or ((x - 80) / 30) ** 2 + ((y - 372) / 14) ** 2 <= 1
 tiles.draw_cobbles(img, apron, (40, 352, 120, 448))
 # vysoká suchá tráva / obilí – nepravidelné porosty
-PATCHES = [(126, 148, 22, 26, 1), (134, 262, 16, 30, 2), (126, 326, 24, 16, 3), (22, 206, 12, 10, 4)]
+PATCHES = [(126, 148, 22, 26, 1), (134, 262, 16, 30, 2), (126, 326, 24, 16, 3)]
 for (cx, cy, rx, ry, sd) in PATCHES:
     tiles.draw_tall_grass(img, tiles.grass_patch(cx, cy, rx, ry, sd), (cx - rx - 4, cy - ry - 4, cx + rx + 5, cy + ry + 5), sd)
 for (r, q0, q1) in LEDGES:
@@ -108,7 +108,7 @@ for (x, y) in ((60, 210), (100, 236), (24, 130), (104, 344)):
     place(O.bush(int(x + y)), x, y, (10, 4))
 # hranice z popelavých stromů (sloupce 0 a 9) od skály dolů k hradbám
 for i, y in enumerate(range(64, 360, 18)):
-    if not 268 <= y <= 330:                                     # tam stojí dům
+    if not 268 <= y <= 330 and not 176 <= y <= 214:             # dům a odbočka do sadu
         place(O.tree(i), 6 + (i % 2) * 3, y, (12, 6))
     place(O.tree(i + 50), 154 - (i % 2) * 3, y, (12, 6))
 for (x, y) in ((22, 64), (138, 64), (22, 150), (138, 200)):
@@ -134,6 +134,7 @@ block[348:448, :] |= cm
 
 # ── 3) mapa chůze ──
 block[48:380, :T] = True; block[48:380, -T:] = True   # stromová hranice
+block[178:206, :T] = False                             # odbočka do Ztichlého sadu (vlevo)
 walk = ~block
 
 os.makedirs(RES, exist_ok=True)

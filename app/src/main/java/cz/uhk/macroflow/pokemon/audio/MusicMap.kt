@@ -13,7 +13,7 @@ object MusicMap {
     /** Název res/raw skladby podle BiomeType.name; null = ticho. */
     fun trackFor(biome: String): String? = when (biome) {
         "TOWN" -> TOWN
-        "MEADOW", "FOREST", "LAKE", "WATER" -> MEADOW
+        "MEADOW", "FOREST", "LAKE", "WATER", "QUIET_ORCHARD" -> MEADOW
         "MOUNTAINS", "SKY_PASS", "ASH_PLAIN" -> MOUNTAINS
         "CAVE_OPEN", "CAVE_MAZE", "HIDDEN_GROVE", "MINES" -> CAVE
         else -> null

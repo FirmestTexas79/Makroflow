@@ -34,5 +34,6 @@ val BiomeType.wildBiome: BiomeType
         BiomeType.SKY_PASS -> BiomeType.MOUNTAINS
         // ponytail: dokud nejsou nakreslení noví Makromoni aktu II (048+), pláň spawnuje horské druhy
         BiomeType.ASH_PLAIN -> BiomeType.MOUNTAINS
+        BiomeType.QUIET_ORCHARD -> BiomeType.MEADOW     // noční druhy louky a Hvozdu (Umbex, duchové…)
         else -> this
     }

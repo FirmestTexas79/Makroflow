@@ -20,7 +20,9 @@ enum class BiomeType {
     /** Doly za Starým dolem (docs/adr/0049) – láva, koleje a chytání hmyzu. */
     MINES,
     /** Popelavá pláň za Branou světů (Akt II, docs/adr/0088). */
-    ASH_PLAIN
+    ASH_PLAIN,
+    /** Ztichlý sad vlevo od pláně, jen v noci (docs/adr/0089). */
+    QUIET_ORCHARD
 }
 
 object BiomeRegistry {
@@ -127,7 +129,9 @@ object BiomeRegistry {
                 questId = cz.uhk.macroflow.pokemon.story.Vendelin.QUEST_ID,
                 cave = cz.uhk.macroflow.pokemon.cave.MinesMap.MAP),
             BiomeDefinition(BiomeType.ASH_PLAIN, R.drawable.ash_plain, graphOf(cz.uhk.macroflow.pokemon.cave.AshPlain.MAP), questId = null,
-                cave = cz.uhk.macroflow.pokemon.cave.AshPlain.MAP)
+                cave = cz.uhk.macroflow.pokemon.cave.AshPlain.MAP),
+            BiomeDefinition(BiomeType.QUIET_ORCHARD, R.drawable.quiet_orchard, graphOf(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP), questId = null,
+                cave = cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP)
         ).associateBy { it.type }
     }
 
