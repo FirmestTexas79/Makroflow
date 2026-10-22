@@ -339,11 +339,16 @@ class QuestJournalFragment : Fragment() {
 
     // ── Zóna 1: mapa lokací a teleport (docs/adr/0052) ───────────────────────
 
+    /** Vybraná zóna na stránce Mapa; null = zóna, ve které hráč stojí. */
+    private var selectedZone: Int? = null
+
     private fun renderZone() {
         val act = activity as? MakromonMapActivity ?: return
         val page = rootView.findViewById<android.widget.FrameLayout>(R.id.zonePage)
-        val map = page.findViewWithTag<cz.uhk.macroflow.pokemon.zone.ZoneMapView>("zone_map") ?: buildMapPage(page)
         val z = act.zoneState()
+        val zone = selectedZone ?: cz.uhk.macroflow.pokemon.zone.ZoneOne.zoneOf(z.current)
+        val existing = page.findViewWithTag<cz.uhk.macroflow.pokemon.zone.ZoneMapView>("zone_map")
+        val map = if (existing != null && existing.zone == zone) existing else { page.removeAllViews(); buildMapPage(page, zone) }
         map.current = z.current
         map.heroFrac = z.heroFrac
         map.heroHead = z.heroHead
@@ -353,17 +358,19 @@ class QuestJournalFragment : Fragment() {
 
     /**
      * Záložka Mapa: mapa vybrané zóny přes celou stránku, vlevo nahoře přes ni svislý sloupec
-     * záložek zón (zatím jen Zóna 1).
+     * záložek zón (Zóna 1, Zóna 2 – klepnutím se přepne).
      */
-    private fun buildMapPage(page: android.widget.FrameLayout): cz.uhk.macroflow.pokemon.zone.ZoneMapView {
+    private fun buildMapPage(page: android.widget.FrameLayout, zone: Int): cz.uhk.macroflow.pokemon.zone.ZoneMapView {
         val ctx = requireContext()
         val dp = resources.displayMetrics.density
         val font = androidx.core.content.res.ResourcesCompat.getFont(ctx, R.font.jersey_15)
-        val map = cz.uhk.macroflow.pokemon.zone.ZoneMapView(ctx).apply { tag = "zone_map" }
+        val map = cz.uhk.macroflow.pokemon.zone.ZoneMapView(ctx, zone).apply { tag = "zone_map" }
         page.addView(map, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val tabs = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; elevation = 2 * dp }
-        cz.uhk.macroflow.pokemon.zone.ZoneOne.ZONES.forEach { (title, selected) ->
-            tabs.addView(zoneTab(title, selected, font, dp), LinearLayout.LayoutParams(
+        cz.uhk.macroflow.pokemon.zone.ZoneOne.ZONES.forEach { (num, title) ->
+            tabs.addView(zoneTab(title, num == zone, font, dp).apply {
+                setOnClickListener { if (num != zone) { selectedZone = num; renderZone() } }
+            }, LinearLayout.LayoutParams(
                 (72 * dp).toInt(), (32 * dp).toInt()).apply { bottomMargin = (5 * dp).toInt() })
         }
         page.addView(tabs, android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,

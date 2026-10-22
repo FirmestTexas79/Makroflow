@@ -1,0 +1,118 @@
+{
+ "w": 1000,
+ "h": 880,
+ "labelSize": 46,
+ "title": [
+  210,
+  810
+ ],
+ "locations": {
+  "QUIET_ORCHARD": {
+   "rect": [
+    90,
+    270,
+    238.0,
+    428.0
+   ],
+   "map": [
+    88.1,
+    235.9,
+    224.07,
+    469.93
+   ],
+   "label": [
+    200,
+    254
+   ]
+  },
+  "ASH_PLAIN": {
+   "rect": [
+    380,
+    80,
+    288.0,
+    728.0
+   ],
+   "map": [
+    384.0,
+    280.0,
+    21.09,
+    782.91
+   ],
+   "label": [
+    520,
+    70
+   ]
+  },
+  "ECHO_CANYON": {
+   "rect": [
+    690,
+    240,
+    246.0,
+    528.0
+   ],
+   "map": [
+    694.0,
+    244.1,
+    186.22,
+    583.86
+   ],
+   "label": [
+    810,
+    224
+   ]
+  }
+ },
+ "links": [
+  {
+   "a": "ASH_PLAIN",
+   "aNode": "k_sadu",
+   "aDir": "w",
+   "aPos": [
+    401.5,
+    356.6
+   ],
+   "aFrac": [
+    0.0625,
+    0.4286
+   ],
+   "b": "QUIET_ORCHARD",
+   "bNode": "vstup_ze_plane",
+   "bDir": "e",
+   "bPos": [
+    312.2,
+    341.6
+   ],
+   "bFrac": [
+    0.95,
+    0.25
+   ],
+   "secret": false
+  },
+  {
+   "a": "ASH_PLAIN",
+   "aNode": "ke_kanonu",
+   "aDir": "e",
+   "aPos": [
+    646.5,
+    356.6
+   ],
+   "aFrac": [
+    0.9375,
+    0.4286
+   ],
+   "b": "ECHO_CANYON",
+   "bNode": "vstup_z_plane",
+   "bDir": "w",
+   "bPos": [
+    703.2,
+    274.4
+   ],
+   "bFrac": [
+    0.0375,
+    0.151
+   ],
+   "secret": false
+  }
+ ],
+ "npcs": {}
+}

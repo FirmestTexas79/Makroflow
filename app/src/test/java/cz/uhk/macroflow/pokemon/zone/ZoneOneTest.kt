@@ -86,7 +86,7 @@ class ZoneOneTest {
             assertTrue("$biome/$node", kotlin.math.abs(expect.first - fx.toFloat()) < 0.001f &&
                 kotlin.math.abs(expect.second - fy.toFloat()) < 0.001f)
         }
-        ZoneOne.LOCATIONS.forEach { b ->
+        ZoneOne.LOCATIONS.filter { ZoneOne.zoneOf(it) == 1 }.forEach { b ->
             assertTrue(b, json.contains("\"$b\": {") && file("src/main/assets/zone/$b.png").exists())
         }
     }

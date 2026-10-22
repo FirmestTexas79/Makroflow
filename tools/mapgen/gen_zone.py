@@ -328,6 +328,10 @@ def background(locs, links):
 
 
 SECRET_BG = {"HIDDEN_GROVE"}
+ZONE_JSON = "zone1.json"
+ZONE_TITLE = "zóna 1"
+NAMES = {"TOWN": "Město", "MEADOW": "Louka", "FOREST": "Hvozd", "HIDDEN_GROVE": "Zapomenutý háj", "MOUNTAINS": "Hory",
+         "CAVE_MAZE": "Starý důl", "MINES": "Doly", "CAVE_OPEN": "Mechová jeskyně", "SKY_PASS": "Nebeský průsmyk"}
 
 
 def main(preview=None):
@@ -347,8 +351,8 @@ def main(preview=None):
                 locations={b: dict(rect=[round(v, 1) for v in i["rect"]], map=i["map"],
                                    label=[LABEL[b][0] + MX, LABEL[b][1] + MY]) for b, i in locs.items()},
                 links=links, npcs=npcs)
-    json.dump(data, open(os.path.join(OUT, "zone1.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
-    print("zóna 1:", ", ".join(f"{b} {int(i['rect'][2])}×{int(i['rect'][3])}" for b, i in locs.items()))
+    json.dump(data, open(os.path.join(OUT, ZONE_JSON), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    print(ZONE_TITLE + ":", ", ".join(f"{b} {int(i['rect'][2])}×{int(i['rect'][3])}" for b, i in locs.items()))
     if preview: render_preview(data, preview)
 
 
@@ -380,8 +384,7 @@ def render_preview(d, path):
         im.alpha_composite(hd, (int(hx * s - 17), int(hy * s - 17)))
     from PIL import ImageFont
     font = ImageFont.truetype(os.path.join(ROOT, "app", "src", "main", "res", "font", "jersey_15.ttf"), int(d["labelSize"] * s))
-    names = {"TOWN": "Město", "MEADOW": "Louka", "FOREST": "Hvozd", "HIDDEN_GROVE": "Zapomenutý háj", "MOUNTAINS": "Hory",
-             "CAVE_MAZE": "Starý důl", "MINES": "Doly", "CAVE_OPEN": "Mechová jeskyně", "SKY_PASS": "Nebeský průsmyk"}
+    names = NAMES
     for b, loc in d["locations"].items():
         if b in SECRET_BG: continue
         x, y = loc["label"]

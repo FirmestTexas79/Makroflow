@@ -12,15 +12,26 @@ package cz.uhk.macroflow.pokemon.zone
 object ZoneOne {
     const val TITLE = "Zóna 1"
 
-    /** Záložky zón na stránce Mapa (název, vybraná) – další zóny přibydou sem. */
-    val ZONES = listOf(TITLE to true)
+    /** Zóny na stránce Mapa: číslo → název (záložky). Zóna 2 = Akt II za Branou světů. */
+    val ZONES = listOf(1 to TITLE, 2 to "Zóna 2")
+
+    /** Lokace aktu II (Zóna 2) – mapa v assets/zone2 (tools/mapgen/gen_zone2.py). */
+    val ZONE2 = setOf("ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON")
+
+    fun zoneOf(biome: String): Int = if (biome in ZONE2) 2 else 1
+
+    /** Soubor s rozvržením a složka obrázků zóny. */
+    fun assetDir(zone: Int) = if (zone == 2) "zone2" else "zone"
+    fun jsonPath(zone: Int) = if (zone == 2) "zone2/zone2.json" else "zone/zone1.json"
+    fun title(zone: Int) = ZONES.firstOrNull { it.first == zone }?.second ?: TITLE
 
     /** Příznak objevené lokace (synchronizuje se se StoryFlags). */
     const val SEEN_PREFIX = "zone_seen_"
     fun seenKey(biome: String) = SEEN_PREFIX + biome
 
     /** Lokace zóny v pořadí kreslení. */
-    val LOCATIONS = listOf("TOWN", "MEADOW", "FOREST", "HIDDEN_GROVE", "MOUNTAINS", "CAVE_MAZE", "MINES", "CAVE_OPEN", "SKY_PASS")
+    val LOCATIONS = listOf("TOWN", "MEADOW", "FOREST", "HIDDEN_GROVE", "MOUNTAINS", "CAVE_MAZE", "MINES", "CAVE_OPEN", "SKY_PASS",
+        "ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON")
 
     /** Tajné lokace – na mapě jen, když v nich hráč stojí. */
     val SECRET = setOf("HIDDEN_GROVE")
@@ -28,17 +39,21 @@ object ZoneOne {
     val NAMES = mapOf(
         "TOWN" to "Město", "MEADOW" to "Louka", "FOREST" to "Hvozd", "HIDDEN_GROVE" to "Zapomenutý háj",
         "MOUNTAINS" to "Hory", "CAVE_MAZE" to "Starý důl", "MINES" to "Doly", "CAVE_OPEN" to "Mechová jeskyně",
-        "SKY_PASS" to "Nebeský průsmyk"
+        "SKY_PASS" to "Nebeský průsmyk",
+        "ASH_PLAIN" to "Popelavá pláň", "QUIET_ORCHARD" to "Ztichlý sad", "ECHO_CANYON" to "Ozvěnový kaňon"
     )
 
     /** Lokace, kam se chodí přes hory – teleport je hlídá stejný krokový zámek jako vstup do hor. */
-    val BEHIND_MOUNTAINS = setOf("MOUNTAINS", "CAVE_MAZE", "MINES", "CAVE_OPEN", "SKY_PASS")
+    val BEHIND_MOUNTAINS = setOf("MOUNTAINS", "CAVE_MAZE", "MINES", "CAVE_OPEN", "SKY_PASS") + ZONE2
 
     /** Uzel, kam teleport postaví hráče (u lokací z CaveMap jejich východ). */
     val ARRIVAL = mapOf(
         "TOWN" to "spawn", "MEADOW" to "rozcesti", "MOUNTAINS" to "rozcesti_hory",
         "FOREST" to "vstup_z_louky", "CAVE_MAZE" to "vychod_dolu", "CAVE_OPEN" to "vychod_jeskyne",
-        "MINES" to "zpet_do_stoly", "SKY_PASS" to "vstup_ze_svatyne", "HIDDEN_GROVE" to "vstup_z_hvozdu"
+        "MINES" to "zpet_do_stoly", "SKY_PASS" to "vstup_ze_svatyne", "HIDDEN_GROVE" to "vstup_z_hvozdu",
+        "ASH_PLAIN" to cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE,
+        "QUIET_ORCHARD" to cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE,
+        "ECHO_CANYON" to cz.uhk.macroflow.pokemon.cave.EchoCanyon.ENTRY_NODE
     )
 
     enum class Shown {
@@ -86,7 +101,9 @@ object ZoneOne {
     /** Spoje lokací – stejné jako „links“ v assets/zone/zone1.json (hlídá test). */
     val LINKS = listOf(
         "TOWN" to "MEADOW", "MEADOW" to "FOREST", "MEADOW" to "MOUNTAINS", "MOUNTAINS" to "SKY_PASS",
-        "MOUNTAINS" to "CAVE_OPEN", "MOUNTAINS" to "CAVE_MAZE", "CAVE_MAZE" to "MINES", "FOREST" to "HIDDEN_GROVE"
+        "MOUNTAINS" to "CAVE_OPEN", "MOUNTAINS" to "CAVE_MAZE", "CAVE_MAZE" to "MINES", "FOREST" to "HIDDEN_GROVE",
+        // Zóna 2 (zone2.json má jen spoje uvnitř zóny; průchod Branou světů je přechod mezi zónami)
+        "SKY_PASS" to "ASH_PLAIN", "ASH_PLAIN" to "QUIET_ORCHARD", "ASH_PLAIN" to "ECHO_CANYON"
     )
 
     /** Počet přechodů po nejkratší cestě (BFS); null = nespojeno. */
@@ -144,6 +161,10 @@ object ZoneOne {
         if (any("sky_pass_visited")) s += "SKY_PASS"
         if (any("forest_rot_defeated", "grove_found")) s += "FOREST"
         if (any("grove_found")) s += "HIDDEN_GROVE"
+        if (any("ash_plain_visited", "quiet_orchard_visited", "echo_canyon_visited")) s += "ASH_PLAIN"
+        if (any("quiet_orchard_visited")) s += "QUIET_ORCHARD"
+        if (any("echo_canyon_visited")) s += "ECHO_CANYON"
+        if ("ASH_PLAIN" in s) s += "SKY_PASS"
         // kdo byl za horami, prošel horami i loukou; kdo byl v Hvozdu, prošel loukou
         if (s.any { it in BEHIND_MOUNTAINS }) s += "MOUNTAINS"
         if ("MOUNTAINS" in s || "FOREST" in s) s += "MEADOW"

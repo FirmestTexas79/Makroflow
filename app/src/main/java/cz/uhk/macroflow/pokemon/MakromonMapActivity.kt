@@ -3113,7 +3113,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     showMapToast("🌲 Hvozd tě pustí dál, až splníš ${block.need} úkolů (máš ${block.done}).")
                 is cz.uhk.macroflow.pokemon.zone.ZoneOne.Block.Energy ->
                     showMapToast("⚡ Dnešních ${zone.FREE_TELEPORTS} teleportů zdarma je pryč. Cesta sem stojí ${block.need} energie, máš ${block.have}.")
-                null -> cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, "Teleport", "Zóna 1 · $name") { ui, body, close ->
+                null -> cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, "Teleport", "${zone.title(zone.zoneOf(biome))} · $name") { ui, body, close ->
                     body.addView(ui.text("Vyskočíš vysoko nad Makrosvět a dopadneš rovnou na místo.", 16f, ui.inkSoft))
                     body.addView(ui.spacer(8f))
                     val free = zone.FREE_TELEPORTS - used

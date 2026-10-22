@@ -27,7 +27,7 @@ import kotlin.math.min
  * spoje mezi východy a vchody, hlavy NPC a hráče tam, kde právě stojí. Klepnutí na lokaci → [onPick].
  * Rozvržení je v assets/zone/zone1.json (tools/mapgen/gen_zone.py).
  */
-class ZoneMapView(context: Context) : View(context) {
+class ZoneMapView(context: Context, val zone: Int = 1) : View(context) {
 
     private class Loc(val id: String, val rect: RectF, val map: FloatArray, val label: PointF, val bmp: Bitmap?)
     private class Link(val a: String, val aDir: String, val aPos: PointF, val b: String, val bDir: String, val bPos: PointF)
@@ -61,9 +61,11 @@ class ZoneMapView(context: Context) : View(context) {
         style = Paint.Style.STROKE; strokeWidth = 4f; color = 0xFFF6E8C4.toInt(); strokeCap = Paint.Cap.ROUND
         pathEffect = DashPathEffect(floatArrayOf(12f, 10f), 0f)
     }
-    private val seaColor = 0xFF3D7DB5.toInt()
+    private val seaColor = if (zone == 2) 0xFF3A363C.toInt() else 0xFF3D7DB5.toInt()   // zóna 2: popelavá pustina
     /** Souvislý terén celé zóny (gen_zone.py → zone/bg.png). */
-    private val bg: Bitmap? = bitmap("zone/bg.png")
+    private val dir = ZoneOne.assetDir(zone)
+    private val bg: Bitmap? = bitmap("$dir/bg.png")
+    private val zoneTitle = ZoneOne.title(zone)
     private var titlePos = PointF(795f, 1150f)
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -77,7 +79,7 @@ class ZoneMapView(context: Context) : View(context) {
     private var oy = 0f
 
     init {
-        val json = JSONObject(context.assets.open("zone/zone1.json").bufferedReader().use { it.readText() })
+        val json = JSONObject(context.assets.open(ZoneOne.jsonPath(zone)).bufferedReader().use { it.readText() })
         cw = json.getDouble("w").toFloat(); ch = json.getDouble("h").toFloat()
         labelSize = json.optDouble("labelSize", 30.0).toFloat()
         json.optJSONArray("title")?.let { titlePos = it.pt() }
@@ -89,7 +91,7 @@ class ZoneMapView(context: Context) : View(context) {
                 RectF(r.f(0), r.f(1), r.f(0) + r.f(2), r.f(1) + r.f(3)),
                 floatArrayOf(m.f(0), m.f(1), m.f(2), m.f(3)),
                 PointF(lb.f(0), lb.f(1)),
-                bitmap("zone/$id.png"))
+                bitmap("$dir/$id.png"))
         }
         val ls = json.getJSONArray("links")
         for (i in 0 until ls.length()) {
@@ -98,7 +100,7 @@ class ZoneMapView(context: Context) : View(context) {
                 o.getString("b"), o.getString("bDir"), o.getJSONArray("bPos").pt())
         }
         val ns = json.getJSONObject("npcs")
-        ns.keys().forEach { b -> npcs += Npc(b, ns.getJSONObject(b).getJSONArray("pos").pt(), bitmap("zone/head_$b.png")) }
+        ns.keys().forEach { b -> npcs += Npc(b, ns.getJSONObject(b).getJSONArray("pos").pt(), bitmap("$dir/head_$b.png")) }
         text.typeface = runCatching { androidx.core.content.res.ResourcesCompat.getFont(context, cz.uhk.macroflow.R.font.jersey_15) }.getOrNull()
         halo.typeface = text.typeface
     }
@@ -193,14 +195,14 @@ class ZoneMapView(context: Context) : View(context) {
     private fun compass(canvas: Canvas, cx: Float, cy: Float) {
         // název zóny na pergamenové stuze (jako cedule mapy)
         text.textSize = 64f; text.color = ink
-        val tw = text.measureText(ZoneOne.TITLE)
+        val tw = text.measureText(zoneTitle)
         val banner = RectF(cx - tw / 2f - 30f, cy - 150f, cx + tw / 2f + 30f, cy - 76f)
         fill.color = 0xFFB08A58.toInt()
         canvas.drawRect(banner.left - 18f, banner.top + 14f, banner.left + 8f, banner.bottom + 10f, fill)     // konce stuhy
         canvas.drawRect(banner.right - 8f, banner.top + 14f, banner.right + 18f, banner.bottom + 10f, fill)
         fill.color = paper; canvas.drawRoundRect(banner, 8f, 8f, fill)
         stroke.color = ink; stroke.strokeWidth = 4f; canvas.drawRoundRect(banner, 8f, 8f, stroke)
-        canvas.drawText(ZoneOne.TITLE, cx, cy - 92f, text)
+        canvas.drawText(zoneTitle, cx, cy - 92f, text)
         val r = 52f
         val star = Path()
         for (i in 0 until 8) {
