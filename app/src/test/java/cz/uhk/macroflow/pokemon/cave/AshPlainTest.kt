@@ -17,9 +17,9 @@ class AshPlainTest {
         assertTrue(!plain.isCave)
     }
 
-    @Test fun vstupNahoreMestoDole() {
-        assertTrue(plain.node(AshPlain.ENTRY_NODE)!!.y < plain.artH * 0.15)
-        assertTrue(plain.node(AshPlain.CITY_GATE_NODE)!!.y > plain.artH * 0.85)
+    @Test fun vstupDoleMestoNahore() {
+        assertTrue(plain.node(AshPlain.ENTRY_NODE)!!.y > plain.artH * 0.85)
+        assertTrue(plain.node(AshPlain.CITY_GATE_NODE)!!.y < plain.artH * 0.2)
     }
 
     @Test fun mistaMajiOblastKlepnutiATexty() {

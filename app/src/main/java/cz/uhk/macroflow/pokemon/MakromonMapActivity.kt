@@ -1311,7 +1311,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.SKY_PASS -> { placeSkyPassDecor(); placeHunfrey() }
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
                 currentBiome == BiomeType.HIDDEN_GROVE -> placeGroveDecor()
-                currentBiome == BiomeType.ASH_PLAIN -> placeEncounterGlows(cave!!)
+                currentBiome == BiomeType.ASH_PLAIN -> Unit       // místa setkání = vysoká tráva v mapě
                 currentBiome == BiomeType.MINES -> { placeMinesDecor(); placeEncounterGlows(cave!!); placeGatherSpots(); placeVendelin() }
                 cave != null -> {
                     placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots()
@@ -1558,7 +1558,7 @@ class MakromonMapActivity : AppCompatActivity() {
         cave.encounterNodes.forEachIndexed { i, id ->
             val n = cave.node(id) ?: return@forEachIndexed
             // Doly: žhnoucí mech (oranžová záře), jeskyně: svítící kapradiny
-            val glow = glowView(size, when (currentBiome) { BiomeType.MINES -> 0xFFFF8A3A.toInt(); BiomeType.ASH_PLAIN -> 0xFFFFC890.toInt(); else -> 0xFF8CF0D2.toInt() }, 0x66).apply {
+            val glow = glowView(size, if (currentBiome == BiomeType.MINES) 0xFFFF8A3A.toInt() else 0xFF8CF0D2.toInt(), 0x66).apply {
                 layoutParams = FrameLayout.LayoutParams(size, (size * 0.6f).toInt())
                 x = n.x * scale - size / 2f
                 y = (n.y - 3) * scale - size * 0.3f
