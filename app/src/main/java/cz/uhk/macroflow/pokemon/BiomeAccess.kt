@@ -32,5 +32,7 @@ val BiomeType.wildBiome: BiomeType
         BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE, BiomeType.MINES -> BiomeType.MOUNTAINS
         BiomeType.FOREST, BiomeType.HIDDEN_GROVE -> BiomeType.MEADOW
         BiomeType.SKY_PASS -> BiomeType.MOUNTAINS
+        // ponytail: dokud nejsou nakreslení noví Makromoni aktu II (048+), pláň spawnuje horské druhy
+        BiomeType.ASH_PLAIN -> BiomeType.MOUNTAINS
         else -> this
     }

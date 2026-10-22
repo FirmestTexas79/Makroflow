@@ -63,7 +63,7 @@ object SkyPass {
         if (heartPlaced) GateBoard(
             "Prstenec se chvěje a září.",
             listOf("Srdce Hvozdu v lůžku tepe zeleným světlem a závoj uvnitř brány se rozestupuje.",
-                "Za ním se rozlévá světlo nového kraje…", "(Cesta do druhého regionu se teprve chystá.)"),
+                "Za ním se rozlévá světlo nového kraje…", "Pod závojem se rozlévá šedá pláň a na jejím konci září bílé hradby."),
             missing = null)
         else GateBoard(
             "Prastarý prstenec nad mořem mraků.",

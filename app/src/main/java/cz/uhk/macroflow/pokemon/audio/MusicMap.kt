@@ -14,7 +14,7 @@ object MusicMap {
     fun trackFor(biome: String): String? = when (biome) {
         "TOWN" -> TOWN
         "MEADOW", "FOREST", "LAKE", "WATER" -> MEADOW
-        "MOUNTAINS", "SKY_PASS" -> MOUNTAINS
+        "MOUNTAINS", "SKY_PASS", "ASH_PLAIN" -> MOUNTAINS
         "CAVE_OPEN", "CAVE_MAZE", "HIDDEN_GROVE", "MINES" -> CAVE
         else -> null
     }

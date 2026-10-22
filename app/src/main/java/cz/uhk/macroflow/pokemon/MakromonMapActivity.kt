@@ -97,7 +97,8 @@ class MakromonMapActivity : AppCompatActivity() {
     private val encounterNodes = setOf("krovi1", "krovi2", "voda", "skaly1", "skaly2") +
         cz.uhk.macroflow.pokemon.cave.CaveMaps.ALL.flatMap { it.encounterNodes } +
         cz.uhk.macroflow.pokemon.cave.ForestMap.MAP.encounterNodes +
-        cz.uhk.macroflow.pokemon.cave.MinesMap.MAP.encounterNodes
+        cz.uhk.macroflow.pokemon.cave.MinesMap.MAP.encounterNodes +
+        cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.encounterNodes
 
     /** Přechod mezi mapami. */
     private enum class MapTransition { NONE, FADE, CAVE_IN, CAVE_OUT,
@@ -109,7 +110,7 @@ class MakromonMapActivity : AppCompatActivity() {
         const val EXTRA_PORTAL = "portal"
         private const val DOUBLE_CLICK_TIME = 300L
         /** Lokace s vlastní scénou přechodu (docs/adr/0042). */
-        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS", "HIDDEN_GROVE")
+        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS", "HIDDEN_GROVE", "ASH_PLAIN")
         /** Dosah klepnutí na uzel v podílu obrazovky. */
         private const val TAP_RADIUS = 0.1f
         /** V jeskyních a lese jsou body husté a mezi nimi se chodí volně – menší dosah. */
@@ -122,7 +123,8 @@ class MakromonMapActivity : AppCompatActivity() {
             "zila_stribro", "zila_zlato", "strom_briza", "strom_javor"
         ) + cz.uhk.macroflow.pokemon.cave.SkyPass.ACTION_NODES +
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
-            cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE
+            cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
+            cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         // Mydrus zapomíná (docs/adr/0057)
@@ -827,7 +829,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     (if (StoryFlags.isSet(this, Vendelin.BOOK_SIGNED_KEY)) Vendelin.DOOR_HANDWRITING else ""))
                 Vendelin.NODE -> { questManager.loadQuest(Vendelin.QUEST_ID); mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150) }
                 Vendelin.BOOK_NODE -> onMinerBook()
-                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu" -> BiomeRegistry.definition(currentBiome)?.cave?.let {
+                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu", cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE -> BiomeRegistry.definition(currentBiome)?.cave?.let {
                     walkInto(BiomeType.valueOf(it.parentBiome), it.mountainNode,
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
@@ -854,6 +856,11 @@ class MakromonMapActivity : AppCompatActivity() {
                 SkyPass.CAIRN_NODE -> showMapToast("🪨 Mužík z plochých kamenů. Poutníci sem pokládají kámen pro štěstí na cestě mezi světy.\n" +
                     "Na tom nejvyšším je vyrytý list.")
                 SkyPass.VISTA_NODE -> vistaShot()
+                // Popelavá pláň (docs/adr/0088)
+                cz.uhk.macroflow.pokemon.cave.AshPlain.SIGN_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.AshPlain.SIGN_TEXT)
+                cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_TEXT +
+                    if (Insight.level(StoryFlags.all(this)) >= 3) cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_TEXT_INSIGHT else "")
+                cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_TEXT)
                 // Hunfrey na plošině vedle brány (docs/adr/0085)
                 cz.uhk.macroflow.pokemon.story.Hunfrey.NODE -> {
                     questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Hunfrey.QUEST_ID)
@@ -934,7 +941,7 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
-    private fun emptyEncounterText(node: String): String = when (node) {
+    private fun emptyEncounterText(node: String): String = cz.uhk.macroflow.pokemon.cave.AshPlain.emptyEncounterText(node) ?: when (node) {
         "jezirko" -> "Na hladině podzemního jezírka se jen zavlnil odraz hub. Zkus to znovu."
         "houby" -> "Svítící houby pomalu pulzují… nikdo tu není. Zkus to znovu."
         "krystaly_j", "balvany_j" -> "Mezi kameny to jen zapraskalo. Zkus to znovu."
@@ -1077,6 +1084,7 @@ class MakromonMapActivity : AppCompatActivity() {
             mapWorld.animate().cancel(); cameraOverride = false
             val firstSkyVisit = newBiome == BiomeType.SKY_PASS && !StoryFlags.isSet(this, SkyPass.VISITED_KEY)
             if (newBiome == BiomeType.SKY_PASS) StoryFlags.set(this, SkyPass.VISITED_KEY)
+            if (newBiome == BiomeType.ASH_PLAIN) StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.AshPlain.VISITED_KEY)
             if (newBiome == BiomeType.FOREST) {
                 val ctx = applicationContext
                 lifecycleScope.launch {
@@ -1303,6 +1311,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.SKY_PASS -> { placeSkyPassDecor(); placeHunfrey() }
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
                 currentBiome == BiomeType.HIDDEN_GROVE -> placeGroveDecor()
+                currentBiome == BiomeType.ASH_PLAIN -> placeEncounterGlows(cave!!)
                 currentBiome == BiomeType.MINES -> { placeMinesDecor(); placeEncounterGlows(cave!!); placeGatherSpots(); placeVendelin() }
                 cave != null -> {
                     placeCrystal(cave, progress); if (cave.isCave) placeEncounterGlows(cave); placeGatherSpots()
@@ -1549,7 +1558,7 @@ class MakromonMapActivity : AppCompatActivity() {
         cave.encounterNodes.forEachIndexed { i, id ->
             val n = cave.node(id) ?: return@forEachIndexed
             // Doly: žhnoucí mech (oranžová záře), jeskyně: svítící kapradiny
-            val glow = glowView(size, if (currentBiome == BiomeType.MINES) 0xFFFF8A3A.toInt() else 0xFF8CF0D2.toInt(), 0x66).apply {
+            val glow = glowView(size, when (currentBiome) { BiomeType.MINES -> 0xFFFF8A3A.toInt(); BiomeType.ASH_PLAIN -> 0xFFFFC890.toInt(); else -> 0xFF8CF0D2.toInt() }, 0x66).apply {
                 layoutParams = FrameLayout.LayoutParams(size, (size * 0.6f).toInt())
                 x = n.x * scale - size / 2f
                 y = (n.y - 3) * scale - size * 0.3f
@@ -2710,7 +2719,11 @@ class MakromonMapActivity : AppCompatActivity() {
             if (StoryFlags.isSet(this, SecretGrove.RELEASED_KEY))
                 body.addView(ui.text(SecretGrove.GATE_RUNES_LINE, 17f, ui.olive).apply { setPadding(0, ui.px(2f), 0, ui.px(6f)) })
             board.missing?.let { body.addView(ui.text("Chybí: $it 🍃", 19f, ui.rust).apply { setPadding(0, ui.px(4f), 0, ui.px(6f)) }) }
-            body.addView(ui.button("Rozumím") { close(); afterGateBoard() }.apply {
+            val open = StoryFlags.isSet(this, SkyPass.HEART_PLACED_KEY)
+            body.addView(ui.button(if (open) "Projít branou" else "Rozumím") {
+                close()
+                if (open) walkInto(BiomeType.ASH_PLAIN, cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE, MapTransition.FADE) else afterGateBoard()
+            }.apply {
                 layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     .apply { topMargin = ui.px(8f) }
             })

@@ -35,7 +35,9 @@ object StoryProgress {
         ForestHeart.ROT_DEFEATED_KEY,
         // Doly (docs/adr/0049)
         cz.uhk.macroflow.pokemon.cave.MinesMap.VISITED_KEY, cz.uhk.macroflow.pokemon.cave.MinesMap.NET_TAKEN_KEY,
-        Vendelin.BOOK_SIGNED_KEY
+        Vendelin.BOOK_SIGNED_KEY,
+        // Akt II (docs/adr/0088)
+        cz.uhk.macroflow.pokemon.cave.AshPlain.VISITED_KEY
     ) + SecretGrove.KEYS
 
     fun isStoryKey(key: String): Boolean =

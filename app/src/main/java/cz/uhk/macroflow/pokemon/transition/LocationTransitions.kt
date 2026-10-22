@@ -28,7 +28,7 @@ object LocationTransitions {
         "TOWN" -> GateScene(w, h)
         "MEADOW" -> GrassScene(w, h)
         "FOREST", "HIDDEN_GROVE" -> LeafScene(w, h)
-        "MOUNTAINS", "SKY_PASS" -> MistScene(w, h)
+        "MOUNTAINS", "SKY_PASS", "ASH_PLAIN" -> MistScene(w, h)
         else -> null
     }
 
