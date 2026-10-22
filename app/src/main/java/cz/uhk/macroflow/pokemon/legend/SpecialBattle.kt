@@ -34,7 +34,7 @@ enum class SpecialBattle(
     BOSS_RED("boss_red", "034", 12, Kind.BOSS, CrystalColor.RED, "makromon_34_ignileo", displayName = "IGNILEO", statsFrom = "003"),
     LEGEND_PEAK("legend_peak", "019", 80, Kind.LEGEND, null, "makromon_19_drakirra"),           // drak z vrcholu
     // pán Rudé hniloby v kořenech Starého dubu (docs/adr/0045)
-    FOREST_ROT("forest_rot", "026", 14, Kind.BOSS, null, "makromon_26_soulord",
+    FOREST_ROT("forest_rot", "026", 13, Kind.BOSS, null, "makromon_26_soulord",
         winKey = cz.uhk.macroflow.pokemon.story.ForestHeart.ROT_DEFEATED_KEY);
 
     enum class Kind { BOSS, LEGEND }

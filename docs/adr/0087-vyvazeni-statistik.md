@@ -26,3 +26,17 @@ Stav: přijato (2026-10-21), větev `MULTI`
   (statistiky Serpfina, lv 12) a Soulord (lv 14) zesílí** – dřív byli výrazně slabší než Ignileo
   (statistiky Ignarotha, součet 340, lv 12); teď jsou srovnatelní.
 - Test `StatsBalanceTest`: každý druh 110–360, vývoj je vždy silnější než předchozí stupeň.
+
+## Doladění bossů (2026-10-22, issue #18)
+Simulace soubojů (tým 2–3 Makromonů druhého stupně, součet ~240, útoky 40/65 bez výhody typu, 4000 bitev):
+
+| Boss | Kde (divocí) | Výhra týmu 3 na lv 10 / 12 / 14 |
+|---|---|---|
+| Aquavulp lv 12 | jeskyně (6–12) | 99 % / 100 % / 100 % |
+| Ignileo lv 12 | doly (8–14) | 1 % / 75 % / 100 % |
+| Soulord lv 14 | kořeny Hvozdu | 2 % / 62 % / 100 % |
+| **Soulord lv 13** | | 10 % / 95 % / 100 % |
+
+- Aquavulp a Ignileo beze změny: křivka jeskyně → doly roste, jak má.
+- **Soulord 14 → 13.** Je duch, takže normální útoky (Tackle, Scratch…) ho nezasáhnou a v praxi je těžší,
+  než ukazuje simulace. S lv 13 zůstává nejtěžším bossem aktu I, ale tým na lv 12 ho dá.
