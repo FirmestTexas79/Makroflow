@@ -18,3 +18,4 @@ local.properties
 /app/release/
 *.aab
 *.apk
+__pycache__/
