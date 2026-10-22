@@ -864,10 +864,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     if (Insight.level(StoryFlags.all(this)) >= 3) cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_TEXT_INSIGHT else "")
                 cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_TEXT)
                 // Ztichlý sad (docs/adr/0089) – jen v noci
-                cz.uhk.macroflow.pokemon.cave.QuietOrchard.PLAIN_NODE ->
-                    if (cz.uhk.macroflow.pokemon.cave.QuietOrchard.isOpen(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)))
-                        walkInto(BiomeType.QUIET_ORCHARD, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE, MapTransition.FADE)
-                    else showMapToast(cz.uhk.macroflow.pokemon.cave.QuietOrchard.CLOSED_TEXT)
+                cz.uhk.macroflow.pokemon.cave.QuietOrchard.PLAIN_NODE -> walkInto(BiomeType.QUIET_ORCHARD, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE, MapTransition.FADE)
                 // Ozvěnový kaňon (docs/adr/0090)
                 cz.uhk.macroflow.pokemon.cave.EchoCanyon.PLAIN_NODE -> walkInto(BiomeType.ECHO_CANYON, cz.uhk.macroflow.pokemon.cave.EchoCanyon.ENTRY_NODE, MapTransition.FADE)
                 cz.uhk.macroflow.pokemon.cave.EchoCanyon.BRIDGE_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.EchoCanyon.BRIDGE_TEXT)
@@ -1139,7 +1136,8 @@ class MakromonMapActivity : AppCompatActivity() {
             clearDecor()
 
             if (def != null) {
-                mapBackground.setImageResource(def.backgroundRes)
+                val night = def.nightRes != null && cz.uhk.macroflow.pokemon.cave.QuietOrchard.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))
+                mapBackground.setImageResource(if (night) def.nightRes!! else def.backgroundRes)
                 layoutWorld(def.cave)
                 movementEngine.updateBiome(def.graph, startPos, walkGridFor(newBiome))
             }
@@ -1328,10 +1326,11 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
                 currentBiome == BiomeType.HIDDEN_GROVE -> placeGroveDecor()
                 // místa setkání = vysoká tráva v mapě; přes ni padá popel a z ohniště jiskří
-                currentBiome == BiomeType.ASH_PLAIN -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.AshFxView(this@MakromonMapActivity, worldScale).apply {
+                currentBiome == BiomeType.ASH_PLAIN -> if (worldScale > 0) placeAshGateVeil().also { addGroundDecor(cz.uhk.macroflow.pokemon.cave.AshFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artH * worldScale)
-                })
-                currentBiome == BiomeType.QUIET_ORCHARD -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.OrchardFxView(this@MakromonMapActivity, worldScale).apply {
+                }) }
+                currentBiome == BiomeType.QUIET_ORCHARD -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.OrchardFxView(this@MakromonMapActivity, worldScale,
+                    cz.uhk.macroflow.pokemon.cave.QuietOrchard.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artH * worldScale)
                 })
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
@@ -1480,6 +1479,35 @@ class MakromonMapActivity : AppCompatActivity() {
                 socketGlow.alpha = 0.25f + 0.75f * p
                 runeGlow.alpha = 0.45f + 0.35f * A.pulse(t + 700, 3400).toFloat()
                 clouds.forEach { c -> c.view.x = kotlin.math.floor(A.cloudX(t, c.speed, c.start, artW, c.w)).toFloat() * s }
+            }
+            start()
+        }
+    }
+
+    /** Popelavá pláň: otevřený závoj Brány světů se točí stejně jako v průsmyku (docs/adr/0088). */
+    private fun placeAshGateVeil() {
+        val s = worldScale.toFloat()
+        val A = cz.uhk.macroflow.pokemon.cave.SkyPassArt
+        val P = cz.uhk.macroflow.pokemon.cave.AshPlain
+        val frames = (0 until A.FRAMES).map {
+            android.graphics.Bitmap.createBitmap(A.veil(it, true), A.VEIL_SIZE, A.VEIL_SIZE, android.graphics.Bitmap.Config.ARGB_8888)
+        }
+        val veilSize = (A.VEIL_SIZE * s).toInt()
+        val veil = pixelView(A.veil(0, true), A.VEIL_SIZE, A.VEIL_SIZE, veilSize, veilSize).apply {
+            x = (P.GATE_X - A.VEIL_R) * s; y = (P.GATE_Y - A.VEIL_R) * s; elevation = 1.5f
+        }
+        val runeGlow = glowView((60 * s).toInt(), 0xFF7CFF9A.toInt(), 0x66).apply {
+            x = (P.GATE_X - 30) * s; y = (P.GATE_Y - 30) * s; elevation = 1.4f
+        }
+        addDecor(runeGlow); addDecor(veil)
+        val t0 = android.os.SystemClock.uptimeMillis()
+        crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 1000; repeatCount = android.animation.ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener {
+                val t = android.os.SystemClock.uptimeMillis() - t0
+                veil.setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, frames[((t / 110) % A.FRAMES).toInt()]).apply { isFilterBitmap = false })
+                runeGlow.alpha = 0.4f + 0.35f * A.pulse(t + 700, 3400).toFloat()
             }
             start()
         }

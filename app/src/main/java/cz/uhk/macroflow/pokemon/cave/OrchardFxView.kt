@@ -9,10 +9,11 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Živý Ztichlý sad (docs/adr/0089): světlušky pomalu krouží a blikají, nad jezírkem jich je víc.
+ * Živý Ztichlý sad (docs/adr/0089): v noci světlušky pomalu krouží a blikají (u jezírka jich je víc),
+ * ve dne místo nich poletují bílí a žlutí motýlci.
  * Velikost = celý svět mapy, [scale] = násobek art pixelu; kreslí se po celých art pixelech.
  */
-class OrchardFxView(context: Context, private val scale: Int) : View(context) {
+class OrchardFxView(context: Context, private val scale: Int, private val night: Boolean) : View(context) {
     private val s = scale.toFloat()
     private val paint = Paint()
     private val t0 = SystemClock.uptimeMillis()
@@ -28,6 +29,18 @@ class OrchardFxView(context: Context, private val scale: Int) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         val t = (SystemClock.uptimeMillis() - t0) / 1000f
+        if (!night) {
+            for ((i, f) in flies.withIndex()) {
+                if (i % 2 == 1) continue
+                val x = f.cx + cos(t * f.speed * 0.6f + f.phase) * f.r * 2
+                val y = f.cy + sin(t * f.speed + f.phase) * f.r
+                val flap = ((t * 8 + i) % 2f) < 1f
+                paint.color = if (i % 4 == 0) 0xFFF8F4E8.toInt() else 0xFFF4D860.toInt()
+                canvas.drawRect((x.toInt() - 1) * s, y.toInt() * s, x.toInt() * s, (y.toInt() + if (flap) 1 else 0) * s + s * 0.5f, paint)
+                canvas.drawRect((x.toInt() + 1) * s, y.toInt() * s, (x.toInt() + 2) * s, (y.toInt() + if (flap) 1 else 0) * s + s * 0.5f, paint)
+            }
+            postInvalidateOnAnimation(); return
+        }
         for (f in flies) {
             val x = f.cx + cos(t * f.speed + f.phase) * f.r
             val y = f.cy + sin(t * f.speed * 1.3f + f.phase) * f.r * 0.6f

@@ -309,13 +309,10 @@ def world_gate():
                 s.a[y - Y0, x - X0] = (r, g, b, 255)
             elif d < 18.6:
                 # otevřený závoj: zelená spirála přes tmavé nitro
-                ang = math.atan2(y - CY, x - CX)
-                sw = (math.sin(2 * ang + d * 0.45) + 1) / 2
-                k = 0.25 + sw * 0.35 + (d / 18.6) ** 2 * 0.3
-                base = np.array([30, 52, 46]); glow = np.array([150, 240, 190])
+                # tmavé nitro – točící se závoj se kreslí ve hře přes něj (SkyPassArt.veil)
+                k = (d / 18.6) ** 2 * 0.35
+                base = np.array([22, 40, 36]); glow = np.array([90, 170, 130])
                 col = base + (glow - base) * k
-                if (x * 7 + y * 13) % 47 == 0 and d < 17:
-                    col = np.array([245, 255, 248])
                 s.a[y - Y0, x - X0] = (*col.astype(np.uint8), 255)
     # Srdce Hvozdu v lůžku (SkyPassArt.HEART_IN_SOCKET)
     heart = ["..g..", ".oao.", "oalao", "oaaao", ".ooo."]

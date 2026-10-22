@@ -107,7 +107,9 @@ object BiomeRegistry {
         /** Zobrazit ukazatel denních kroků (cíl = zámek dalšího biomu). */
         val stepGoalFor: BiomeType? = null,
         /** Jeskyně: mapa větší než obrazovka, kamera jede za postavou. null = mapa přes celou obrazovku. */
-        val cave: CaveMap? = null
+        val cave: CaveMap? = null,
+        /** Noční podoba mapy (stejné rozložení, jiné světlo); null = stejná ve dne i v noci. */
+        @DrawableRes val nightRes: Int? = null
     )
 
     val DEFINITIONS: Map<BiomeType, BiomeDefinition> by lazy {
@@ -133,7 +135,7 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.ASH_PLAIN, R.drawable.ash_plain, graphOf(cz.uhk.macroflow.pokemon.cave.AshPlain.MAP), questId = null,
                 cave = cz.uhk.macroflow.pokemon.cave.AshPlain.MAP),
             BiomeDefinition(BiomeType.QUIET_ORCHARD, R.drawable.quiet_orchard, graphOf(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP), questId = null,
-                cave = cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP),
+                cave = cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP, nightRes = R.drawable.quiet_orchard_night),
             BiomeDefinition(BiomeType.ECHO_CANYON, R.drawable.echo_canyon, graphOf(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP), questId = null,
                 cave = cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP)
         ).associateBy { it.type }

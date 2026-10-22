@@ -8,9 +8,9 @@ import org.junit.Test
 class QuietOrchardTest {
     private val sad = QuietOrchard.MAP
 
-    @Test fun otevrenoJenVNoci() {
-        assertTrue(QuietOrchard.isOpen(19)); assertTrue(QuietOrchard.isOpen(23)); assertTrue(QuietOrchard.isOpen(0)); assertTrue(QuietOrchard.isOpen(4))
-        assertFalse(QuietOrchard.isOpen(5)); assertFalse(QuietOrchard.isOpen(12)); assertFalse(QuietOrchard.isOpen(18))
+    @Test fun nocJeOd19Do5() {
+        assertTrue(QuietOrchard.isNight(19)); assertTrue(QuietOrchard.isNight(23)); assertTrue(QuietOrchard.isNight(0)); assertTrue(QuietOrchard.isNight(4))
+        assertFalse(QuietOrchard.isNight(5)); assertFalse(QuietOrchard.isNight(12)); assertFalse(QuietOrchard.isNight(18))
     }
 
     @Test fun celySadJeDosazitelnyAVedeZpetNaPlan() {

@@ -20,3 +20,6 @@ Stav: přijato (2026-10-22), větev `MULTI`, issue #26
 - Cedule, mezník (s Vhledem ≥ 3 prozradí „S-0“) a zavřená vrata Ozvěny (otevře #27).
 - Příznak `ash_plain_visited` je ve `StoryProgress.STORY_KEYS`.
 - Mimo rozsah: fáze 1 kapitoly V (Sestup s Hunfreyem) přijde s questovou linkou v #28, zóna aktu II v deníku později.
+- Závoj v Bráně světů se na pláni točí stejně jako v průsmyku (`SkyPassArt.veil`, střed `AshPlain.GATE_X/Y`);
+  v obrázku mapy je uvnitř prstence jen tmavé nitro. Oblasti klepnutí u okrajů mapy jsou větší, aby šly
+  trefit vedle ovládacích prvků (ukazatel energie vlevo, tlačítka vpravo).

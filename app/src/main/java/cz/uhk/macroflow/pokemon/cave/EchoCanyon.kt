@@ -35,7 +35,7 @@ object EchoCanyon {
         parentBiome = "ASH_PLAIN",
         isCave = false,
         tapAreas = mapOf(
-            ENTRY_NODE to Triple(6, 56, 12),
+            ENTRY_NODE to Triple(20, 58, 20),
             "hnizdo" to Triple(54, 78, 12),
             "jeskynka" to Triple(104, 166, 12),
             "rimsa" to Triple(38, 156, 14),

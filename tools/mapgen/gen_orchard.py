@@ -1,9 +1,9 @@
 """
 Použití:  python tools/mapgen/gen_orchard.py   (vyžaduje Pillow + numpy)
-Výstup:   app/src/main/res/drawable-nodpi/quiet_orchard.png, app/src/main/assets/walk/quiet_orchard.txt,
+Výstup:   app/src/main/res/drawable-nodpi/quiet_orchard.png (den) a quiet_orchard_night.png (noc), app/src/main/assets/walk/quiet_orchard.txt,
           tools/mapgen/quiet_orchard_debug.png, tools/mapgen/orchard/parts_objects.png
 
-Ztichlý sad (Akt II, docs/adr/0089) – otevírá se jen v noci. Stejné skládání jako Popelavá pláň:
+Ztichlý sad (Akt II, docs/adr/0089) – ve dne slunný, v noci měsíční (dvě mapy, stejné rozložení). Stejné skládání jako Popelavá pláň:
   1. pozadí z dlaždic (ashplain/tiles.py se zelenou paletou sadu),
   2. objekty (orchard/sad_objects.py + popelavé stromy z ashplain/objects.py na okraji),
   3. složení podle mřížky 10 × 20, pak NOC: celé přebarvení do měsíčního světla a nakonec
@@ -121,12 +121,14 @@ for (spr, cx, by, foot, shade) in sorted(placed, key=lambda p: p[2]):
         fw, fh = foot
         block[max(0, by - fh):by, max(0, int(cx - fw // 2)):min(AW, int(cx + (fw + 1) // 2))] = True
 
-# ── 3) NOC: přebarvení do měsíčního světla, pak zdroje světla ──
+# ── 3) DEN se uloží tak, jak je; NOC: přebarvení do měsíčního světla, pak zdroje světla ──
 day = img.copy()
+Image.fromarray(day[:, :, :3]).save(os.path.join(RES, "quiet_orchard.png"))
 EMISSIVE = {tuple(int(v) for v in col[:3]) for col in S.GOLD + [c(0xFFD27A), c(0xFFF2B0)]}
 rgb = img[:, :, :3].astype(np.float64)
 lum = rgb @ np.array([0.3, 0.55, 0.15])
-night = rgb * np.array([0.40, 0.50, 0.80]) + np.array([8, 12, 30]) + (lum[..., None] > 150) * np.array([2, 4, 8]) - (lum[..., None] > 170) * np.array([14, 14, 10])
+grey = rgb * 0.55 + lum[..., None] * 0.45                                 # nejdřív ubrat barvu, ať kámen nemodrá
+night = grey * np.array([0.44, 0.52, 0.70]) + np.array([6, 10, 22]) - (lum[..., None] > 170) * np.array([18, 18, 14])
 img[:, :, :3] = np.clip(night, 0, 255).astype(np.uint8)
 lights = []
 for y in range(AH):
@@ -160,8 +162,7 @@ block[:46, :] = True
 block[46:, :T] = True; block[46:, -T:] = True
 block[64:96, -T:] = False                                     # vstup zprava mezi sloupky
 walk = ~block
-os.makedirs(RES, exist_ok=True)
-Image.fromarray(img[:, :, :3]).save(os.path.join(RES, "quiet_orchard.png"))
+Image.fromarray(img[:, :, :3]).save(os.path.join(RES, "quiet_orchard_night.png"))
 gw, gh = AW // CELL, AH // CELL
 rows = ["".join("." if walk[gy * CELL:(gy + 1) * CELL, gx * CELL:(gx + 1) * CELL].mean() >= 0.5 else "#" for gx in range(gw)) for gy in range(gh)]
 for n, (x, y) in NODES.items():

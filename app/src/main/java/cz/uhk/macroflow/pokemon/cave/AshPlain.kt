@@ -12,6 +12,9 @@ object AshPlain {
     const val SIGN_NODE = "cedule"
     const val MILESTONE_NODE = "meznik"
     const val CITY_GATE_NODE = "brana_mesta"
+    /** Střed prstence Brány světů na mapě pláně (art px) – sem se kreslí točící se závoj. */
+    const val GATE_X = 80
+    const val GATE_Y = 36
 
     val MAP = CaveMap(
         artW = 160, artH = 448,
@@ -37,8 +40,8 @@ object AshPlain {
         isCave = false,
         tapAreas = mapOf(
             ENTRY_NODE to Triple(80, 36, 26),
-            QuietOrchard.PLAIN_NODE to Triple(8, 192, 12),
-            EchoCanyon.PLAIN_NODE to Triple(152, 192, 12),
+            QuietOrchard.PLAIN_NODE to Triple(14, 192, 18),
+            EchoCanyon.PLAIN_NODE to Triple(146, 192, 18),
             CITY_GATE_NODE to Triple(80, 422, 16),
             SIGN_NODE to Triple(52, 80, 8),
             MILESTONE_NODE to Triple(112, 284, 8),
