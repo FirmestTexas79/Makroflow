@@ -873,6 +873,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_TEXT)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIDA_NODE, cz.uhk.macroflow.pokemon.cave.OzvenaCity.JARDA_NODE,
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.KORINEK_NODE -> cz.uhk.macroflow.pokemon.cave.OzvenaCity.residentLine(
+                    nodeName, java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR))?.let { showMapToast(it) }
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.GATE_NODE -> replaceMapContent(cz.uhk.macroflow.pokemon.trainer.ArenaFragment())
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.COMMANDER_NODE -> showCommander(0)
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.FAME_NODE -> showHallOfFame()
@@ -1350,6 +1353,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artH * worldScale)
                 })
                 currentBiome == BiomeType.ARENA_HALL -> if (worldScale > 0) placeHallPortraits()
+                currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)
                 })
@@ -1781,6 +1785,39 @@ class MakromonMapActivity : AppCompatActivity() {
             addDecor(bg)
             crystalAnimators += android.animation.ObjectAnimator.ofFloat(bg, "alpha", 0.3f, 1f, 0.3f).apply {
                 duration = 1500; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+            }
+        }
+    }
+
+    /**
+     * Obyvatelé Ozvěny (docs/adr/0093): pásy 4 snímků idle, 1 px spritu = 2 dp jako hráč, pata na art souřadnici.
+     */
+    private fun placeTownsfolk() {
+        val s = worldScale.toFloat()
+        val px = kotlin.math.max(1, kotlin.math.round(2 * resources.displayMetrics.density).toInt()).toFloat()
+        for (t in cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWNSFOLK) {
+            val res = when (t.id) {
+                "bohousek" -> R.drawable.npc_bohousek_map; "venka" -> R.drawable.npc_venka_map
+                "lida" -> R.drawable.npc_lida_map; "jarda" -> R.drawable.npc_jarda_map
+                else -> R.drawable.npc_korinek_map
+            }
+            val sheet = android.graphics.BitmapFactory.decodeResource(resources, res, android.graphics.BitmapFactory.Options().apply { inScaled = false })
+            val fw = sheet.width / 4; val fh = sheet.height
+            val frames = (0 until 4).map { k ->
+                android.graphics.drawable.BitmapDrawable(resources, android.graphics.Bitmap.createBitmap(sheet, k * fw, 0, fw, fh)).apply { isFilterBitmap = false }
+            }
+            val npc = ImageView(this).apply {
+                layoutParams = FrameLayout.LayoutParams((fw * px).toInt(), (fh * px).toInt())
+                setImageDrawable(frames[0]); scaleType = ImageView.ScaleType.FIT_XY
+                x = t.x * s - fw * px / 2f; y = t.y * s - fh * px; elevation = 2f
+            }
+            addDecor(npc)
+            // každý dýchá jinak rychle, ať se nehýbou všichni naráz
+            crystalAnimators += android.animation.ValueAnimator.ofInt(0, 4).apply {
+                duration = 1100L + (t.x * 7 + t.y) % 500; repeatCount = android.animation.ValueAnimator.INFINITE
+                interpolator = android.view.animation.LinearInterpolator()
+                addUpdateListener { npc.setImageDrawable(frames[(it.animatedValue as Int).coerceIn(0, 3)]) }
+                start()
             }
         }
     }

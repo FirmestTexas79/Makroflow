@@ -31,4 +31,17 @@ class OzvenaArenaHallTest {
         assertTrue(ArenaHall.COMMANDER_PAGES.size >= 3)
         assertTrue(ArenaHall.WANTED_TEXT.contains("DRAKIRRA"))
     }
+
+    @Test fun obyvateleStojiVeMesteAMluvi() {
+        val m = OzvenaCity.MAP
+        assertEquals(5, OzvenaCity.TOWNSFOLK.size)
+        OzvenaCity.TOWNSFOLK.forEach { t ->
+            assertTrue(t.id, t.x in 0 until m.artW && t.y in 0 until m.artH && m.node(t.node) != null && t.node in OzvenaCity.ACTION_NODES)
+        }
+        for (n in listOf(OzvenaCity.LIDA_NODE, OzvenaCity.JARDA_NODE, OzvenaCity.KORINEK_NODE)) {
+            assertTrue(n, OzvenaCity.residentLine(n, 1) != OzvenaCity.residentLine(n, 2))   // repliky se střídají po dnech
+            assertTrue(n, OzvenaCity.residentLine(n, -5) != null)
+        }
+        assertEquals(null, OzvenaCity.residentLine(OzvenaCity.BAKERY_NODE, 1))              // pekař jede ve smyčce
+    }
 }
