@@ -167,7 +167,7 @@ def fountain():
                 continue
             if din <= 1:
                 s.px(x, y, WATER[1] if (x + y * 3) % 9 else WATER[2])
-                if (x * 5 + y * 11) % 37 == 0:
+                if (x * 5 + y * 11) % 97 == 0:
                     s.px(x, y, WATER[3])
             elif y < 32:
                 s.px(x, y, STN[4] if d > 0.93 or din < 1.12 else STN[3])
@@ -514,3 +514,64 @@ def inner_gate(W=240):
     for lx in (cx - 20, cx + 19):
         s.rect(lx - 1, 34, lx + 1, 39, c(0x2A2426)); s.px(lx, 36, c(0xFFD27A))
     return outline(s, K)
+
+
+BW_LEAF = [c(0x10262A), c(0x183C3A), c(0x22584A), c(0x2E7656), c(0x48946A), c(0x78B884)]
+
+
+def tree_bw(seed=0, h=50):
+    """
+    Strom ve stylu B/W 34 × h: tři patra koruny nad sebou, každé patro je elipsa se světlým lemem nahoře,
+    tmavým zubatým spodkem (stín dalšího patra) a jemnými lístky – plochý, ale působí prostorově.
+    """
+    r = np.random.default_rng(seed)
+    W = 34
+    s = Spr(W, h)
+    # kmen
+    for y in range(h - 15, h - 1):
+        for x in range(14, 20):
+            s.px(x, y, WD[3] if x == 14 else WD[2] if x < 18 else WD[1])
+    s.hline(13, 20, h - 1, WD[0])
+    tiers = [(17, h - 22, 16.5, 10), (17, h - 33, 13, 9), (17, h - 42, 9, 7.5)]
+    for ti, (cx, cy, rx, ry) in enumerate(tiers):
+        cx += int(r.integers(-1, 2))
+        for y in range(int(cy - ry) - 1, int(cy + ry) + 3):
+            for x in range(int(cx - rx) - 1, int(cx + rx) + 2):
+                # zubatý spodní okraj (lalůčky)
+                lob = 1.0 + 0.12 * math.sin((x - cx) * 1.3 + ti)
+                d = ((x + .5 - cx) / rx) ** 2 + ((y + .5 - cy) / (ry * lob)) ** 2
+                if d > 1:
+                    continue
+                v = (y - (cy - ry)) / (2 * ry)                       # 0 nahoře → 1 dole
+                side = (x - cx) / rx                                 # světlo zleva
+                k = 5 if v < 0.16 else 4 if v < 0.38 else 3 if v < 0.62 else 2 if v < 0.82 else 1
+                if side > 0.55:
+                    k = max(1, k - 1)
+                if side < -0.6 and v < 0.6:
+                    k = min(5, k + 1)
+                if 0.25 < v < 0.75 and (x * 3 + y * 5 + ti) % 7 == 0:
+                    k = min(5, k + 1)                                # lístky
+                s.px(x, y, BW_LEAF[k])
+        # stín pod patrem na nižším patře
+        if ti > 0:
+            for x in range(int(cx - rx), int(cx + rx) + 1):
+                yb = int(cy + ry * math.sqrt(max(0, 1 - ((x - cx) / rx) ** 2))) + 1
+                if 0 <= yb < h and s.a[yb, x, 3]:
+                    s.px(x, yb, BW_LEAF[0]); s.px(x, yb + 1, BW_LEAF[1])
+    return outline(s, c(0x0A1416))
+
+
+def shade_building(s, roof_rows=None):
+    """Víc prostoru: pravá třetina stěn a střechy tmavší, levý okraj lehce světlejší."""
+    a = s.a
+    h, w = a.shape[:2]
+    for x in range(w):
+        t = x / (w - 1)
+        if t > 0.66:
+            f = 1 - (t - 0.66) * 0.55
+            m = a[:, x, 3] > 0
+            a[m, x, :3] = (a[m, x, :3] * f).astype(np.uint8)
+        elif t < 0.12:
+            m = a[:, x, 3] > 0
+            a[m, x, :3] = np.minimum(255, a[m, x, :3] * 1.06).astype(np.uint8)
+    return s
