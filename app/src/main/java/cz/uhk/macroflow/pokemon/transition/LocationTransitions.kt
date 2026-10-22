@@ -25,7 +25,7 @@ interface TransitionScene {
 object LocationTransitions {
     /** Scéna podle cílové lokace, null = obyčejné prolnutí. */
     fun forBiome(biome: String, w: Int, h: Int): TransitionScene? = when (biome) {
-        "TOWN" -> GateScene(w, h)
+        "TOWN", "OZVENA" -> GateScene(w, h)
         "MEADOW" -> GrassScene(w, h)
         "FOREST", "HIDDEN_GROVE", "QUIET_ORCHARD" -> LeafScene(w, h)
         "MOUNTAINS", "SKY_PASS", "ASH_PLAIN", "ECHO_CANYON" -> MistScene(w, h)

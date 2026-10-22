@@ -488,15 +488,18 @@ def scale_tower():
             s.px(x, y, dark[k])
     for x in (10, 11, 48, 49):
         s.vline(x, 46, 117, c(0xE6E2D8) if x in (10, 48) else c(0xC8C2B6))   # bílé nároží
-    # znak vah v kruhu
-    for y in range(52, 74):
-        for x in range(18, 42):
-            d = math.hypot(x - 29.5, y - 62.5)
-            if d < 10.5:
-                s.px(x, y, c(0xE6E2D8) if d > 9 else c(0x1A1820))
-    s.vline(29, 55, 69, c(0xE6C258)); s.vline(30, 55, 69, c(0xB8902E)); s.hline(22, 37, 57, c(0xE6C258))
-    for px0 in (23, 36):
-        s.vline(px0, 58, 61, c(0xB8902E)); s.hline(px0 - 3, px0 + 3, 62, c(0xE6C258))
+    # znak vah: velké zlaté váhy přímo na tmavém kameni (bez rámu), pod nimi bílá římsa
+    G = [c(0x7A5A16), c(0xB8902E), c(0xE6C258), c(0xFFF0A8)]
+    s.rect(28, 50, 31, 74, G[1]); s.vline(28, 50, 74, G[3]); s.vline(31, 50, 74, G[0])     # sloupek
+    s.rect(25, 74, 34, 76, G[2]); s.hline(25, 34, 74, G[3])                               # podstavec
+    s.rect(14, 53, 45, 55, G[2]); s.hline(14, 45, 53, G[3]); s.hline(14, 45, 55, G[0])     # vahadlo
+    s.rect(27, 48, 32, 51, G[2]); s.px(29, 47, G[3]); s.px(30, 47, G[3])                  # hlavice
+    for px0 in (16, 43):
+        s.line(px0, 56, px0 - 5, 64, G[1]); s.line(px0, 56, px0 + 5, 64, G[1])            # řetízky
+        for k in range(4):
+            s.hline(px0 - 7 + k, px0 + 7 - k, 65 + k, G[3] if k == 0 else G[2] if k < 2 else G[1])
+        s.hline(px0 - 3, px0 + 3, 69, G[0])
+    s.hline(12, 47, 78, c(0xE6E2D8)); s.hline(12, 47, 79, c(0xA8A2A0))
     # úzká okna
     for (x, y) in ((16, 80), (41, 80), (16, 96), (41, 96)):
         s.rect(x, y, x + 2, y + 8, c(0xFFD27A) if y == 80 else c(0x14121A)); s.px(x + 1, y - 1, c(0xE6E2D8))
@@ -507,13 +510,6 @@ def scale_tower():
     s.px(33, 109, c(0xE0B040))
     for i in range(4):
         s.rect(18 - i * 2, 118 + i * 3, 41 + i * 2, 120 + i * 3, STN[3 if i % 2 else 2]); s.hline(18 - i * 2, 41 + i * 2, 118 + i * 3, STN[4])
-    # prapory
-    for bx in (13, 45):
-        for y in range(50, 72):
-            for x in range(bx - 2, bx + 3):
-                stripe = (y // 4) % 2
-                s.px(x, y, c(0xF0EEE8) if stripe else c(0x1A1820))
-        s.px(bx - 2, 72, c(0x1A1820)); s.px(bx + 2, 72, c(0x1A1820))
     return outline(s, K)
 
 

@@ -59,8 +59,6 @@ object AshPlain {
     const val SIGN_TEXT = "🪧 Cedule je ohořelá. Šipka ukazuje k bílým hradbám a pod ní jde přečíst jen:\n„OZVĚNA – vítejte zpět.“"
     const val MILESTONE_TEXT = "🪨 Kamenný mezník. Na čele je vytesané „S“ a pod ním číslo, které někdo pečlivě oškrábal."
     const val MILESTONE_TEXT_INSIGHT = "\nKdyž se podíváš zblízka, pořád je tam vidět nula. S-0."
-    const val CITY_GATE_TEXT = "🏰 Mříž v bráně je spuštěná až k zemi. Za hradbami je slyšet zvon a smích, jako by tam byl svátek.\n" +
-        "(Město se teprve staví – brzy se otevře.)"
 
     fun emptyEncounterText(node: String): String? = when (node) {
         "duny" -> "Suchá tráva zašustila a ve vzduchu se zatočil popel. Zkus to znovu."

@@ -3,6 +3,7 @@ package cz.uhk.macroflow.pokemon.zone
 import cz.uhk.macroflow.pokemon.cave.AshPlain
 import cz.uhk.macroflow.pokemon.cave.CaveMap
 import cz.uhk.macroflow.pokemon.cave.EchoCanyon
+import cz.uhk.macroflow.pokemon.cave.OzvenaCity
 import cz.uhk.macroflow.pokemon.cave.QuietOrchard
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -13,7 +14,7 @@ import java.io.File
 /** Mapa Zóna 2 (Akt II) v deníku: rozvržení z gen_zone2.py sedí s mapami lokací, teleport a objevování. */
 class ZoneTwoTest {
     private fun file(rel: String): File = listOf(File(rel), File("app/$rel")).first { it.exists() }
-    private val maps: Map<String, CaveMap> = mapOf("ASH_PLAIN" to AshPlain.MAP, "QUIET_ORCHARD" to QuietOrchard.MAP, "ECHO_CANYON" to EchoCanyon.MAP)
+    private val maps: Map<String, CaveMap> = mapOf("ASH_PLAIN" to AshPlain.MAP, "QUIET_ORCHARD" to QuietOrchard.MAP, "ECHO_CANYON" to EchoCanyon.MAP, "OZVENA" to OzvenaCity.MAP)
 
     @Test fun zone2LocationsHaveArrivalNamesAndZone() {
         ZoneOne.ZONE2.forEach {
@@ -30,7 +31,7 @@ class ZoneTwoTest {
         val json = file("src/main/assets/zone2/zone2.json").readText()
         val ends = Regex("\"(a|b)\": \"([A-Z_]+)\",\\s*\"\\1Node\": \"([a-z_]+)\",\\s*\"\\1Dir\": \"[nsew]\",\\s*\"\\1Pos\": \\[[^\\]]*\\],\\s*\"\\1Frac\": \\[\\s*([0-9.]+),\\s*([0-9.]+)\\s*\\]")
             .findAll(json).toList()
-        assertEquals(4, ends.size)
+        assertEquals(6, ends.size)
         for (e in ends) {
             val g = e.groupValues
             val biome = g[2]; val node = g[3]; val fx = g[4]; val fy = g[5]

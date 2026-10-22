@@ -17,7 +17,7 @@ import city_parts as C, pix, tiles, objects  # noqa: E402
 from pix import c, Spr  # noqa: E402
 from pixart import STN, stones  # noqa: E402
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "v6"
+VER = sys.argv[1] if len(sys.argv) > 1 else "v7"
 AW, AH = 384, 656
 T = 16
 VOID_Y = 600
@@ -127,8 +127,16 @@ for y in range(VOID_Y, AH):
 placed = []
 
 
-def place(spr, cx, by, z=None, cast=True):
+block = np.zeros((AH, AW), bool)
+
+
+def place(spr, cx, by, z=None, cast=True, foot="auto"):
     placed.append((spr, cx, by, by if z is None else z, cast))
+    if foot == "auto":
+        foot = (max(4, spr.w - 6), max(3, int(spr.h * 0.42))) if spr.h > 30 else (max(4, spr.w - 2), 4)
+    if foot:
+        fw, fh = foot
+        block[max(0, by - fh):by, max(0, int(cx - fw // 2)):min(AW, int(cx + (fw + 1) // 2))] = True
 
 
 DOORS = []
@@ -145,12 +153,12 @@ wall_l = Spr(120, 58); stones(wall_l, 0, 119, 8, 57, h=6, w=(8, 14), seed=81, to
 for x in range(0, 120, 8):
     wall_l.rect(x, 2, x + 4, 8, STN[3]); wall_l.hline(x, x + 4, 2, STN[4])
 wall_r = Spr(120, 58); wall_r.a = wall_l.a[:, ::-1].copy()
-place(wall_l, 60, 100, z=1, cast=False); place(wall_r, 324, 100, z=1, cast=False)
-place(gate, 192, 100, z=2, cast=False)
+place(wall_l, 60, 100, z=1, cast=False, foot=None); place(wall_r, 324, 100, z=1, cast=False, foot=None)
+place(gate, 192, 100, z=2, cast=False, foot=None)
 for tx in (16, 368):
     t = objects.city_gate()
     tower = Spr(34, 100); tower.a = t.a[:, 21:55].copy()
-    place(tower, tx, 100, z=3, cast=False)
+    place(tower, tx, 100, z=3, cast=False, foot=None)
 
 # sever: řada domů nad uličkou a pod ní
 for (x, kw) in ((48, dict(w=44, wall_h=24, roof_pal=C.ROOF_TEAL, wall="timber", shut="blue", seed=21)),
@@ -165,10 +173,10 @@ house(52, 246, w=44, wall_h=24, roof_pal=C.ROOF_RED, wall="plaster", shut="green
 place(C.shade_building(C.bakery()), 280, 246); DOORS.append((282, 246))
 house(340, 246, w=40, wall_h=22, rows=5, roof_pal=C.ROOF_SLATE, wall="stone", shut="red", windows=1, seed=28)
 for (x, y) in ((314, 250), (322, 250)):
-    place(C.barrel(), x, y)
+    place(C.barrel(), x, y, foot=(8, 4))
 place(C.crate(), 246, 252)
 # náměstí
-place(C.fountain(), SQ[0], SQ[1] + 36)
+place(C.fountain(), SQ[0], SQ[1] + 36, foot=(72, 34))
 for (x, y, cl, g) in ((140, 300, "red", "apples"), (244, 300, "blue", "bread"), (140, 372, "green", "apples"), (244, 372, "red", "bread")):
     place(C.stall(cl, g), x, y)
 for (x, y) in ((160, 386), (224, 386)):
@@ -176,7 +184,7 @@ for (x, y) in ((160, 386), (224, 386)):
 place(C.notice_board(), 116, 272)
 for a in range(0, 360, 45):
     place(C.city_lamp(), int(SQ[0] + 96 * math.cos(math.radians(a))), int(SQ[1] + 4 + 80 * math.sin(math.radians(a))))
-place(C.bunting(150), SQ[0], 270, z=900, cast=False)
+place(C.bunting(150), SQ[0], 270, z=900, cast=False, foot=None)
 # západ: park, domy u západní ulice
 for (x, y, kw) in ((70, 316, dict(w=40, wall_h=22, rows=5, roof_pal=C.ROOF_OCHRE, wall="plaster", shut="green", windows=1, seed=31)),
                    (92, 420, dict(w=44, wall_h=34, roof_pal=C.ROOF_TEAL, wall="timber", shut="blue", seed=32, storeys=2)),
@@ -186,24 +194,24 @@ for (x, y, kw) in ((70, 316, dict(w=40, wall_h=22, rows=5, roof_pal=C.ROOF_OCHRE
     house(x, y, **kw)
 place(C.flower_bed(36), 92, 432); place(C.flower_bed(30), 110, 544)
 # východ: Aréna a domy
-place(C.shade_building(C.arena()), 318, 486)
+place(C.shade_building(C.arena()), 318, 486, foot=(110, 56))
 house(352, 330, w=40, wall_h=24, roof_pal=C.ROOF_RED, wall="plaster", shut="ochre", windows=1, seed=41)
 house(276, 420, w=40, wall_h=22, rows=5, roof_pal=C.ROOF_TEAL, wall="plaster", shut="green", windows=1, seed=42)
 # jih: věž s náměstíčkem, sklad schovaný za stromy
-place(C.shade_building(C.scale_tower()), 192, 562)
+place(C.shade_building(C.scale_tower()), 192, 562, foot=(44, 62))
 house(258, 556, w=40, wall_h=24, roof_pal=C.ROOF_SLATE, wall="stone", shut="red", windows=1, seed=51)
 place(C.shed(), 352, 548)
 # okraj propasti
-place(C.cliff_edge(AW), 192, VOID_Y + 34, z=0, cast=False)
+place(C.cliff_edge(AW), 192, VOID_Y + 34, z=0, cast=False, foot=None)
 place(C.balustrade(152), 76, VOID_Y + 2, cast=False)       # zábradlí přes celou šířku, mezera jen u výtahu
 place(C.balustrade(200), 288, VOID_Y + 2, cast=False)
-place(C.elevator(), 170, VOID_Y + 14, cast=False)
+place(C.elevator(), 170, VOID_Y + 14, cast=False, foot=(30, 18))
 # stromy B/W: husté okraje, park, kolem Arény a věže
 TREES = [(x, y) for y in range(130, 600, 22) for x in (6, 378)]
 TREES += [(22, 214), (40, 226), (18, 260), (40, 270), (24, 296), (150, 440), (130, 470), (236, 470), (256, 500),
           (360, 400), (372, 470), (330, 556), (366, 540), (300, 578), (68, 600), (230, 140), (154, 140), (212, 260), (172, 262)]
 for i, (x, y) in enumerate(TREES):
-    place(C.tree_bw(i, 50 if i % 3 else 56), x, y)
+    place(C.tree_bw(i, 50 if i % 3 else 56), x, y, foot=(12, 7))
 
 # chodníčky od dveří ke dlažbě (šlapáky) a květiny v trávě
 for (dx, dy) in DOORS:
@@ -238,6 +246,44 @@ for (spr, cx, by, z, cast) in sorted(placed, key=lambda p: p[3]):
 
 out = Image.fromarray(img[:, :, :3])
 out.resize((AW * 2, AH * 2), Image.NEAREST).save(os.path.join(HERE, f"ozvena_{VER}.png"))
+
+# ── herní výstupy: obrázek, mapa chůze, uzly (ZDROJ PRAVDY i pro OzvenaCity.kt) ──
+NODES = {
+    "vstup_z_plane": (192, 108), "c_sever": (186, 182), "venka": (106, 258), "pekarna": (282, 258),
+    "namesti": (124, 336), "vyveska": (116, 284), "kasna": (192, 368), "c_jih": (192, 410),
+    "arena": (318, 494), "vez": (192, 572), "vytah": (170, 588), "sklad": (352, 560),
+}
+EDGES = [("vstup_z_plane", "c_sever"), ("c_sever", "venka"), ("c_sever", "pekarna"), ("c_sever", "namesti"),
+         ("namesti", "vyveska"), ("namesti", "kasna"), ("namesti", "c_jih"), ("c_jih", "arena"), ("c_jih", "vez"),
+         ("vez", "vytah"), ("vez", "sklad")]
+block[:100, :] = True
+block[:112, 180:205] = False                            # průjezd branou
+block[VOID_Y - 10:, :] = True                           # zábradlí a propast
+block[VOID_Y - 22:VOID_Y - 8, 154:186] = False          # mezera u výtahu
+block[:, :6] = True; block[:, -6:] = True
+walk = ~block
+ROOT = os.path.join(HERE, "..", "..", "..")
+Image.fromarray(img[:, :, :3]).save(os.path.join(ROOT, "app", "src", "main", "res", "drawable-nodpi", "ozvena.png"))
+CELL = 2
+rows = ["".join("." if walk[gy * CELL:(gy + 1) * CELL, gx * CELL:(gx + 1) * CELL].mean() >= 0.5 else "#" for gx in range(AW // CELL)) for gy in range(AH // CELL)]
+for n, (x, y) in NODES.items():
+    rr = list(rows[y // CELL]); rr[x // CELL] = "."; rows[y // CELL] = "".join(rr)
+with open(os.path.join(ROOT, "app", "src", "main", "assets", "walk", "ozvena.txt"), "w") as f:
+    f.write(f"# mapa chůze ozvena: obrázek {AW}x{AH}, buňka {CELL} px (tools/mapgen/city/gen_city.py)\n")
+    f.write(f"{AW} {AH} {CELL}\n")
+    f.write("\n".join(rows) + "\n")
+from PIL import ImageDraw
+dbg = Image.fromarray(img[:, :, :3]).resize((AW * 2, AH * 2), Image.NEAREST).convert("RGBA")
+ov = Image.new("RGBA", dbg.size, (0, 0, 0, 0)); d = ImageDraw.Draw(ov)
+for gy, row in enumerate(rows):
+    for gx, ch in enumerate(row):
+        if ch == "#":
+            d.rectangle([gx * 4, gy * 4, gx * 4 + 3, gy * 4 + 3], fill=(255, 0, 0, 50))
+for (a, b) in EDGES:
+    d.line([NODES[a][0] * 2, NODES[a][1] * 2, NODES[b][0] * 2, NODES[b][1] * 2], fill=(255, 255, 0, 200), width=2)
+for n, (x, y) in NODES.items():
+    d.ellipse([x * 2 - 5, y * 2 - 5, x * 2 + 5, y * 2 + 5], fill=(0, 120, 255, 230))
+Image.alpha_composite(dbg, ov).save(os.path.join(HERE, "ozvena_debug.png"))
 # výřez, jak ho uvidí hráč (128 art px na šířku, poměr telefonu ~9:20), střed na náměstí
 vw, vh = 128, 284
 v = out.crop((SQ[0] - vw // 2, SQ[1] - vh // 2 - 20, SQ[0] + vw // 2, SQ[1] + vh // 2 - 20))

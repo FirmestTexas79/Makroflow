@@ -24,7 +24,11 @@ enum class BiomeType {
     /** Ztichlý sad vlevo od pláně, jen v noci (docs/adr/0089). */
     QUIET_ORCHARD,
     /** Ozvěnový kaňon vpravo od pláně (docs/adr/0090). */
-    ECHO_CANYON
+    ECHO_CANYON,
+    /** Město Ozvěna – střed aktu II (docs/adr/0092). */
+    OZVENA,
+    /** Vstupní hala Arény v Ozvěně (docs/adr/0092). */
+    ARENA_HALL
 }
 
 object BiomeRegistry {
@@ -137,7 +141,9 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.QUIET_ORCHARD, R.drawable.quiet_orchard, graphOf(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP), questId = null,
                 cave = cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP, nightRes = R.drawable.quiet_orchard_night),
             BiomeDefinition(BiomeType.ECHO_CANYON, R.drawable.echo_canyon, graphOf(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP), questId = null,
-                cave = cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP)
+                cave = cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP),
+            BiomeDefinition(BiomeType.OZVENA, R.drawable.ozvena, graphOf(cz.uhk.macroflow.pokemon.cave.OzvenaCity.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.OzvenaCity.MAP),
+            BiomeDefinition(BiomeType.ARENA_HALL, R.drawable.arena_hall, graphOf(cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP)
         ).associateBy { it.type }
     }
 

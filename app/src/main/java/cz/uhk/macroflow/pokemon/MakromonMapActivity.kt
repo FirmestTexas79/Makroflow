@@ -112,7 +112,7 @@ class MakromonMapActivity : AppCompatActivity() {
         const val EXTRA_PORTAL = "portal"
         private const val DOUBLE_CLICK_TIME = 300L
         /** Lokace s vlastní scénou přechodu (docs/adr/0042). */
-        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS", "HIDDEN_GROVE", "ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON")
+        private val LOCATION_SCENES = setOf("TOWN", "MEADOW", "FOREST", "MOUNTAINS", "SKY_PASS", "HIDDEN_GROVE", "ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA")
         /** Dosah klepnutí na uzel v podílu obrazovky. */
         private const val TAP_RADIUS = 0.1f
         /** V jeskyních a lese jsou body husté a mezi nimi se chodí volně – menší dosah. */
@@ -126,7 +126,8 @@ class MakromonMapActivity : AppCompatActivity() {
         ) + cz.uhk.macroflow.pokemon.cave.SkyPass.ACTION_NODES +
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
-            cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         // Mydrus zapomíná (docs/adr/0057)
@@ -831,7 +832,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     (if (StoryFlags.isSet(this, Vendelin.BOOK_SIGNED_KEY)) Vendelin.DOOR_HANDWRITING else ""))
                 Vendelin.NODE -> { questManager.loadQuest(Vendelin.QUEST_ID); mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150) }
                 Vendelin.BOOK_NODE -> onMinerBook()
-                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu", cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.EchoCanyon.ENTRY_NODE -> BiomeRegistry.definition(currentBiome)?.cave?.let {
+                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu", cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.EchoCanyon.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.OzvenaCity.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.ArenaHall.ENTRY_NODE -> BiomeRegistry.definition(currentBiome)?.cave?.let {
                     walkInto(BiomeType.valueOf(it.parentBiome), it.mountainNode,
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
@@ -862,7 +863,21 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.AshPlain.SIGN_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.AshPlain.SIGN_TEXT)
                 cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_TEXT +
                     if (Insight.level(StoryFlags.all(this)) >= 3) cz.uhk.macroflow.pokemon.cave.AshPlain.MILESTONE_TEXT_INSIGHT else "")
-                cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_TEXT)
+                cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_NODE -> walkInto(BiomeType.OZVENA, cz.uhk.macroflow.pokemon.cave.OzvenaCity.ENTRY_NODE, MapTransition.FADE)
+                // Město Ozvěna a hala Arény (docs/adr/0092)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.ARENA_NODE -> walkInto(BiomeType.ARENA_HALL, cz.uhk.macroflow.pokemon.cave.ArenaHall.ENTRY_NODE, MapTransition.FADE)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_TEXT)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_TEXT)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_TEXT)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_TEXT)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_TEXT)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_TEXT)
+                cz.uhk.macroflow.pokemon.cave.ArenaHall.GATE_NODE -> replaceMapContent(cz.uhk.macroflow.pokemon.trainer.ArenaFragment())
+                cz.uhk.macroflow.pokemon.cave.ArenaHall.COMMANDER_NODE -> showCommander(0)
+                cz.uhk.macroflow.pokemon.cave.ArenaHall.FAME_NODE -> showHallOfFame()
+                cz.uhk.macroflow.pokemon.cave.ArenaHall.WANTED_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.ArenaHall.WANTED_TEXT)
+                cz.uhk.macroflow.pokemon.cave.ArenaHall.TRAINING_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.ArenaHall.TRAINING_TEXT)
                 // Ztichlý sad (docs/adr/0089) – jen v noci
                 cz.uhk.macroflow.pokemon.cave.QuietOrchard.PLAIN_NODE -> walkInto(BiomeType.QUIET_ORCHARD, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE, MapTransition.FADE)
                 // Ozvěnový kaňon (docs/adr/0090)
@@ -1098,6 +1113,7 @@ class MakromonMapActivity : AppCompatActivity() {
             if (newBiome == BiomeType.ASH_PLAIN) StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.AshPlain.VISITED_KEY)
             if (newBiome == BiomeType.QUIET_ORCHARD) StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.QuietOrchard.VISITED_KEY)
             if (newBiome == BiomeType.ECHO_CANYON) StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.EchoCanyon.VISITED_KEY)
+            if (newBiome == BiomeType.OZVENA) StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.OzvenaCity.VISITED_KEY)
             if (newBiome == BiomeType.FOREST) {
                 val ctx = applicationContext
                 lifecycleScope.launch {
@@ -1333,6 +1349,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     cz.uhk.macroflow.pokemon.cave.QuietOrchard.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artH * worldScale)
                 })
+                currentBiome == BiomeType.ARENA_HALL -> if (worldScale > 0) placeHallPortraits()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)
                 })
@@ -1481,6 +1498,60 @@ class MakromonMapActivity : AppCompatActivity() {
                 clouds.forEach { c -> c.view.x = kotlin.math.floor(A.cloudX(t, c.speed, c.start, artW, c.w)).toFloat() * s }
             }
             start()
+        }
+    }
+
+    // ── Hala Arény v Ozvěně (docs/adr/0092) ─────────────────────────────────
+
+    /** Tři nejlepší ze žebříčku (jméno, druh prvního Makromona, body); bez sítě legendy cechu. */
+    private suspend fun hallChampions(): List<Triple<String, String, Int>> = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        val live = if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) runCatching {
+            cz.uhk.macroflow.data.FirebaseRepository.arenaLeaderboard(3).map { Triple(it.name, it.team.firstOrNull()?.speciesId ?: "012", it.points) }
+        }.getOrNull().orEmpty() else emptyList()
+        (live + cz.uhk.macroflow.pokemon.cave.ArenaHall.LEGENDS).take(3)
+    }
+
+    /** Portréty v Síni šampionů: Makromon šampionova týmu v zlaceném rámu. */
+    private fun placeHallPortraits() {
+        val s = worldScale.toFloat()
+        lifecycleScope.launch {
+            val champs = hallChampions()
+            if (currentBiome != BiomeType.ARENA_HALL) return@launch
+            champs.forEachIndexed { i, (_, species, _) ->
+                val r = cz.uhk.macroflow.pokemon.cave.ArenaHall.PORTRAITS.getOrNull(i) ?: return@forEachIndexed
+                val sp = cz.uhk.macroflow.pokemon.species.SpeciesRegistry.byId(species) ?: return@forEachIndexed
+                val res = resources.getIdentifier("makromon_${species.takeLast(2)}_${sp.name.lowercase().trim().replace(" ", "_")}", "drawable", packageName)
+                if (res == 0) return@forEachIndexed
+                addDecor(ImageView(this@MakromonMapActivity).apply {
+                    layoutParams = FrameLayout.LayoutParams((r[2] * s).toInt(), (r[3] * s).toInt())
+                    x = r[0] * s; y = r[1] * s + r[3] * s * 0.1f; elevation = 1.2f
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    setImageResource(res)
+                })
+            }
+        }
+    }
+
+    private fun showHallOfFame() {
+        lifecycleScope.launch {
+            val champs = hallChampions()
+            val medals = listOf("🥇", "🥈", "🥉")
+            showMapToast("🏆 Síň šampionů Arény Ozvěny\n" + champs.mapIndexed { i, (n, sp, pts) ->
+                val name = cz.uhk.macroflow.pokemon.species.SpeciesRegistry.byId(sp)?.displayName ?: ""
+                "${medals[i]} $n – $pts bodů · $name"
+            }.joinToString("\n"))
+        }
+    }
+
+    /** Velitel bojového cechu vysvětluje arénu po stránkách; na konci pozve dál. */
+    private fun showCommander(page: Int) {
+        val pages = cz.uhk.macroflow.pokemon.cave.ArenaHall.COMMANDER_PAGES
+        val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, cz.uhk.macroflow.pokemon.cave.ArenaHall.COMMANDER_NAME, "Bojový cech Ozvěny · ${page + 1}/${pages.size}") { ui, body, close ->
+            body.addView(ui.text(pages[page], 17f))
+            body.addView(ui.spacer(12f))
+            if (page < pages.size - 1) body.addView(ui.button("Dál") { close(); showCommander(page + 1) })
+            else body.addView(ui.button("Do arény") { close(); replaceMapContent(cz.uhk.macroflow.pokemon.trainer.ArenaFragment()) })
         }
     }
 

@@ -1,10 +1,10 @@
 {
  "w": 1000,
- "h": 880,
+ "h": 1420,
  "labelSize": 46,
  "title": [
-  210,
-  810
+  200,
+  1190
  ],
  "locations": {
   "QUIET_ORCHARD": {
@@ -60,6 +60,24 @@
     810,
     224
    ]
+  },
+  "OZVENA": {
+   "rect": [
+    350,
+    840,
+    332.0,
+    528.0
+   ],
+   "map": [
+    354.0,
+    324.0,
+    844.0,
+    551.97
+   ],
+   "label": [
+    810,
+    1100
+   ]
   }
  },
  "links": [
@@ -110,6 +128,31 @@
    "bFrac": [
     0.0375,
     0.151
+   ],
+   "secret": false
+  },
+  {
+   "a": "ASH_PLAIN",
+   "aNode": "brana_mesta",
+   "aDir": "s",
+   "aPos": [
+    524.0,
+    776.0
+   ],
+   "aFrac": [
+    0.5,
+    0.9643
+   ],
+   "b": "OZVENA",
+   "bNode": "vstup_z_plane",
+   "bDir": "n",
+   "bPos": [
+    516.0,
+    934.9
+   ],
+   "bFrac": [
+    0.5,
+    0.1646
    ],
    "secret": false
   }
