@@ -45,18 +45,19 @@ def stones(s, x0, x1, y0, y1, h=5, w=(5, 9), seed=1, tone=0, mortar=True):
         row += 1
 
 
-def shingles(s, rows_spec, seed=2):
+def shingles(s, rows_spec, seed=2, pal=None):
     """
     Šindelová střecha: rows_spec = [(y, x0, x1)] pro každou řadu (výška řady 3 px, shora dolů).
     Šindele 4 px, posun v každé druhé řadě, světlá horní hrana, tmavá spodní a mezery.
     """
+    R = pal or ROOF
     for i, (y, x0, x1) in enumerate(rows_spec):
         off = (i % 2) * 2
         for x in range(x0, x1 + 1):
             gap = (x + off) % 4 == 0
-            s.px(x, y, ROOF[1] if gap else ROOF[4] if (x + off) % 4 == 1 else ROOF[3])
-            s.px(x, y + 1, ROOF[1] if gap else ROOF[2])
-            s.px(x, y + 2, ROOF[0] if gap else ROOF[1])
+            s.px(x, y, R[1] if gap else R[4] if (x + off) % 4 == 1 else R[3])
+            s.px(x, y + 1, R[1] if gap else R[2])
+            s.px(x, y + 2, R[0] if gap else R[1])
 
 
 def box_outline(s, x0, y0, x1, y1, col=K):

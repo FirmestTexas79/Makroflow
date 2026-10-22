@@ -24,6 +24,7 @@ class Spr:
         return 0 <= x < self.w and 0 <= y < self.h and self.a[y, x, 3] > 0
 
     def rect(self, x0, y0, x1, y1, col):
+        x0, y0, x1, y1 = int(x0), int(y0), int(x1), int(y1)
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
                 self.px(x, y, col)
