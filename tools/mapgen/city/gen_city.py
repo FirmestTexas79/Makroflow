@@ -252,7 +252,7 @@ NODES = {
     "vstup_z_plane": (192, 108), "c_sever": (186, 182), "venka": (106, 258), "pekarna": (282, 258),
     "namesti": (124, 336), "vyveska": (116, 284), "kasna": (192, 368), "c_jih": (192, 410),
     "arena": (318, 494), "vez": (192, 572), "vytah": (170, 588), "sklad": (352, 560),
-    "lida": (164, 310), "jarda": (220, 208), "korinek": (230, 392),    # obyvatelé (gen_npc_ozvena.py)
+    "lida": (164, 310), "jarda": (220, 208), "korinek": (252, 398),    # obyvatelé – Makromoni (OzvenaCity.TOWNSFOLK)
 }
 EDGES = [("vstup_z_plane", "c_sever"), ("c_sever", "venka"), ("c_sever", "pekarna"), ("c_sever", "namesti"),
          ("namesti", "vyveska"), ("namesti", "kasna"), ("namesti", "c_jih"), ("c_jih", "arena"), ("c_jih", "vez"),

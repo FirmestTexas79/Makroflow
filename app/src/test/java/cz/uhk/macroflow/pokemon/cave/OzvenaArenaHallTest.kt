@@ -35,6 +35,8 @@ class OzvenaArenaHallTest {
     @Test fun obyvateleStojiVeMesteAMluvi() {
         val m = OzvenaCity.MAP
         assertEquals(5, OzvenaCity.TOWNSFOLK.size)
+        val sprites = listOf("src/main/res/drawable", "app/src/main/res/drawable").map { java.io.File(it) }.first { it.exists() }.list()!!.toList()
+        OzvenaCity.TOWNSFOLK.forEach { t -> assertTrue(t.id, sprites.any { it.startsWith("makromon_%02d_".format(t.species)) }) }
         OzvenaCity.TOWNSFOLK.forEach { t ->
             assertTrue(t.id, t.x in 0 until m.artW && t.y in 0 until m.artH && m.node(t.node) != null && t.node in OzvenaCity.ACTION_NODES)
         }

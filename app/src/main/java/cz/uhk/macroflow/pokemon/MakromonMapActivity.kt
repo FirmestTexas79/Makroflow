@@ -1790,34 +1790,33 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Obyvatelé Ozvěny (docs/adr/0093): pásy 4 snímků idle, 1 px spritu = 2 dp jako hráč, pata na art souřadnici.
+     * Obyvatelé Ozvěny (docs/adr/0093): Makromoni z Makrodexu (obrázek 640 px = 64 px pixel artu po 10),
+     * zmenšení bez vyhlazení na 1 px = 1 dp, pata na art souřadnici; lehce dýchají, každý jiným tempem.
      */
     private fun placeTownsfolk() {
         val s = worldScale.toFloat()
-        val px = kotlin.math.max(1, kotlin.math.round(2 * resources.displayMetrics.density).toInt()).toFloat()
+        val px = kotlin.math.max(1, kotlin.math.round(resources.displayMetrics.density).toInt())
         for (t in cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWNSFOLK) {
-            val res = when (t.id) {
-                "bohousek" -> R.drawable.npc_bohousek_map; "venka" -> R.drawable.npc_venka_map
-                "lida" -> R.drawable.npc_lida_map; "jarda" -> R.drawable.npc_jarda_map
-                else -> R.drawable.npc_korinek_map
+            val res = when (t.species) {
+                1 -> R.drawable.makromon_01_ignar; 38 -> R.drawable.makromon_38_johnsova; 7 -> R.drawable.makromon_07_flori
+                32 -> R.drawable.makromon_32_mysnic; else -> R.drawable.makromon_44_gemak
             }
-            val sheet = android.graphics.BitmapFactory.decodeResource(resources, res, android.graphics.BitmapFactory.Options().apply { inScaled = false })
-            val fw = sheet.width / 4; val fh = sheet.height
-            val frames = (0 until 4).map { k ->
-                android.graphics.drawable.BitmapDrawable(resources, android.graphics.Bitmap.createBitmap(sheet, k * fw, 0, fw, fh)).apply { isFilterBitmap = false }
-            }
+            val big = android.graphics.BitmapFactory.decodeResource(resources, res, android.graphics.BitmapFactory.Options().apply { inScaled = false }) ?: continue
+            val bmp = android.graphics.Bitmap.createScaledBitmap(big, big.width / 10, big.height / 10, false)
+            var foot = bmp.height - 1
+            while (foot > 0 && (0 until bmp.width).none { (bmp.getPixel(it, foot) ushr 24) != 0 }) foot--
+            val w = bmp.width * px; val h = bmp.height * px
             val npc = ImageView(this).apply {
-                layoutParams = FrameLayout.LayoutParams((fw * px).toInt(), (fh * px).toInt())
-                setImageDrawable(frames[0]); scaleType = ImageView.ScaleType.FIT_XY
-                x = t.x * s - fw * px / 2f; y = t.y * s - fh * px; elevation = 2f
+                layoutParams = FrameLayout.LayoutParams(w, h)
+                setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, bmp).apply { isFilterBitmap = false })
+                scaleType = ImageView.ScaleType.FIT_XY
+                x = t.x * s - w / 2f; y = t.y * s - (foot + 1) * px; elevation = 2f
+                pivotX = w / 2f; pivotY = (foot + 1f) * px
+                contentDescription = t.id
             }
             addDecor(npc)
-            // každý dýchá jinak rychle, ať se nehýbou všichni naráz
-            crystalAnimators += android.animation.ValueAnimator.ofInt(0, 4).apply {
-                duration = 1100L + (t.x * 7 + t.y) % 500; repeatCount = android.animation.ValueAnimator.INFINITE
-                interpolator = android.view.animation.LinearInterpolator()
-                addUpdateListener { npc.setImageDrawable(frames[(it.animatedValue as Int).coerceIn(0, 3)]) }
-                start()
+            crystalAnimators += android.animation.ObjectAnimator.ofFloat(npc, "scaleY", 1f, 1.035f, 1f).apply {
+                duration = 1600L + (t.x * 7 + t.y) % 700; repeatCount = android.animation.ValueAnimator.INFINITE; start()
             }
         }
     }
