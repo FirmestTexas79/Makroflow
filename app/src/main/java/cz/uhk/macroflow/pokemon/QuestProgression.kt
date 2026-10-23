@@ -137,6 +137,15 @@ object QuestProgression {
         metadata.split(",").map { it.trim() }.filter { it.isNotEmpty() && it.toIntOrNull() == null }.toSet()
 
     /**
+     * Quest, který byl hotový, ale mezitím dostal další fáze (pokračování příběhu), se znovu otevře
+     * na první nové fázi; jinak beze změny (docs/adr/0096).
+     */
+    fun reopenIfExtended(progress: QuestProgressEntity, quest: QuestDefinition, now: Long): QuestProgressEntity =
+        if (progress.isCompleted && progress.currentStageIndex < quest.stages.size)
+            progress.copy(isCompleted = false, metadata = "0", lastUpdated = now, stageStartedAt = now)
+        else progress
+
+    /**
      * Zapíše nová metadata do aktuální fáze a případně quest posune.
      * @return nový stav + příznak, zda se fáze právě dokončila.
      */
