@@ -352,14 +352,19 @@ class MakromonMapActivity : AppCompatActivity() {
                 companionManager.refresh()
                 refreshTeamColumn()
                 refreshStoryDecor()     // po souboji se strážcem / legendou
-                mapWorld.postDelayed({ if (!isFinishing) maybePlayStoryCutscene() }, 450)
-                questManager.recheck()  // boss Hvozdu nastavil příznak → fáze questu se splní
+                // boss Hvozdu nastavil příznak → fáze questu se splní; po pádu Soulorda až po cutscéně (odměna od dubu pak navazuje)
+                if (gamePrefs.getBoolean(cz.uhk.macroflow.pokemon.cutscene.StoryCutscenes.SOULORD_PENDING, false))
+                    mapWorld.postDelayed({ if (!isFinishing && !maybePlayStoryCutscene { questManager.recheck() }) questManager.recheck() }, 300)
+                else {
+                    mapWorld.postDelayed({ if (!isFinishing) maybePlayStoryCutscene() }, 450)
+                    questManager.recheck()
+                }
                 checkAwards()           // chycení, denní úkoly… (docs/adr/0037)
                 maybeWhiteout()         // padl celý tým → smrt postavy (docs/adr/0052)
                 // Spirra mohla v souboji dosáhnout levelu 12 → vývoj podle splněné cesty (docs/adr/0055)
                 if (!gamePrefs.getBoolean(cz.uhk.macroflow.pokemon.zone.Whiteout.PENDING_KEY, false) && !cinematic)
                     mapWorld.postDelayed({
-                        if (!isFinishing && !cinematic && supportFragmentManager.backStackEntryCount == 0)
+                        if (!isFinishing && !cinematic && !storyCutscenePlaying && supportFragmentManager.backStackEntryCount == 0)
                             cz.uhk.macroflow.pokemon.evolution.SpirraEvolutionFlow.check(this) { companionManager.refresh() }
                     }, 600)
             }
@@ -2484,6 +2489,8 @@ class MakromonMapActivity : AppCompatActivity() {
             "🕯 Fenn: skok na Noc bez měsíce",
             "🎬 Cutscéna: Oči (Drakirra na vrcholu)",
             "🎬 Cutscéna: Modré světlo v trní (Hvozd)",
+            "🎬 Cutscéna: Pád Soulorda (Hvozd)",
+            "🎬 Cutscéna: Brána se otevírá (průsmyk)",
             "🍫 +5× Proteinová tyčinka (+250 XP)",
             "💪 +5× Preworkout (+1 level)",
             "🥫 +5× Bílý Monster (+3 levely)"
@@ -2556,7 +2563,9 @@ class MakromonMapActivity : AppCompatActivity() {
                         cz.uhk.macroflow.pokemon.cutscene.DrakirraCutsceneView(this@MakromonMapActivity))
                     18 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
                         cz.uhk.macroflow.pokemon.cutscene.GroveCutsceneView(this@MakromonMapActivity))
-                    19, 20, 21 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 19])
+                    19 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), cz.uhk.macroflow.pokemon.cutscene.SoulordCutsceneView(this@MakromonMapActivity))
+                    20 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), cz.uhk.macroflow.pokemon.cutscene.GateCutsceneView(this@MakromonMapActivity))
+                    21, 22, 23 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 21])
                 }
             }
             .show()
@@ -2818,11 +2827,18 @@ class MakromonMapActivity : AppCompatActivity() {
 
     private var storyCutscenePlaying = false
 
-    /** Čekající příběhová cutscéna prvního regionu (po souboji s legendou, po Mydrusově nápovědě). */
-    private fun maybePlayStoryCutscene() {
-        if (storyCutscenePlaying || cinematic || supportFragmentManager.backStackEntryCount > 0 || questDialogManager.isVisible()) return
+    /**
+     * Čekající příběhová cutscéna prvního regionu (po souboji s legendou, po pádu Soulorda, po Mydrusově nápovědě).
+     * @return true, pokud se cutscéna spustila ([done] se zavolá po jejím konci).
+     */
+    private fun maybePlayStoryCutscene(done: () -> Unit = {}): Boolean {
+        if (storyCutscenePlaying || cinematic || supportFragmentManager.backStackEntryCount > 0 || questDialogManager.isVisible()) return false
         val C = cz.uhk.macroflow.pokemon.cutscene.StoryCutscenes
         val view: cz.uhk.macroflow.pokemon.cutscene.CutsceneView = when {
+            gamePrefs.getBoolean(C.SOULORD_PENDING, false) -> {
+                gamePrefs.edit().remove(C.SOULORD_PENDING).apply()
+                cz.uhk.macroflow.pokemon.cutscene.SoulordCutsceneView(this)
+            }
             gamePrefs.getBoolean(C.DRAKIRRA_PENDING, false) -> {
                 gamePrefs.edit().remove(C.DRAKIRRA_PENDING).apply()
                 cz.uhk.macroflow.pokemon.cutscene.DrakirraCutsceneView(this)
@@ -2831,10 +2847,11 @@ class MakromonMapActivity : AppCompatActivity() {
                 gamePrefs.edit().remove(C.GROVE_ARMED).putBoolean(C.GROVE_SEEN, true).apply()
                 cz.uhk.macroflow.pokemon.cutscene.GroveCutsceneView(this)
             }
-            else -> return
+            else -> return false
         }
         storyCutscenePlaying = true
-        cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), view) { storyCutscenePlaying = false }
+        cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), view) { storyCutscenePlaying = false; done() }
+        return true
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -3181,9 +3198,13 @@ class MakromonMapActivity : AppCompatActivity() {
                         refreshStoryDecor()          // závoj se přebarví na otevřenou bránu
                         flash.animate().alpha(0f).setDuration(900).withEndAction {
                             root.removeView(flash)
-                            transitionRunning = false
-                            showMapToast("🍃 Srdce Hvozdu zapadlo do lůžka a runy se rozzářily zeleně. Brána světů je otevřená!")
-                            mapWorld.postDelayed({ if (!isFinishing) showWorldGateBoard() }, 900)
+                            // cutscéna „Brána se otevírá“ (docs/adr/0099), pak tabule
+                            cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), cz.uhk.macroflow.pokemon.cutscene.GateCutsceneView(this@MakromonMapActivity)) {
+                                transitionRunning = false
+                                if (isFinishing) return@play
+                                showMapToast("🍃 Srdce Hvozdu zapadlo do lůžka a runy se rozzářily zeleně. Brána světů je otevřená!")
+                                mapWorld.postDelayed({ if (!isFinishing) showWorldGateBoard() }, 900)
+                            }
                         }.start()
                     }.start()
                 }

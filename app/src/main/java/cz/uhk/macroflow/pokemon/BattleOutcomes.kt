@@ -115,6 +115,9 @@ internal fun PokemonBattleView.enemyFainted() {
         cz.uhk.macroflow.pokemon.story.StoryFlags.set(context, cz.uhk.macroflow.pokemon.legend.LegendProgress.bossKey(c))
     }
     special?.winKey?.let { cz.uhk.macroflow.pokemon.story.StoryFlags.set(context, it) }
+    // pán Rudé hniloby padl → po návratu na mapu cutscéna „Pád Soulorda“ (docs/adr/0099)
+    if (special == cz.uhk.macroflow.pokemon.legend.SpecialBattle.FOREST_ROT)
+        gamePrefs().edit().putBoolean(cz.uhk.macroflow.pokemon.cutscene.StoryCutscenes.SOULORD_PENDING, true).apply()
     gs.enemyVisible = false
     gs.phase = BattlePhase.ENEMY_FAINTED
     setText("${gs.enemy.name}", "FAINTED!")

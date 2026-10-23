@@ -7,4 +7,6 @@ object StoryCutscenes {
     /** Mydrus právě zmínil modré houby – po zavření dialogu se přehraje „Modré světlo v trní“ (jen jednou). */
     const val GROVE_ARMED = "cutscene_grove_armed"
     const val GROVE_SEEN = "cutscene_grove_seen"
+    /** Soulord právě padl – „Pád Soulorda“ se přehraje před odměnou od Starého dubu. */
+    const val SOULORD_PENDING = "cutscene_soulord_pending"
 }

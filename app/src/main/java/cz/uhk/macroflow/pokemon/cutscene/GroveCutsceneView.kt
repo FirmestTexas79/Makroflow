@@ -43,9 +43,6 @@ class GroveCutsceneView(context: Context) : CutsceneView(context) {
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
-    private val antlers = Path()
-
     private fun light(c: Canvas, x: Float, y: Float, r: Float, color: Int, a: Float) {
         if (a <= 0f || r <= 0f) return
         glow.shader = RadialGradient(x, y, r, intArrayOf(color, color and 0x00FFFFFF), null, Shader.TileMode.CLAMP)
@@ -103,14 +100,25 @@ class GroveCutsceneView(context: Context) : CutsceneView(context) {
         }
     }
 
-    /** Postava z modrého světla: tělo, hlava a rozvětvené paroží, bez obličeje. */
-    private fun elderan(c: Canvas, x: Float, foot: Float, s: Float, a: Float) {
+    private fun elderan(c: Canvas, x: Float, foot: Float, s: Float, a: Float) = ElderanFigure.draw(c, x, foot, s, a)
+}
+
+/** Elderan jako postava z modrého světla: tělo, hlava a rozvětvené paroží, bez obličeje (háj, pád Soulorda). */
+object ElderanFigure {
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val antlers = Path()
+
+    fun draw(c: Canvas, x: Float, foot: Float, s: Float, a: Float) {
         val h = 24f * s
-        light(c, x, foot - h * 0.55f, h * 0.9f, 0x667FD0FF, a)
-        fill.shader = null; fill.color = 0xFFBFE6FF.toInt(); fill.alpha = (a * 150).toInt()
+        glow.shader = RadialGradient(x, foot - h * 0.55f, h * 0.9f, intArrayOf(0x667FD0FF, 0x007FD0FF), null, Shader.TileMode.CLAMP)
+        glow.alpha = (a * 255).toInt().coerceIn(0, 255)
+        c.drawCircle(x, foot - h * 0.55f, h * 0.9f, glow)
+        fill.color = 0xFFBFE6FF.toInt(); fill.alpha = (a * 150).toInt().coerceIn(0, 255)
         c.drawOval(x - 4f * s, foot - h * 0.78f, x + 4f * s, foot, fill)
         c.drawCircle(x, foot - h * 0.84f, 2.6f * s, fill)
-        line.color = 0xFFDFF3FF.toInt(); line.alpha = (a * 200).toInt(); line.strokeWidth = s * 0.7f
+        line.color = 0xFFDFF3FF.toInt(); line.alpha = (a * 200).toInt().coerceIn(0, 255); line.strokeWidth = s * 0.7f
         antlers.rewind()
         for (side in listOf(-1f, 1f)) {
             val bx = x + side * 1.6f * s; val by = foot - h * 0.92f
