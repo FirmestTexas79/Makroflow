@@ -12,6 +12,8 @@ import math, os, sys
 import numpy as np
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, ".."))
+import walkmask  # noqa: E402
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "ashplain"))
 import city_parts as C, pix, tiles, objects  # noqa: E402
 from pix import c, Spr  # noqa: E402
@@ -130,10 +132,16 @@ placed = []
 block = np.zeros((AH, AW), bool)
 
 
+PAD = 3          # půl šířky postavy v art px – ať hráč nezajede bokem do zdi
+
+
 def place(spr, cx, by, z=None, cast=True, foot="auto"):
+    """foot="auto": blokuje se celá silueta spritu (mapa je jedna vrstva, hráč se kreslí přes všechno –
+    kdyby šel „za“ dům nebo strom, prošel by jím; walkmask.py); n-tice = jen obdélník u paty."""
     placed.append((spr, cx, by, by if z is None else z, cast))
     if foot == "auto":
-        foot = (max(4, spr.w - 6), max(3, int(spr.h * 0.42))) if spr.h > 30 else (max(4, spr.w - 2), 4)
+        walkmask.silhouette(block, spr.a[:, :, 3], int(cx - spr.w // 2), int(by - spr.h), PAD)
+        return
     if foot:
         fw, fh = foot
         block[max(0, by - fh):by, max(0, int(cx - fw // 2)):min(AW, int(cx + (fw + 1) // 2))] = True
@@ -176,7 +184,7 @@ for (x, y) in ((314, 250), (322, 250)):
     place(C.barrel(), x, y, foot=(8, 4))
 place(C.crate(), 246, 252)
 # náměstí
-place(C.fountain(), SQ[0], SQ[1] + 36, foot=(72, 34))
+place(C.fountain(), SQ[0], SQ[1] + 36)
 for (x, y, cl, g) in ((140, 300, "red", "apples"), (244, 300, "blue", "bread"), (140, 372, "green", "apples"), (244, 372, "red", "bread")):
     place(C.stall(cl, g), x, y)
 for (x, y) in ((160, 386), (224, 386)):
@@ -194,24 +202,25 @@ for (x, y, kw) in ((70, 316, dict(w=40, wall_h=22, rows=5, roof_pal=C.ROOF_OCHRE
     house(x, y, **kw)
 place(C.flower_bed(36), 92, 432); place(C.flower_bed(30), 110, 544)
 # východ: Aréna a domy
-place(C.shade_building(C.arena()), 318, 486, foot=(110, 56))
+place(C.shade_building(C.arena()), 318, 486)
 house(352, 330, w=40, wall_h=24, roof_pal=C.ROOF_RED, wall="plaster", shut="ochre", windows=1, seed=41)
 house(276, 420, w=40, wall_h=22, rows=5, roof_pal=C.ROOF_TEAL, wall="plaster", shut="green", windows=1, seed=42)
 # jih: věž s náměstíčkem, sklad schovaný za stromy
-place(C.shade_building(C.scale_tower()), 192, 562, foot=(44, 62))
+place(C.shade_building(C.scale_tower()), 192, 562)
 house(258, 556, w=40, wall_h=24, roof_pal=C.ROOF_SLATE, wall="stone", shut="red", windows=1, seed=51)
 place(C.shed(), 352, 548)
 # okraj propasti
 place(C.cliff_edge(AW), 192, VOID_Y + 34, z=0, cast=False, foot=None)
-place(C.balustrade(152), 76, VOID_Y + 2, cast=False)       # zábradlí přes celou šířku, mezera jen u výtahu
-place(C.balustrade(200), 288, VOID_Y + 2, cast=False)
+# zábradlí přes celou šířku, mezera jen u výtahu; hráč stojí před ním, takže blokuje jen spodek
+bl, br = C.balustrade(152), C.balustrade(200)
+place(bl, 76, VOID_Y + 2, cast=False, foot=(bl.w, bl.h // 2)); place(br, 288, VOID_Y + 2, cast=False, foot=(br.w, br.h // 2))
 place(C.elevator(), 170, VOID_Y + 14, cast=False, foot=(30, 18))
 # stromy B/W: husté okraje, park, kolem Arény a věže
 TREES = [(x, y) for y in range(130, 600, 22) for x in (6, 378)]
 TREES += [(22, 214), (40, 226), (18, 260), (40, 270), (24, 296), (150, 440), (130, 470), (236, 470), (256, 500),
           (360, 400), (372, 470), (330, 556), (366, 540), (300, 578), (68, 600), (230, 140), (154, 140), (212, 260), (172, 262)]
 for i, (x, y) in enumerate(TREES):
-    place(C.tree_bw(i, 50 if i % 3 else 56), x, y, foot=(12, 7))
+    place(C.tree_bw(i, 50 if i % 3 else 56), x, y)
 
 # chodníčky od dveří ke dlažbě (šlapáky) a květiny v trávě
 for (dx, dy) in DOORS:
@@ -249,7 +258,7 @@ out.resize((AW * 2, AH * 2), Image.NEAREST).save(os.path.join(HERE, f"ozvena_{VE
 
 # ── herní výstupy: obrázek, mapa chůze, uzly (ZDROJ PRAVDY i pro OzvenaCity.kt) ──
 NODES = {
-    "vstup_z_plane": (192, 108), "c_sever": (186, 182), "venka": (106, 258), "pekarna": (282, 258),
+    "vstup_z_plane": (192, 108), "c_sever": (186, 182), "venka": (96, 256), "pekarna": (282, 258),
     "namesti": (124, 336), "vyveska": (116, 284), "kasna": (192, 368), "c_jih": (192, 410),
     "arena": (318, 494), "vez": (192, 572), "vytah": (170, 588), "sklad": (352, 560),
     "lida": (164, 310), "jarda": (220, 208), "korinek": (252, 398),    # obyvatelé – Makromoni (OzvenaCity.TOWNSFOLK)
@@ -258,6 +267,9 @@ EDGES = [("vstup_z_plane", "c_sever"), ("c_sever", "venka"), ("c_sever", "pekarn
          ("namesti", "vyveska"), ("namesti", "kasna"), ("namesti", "c_jih"), ("c_jih", "arena"), ("c_jih", "vez"),
          ("vez", "vytah"), ("vez", "sklad"),
          ("namesti", "lida"), ("c_sever", "jarda"), ("c_jih", "korinek")]
+# obyvatelé (Makromoni v OzvenaCity.TOWNSFOLK – pata x, y): nejde se skrz ně
+for (x, y) in ((298, 256), (78, 256), (150, 308), (206, 208), (234, 392)):
+    block[y - 6:y, x - 7:x + 7] = True
 block[:100, :] = True
 block[:112, 180:205] = False                            # průjezd branou
 block[VOID_Y - 10:, :] = True                           # zábradlí a propast

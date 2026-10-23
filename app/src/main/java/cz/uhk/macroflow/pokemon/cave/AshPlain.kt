@@ -21,7 +21,7 @@ object AshPlain {
         nodes = listOf(
             CaveNode(ENTRY_NODE, 80, 78),
             CaveNode("n1", 80, 112), CaveNode(SIGN_NODE, 52, 100), CaveNode("n2", 48, 112), CaveNode("duny", 112, 160),
-            CaveNode("n3", 48, 192), CaveNode(QuietOrchard.PLAIN_NODE, 10, 192), CaveNode("ohniste", 40, 236), CaveNode("n4", 96, 192), CaveNode(EchoCanyon.PLAIN_NODE, 150, 192), CaveNode("hajek", 124, 256),
+            CaveNode("n3", 48, 192), CaveNode(QuietOrchard.PLAIN_NODE, 10, 192), CaveNode("ohniste", 40, 236), CaveNode("n4", 96, 192), CaveNode(EchoCanyon.PLAIN_NODE, 150, 192), CaveNode("hajek", 124, 244),
             CaveNode("n5", 96, 272), CaveNode(MILESTONE_NODE, 112, 300), CaveNode("n6", 64, 272),
             CaveNode("sutiny", 36, 326), CaveNode("pole", 124, 326),
             CaveNode("n7", 64, 336), CaveNode(CITY_GATE_NODE, 80, 432)

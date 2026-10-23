@@ -18,6 +18,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import walkmask  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "ashplain"))
 import tiles, objects, pix  # noqa: E402
 from tiles import T  # noqa: E402
@@ -33,7 +35,7 @@ rng = np.random.default_rng(88)
 NODES = {
     "vstup_z_brany": (80, 78),
     "n1": (80, 112), "cedule": (52, 100), "n2": (48, 112), "duny": (112, 160),
-    "n3": (48, 192), "k_sadu": (10, 192), "ohniste": (40, 236), "n4": (96, 192), "ke_kanonu": (150, 192), "hajek": (124, 256),
+    "n3": (48, 192), "k_sadu": (10, 192), "ohniste": (40, 236), "n4": (96, 192), "ke_kanonu": (150, 192), "hajek": (124, 244),
     "n5": (96, 272), "meznik": (112, 300), "n6": (64, 272), "sutiny": (36, 326), "pole": (124, 326),
     "n7": (64, 336), "brana_mesta": (80, 432),
 }
@@ -120,9 +122,8 @@ for (spr, cx, by, foot, shade) in sorted(placed, key=lambda p: p[2]):
     if shade:
         pix.shadow(img, cx, by - 1, spr.w * 0.38, 3)
     pix.paste(img, spr, x0, y0)
-    if foot:
-        fw, fh = foot
-        block[max(0, by - fh):by, max(0, int(cx - fw // 2)):min(AW, int(cx + (fw + 1) // 2))] = True
+    if foot:                                            # silueta, ne jen pata (walkmask.py, ADR 0094)
+        walkmask.silhouette(block, spr.a[:, :, 3], int(cx - spr.w // 2), int(by - spr.h))
 
 # kolize Brány světů: prstenec a menhiry (schody pod ní jsou průchozí)
 gm = gate.a[:, :, 3] > 0

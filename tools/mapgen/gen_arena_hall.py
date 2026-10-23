@@ -15,6 +15,8 @@ import glob, math, os, sys
 import numpy as np
 from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import walkmask  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "arena")); sys.path.insert(0, os.path.join(HERE, "ashplain"))
 sys.path.insert(0, os.path.join(HERE, "orchard"))
 import hall_parts as P, pix  # noqa: E402
@@ -67,11 +69,8 @@ block[:WALL_H + 2, :] = True
 placed = []
 def place(spr, cx, by, foot="auto", z=None):
     placed.append((spr, cx, by, by if z is None else z))
-    if foot == "auto":
-        foot = (spr.w - 4, max(3, int(spr.h * 0.35)))
-    if foot:
-        fw, fh = foot
-        block[max(0, by - fh):by, max(0, int(cx - fw // 2)):min(AW, int(cx + (fw + 1) // 2))] = True
+    if foot:                                            # silueta, ne jen pata (walkmask.py, ADR 0094)
+        walkmask.silhouette(block, spr.a[:, :, 3], int(cx - spr.w // 2), int(by - spr.h), 2)
 
 place(P.arena_door(), 88, WALL_H + 6, foot=None, z=1)
 for bx in (28, 148):
@@ -108,7 +107,7 @@ place(P.bench_long(), 46, 196, foot=(34, 5)); place(P.bench_long(), 124, 196, fo
 for (x, y) in ((16, 100), (160, 100)):
     place(P.plant(), x, y, foot=(10, 5))
 place(P.armor_statue(), 62, 286, foot=(16, 8)); place(P.armor_statue(), 114, 286, foot=(16, 8))
-place(P.guild_flag(), 96, 162, foot=(4, 3))
+place(P.guild_flag(), 104, 162, foot=None)                       # vlajka za levým koncem stolu
 for (spr, cx, by, z) in sorted(placed, key=lambda p: p[3]):
     pix.paste(img, spr, int(cx - spr.w // 2), int(by - spr.h))
 block[WALL_H - 4:WALL_H + 8, 70:107] = False                          # schody k bráně

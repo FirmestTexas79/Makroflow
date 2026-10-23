@@ -17,6 +17,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import walkmask  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "ashplain"))
 sys.path.insert(0, os.path.join(HERE, "orchard"))
 import tiles, objects, pix, sad_objects as S  # noqa: E402
@@ -35,7 +37,7 @@ NODES = {
     "vstup_ze_plane": (152, 80),
     "s1": (80, 80), "s2": (80, 160), "s3": (40, 160), "s4": (120, 160),
     "jezirko_sad": (64, 214), "ule": (120, 216), "studna": (96, 232),
-    "s5": (80, 248), "stara_jablon": (52, 292), "trava_sad": (28, 270), "bouda": (124, 300),
+    "s5": (80, 238), "stara_jablon": (52, 292), "trava_sad": (28, 270), "bouda": (124, 300),
 }
 EDGES = [
     ("vstup_ze_plane", "s1"), ("s1", "s2"), ("s2", "s3"), ("s2", "s4"), ("s3", "jezirko_sad"),
@@ -110,16 +112,15 @@ for i, y in enumerate(range(70, 340, 20)):
     place(objects.tree(i + 7), 4 + (i % 2) * 3, y, (12, 6))
     if not 54 <= y <= 120:                                      # vstup zprava (z pláně se jde doleva)
         place(objects.tree(i + 77), 156 - (i % 2) * 3, y, (12, 6))
-for (x, y) in ((24, 322), (140, 330), (96, 334)):
+for (x, y) in ((24, 322), (140, 330), (96, 352)):
     place(S.fruit_tree(x), x, y, (8, 5))
 
 for (spr, cx, by, foot, shade) in sorted(placed, key=lambda p: p[2]):
     if shade:
         pix.shadow(img, cx, by - 1, spr.w * 0.38, 3)
     pix.paste(img, spr, int(cx - spr.w // 2), int(by - spr.h))
-    if foot:
-        fw, fh = foot
-        block[max(0, by - fh):by, max(0, int(cx - fw // 2)):min(AW, int(cx + (fw + 1) // 2))] = True
+    if foot:                                            # silueta, ne jen pata (walkmask.py, ADR 0094)
+        walkmask.silhouette(block, spr.a[:, :, 3], int(cx - spr.w // 2), int(by - spr.h))
 
 # ── 3) DEN se uloží tak, jak je; NOC: přebarvení do měsíčního světla, pak zdroje světla ──
 day = img.copy()

@@ -24,7 +24,7 @@ object QuietOrchard {
             CaveNode(ENTRY_NODE, 152, 80),
             CaveNode("s1", 80, 80), CaveNode("s2", 80, 160), CaveNode("s3", 40, 160), CaveNode("s4", 120, 160),
             CaveNode("jezirko_sad", 64, 214), CaveNode("ule", 120, 216), CaveNode(WELL_NODE, 96, 232),
-            CaveNode("s5", 80, 248), CaveNode("stara_jablon", 52, 292), CaveNode("trava_sad", 28, 270), CaveNode(HUT_NODE, 124, 300)
+            CaveNode("s5", 80, 238), CaveNode("stara_jablon", 52, 292), CaveNode("trava_sad", 28, 270), CaveNode(HUT_NODE, 124, 300)
         ),
         edges = listOf(
             ENTRY_NODE to "s1", "s1" to "s2", "s2" to "s3", "s2" to "s4", "s3" to "jezirko_sad",

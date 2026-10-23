@@ -16,6 +16,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import walkmask  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "ashplain"))
 sys.path.insert(0, os.path.join(HERE, "canyon"))
 import pix, objects, canyon_parts as K  # noqa: E402
@@ -94,9 +96,8 @@ for (spr, cx, by, foot, shade) in sorted(placed, key=lambda p: p[2]):
     if shade:
         pix.shadow(img, cx, by - 1, spr.w * 0.38, 3)
     pix.paste(img, spr, int(cx - spr.w // 2), int(by - spr.h))
-    if foot:
-        fw, fh = foot
-        block[max(0, by - fh):by, max(0, int(cx - fw // 2)):min(AW, int(cx + (fw + 1) // 2))] = True
+    if foot:                                            # silueta, ne jen pata (walkmask.py, ADR 0094)
+        walkmask.silhouette(block, spr.a[:, :, 3], int(cx - spr.w // 2), int(by - spr.h))
 block[186:210, 66:94] = False                       # most je průchozí
 
 # ── 3) mapa chůze ──

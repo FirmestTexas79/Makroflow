@@ -29,7 +29,7 @@ object OzvenaCity {
     /** Pekař a Věnka stojí u svých dveří, ostatní po městě. */
     val TOWNSFOLK = listOf(
         Townsfolk("bohousek", 1, BAKERY_NODE, 298, 256),      // Ignar – plamínek na ocase drží pec rozpálenou
-        Townsfolk("venka", 38, VENKA_NODE, 90, 254),          // Johnsova – sova písařka
+        Townsfolk("venka", 38, VENKA_NODE, 78, 256),          // Johnsova – sova písařka
         Townsfolk("lida", 7, LIDA_NODE, 150, 308),            // Flori – jablka ze sadu
         Townsfolk("jarda", 32, JARDA_NODE, 206, 208),         // Mysnic – metař
         Townsfolk("korinek", 44, KORINEK_NODE, 234, 392)      // Gemak – starý pán s novinami
@@ -38,7 +38,7 @@ object OzvenaCity {
     val MAP = CaveMap(
         artW = 384, artH = 656,
         nodes = listOf(
-            CaveNode(ENTRY_NODE, 192, 108), CaveNode("c_sever", 186, 182), CaveNode(VENKA_NODE, 106, 258),
+            CaveNode(ENTRY_NODE, 192, 108), CaveNode("c_sever", 186, 182), CaveNode(VENKA_NODE, 96, 256),
             CaveNode(BAKERY_NODE, 282, 258), CaveNode("namesti", 124, 336), CaveNode(BOARD_NODE, 116, 284),
             CaveNode(FOUNTAIN_NODE, 192, 368), CaveNode("c_jih", 192, 410), CaveNode(ARENA_NODE, 318, 494),
             CaveNode(TOWER_NODE, 192, 572), CaveNode(LIFT_NODE, 170, 588), CaveNode(SHED_NODE, 352, 560),
@@ -60,7 +60,7 @@ object OzvenaCity {
         isCave = false,
         tapAreas = mapOf(
             ENTRY_NODE to Triple(192, 84, 18),
-            VENKA_NODE to Triple(98, 234, 24), BAKERY_NODE to Triple(276, 232, 30),
+            VENKA_NODE to Triple(92, 236, 24), BAKERY_NODE to Triple(276, 232, 30),
             BOARD_NODE to Triple(116, 262, 10), FOUNTAIN_NODE to Triple(192, 330, 34),
             ARENA_NODE to Triple(318, 458, 40), TOWER_NODE to Triple(192, 520, 24),
             LIFT_NODE to Triple(170, 580, 14), SHED_NODE to Triple(352, 538, 12),
