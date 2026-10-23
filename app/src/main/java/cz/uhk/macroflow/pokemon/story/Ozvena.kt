@@ -3,17 +3,17 @@ package cz.uhk.macroflow.pokemon.story
 /**
  * Kapitola V · OZVĚNA (bible příběhu, docs/adr/0095). Čistá data, pokryto testy.
  *
- * Zatím první dvě fáze: „Dobré ráno, Ozvěno“ (pekař Bohoušek, tři rána se snídaní) a „Jméno na dveřích“
- * (písařka Věnka dá Pamětní knihu). Další fáze (Pět Mistrů, Kalibrace…) se přidají za ně.
+ * Zatím první dvě fáze: „Dobré ráno, Ozvěno“ (pekař Brann, tři rána se snídaní) a „Jméno na dveřích“
+ * (písařka Vessa dá Pamětní knihu). Další fáze (Pět Mistrů, Kalibrace…) se přidají za ně.
  */
 object Ozvena {
     const val QUEST_ID = "ozvena_chapter"
-    const val BAKER = "Pekař Bohoušek"
-    const val SCRIBE = "Písařka Věnka"
+    const val BAKER = "Pekař Brann"
+    const val SCRIBE = "Písařka Vessa"
 
-    /** Fáze, ve které hráč jde za Věnkou pro Pamětní knihu (index). */
+    /** Fáze, ve které hráč jde za Vessou pro Pamětní knihu (index). */
     const val NAME_STAGE = 1
-    /** Věnka hráči dala Pamětní knihu. */
+    /** Vessa hráči dala Pamětní knihu. */
     const val BOOK_KEY = "ozvena_memory_book"
 
     const val BREAKFAST_DAYS = 3
@@ -34,19 +34,19 @@ object Ozvena {
             "Ráno je ráno, jen když se nasnídáš. To ví každý. Nevím odkud, ale ví."
 
     const val GOOD_MORNING_HINT =
-        "„Dobré ráno, dobré ráno!“ Zapiš si snídani (do 10:30) ve třech různých dnech. Bohoušek si tě pamatuje… nebo aspoň říká, že ano."
+        "„Dobré ráno, dobré ráno!“ Zapiš si snídani (do 10:30) ve třech různých dnech. Brann si tě pamatuje… nebo aspoň říká, že ano."
 
     const val NAME_ON_DOOR =
         "„Dobré ráno, dobré ráno! Čerstvý chléb, jako každé ráno!“\n\n" +
             "…Počkej. Třikrát jsi tu byl a třikrát jsem ti řekl úplně totéž, viď? To je zvláštní. " +
             "Mám pocit, že to říkám už hrozně dlouho.\n\n" +
             "Vedle pekárny stojí u dveří prázdný kočárek. Bydleli tam… někdo tam bydlel. Na dveřích bylo jméno, " +
-            "teď je tam jen škrábanec. Zajdi za písařkou Věnkou. Ta zapisuje jména, aby nezmizela."
+            "teď je tam jen škrábanec. Zajdi za písařkou Vessou. Ta zapisuje jména, aby nezmizela."
 
-    const val NAME_ON_DOOR_HINT = "Písařka Věnka stojí u svého domu na západ od náměstí – u zdi plné jmen."
+    const val NAME_ON_DOOR_HINT = "Písařka Vessa stojí u svého domu na západ od náměstí – u zdi plné jmen."
 
     const val MEMORY_BOOK =
-        "„Bohoušek tě posílá? Tak už to zase začíná.“\n\n" +
+        "„Brann tě posílá? Tak už to zase začíná.“\n\n" +
             "Zapsala jsem tě. A tady – Pamětní kniha. Co do ní zapíšeš, to Bezejmenní nesmažou. " +
             "Aspoň zatím to tak vždycky platilo.\n\n" +
             "Víš, kolik jmen je na té zdi? Já už ne. Vím jen, že moje tam není. Jednou ráno jsem ho hledala " +

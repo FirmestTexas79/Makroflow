@@ -1,6 +1,6 @@
 """
 Díly města Ozvěna (Akt II, návrh): domy skládané po prvcích (šindel po šindeli, kámen po kameni,
-vlastní obrys každého prvku, stín pod okapem), pekárna, dům písařky Věnky popsaný jmény, kašna,
+vlastní obrys každého prvku, stín pod okapem), pekárna, dům písařky Vessy popsaný jmény, kašna,
 stánky, Aréna, Věž Řádu Váhy, sklad, zábradlí nad propastí, výtah a vnitřní strana městské brány.
 """
 import math, os, sys
@@ -136,7 +136,7 @@ def house(w=48, wall_h=24, rows=6, roof_pal=ROOF_RED, wall="plaster", shut="gree
 
 
 def bakery():
-    """Pekárna Bohouška: okrová omítka, výloha s chleby, pruhovaná markýza, vývěsní preclík, komín."""
+    """Pekárna Branna: okrová omítka, výloha s chleby, pruhovaná markýza, vývěsní preclík, komín."""
     s = house(64, 28, rows=7, roof_pal=ROOF_OCHRE, wall="ochre", shut=None, windows=0, chimney=True, seed=4)
     y0 = 7 * 3 + 4 + 2
     # výloha
@@ -164,7 +164,7 @@ def bakery():
 
 
 def venka_house():
-    """Dům písařky Věnky: bílá omítka hustě popsaná jmény (řádky drobných čárek), břidlicová střecha."""
+    """Dům písařky Vessy: bílá omítka hustě popsaná jmény (řádky drobných čárek), břidlicová střecha."""
     s = house(44, 26, rows=6, roof_pal=ROOF_SLATE, wall="plaster", shut="blue", windows=1, chimney=False, seed=7)
     r = np.random.default_rng(3)
     y0 = 6 * 3 + 4 + 2

@@ -9,5 +9,5 @@ Stav: přijato (2026-10-23), větev `MULTI`
   do stran (půl šířky postavy). Zábradlí nad propastí blokuje jen spodek – hráč stojí před ním.
 - Obyvatelé Ozvěny mají v mapě chůze malý obdélník u paty, skrz Makromony se taky nechodí.
 - Posunuté uzly, které skončily uvnitř siluety: pláň `hajek` (124, 244), sad `s5` (80, 238) a ovocný strom
-  v sadu o kus níž (průchod k boudě), město `venka` (96, 256) a Věnka (78, 256); vlajka cechu v hale stojí
+  v sadu o kus níž (průchod k boudě), město `venka` (96, 256) a Vessa (78, 256); vlajka cechu v hale stojí
   za stolem (bez kolize), aby zůstala volná cesta po koberci k bráně.

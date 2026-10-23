@@ -16,4 +16,4 @@ Stav: přijato (2026-10-22), větev `MULTI`, issue #29
 - Místa setkání: jezírko (rybaření, `jezirko_` = vodní setkání), úly, Stará jabloň, vlhká tráva.
   Divocí lv 12–18, druhy zatím z louky (`wildBiome = MEADOW`, noční druhy se tam objeví samy).
 - Studna a bouda mají texty s náznaky (odraz se pohne později, škrtnutá jména zahradníků).
-- Mimo rozsah: sběr plodů pro Bohouška (přijde s městem, #27/#28).
+- Mimo rozsah: sběr plodů pro Branna (přijde s městem, #27/#28).

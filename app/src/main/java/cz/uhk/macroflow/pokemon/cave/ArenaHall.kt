@@ -12,7 +12,7 @@ object ArenaHall {
     const val FAME_NODE = "sin_slavy"
     const val WANTED_NODE = "hledani"
     const val TRAINING_NODE = "trenink"
-    const val COMMANDER_NAME = "Velitel Radim"
+    const val COMMANDER_NAME = "Velitel Kassar"
 
     val MAP = CaveMap(
         artW = 176, artH = 288,
@@ -43,7 +43,7 @@ object ArenaHall {
     val PORTRAITS = listOf(intArrayOf(39, 107, 14, 18), intArrayOf(14, 111, 14, 18), intArrayOf(64, 111, 14, 18))
 
     /** Když žebříček není k dispozici (offline, nepřihlášený hráč), visí tu legendy cechu. */
-    val LEGENDS = listOf(Triple("Kateřina Holá", "003", 1980), Triple("Marek Sýkora", "026", 1840), Triple("Iva Tichá", "021", 1715))
+    val LEGENDS = listOf(Triple("Kaia", "003", 1980), Triple("Orvo", "026", 1840), Triple("Ilvi", "021", 1715))
 
     /** Výklad velitele po stránkách. */
     val COMMANDER_PAGES = listOf(
