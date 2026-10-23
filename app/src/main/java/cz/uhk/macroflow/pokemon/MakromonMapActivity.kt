@@ -2482,15 +2482,9 @@ class MakromonMapActivity : AppCompatActivity() {
             "🍄 Soulord poražen (otevře háj)",
             "🌕 Bdění u oltáře splněno (noc)",
             "🗝 Reset Zapomenutého háje",
-            "🎬 Přehrát úvod do Makrosvěta",
-            "🕯 Cutscéna: Světlo mezi stromy (sad)",
+            "🎬 Cutscény a videa ›",
             "🕯 Reset questu Fenna (Ztichlý sad)",
-            "🕯 Cutscéna: Bezejmenní (finále sadu)",
             "🕯 Fenn: skok na Noc bez měsíce",
-            "🎬 Cutscéna: Oči (Drakirra na vrcholu)",
-            "🎬 Cutscéna: Modré světlo v trní (Hvozd)",
-            "🎬 Cutscéna: Pád Soulorda (Hvozd)",
-            "🎬 Cutscéna: Brána se otevírá (průsmyk)",
             "🍫 +5× Proteinová tyčinka (+250 XP)",
             "💪 +5× Preworkout (+1 level)",
             "🥫 +5× Bílý Monster (+3 levely)"
@@ -2553,21 +2547,32 @@ class MakromonMapActivity : AppCompatActivity() {
                         showMapToast("🌕 Debug: bdění splněno")
                     }
                     11 -> debugResetGrove()
-                    12 -> IntroFlyoverView.play(findViewById(android.R.id.content))
-                    13 -> playFennCutscene(meet = false)
-                    14 -> debugResetFenn()
-                    15 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
-                        cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this@MakromonMapActivity))
-                    16 -> debugFennFinale()
-                    17 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
-                        cz.uhk.macroflow.pokemon.cutscene.DrakirraCutsceneView(this@MakromonMapActivity))
-                    18 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
-                        cz.uhk.macroflow.pokemon.cutscene.GroveCutsceneView(this@MakromonMapActivity))
-                    19 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), cz.uhk.macroflow.pokemon.cutscene.SoulordCutsceneView(this@MakromonMapActivity))
-                    20 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), cz.uhk.macroflow.pokemon.cutscene.GateCutsceneView(this@MakromonMapActivity))
-                    21, 22, 23 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 21])
+                    12 -> showDebugCutscenes()
+                    13 -> debugResetFenn()
+                    14 -> debugFennFinale()
+                    15, 16, 17 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 15])
                 }
             }
+            .show()
+    }
+
+    /** Podsložka debug menu: všechny cutscény v pořadí příběhu. */
+    private fun showDebugCutscenes() {
+        val root = findViewById<ViewGroup>(android.R.id.content)
+        fun play(v: cz.uhk.macroflow.pokemon.cutscene.CutsceneView) = cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(root, v)
+        val list: List<Pair<String, () -> Unit>> = listOf(
+            "🎬 Úvod do Makrosvěta" to { IntroFlyoverView.play(root) },
+            "🐉 Oči (Drakirra na vrcholu)" to { play(cz.uhk.macroflow.pokemon.cutscene.DrakirraCutsceneView(this)) },
+            "🍄 Pád Soulorda (Hvozd)" to { play(cz.uhk.macroflow.pokemon.cutscene.SoulordCutsceneView(this)) },
+            "💙 Modré světlo v trní (Hvozd)" to { play(cz.uhk.macroflow.pokemon.cutscene.GroveCutsceneView(this)) },
+            "🌀 Brána se otevírá (průsmyk)" to { play(cz.uhk.macroflow.pokemon.cutscene.GateCutsceneView(this)) },
+            "🕯 Světlo mezi stromy (Ztichlý sad)" to { play(cz.uhk.macroflow.pokemon.cutscene.FennCutsceneView(this)) },
+            "🌑 Bezejmenní (finále sadu)" to { play(cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this)) }
+        )
+        android.app.AlertDialog.Builder(this)
+            .setTitle("🎬 Cutscény a videa")
+            .setItems(list.map { it.first }.toTypedArray()) { _, which -> list[which].second() }
+            .setNegativeButton("Zpět") { _, _ -> showDebugMenu() }
             .show()
     }
 
