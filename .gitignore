@@ -19,3 +19,7 @@ local.properties
 *.aab
 *.apk
 __pycache__/
+
+# pomocné soubory buildu Claude a pracovní stromy agentů
+/_claude_tmp/
+/.claude/worktrees/
