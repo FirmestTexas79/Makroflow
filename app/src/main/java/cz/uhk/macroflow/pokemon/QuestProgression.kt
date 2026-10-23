@@ -104,6 +104,7 @@ object QuestProgression {
                 else "Dnes máš ${n.label} na $v % svého cíle. Potřebuješ ${n.minPct}–${n.maxPct} %."
             }
             RequirementType.TALK_TO_NPC -> stage.text
+            RequirementType.WATER_DAYS -> "Cíl vody zatím splněný $v z ${stage.targetValue} dní. Napij se – sad pije s tebou."
             RequirementType.FLAGS_COUNT -> "Hotovo $v z ${stage.targetValue}. Co přesně chybí, najdeš v deníku."
             RequirementType.BREAKFAST_DAYS -> "Snídaně zatím $v z ${stage.targetValue} rán. Zapiš si snídani do 10:30."
             RequirementType.HAVE_ITEM -> "Ještě ho nemáš. Až ho budeš mít, stav se."
@@ -135,6 +136,11 @@ object QuestProgression {
 
     fun visitedNodes(metadata: String): Set<String> =
         metadata.split(",").map { it.trim() }.filter { it.isNotEmpty() && it.toIntOrNull() == null }.toSet()
+
+    /** Kolik různých dnů od [sinceDate] (yyyy-MM-dd, včetně) mělo v součtu aspoň [targetMl]; [log] = (datum, ml). */
+    fun daysAtLeast(log: List<Pair<String, Int>>, sinceDate: String, targetMl: Int): Int =
+        if (targetMl <= 0) 0
+        else log.filter { it.first >= sinceDate }.groupBy({ it.first }, { it.second }).count { (_, ml) -> ml.sum() >= targetMl }
 
     /**
      * Quest, který byl hotový, ale mezitím dostal další fáze (pokračování příběhu), se znovu otevře

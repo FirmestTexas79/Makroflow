@@ -52,6 +52,8 @@ object Dossiers {
             "{4|Koruna z plamenů není jeho.} {5|Byla mu nasazena při Přání.} {99|Nosič čeká na vystřídání.}"
         "035" -> "Strážkyně. Hlídá modrý krystal. Voda kolem ní neteče, krouží." to
             "{4|Krouží stále stejným směrem jako Finleti v noci.} {5|Krystal pláče, když se k němu přiblíží.}"
+        "043" -> "Svíčka, která nedohoří. V noci se zdržuje u ovocných stromů." to
+            "{5|Kontrolní výsadba S-0: zahradník F.} {6|Měření zármutku – pokus o paměť bez nádoby.} {7|Výsledek: bolest roste rychleji než zapomnění.}"
         else -> "Bez záznamu." to "{4|Spis neúplný.}"
     }
 

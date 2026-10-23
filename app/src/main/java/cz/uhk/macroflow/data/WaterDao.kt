@@ -16,6 +16,10 @@ interface WaterDao {
     @Query("SELECT MAX(timestamp) FROM water_log WHERE date = :date")
     fun getLastDrinkTimestamp(date: String): Long?
 
+    /** Zápisy vody od data (yyyy-MM-dd, včetně) – zalévání sadu (docs/adr/0097). */
+    @Query("SELECT * FROM water_log WHERE date >= :date")
+    fun getWaterSinceSync(date: String): List<WaterEntity>
+
     @Query("SELECT * FROM water_log")
     fun getAllWaterSync(): List<WaterEntity>
 

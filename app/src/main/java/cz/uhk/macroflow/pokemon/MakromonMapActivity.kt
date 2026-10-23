@@ -828,6 +828,11 @@ class MakromonMapActivity : AppCompatActivity() {
                 }, 200)
                 return@action
             }
+            if (nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIDA_NODE && cz.uhk.macroflow.pokemon.story.Fenn.CLUE_KEYS.all { StoryFlags.isSet(this, it) } &&
+                !StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_TOLD_KEY)) { onNelleMaren(); return@action }
+            // Stará jabloň po konci B/C v noci svítí a dává Zlaté jablko
+            if (currentBiome == BiomeType.QUIET_ORCHARD && nodeName == "stara_jablon" && orchardNight() &&
+                cz.uhk.macroflow.pokemon.story.Fenn.inTree { StoryFlags.isSet(this, it) }) { giveDailyApple(cz.uhk.macroflow.pokemon.story.Fenn.APPLE_FROM_TREE, cz.uhk.macroflow.pokemon.story.Fenn.TREE_AFTER); return@action }
 
             when (nodeName) {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
@@ -889,8 +894,11 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIDA_NODE, cz.uhk.macroflow.pokemon.cave.OzvenaCity.JARDA_NODE,
-                cz.uhk.macroflow.pokemon.cave.OzvenaCity.KORINEK_NODE -> cz.uhk.macroflow.pokemon.cave.OzvenaCity.residentLine(
-                    nodeName, java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR))?.let { showMapToast(it) }
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.KORINEK_NODE -> when {
+                    nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.KORINEK_NODE && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.END_A_KEY) -> showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.TOBBEN_GONE)
+                    nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIDA_NODE && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_TRUTH_KEY) -> showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.NELLE_AFTER_TRUTH)
+                    else -> cz.uhk.macroflow.pokemon.cave.OzvenaCity.residentLine(nodeName, java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR))?.let { showMapToast(it) }
+                }
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.GATE_NODE -> replaceMapContent(cz.uhk.macroflow.pokemon.trainer.ArenaFragment())
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.COMMANDER_NODE -> showCommander(0)
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.FAME_NODE -> showHallOfFame()
@@ -906,10 +914,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.QuietOrchard.WELL_NODE -> showMapToast(
                     if (fennStage() == cz.uhk.macroflow.pokemon.story.Fenn.NAMES_STAGE && !orchardNight()) cz.uhk.macroflow.pokemon.story.Fenn.WELL_DAY else cz.uhk.macroflow.pokemon.cave.QuietOrchard.WELL_TEXT)
                 cz.uhk.macroflow.pokemon.cave.QuietOrchard.HUT_NODE -> onOrchardHut()
-                cz.uhk.macroflow.pokemon.story.Fenn.NODE -> if (orchardNight() && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.MET_KEY)) {
-                    questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID)
-                    mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150)
-                } else showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.DAY_SPOT)
+                cz.uhk.macroflow.pokemon.story.Fenn.NODE -> if (orchardNight() && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.MET_KEY) &&
+                    !cz.uhk.macroflow.pokemon.story.Fenn.inTree { StoryFlags.isSet(this, it) }) onFennTalk() else showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.DAY_SPOT)
                 // Hunfrey na plošině vedle brány (docs/adr/0085)
                 cz.uhk.macroflow.pokemon.story.Hunfrey.NODE -> {
                     questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Hunfrey.QUEST_ID)
@@ -1815,6 +1821,7 @@ class MakromonMapActivity : AppCompatActivity() {
      */
     private fun placeTownsfolk() {
         for (t in cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWNSFOLK) {
+            if (t.node == cz.uhk.macroflow.pokemon.cave.OzvenaCity.KORINEK_NODE && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.END_A_KEY)) continue   // Bezejmenní si ho vzali
             val res = when (t.species) {
                 1 -> R.drawable.makromon_01_ignar; 38 -> R.drawable.makromon_38_johnsova; 7 -> R.drawable.makromon_07_flori
                 32 -> R.drawable.makromon_32_mysnic; else -> R.drawable.makromon_44_gemak
@@ -1912,7 +1919,10 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun placeFenn() {
         if (!StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.STARTED_KEY)) return
         questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID)
+        val has = { k: String -> StoryFlags.isSet(this, k) }
+        if (cz.uhk.macroflow.pokemon.story.Fenn.fennStays(has)) pulseGlow(126f, 282f, 12f, 0xFFFFD27A.toInt())          // lucerna v chalupě svítí napořád
         if (!orchardNight()) return
+        if (cz.uhk.macroflow.pokemon.story.Fenn.inTree(has)) { pulseGlow(80f, 258f, 30f, 0xFF9CC8FF.toInt()); return }  // Fenn ve Staré jabloni
         if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.MET_KEY)) {
             val npc = placeMakromonNpc(R.drawable.makromon_43_kendl, cz.uhk.macroflow.pokemon.story.Fenn.X, cz.uhk.macroflow.pokemon.story.Fenn.Y, cz.uhk.macroflow.pokemon.story.Fenn.NAME)
             val g = (14 * worldScale)
@@ -1924,6 +1934,121 @@ class MakromonMapActivity : AppCompatActivity() {
                 duration = 1400; repeatCount = android.animation.ValueAnimator.INFINITE; start()
             }
         } else if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_KEY) && !fennCutscenePlaying) playFennCutscene(meet = true)
+    }
+
+    private fun vessaText() = cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_TEXT + if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.END_A_KEY)) cz.uhk.macroflow.pokemon.story.Fenn.VESSA_AFTER_A else ""
+
+    /** Pulzující záře na art souřadnici (lucerna, svítící jabloň). */
+    private fun pulseGlow(x: Float, y: Float, size: Float, color: Int) {
+        val g = (size * worldScale).toInt()
+        val v = glowView(g, color, 0x88).apply { this.x = x * worldScale - g / 2f; this.y = y * worldScale - g / 2f; elevation = 1.9f }
+        addDecor(v)
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(v, "alpha", 0.45f, 1f, 0.6f, 0.9f, 0.45f).apply {
+            duration = 2400; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+    }
+
+    /** Zlaté jablko jednou denně (konec A od Fenna, konec B/C z jabloně); jinak jen věta. */
+    private fun giveDailyApple(given: String, otherwise: String) {
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())
+        if (gamePrefs.getString(cz.uhk.macroflow.pokemon.story.Fenn.APPLE_DAY_PREF, null) == today) { showMapToast(otherwise); return }
+        gamePrefs.edit().putString(cz.uhk.macroflow.pokemon.story.Fenn.APPLE_DAY_PREF, today).apply()
+        lifecycleScope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.skills.SkillStore.add(applicationContext, cz.uhk.macroflow.pokemon.boost.RareBoost.GOLDEN_APPLE.id, 1)
+            }
+            showMapToast(given)
+        }
+    }
+
+    /** Babička Nelle a jméno Maren (fáze „Co ví Nelle“): pravda o sadu, nebo fasáda. */
+    private fun onNelleMaren() {
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), cz.uhk.macroflow.pokemon.story.Fenn.NELLE, "Maren") { ui, body, close ->
+            body.addView(ui.text(cz.uhk.macroflow.pokemon.story.Fenn.NELLE_MAREN, 15f).apply {
+                setBackgroundColor(0x22BC6C25); setPadding(ui.px(10f), ui.px(10f), ui.px(10f), ui.px(10f))
+            })
+            fun choice(label: String, truth: Boolean) = body.addView(ui.button(label) {
+                close()
+                StoryFlags.set(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_TOLD_KEY)
+                if (truth) StoryFlags.set(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_TRUTH_KEY)
+                showMapToast(if (truth) cz.uhk.macroflow.pokemon.story.Fenn.NELLE_TRUTH else cz.uhk.macroflow.pokemon.story.Fenn.NELLE_FACADE)
+            }.apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = ui.px(8f) }
+            })
+            choice("Říct jí pravdu o sadu", true)
+            choice("Nechat ji v klidu", false)
+        }
+    }
+
+    /** Rozhovor s Fennem v noci: vyřízení od Nelle, finále, po konci A jablka. */
+    private fun onFennTalk() {
+        questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            val has = { k: String -> StoryFlags.isSet(this, k) }
+            when {
+                has(cz.uhk.macroflow.pokemon.story.Fenn.NELLE_TOLD_KEY) && !has(cz.uhk.macroflow.pokemon.story.Fenn.REPORTED_KEY) -> {
+                    showMapToast(if (has(cz.uhk.macroflow.pokemon.story.Fenn.NELLE_TRUTH_KEY)) cz.uhk.macroflow.pokemon.story.Fenn.FENN_HEARS_TRUTH else cz.uhk.macroflow.pokemon.story.Fenn.FENN_HEARS_FACADE)
+                    StoryFlags.set(this, cz.uhk.macroflow.pokemon.story.Fenn.REPORTED_KEY)
+                    mapWorld.postDelayed({ if (!isFinishing) questManager.recheck() }, 1800)
+                }
+                fennStage() == cz.uhk.macroflow.pokemon.story.Fenn.FINALE_STAGE && !has(cz.uhk.macroflow.pokemon.story.Fenn.ENDING_KEY) && questIntroSeen() -> playFinale()
+                cz.uhk.macroflow.pokemon.story.Fenn.fennStays(has) -> giveDailyApple(cz.uhk.macroflow.pokemon.story.Fenn.APPLE_FROM_FENN, cz.uhk.macroflow.pokemon.story.Fenn.FENN_AFTER)
+                else -> questManager.checkNpcInteraction()
+            }
+        }, 150)
+    }
+
+    /** Úvod fáze Noc bez měsíce už zazněl (první oslovení ho přehraje, druhé spustí finále). */
+    private fun questIntroSeen() =
+        getSharedPreferences("QuestPrefs", Context.MODE_PRIVATE).getInt("intro_seen_" + cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID, -1) >= cz.uhk.macroflow.pokemon.story.Fenn.FINALE_STAGE
+
+    /** Finále: cutscéna Bezejmenných, pak volba konce. */
+    private fun playFinale() {
+        cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
+            cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this)) { if (!isFinishing) chooseEnding() }
+    }
+
+    private fun chooseEnding() {
+        val flags = StoryFlags.all(this)
+        val secret = cz.uhk.macroflow.pokemon.story.Fenn.secretEndingOpen(cz.uhk.macroflow.pokemon.story.Fenn.truths { it in flags }, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_TRUTH_KEY in flags, Insight.level(flags))
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), cz.uhk.macroflow.pokemon.story.Fenn.FINALE_TITLE,
+            "Čí jméno si vezmou?") { ui, body, close ->
+            body.addView(ui.text(cz.uhk.macroflow.pokemon.story.Fenn.FINALE, 15f).apply {
+                setBackgroundColor(0x33101830); setPadding(ui.px(10f), ui.px(10f), ui.px(10f), ui.px(10f))
+            })
+            fun choice(label: String, e: cz.uhk.macroflow.pokemon.story.Fenn.Ending) = body.addView(ui.button(label) { close(); endFennQuest(e) }.apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = ui.px(8f) }
+            })
+            choice(cz.uhk.macroflow.pokemon.story.Fenn.CHOICE_A, cz.uhk.macroflow.pokemon.story.Fenn.Ending.A)
+            choice(cz.uhk.macroflow.pokemon.story.Fenn.CHOICE_B, cz.uhk.macroflow.pokemon.story.Fenn.Ending.B)
+            if (secret) choice(cz.uhk.macroflow.pokemon.story.Fenn.CHOICE_C, cz.uhk.macroflow.pokemon.story.Fenn.Ending.C)
+        }
+    }
+
+    /** Konec linky: příznaky, Zlaté jablko a epilog; po zavření se quest uzavře a svět se změní. */
+    private fun endFennQuest(e: cz.uhk.macroflow.pokemon.story.Fenn.Ending) {
+        StoryFlags.set(this, cz.uhk.macroflow.pokemon.story.Fenn.endingKey(e)); StoryFlags.set(this, cz.uhk.macroflow.pokemon.story.Fenn.ENDING_KEY)
+        gamePrefs.edit().putString(cz.uhk.macroflow.pokemon.story.Fenn.APPLE_DAY_PREF,
+            java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())).apply()
+        lifecycleScope.launch(Dispatchers.IO) {
+            cz.uhk.macroflow.pokemon.skills.SkillStore.add(applicationContext, cz.uhk.macroflow.pokemon.boost.RareBoost.GOLDEN_APPLE.id, 1)
+        }
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), cz.uhk.macroflow.pokemon.story.Fenn.FINALE_TITLE, "") { ui, body, close ->
+            body.addView(ui.text(cz.uhk.macroflow.pokemon.story.Fenn.endingText(e), 15f).apply {
+                setBackgroundColor(0x33101830); setPadding(ui.px(10f), ui.px(10f), ui.px(10f), ui.px(10f))
+            })
+            body.addView(ui.button("Pokračovat") {
+                close()
+                refreshStoryDecor()
+                questManager.recheck()
+            }.apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = ui.px(10f) }
+            })
+        }
     }
 
     /** Cutscéna „Světlo mezi stromy“; [meet] = poprvé ve hře (pak se Fenn objeví a promluví), jinak jen přehrání. */
@@ -1946,12 +2071,12 @@ class MakromonMapActivity : AppCompatActivity() {
         val p = questManager.getCurrentProgress()
         val ours = questManager.getActiveQuestId() == O.QUEST_ID && p != null
         when {
-            !ours -> showMapToast(if (venka) cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_TEXT else cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_TEXT)
+            !ours -> showMapToast(if (venka) vessaText() else cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_TEXT)
             venka && !p!!.isCompleted && p.currentStageIndex == O.NAME_STAGE -> {
                 StoryFlags.set(this, O.BOOK_KEY)          // Vessa hráče zapíše a dá mu knihu → fáze splněna, rozloučí se
                 questManager.recheck()
             }
-            venka -> if (p!!.isCompleted) questManager.checkNpcInteraction() else showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_TEXT)
+            venka -> if (p!!.isCompleted) questManager.checkNpcInteraction() else showMapToast(vessaText())
             p!!.isCompleted -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_TEXT)   // smyčka: pořád stejný pozdrav
             else -> questManager.checkNpcInteraction()
         }
@@ -2353,6 +2478,8 @@ class MakromonMapActivity : AppCompatActivity() {
             "🎬 Přehrát úvod do Makrosvěta",
             "🕯 Cutscéna: Světlo mezi stromy (sad)",
             "🕯 Reset questu Fenna (Ztichlý sad)",
+            "🕯 Cutscéna: Bezejmenní (finále sadu)",
+            "🕯 Fenn: skok na Noc bez měsíce",
             "🍫 +5× Proteinová tyčinka (+250 XP)",
             "💪 +5× Preworkout (+1 level)",
             "🥫 +5× Bílý Monster (+3 levely)"
@@ -2418,15 +2545,37 @@ class MakromonMapActivity : AppCompatActivity() {
                     12 -> IntroFlyoverView.play(findViewById(android.R.id.content))
                     13 -> playFennCutscene(meet = false)
                     14 -> debugResetFenn()
-                    15, 16, 17 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 15])
+                    15 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
+                        cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this@MakromonMapActivity))
+                    16 -> debugFennFinale()
+                    17, 18, 19 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 17])
                 }
             }
             .show()
     }
 
+    /** Quest Fenna rovnou ve fázi Noc bez měsíce (všechny stopy a Nelle jako pravda). */
+    private fun debugFennFinale() {
+        val F = cz.uhk.macroflow.pokemon.story.Fenn
+        (listOf(F.STARTED_KEY, F.NELLE_KEY, F.MET_KEY, F.NELLE_TOLD_KEY, F.NELLE_TRUTH_KEY, F.REPORTED_KEY) + F.CLUE_KEYS)
+            .forEach { StoryFlags.set(this, it) }
+        listOf(F.ENDING_KEY, F.END_A_KEY, F.END_B_KEY, F.END_C_KEY).forEach { StoryFlags.clear(this, it) }
+        lifecycleScope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                db.questDao().saveQuestProgress(QuestProgressEntity(questId = F.QUEST_ID, currentStageIndex = F.FINALE_STAGE,
+                    metadata = "0", stageStartedAt = System.currentTimeMillis()))
+            }
+            questManager.forget(F.QUEST_ID)
+            questManager.loadQuest(F.QUEST_ID)
+            refreshStoryDecor()
+            showMapToast("🕯 Debug: Fenn čeká na Noc bez měsíce – v noci ho dvakrát oslov (úvod, pak finále)")
+        }
+    }
+
     /** Quest Fenna od začátku: příznaky pryč, postup v DB smazaný. */
     private fun debugResetFenn() {
         cz.uhk.macroflow.pokemon.story.Fenn.ALL_KEYS.forEach { StoryFlags.clear(this, it) }
+        gamePrefs.edit().remove(cz.uhk.macroflow.pokemon.story.Fenn.APPLE_DAY_PREF).apply()
         lifecycleScope.launch {
             kotlinx.coroutines.withContext(Dispatchers.IO) { db.questDao().deleteById(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID) }
             questManager.forget(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID)

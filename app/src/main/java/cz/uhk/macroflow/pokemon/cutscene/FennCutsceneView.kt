@@ -34,26 +34,9 @@ class FennCutsceneView(context: Context) : CutsceneView(context) {
             Caption(11_100f, 13_800f, l[3]), Caption(14_100f, 16_800f, l[4]), Caption(17_600f, 21_200f, l[5]))
     }
 
-    /** Fenn = Kendl z Makrodexu (64 px pixel artu), na mapě vysoký jako ve hře (~25 art px). */
-    private val fenn: Bitmap = BitmapFactory.decodeResource(resources, R.drawable.makromon_43_kendl,
-        BitmapFactory.Options().apply { inScaled = false }).let { Bitmap.createScaledBitmap(it, it.width / 10, it.height / 10, false) }
-    private val fennScale = FENN_ART_H / fenn.height
-    private val fennFoot: Int
-    private val flameTip: Pair<Float, Float>
-
-    init {
-        var foot = fenn.height - 1
-        while (foot > 0 && (0 until fenn.width).none { fenn.getPixel(it, foot) ushr 24 != 0 }) foot--
-        fennFoot = foot
-        var top = 0
-        while (top < fenn.height - 1 && (0 until fenn.width).none { fenn.getPixel(it, top) ushr 24 != 0 }) top++
-        val xs = (0 until fenn.width).filter { fenn.getPixel(it, top) ushr 24 != 0 }
-        flameTip = xs.average().toFloat() to (top + 4f)
-    }
-
-    /** Kde je plamen na Fennově hlavě (art px sadu). */
-    private val flameHomeX = Fenn.X + (flameTip.first - fenn.width / 2f) * fennScale
-    private val flameHomeY = Fenn.Y - (fennFoot + 1 - flameTip.second) * fennScale
+    private val fennActor = FennActor(context)
+    private val flameHomeX get() = fennActor.flameX
+    private val flameHomeY get() = fennActor.flameY
 
     /** Pouť plamínku: (čas, x, y); mezi body se plynule přesouvá, u stromu chvíli postojí. */
     private val path = listOf(
@@ -62,10 +45,8 @@ class FennCutsceneView(context: Context) : CutsceneView(context) {
         Triple(14_800f, 80f, 256f), Triple(17_000f, flameHomeX, flameHomeY)
     )
 
-    private val pixel = Paint().apply { isFilterBitmap = false; isAntiAlias = false }
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val dst = RectF()
     private val flies = List(36) { i ->
         floatArrayOf(10f + (i * 37 % 140), 40f + (i * 71 % 270), (i * 0.73f) % 6.28f, 0.6f + (i % 5) * 0.15f)
     }
@@ -91,13 +72,7 @@ class FennCutsceneView(context: Context) : CutsceneView(context) {
         }
         // Fenn se zjeví pod plamenem
         val fennA = ((t - 16_600f) / 1_600f).coerceIn(0f, 1f)
-        if (fennA > 0f) {
-            val w = fenn.width * fennScale; val h = fenn.height * fennScale
-            val left = Fenn.X - w / 2f; val top = Fenn.Y - (fennFoot + 1) * fennScale
-            dst.set(toX(left), toY(top), toX(left + w), toY(top + h))
-            pixel.alpha = (fennA * 255).toInt()
-            c.drawBitmap(fenn, null, dst, pixel)
-        }
+        if (fennA > 0f) fennActor.draw(c, toX, toY, fennA)
         // plamínek (po splynutí s Fennem z něj zbude jen záře nad svíčkou)
         val appear = ((t - 4_800f) / 900f).coerceIn(0f, 1f)
         if (appear > 0f) {
@@ -115,7 +90,39 @@ class FennCutsceneView(context: Context) : CutsceneView(context) {
         }
     }
 
-    companion object {
-        private const val FENN_ART_H = 25f
+}
+
+/** Zahradník Fenn (Kendl z Makrodexu, 64 px pixel artu) na mapě sadu – vysoký jako ve hře, pata na Fenn.X/Y. */
+class FennActor(context: Context) {
+    private val bmp: Bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.makromon_43_kendl,
+        BitmapFactory.Options().apply { inScaled = false }).let { Bitmap.createScaledBitmap(it, it.width / 10, it.height / 10, false) }
+    private val k = ART_H / bmp.height
+    private val foot: Int
+    /** Špička plamene na hlavě (art px sadu). */
+    val flameX: Float
+    val flameY: Float
+    private val paint = Paint().apply { isFilterBitmap = false; isAntiAlias = false }
+    private val dst = RectF()
+
+    init {
+        fun opaqueRow(y: Int) = (0 until bmp.width).any { bmp.getPixel(it, y) ushr 24 != 0 }
+        var f = bmp.height - 1
+        while (f > 0 && !opaqueRow(f)) f--
+        foot = f
+        var top = 0
+        while (top < bmp.height - 1 && !opaqueRow(top)) top++
+        val xs = (0 until bmp.width).filter { bmp.getPixel(it, top) ushr 24 != 0 }
+        flameX = Fenn.X + (xs.average().toFloat() - bmp.width / 2f) * k
+        flameY = Fenn.Y - (foot + 1 - (top + 4f)) * k
     }
+
+    fun draw(c: Canvas, toX: (Float) -> Float, toY: (Float) -> Float, alpha: Float, dx: Float = 0f) {
+        val w = bmp.width * k; val h = bmp.height * k
+        val left = Fenn.X - w / 2f + dx; val top = Fenn.Y - (foot + 1) * k
+        dst.set(toX(left), toY(top), toX(left + w), toY(top + h))
+        paint.alpha = (alpha * 255).toInt()
+        c.drawBitmap(bmp, null, dst, paint)
+    }
+
+    companion object { const val ART_H = 25f }
 }

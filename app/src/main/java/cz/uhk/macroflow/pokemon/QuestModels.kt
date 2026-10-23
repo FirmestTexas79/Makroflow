@@ -32,7 +32,9 @@ enum class RequirementType {
     /** Snídaně (jídlo 4:00–10:30) v targetValue různých dnech od začátku fáze; metadata = počet dnů (docs/adr/0095). */
     BREAKFAST_DAYS,
     /** Kolik z příznaků příběhu je nastaveno; targetId = "klíč,klíč,…", metadata = počet (docs/adr/0096). */
-    FLAGS_COUNT
+    FLAGS_COUNT,
+    /** Splněný denní cíl vody v targetValue různých dnech od začátku fáze; metadata = počet dnů (docs/adr/0097). */
+    WATER_DAYS
 }
 
 data class QuestStage(
@@ -553,7 +555,8 @@ object QuestRegistry {
         id = cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID,
         chapter = "🕯 ZTICHLÝ SAD",
         side = true,
-        farewell = cz.uhk.macroflow.pokemon.story.Fenn.PART_ONE_FAREWELL,
+        farewell = cz.uhk.macroflow.pokemon.story.Fenn.FAREWELL,
+        farewellSpeakerResId = R.drawable.npc_orchard_hut,
         stages = listOf(
             QuestStage(
                 title = "Teplý košík",
@@ -579,6 +582,30 @@ object QuestRegistry {
                 targetValue = cz.uhk.macroflow.pokemon.story.Fenn.CLUE_KEYS.size,
                 targetId = cz.uhk.macroflow.pokemon.story.Fenn.CLUE_KEYS.joinToString(","),
                 hint = cz.uhk.macroflow.pokemon.story.Fenn.TREE_NAMES_HINT
+            ),
+            // ── část 2 (docs/adr/0097) ──
+            QuestStage(
+                title = "Co ví Nelle",
+                text = cz.uhk.macroflow.pokemon.story.Fenn.ASK_ABOUT_MAREN,
+                speakerResId = R.drawable.makromon_43_kendl, speakerName = cz.uhk.macroflow.pokemon.story.Fenn.NAME,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.Fenn.REPORTED_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.Fenn.ASK_ABOUT_MAREN_HINT
+            ),
+            QuestStage(
+                title = "Zalévání",
+                text = cz.uhk.macroflow.pokemon.story.Fenn.WATERING,
+                speakerResId = R.drawable.makromon_43_kendl, speakerName = cz.uhk.macroflow.pokemon.story.Fenn.NAME,
+                requirementType = RequirementType.WATER_DAYS, targetValue = cz.uhk.macroflow.pokemon.story.Fenn.WATER_DAYS,
+                hint = cz.uhk.macroflow.pokemon.story.Fenn.WATERING_HINT
+            ),
+            QuestStage(
+                title = "Noc bez měsíce",
+                text = cz.uhk.macroflow.pokemon.story.Fenn.MOONLESS,
+                speakerResId = R.drawable.makromon_43_kendl, speakerName = cz.uhk.macroflow.pokemon.story.Fenn.NAME,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.Fenn.ENDING_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.Fenn.MOONLESS_HINT
             )
         )
     )

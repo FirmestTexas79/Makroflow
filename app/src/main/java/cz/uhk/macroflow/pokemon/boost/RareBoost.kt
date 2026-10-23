@@ -4,6 +4,8 @@ import cz.uhk.macroflow.pokemon.PokemonLevelCalc
 
 /** Kolik XP dá proteinová tyčinka. */
 private const val PROTEIN_BAR_XP = 250
+/** Kolik XP dá Zlaté jablko ze Ztichlého sadu. */
+private const val GOLDEN_APPLE_XP = 600
 
 /**
  * Nakopávače (docs/adr/0086): vzácné předměty, kterými hráč rovnou zvedne Makromonovi XP nebo levely
@@ -79,6 +81,27 @@ enum class RareBoost(
             "............"
         ),
         mapOf('K' to 0xFF1E2A1E, 'S' to 0xFFB8C0C8, 's' to 0xFF8A939B, 'W' to 0xFFF6F6F2, 'G' to 0xFF3DDC4A)
+    ),
+    /** Odměna ze Ztichlého sadu (docs/adr/0097) – v obchodě se neprodává. */
+    GOLDEN_APPLE(
+        "item_rare_golden_apple", "Zlaté jablko",
+        "Jablko ze Ztichlého sadu. Chutná jako vzpomínka, kterou nemůžeš zařadit. Makromon dostane $GOLDEN_APPLE_XP XP.",
+        Effect.Xp(GOLDEN_APPLE_XP),
+        listOf(
+            "......K.....",
+            ".....KbK....",
+            "...KKKbLLK..",
+            "..KYYYKKLLK.",
+            ".KYWYYYYKK..",
+            ".KYWYYYYYyK.",
+            ".KYYYYYYYyK.",
+            ".KYYYYYYYyK.",
+            "..KYYYYYyK..",
+            "..KyYYYyyK..",
+            "...KKyyKK...",
+            "....KKKK...."
+        ),
+        mapOf('K' to 0xFF3A2A12, 'Y' to 0xFFF2C744, 'y' to 0xFFC28A1E, 'W' to 0xFFFFF6C8, 'b' to 0xFF6D4C2A, 'L' to 0xFF6FBF4A)
     );
 
     /** Co nakopávač udělá. */
@@ -90,7 +113,10 @@ enum class RareBoost(
     }
 
     /** Cena v obchodě (Makro penízky). */
-    val price: Int get() = when (this) { PROTEIN_BAR -> 120; PREWORKOUT -> 300; WHITE_MONSTER -> 800 }
+    val price: Int get() = when (this) { PROTEIN_BAR -> 120; PREWORKOUT -> 300; WHITE_MONSTER -> 800; GOLDEN_APPLE -> 0 }
+
+    /** Prodává se v obchodě (Zlaté jablko jen ze sadu). */
+    val sold: Boolean get() = price > 0
 
     /** Výsledek použití: nový level, nové XP a o kolik levelů to Makromona posunulo. */
     data class Outcome(val level: Int, val xp: Int, val levelsGained: Int)

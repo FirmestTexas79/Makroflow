@@ -216,6 +216,10 @@ class QuestManager(
                     db.consumedSnackDao().getConsumedByDateSync(today()).size
                 RequirementType.WALK_STEPS ->
                     db.stepsDao().getStepsForDateSync(today())?.count ?: 0
+                RequirementType.WATER_DAYS -> waterProvider?.invoke()?.let { (_, target) ->
+                    val since = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(progress.stageStartedAt))
+                    QuestProgression.daysAtLeast(db.waterDao().getWaterSinceSync(since).map { it.date to it.amountMl }, since, target)
+                }
                 RequirementType.BREAKFAST_DAYS -> {
                     val since = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(progress.stageStartedAt))
                     cz.uhk.macroflow.pokemon.story.Ozvena.breakfastDays(

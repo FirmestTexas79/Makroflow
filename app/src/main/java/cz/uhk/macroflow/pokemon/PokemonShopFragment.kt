@@ -52,7 +52,7 @@ class PokemonShopFragment : Fragment() {
         ShopProduct(b.id, "${b.label} (${b.packSize}x)", b.description, b.price, b.packSize, "", 0, b)
     } + cz.uhk.macroflow.pokemon.status.MedItem.entries.map { m ->
         ShopProduct(m.id, m.label, m.description, m.price, 1, "", 0, med = m)
-    } + cz.uhk.macroflow.pokemon.boost.RareBoost.entries.map { r ->
+    } + cz.uhk.macroflow.pokemon.boost.RareBoost.entries.filter { it.sold }.map { r ->
         ShopProduct(r.id, r.label, r.description, r.price, 1, "", 0, boost = r)
     } + listOf(
         ShopProduct("lure_lamp", "Spooky Plate", "Zvedne spawn Gengara v noci.", 150, 1, "https://img.pokemondb.net/sprites/items/spooky-plate.png", 1),

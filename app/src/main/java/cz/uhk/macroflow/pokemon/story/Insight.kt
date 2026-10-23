@@ -20,7 +20,9 @@ object Insight {
         SecretGrove.FOUND_KEY to 1,
         SecretGrove.RELEASED_KEY to 2,
         // šichtovní kniha v Dolech – hráč je Okruh 213 (docs/adr/0050)
-        Vendelin.BOOK_SIGNED_KEY to 1
+        Vendelin.BOOK_SIGNED_KEY to 1,
+        // Ztichlý sad: seznam s razítkem S-0 (docs/adr/0097)
+        Fenn.END_C_KEY to 2
     )
 
     /** Vhled = součet vah nastavených příznaků + 1 za každý nalezený list. */
