@@ -211,6 +211,11 @@ class QuestManager(
                     db.consumedSnackDao().getConsumedByDateSync(today()).size
                 RequirementType.WALK_STEPS ->
                     db.stepsDao().getStepsForDateSync(today())?.count ?: 0
+                RequirementType.BREAKFAST_DAYS -> {
+                    val since = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(progress.stageStartedAt))
+                    cz.uhk.macroflow.pokemon.story.Ozvena.breakfastDays(
+                        db.consumedSnackDao().getConsumedSinceSync(since).map { it.date to it.time }, since)
+                }
                 RequirementType.SCAN_BARCODE ->
                     db.gameEventDao().countSince(GameEventType.BARCODE_SCANNED.name, progress.stageStartedAt)
                 RequirementType.HIT_WATER -> waterProvider?.invoke()?.let { (drank, target) ->

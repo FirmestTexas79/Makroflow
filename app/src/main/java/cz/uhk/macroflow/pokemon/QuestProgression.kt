@@ -104,6 +104,7 @@ object QuestProgression {
                 else "Dnes máš ${n.label} na $v % svého cíle. Potřebuješ ${n.minPct}–${n.maxPct} %."
             }
             RequirementType.TALK_TO_NPC -> stage.text
+            RequirementType.BREAKFAST_DAYS -> "Snídaně zatím $v z ${stage.targetValue} rán. Zapiš si snídani do 10:30."
             RequirementType.HAVE_ITEM -> "Ještě ho nemáš. Až ho budeš mít, stav se."
             RequirementType.AFK_MINUTES -> "Nejméně máš zatím odpracováno ${clock(v)} z ${clock(stage.targetValue)}. " +
                 "Počítá se kácení, těžba i chytání hmyzu – každé zvlášť."

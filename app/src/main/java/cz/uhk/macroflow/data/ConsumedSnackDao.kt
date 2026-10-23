@@ -14,6 +14,10 @@ interface ConsumedSnackDao {
     @Query("SELECT * FROM consumed_snacks WHERE date = :date")
     fun getConsumedByDateSync(date: String): List<ConsumedSnackEntity>
 
+    /** Jídla od data (yyyy-MM-dd, včetně) – snídaně v kapitole Ozvěna (docs/adr/0095). */
+    @Query("SELECT * FROM consumed_snacks WHERE date >= :date")
+    fun getConsumedSinceSync(date: String): List<ConsumedSnackEntity>
+
     // Pro AchievementEngine a export pro trenéra — vrátí vše synchronně na Dispatchers.IO
     @Query("SELECT * FROM consumed_snacks")
     fun getAllConsumedSync(): List<ConsumedSnackEntity>

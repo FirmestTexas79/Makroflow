@@ -28,7 +28,9 @@ enum class RequirementType {
      * Odpracovat od začátku fáze v každé z dovedností aspoň targetValue minut (i AFK);
      * targetId = "logging,mining,bugcatching", metadata = minuty nejslabší z nich (docs/adr/0050).
      */
-    AFK_MINUTES
+    AFK_MINUTES,
+    /** Snídaně (jídlo 4:00–10:30) v targetValue různých dnech od začátku fáze; metadata = počet dnů (docs/adr/0095). */
+    BREAKFAST_DAYS
 }
 
 data class QuestStage(
@@ -517,7 +519,34 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, MINES_QUEST, HUNFREY_QUEST, SECRET_GROVE_QUEST) }
+    // ── Kapitola V · OZVĚNA (bible příběhu, docs/adr/0095) ──
+    val OZVENA_QUEST = QuestDefinition(
+        id = cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID,
+        chapter = "V · OZVĚNA",
+        farewell = cz.uhk.macroflow.pokemon.story.Ozvena.MEMORY_BOOK,
+        farewellSpeakerResId = R.drawable.makromon_38_johnsova,
+        farewellSpeakerName = cz.uhk.macroflow.pokemon.story.Ozvena.SCRIBE,
+        stages = listOf(
+            QuestStage(
+                title = "Dobré ráno, Ozvěno",
+                text = cz.uhk.macroflow.pokemon.story.Ozvena.GOOD_MORNING,
+                speakerResId = R.drawable.makromon_01_ignar, speakerName = cz.uhk.macroflow.pokemon.story.Ozvena.BAKER,
+                requirementType = RequirementType.BREAKFAST_DAYS,
+                targetValue = cz.uhk.macroflow.pokemon.story.Ozvena.BREAKFAST_DAYS,
+                hint = cz.uhk.macroflow.pokemon.story.Ozvena.GOOD_MORNING_HINT
+            ),
+            QuestStage(
+                title = "Jméno na dveřích",
+                text = cz.uhk.macroflow.pokemon.story.Ozvena.NAME_ON_DOOR,
+                speakerResId = R.drawable.makromon_01_ignar, speakerName = cz.uhk.macroflow.pokemon.story.Ozvena.BAKER,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.Ozvena.BOOK_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.Ozvena.NAME_ON_DOOR_HINT
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, SECRET_GROVE_QUEST) }
 
     /** Pořadí kapitoly v deníku (neznámé na konec). */
     fun journalOrder(id: String): Int {

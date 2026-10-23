@@ -866,8 +866,11 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.AshPlain.CITY_GATE_NODE -> walkInto(BiomeType.OZVENA, cz.uhk.macroflow.pokemon.cave.OzvenaCity.ENTRY_NODE, MapTransition.FADE)
                 // Město Ozvěna a hala Arény (docs/adr/0092)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.ARENA_NODE -> walkInto(BiomeType.ARENA_HALL, cz.uhk.macroflow.pokemon.cave.ArenaHall.ENTRY_NODE, MapTransition.FADE)
-                cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_TEXT)
-                cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_TEXT)
+                // Kapitola V · OZVĚNA (docs/adr/0095): Bohoušek ji začíná, Věnka dává Pamětní knihu
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_NODE, cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_NODE -> {
+                    questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID)
+                    mapWorld.postDelayed({ if (!isFinishing) onOzvenaNpc(nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_NODE) }, 150)
+                }
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
@@ -1818,6 +1821,23 @@ class MakromonMapActivity : AppCompatActivity() {
             crystalAnimators += android.animation.ObjectAnimator.ofFloat(npc, "scaleY", 1f, 1.035f, 1f).apply {
                 duration = 1600L + (t.x * 7 + t.y) % 700; repeatCount = android.animation.ValueAnimator.INFINITE; start()
             }
+        }
+    }
+
+    /** Pekař Bohoušek a písařka Věnka v kapitole Ozvěna (docs/adr/0095). */
+    private fun onOzvenaNpc(venka: Boolean) {
+        val O = cz.uhk.macroflow.pokemon.story.Ozvena
+        val p = questManager.getCurrentProgress()
+        val ours = questManager.getActiveQuestId() == O.QUEST_ID && p != null
+        when {
+            !ours -> showMapToast(if (venka) cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_TEXT else cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_TEXT)
+            venka && !p!!.isCompleted && p.currentStageIndex == O.NAME_STAGE -> {
+                StoryFlags.set(this, O.BOOK_KEY)          // Věnka hráče zapíše a dá mu knihu → fáze splněna, rozloučí se
+                questManager.recheck()
+            }
+            venka -> if (p!!.isCompleted) questManager.checkNpcInteraction() else showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.VENKA_TEXT)
+            p!!.isCompleted -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_TEXT)   // smyčka: pořád stejný pozdrav
+            else -> questManager.checkNpcInteraction()
         }
     }
 

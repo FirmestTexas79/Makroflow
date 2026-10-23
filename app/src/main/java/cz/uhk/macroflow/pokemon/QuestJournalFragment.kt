@@ -715,6 +715,11 @@ class QuestJournalFragment : Fragment() {
                     "Cíl: Průzkum ($visited / ${stageToDisplay.targetValue})"
                 }
                 RequirementType.BATTLE_TYPE -> "Cíl: Souboj (${stageToDisplay.targetId})"
+                RequirementType.BREAKFAST_DAYS -> {
+                    val value = if (viewingIndex < currentIndex || isAllDone) stageToDisplay.targetValue
+                        else QuestProgression.currentValue(stageToDisplay, progress.metadata)
+                    "Cíl: Snídaně do 10:30 ($value / ${stageToDisplay.targetValue} dní)"
+                }
                 RequirementType.BATTLE_BIOME -> {
                     val value = if (viewingIndex < currentIndex || isAllDone) stageToDisplay.targetValue
                         else QuestProgression.currentValue(stageToDisplay, progress.metadata)
