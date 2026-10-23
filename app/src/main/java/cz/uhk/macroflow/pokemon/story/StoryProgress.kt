@@ -39,7 +39,7 @@ object StoryProgress {
         // Akt II (docs/adr/0088)
         cz.uhk.macroflow.pokemon.cave.AshPlain.VISITED_KEY, cz.uhk.macroflow.pokemon.cave.QuietOrchard.VISITED_KEY, cz.uhk.macroflow.pokemon.cave.EchoCanyon.VISITED_KEY, cz.uhk.macroflow.pokemon.cave.OzvenaCity.VISITED_KEY,
         Ozvena.BOOK_KEY
-    ) + SecretGrove.KEYS
+    ) + SecretGrove.KEYS + Fenn.ALL_KEYS
 
     fun isStoryKey(key: String): Boolean =
         key.startsWith("boss_defeated_") || key.startsWith("crystal_") ||

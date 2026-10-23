@@ -816,6 +816,18 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
             }
             Insight.pageAt(currentBiome.name, nodeName, StoryFlags.all(this))?.let { findTornPage(it); return@action }
+            // Zahradník Fenn (docs/adr/0096): stopy ke jménům stromů – úly a jezírko mají přednost před setkáním
+            if (currentBiome == BiomeType.QUIET_ORCHARD) fennClueHere(nodeName)?.let { onFennClue(it); return@action }
+            // Nelle odpoví, kdo sbírá jablka – fáze „Teplý košík“ je splněná a dál mluví ona
+            if (nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIDA_NODE &&
+                StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.STARTED_KEY) && !StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_KEY)) {
+                questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID)
+                mapWorld.postDelayed({
+                    if (isFinishing) return@postDelayed
+                    StoryFlags.set(this, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_KEY); questManager.recheck()
+                }, 200)
+                return@action
+            }
 
             when (nodeName) {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
@@ -891,8 +903,13 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.EchoCanyon.BRIDGE_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.EchoCanyon.BRIDGE_TEXT)
                 cz.uhk.macroflow.pokemon.cave.EchoCanyon.BONES_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.EchoCanyon.BONES_TEXT)
                 cz.uhk.macroflow.pokemon.cave.EchoCanyon.WALL_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.EchoCanyon.echo(java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR)))
-                cz.uhk.macroflow.pokemon.cave.QuietOrchard.WELL_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.QuietOrchard.WELL_TEXT)
-                cz.uhk.macroflow.pokemon.cave.QuietOrchard.HUT_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.QuietOrchard.HUT_TEXT)
+                cz.uhk.macroflow.pokemon.cave.QuietOrchard.WELL_NODE -> showMapToast(
+                    if (fennStage() == cz.uhk.macroflow.pokemon.story.Fenn.NAMES_STAGE && !orchardNight()) cz.uhk.macroflow.pokemon.story.Fenn.WELL_DAY else cz.uhk.macroflow.pokemon.cave.QuietOrchard.WELL_TEXT)
+                cz.uhk.macroflow.pokemon.cave.QuietOrchard.HUT_NODE -> onOrchardHut()
+                cz.uhk.macroflow.pokemon.story.Fenn.NODE -> if (orchardNight() && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.MET_KEY)) {
+                    questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID)
+                    mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150)
+                } else showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.DAY_SPOT)
                 // Hunfrey na plošině vedle brány (docs/adr/0085)
                 cz.uhk.macroflow.pokemon.story.Hunfrey.NODE -> {
                     questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Hunfrey.QUEST_ID)
@@ -1351,10 +1368,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.ASH_PLAIN -> if (worldScale > 0) placeAshGateVeil().also { addGroundDecor(cz.uhk.macroflow.pokemon.cave.AshFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artH * worldScale)
                 }) }
-                currentBiome == BiomeType.QUIET_ORCHARD -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.OrchardFxView(this@MakromonMapActivity, worldScale,
+                currentBiome == BiomeType.QUIET_ORCHARD -> if (worldScale > 0) placeFenn().also { addGroundDecor(cz.uhk.macroflow.pokemon.cave.OrchardFxView(this@MakromonMapActivity, worldScale,
                     cz.uhk.macroflow.pokemon.cave.QuietOrchard.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artH * worldScale)
-                })
+                }) }
                 currentBiome == BiomeType.ARENA_HALL -> if (worldScale > 0) placeHallPortraits()
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
@@ -1797,29 +1814,128 @@ class MakromonMapActivity : AppCompatActivity() {
      * zmenšení bez vyhlazení na 1 px = 1 dp, pata na art souřadnici; lehce dýchají, každý jiným tempem.
      */
     private fun placeTownsfolk() {
-        val s = worldScale.toFloat()
-        val px = kotlin.math.max(1, kotlin.math.round(resources.displayMetrics.density).toInt())
         for (t in cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWNSFOLK) {
             val res = when (t.species) {
                 1 -> R.drawable.makromon_01_ignar; 38 -> R.drawable.makromon_38_johnsova; 7 -> R.drawable.makromon_07_flori
                 32 -> R.drawable.makromon_32_mysnic; else -> R.drawable.makromon_44_gemak
             }
-            val big = android.graphics.BitmapFactory.decodeResource(resources, res, android.graphics.BitmapFactory.Options().apply { inScaled = false }) ?: continue
-            val bmp = android.graphics.Bitmap.createScaledBitmap(big, big.width / 10, big.height / 10, false)
-            var foot = bmp.height - 1
-            while (foot > 0 && (0 until bmp.width).none { (bmp.getPixel(it, foot) ushr 24) != 0 }) foot--
-            val w = bmp.width * px; val h = bmp.height * px
-            val npc = ImageView(this).apply {
-                layoutParams = FrameLayout.LayoutParams(w, h)
-                setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, bmp).apply { isFilterBitmap = false })
-                scaleType = ImageView.ScaleType.FIT_XY
-                x = t.x * s - w / 2f; y = t.y * s - (foot + 1) * px; elevation = 2f
-                pivotX = w / 2f; pivotY = (foot + 1f) * px
-                contentDescription = t.id
+            placeMakromonNpc(res, t.x, t.y, t.id)
+        }
+    }
+
+    /**
+     * Makromon jako postava na mapě: obrázek z Makrodexu (640 px = 64 px pixel artu po 10) zmenšený bez vyhlazení
+     * na 1 px = 1 dp, pata na art souřadnici [x], [y]; lehce dýchá, každý jiným tempem.
+     */
+    private fun placeMakromonNpc(res: Int, x: Int, y: Int, desc: String): ImageView {
+        val s = worldScale.toFloat()
+        val px = kotlin.math.max(1, kotlin.math.round(resources.displayMetrics.density).toInt())
+        val big = android.graphics.BitmapFactory.decodeResource(resources, res, android.graphics.BitmapFactory.Options().apply { inScaled = false })
+        val bmp = android.graphics.Bitmap.createScaledBitmap(big, big.width / 10, big.height / 10, false)
+        var foot = bmp.height - 1
+        while (foot > 0 && (0 until bmp.width).none { (bmp.getPixel(it, foot) ushr 24) != 0 }) foot--
+        val w = bmp.width * px; val h = bmp.height * px
+        val npc = ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(w, h)
+            setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, bmp).apply { isFilterBitmap = false })
+            scaleType = ImageView.ScaleType.FIT_XY
+            this.x = x * s - w / 2f; this.y = y * s - (foot + 1) * px; elevation = 2f
+            pivotX = w / 2f; pivotY = (foot + 1f) * px
+            contentDescription = desc
+        }
+        addDecor(npc)
+        crystalAnimators += android.animation.ObjectAnimator.ofFloat(npc, "scaleY", 1f, 1.035f, 1f).apply {
+            duration = 1600L + (x * 7 + y) % 700; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+        return npc
+    }
+
+    // ── Ztichlý sad: Zahradník, který sázel jména (docs/adr/0096) ──
+
+    private fun orchardNight() = cz.uhk.macroflow.pokemon.cave.QuietOrchard.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))
+    private var fennCutscenePlaying = false
+
+    /** Aktuální fáze questu Fenna, je-li načtený a nedokončený; jinak -1. */
+    private fun fennStage(): Int {
+        val p = questManager.getCurrentProgress()
+        return if (questManager.getActiveQuestId() == cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID && p != null && !p.isCompleted) p.currentStageIndex else -1
+    }
+
+    /** Stopa ke jménu stromu na tomhle uzlu, pokud ji teď (ve správnou denní dobu) jde najít. */
+    private fun fennClueHere(node: String): cz.uhk.macroflow.pokemon.story.Fenn.Clue? {
+        val clue = cz.uhk.macroflow.pokemon.story.Fenn.clueAt(node) ?: return null
+        if (fennStage() != cz.uhk.macroflow.pokemon.story.Fenn.NAMES_STAGE || StoryFlags.isSet(this, clue.key) || clue.atNight != orchardNight()) return null
+        return clue
+    }
+
+    /** Hráč najde jméno: zapíše ho do Pamětní knihy a rozhodne, jestli Fennovi řekne celou pravdu. */
+    private fun onFennClue(clue: cz.uhk.macroflow.pokemon.story.Fenn.Clue) {
+        if (!StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Ozvena.BOOK_KEY)) { showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.NO_BOOK); return }
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Jméno: ${clue.treeName}",
+            "Co řekneš Fennovi?") { ui, body, close ->
+            body.addView(ui.text(clue.found, 15f).apply {
+                setBackgroundColor(0x22101830)
+                setPadding(ui.px(10f), ui.px(10f), ui.px(10f), ui.px(10f))
+            })
+            fun choice(label: String, truth: Boolean) = body.addView(ui.button(label) {
+                close()
+                StoryFlags.set(this@MakromonMapActivity, clue.key)
+                if (truth) StoryFlags.set(this@MakromonMapActivity, clue.truthKey)
+                showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.WRITTEN + "\n\n" + if (truth) clue.truth else clue.nameOnly)
+                mapWorld.postDelayed({ if (!isFinishing) { questManager.recheck(); refreshStoryDecor() } }, 600)
+            }.apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = ui.px(8f) }
+            })
+            choice("Říct mu celou pravdu", true)
+            choice("Říct mu jen jméno", false)
+        }
+    }
+
+    /** Chalupa: ve dne začíná prolog (seznam se škrtnutými jmény), v noci je prázdná. */
+    private fun onOrchardHut() {
+        if (orchardNight()) { showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.NIGHT_HUT); return }
+        val started = StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.STARTED_KEY)
+        if (!started) StoryFlags.set(this, cz.uhk.macroflow.pokemon.story.Fenn.STARTED_KEY)
+        questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            if (!started || fennStage() == cz.uhk.macroflow.pokemon.story.Fenn.NELLE_STAGE) questManager.checkNpcInteraction()
+            else showMapToast(cz.uhk.macroflow.pokemon.cave.QuietOrchard.HUT_TEXT)
+        }, 200)
+    }
+
+    /**
+     * Fenn stojí v noci u chalupy, jakmile ho hráč potkal. Při prvním nočním příchodu po rozhovoru s Nelle
+     * se přehraje cutscéna „Světlo mezi stromy“ a Fenn pak sám promluví.
+     */
+    private fun placeFenn() {
+        if (!StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.STARTED_KEY)) return
+        questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID)
+        if (!orchardNight()) return
+        if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.MET_KEY)) {
+            val npc = placeMakromonNpc(R.drawable.makromon_43_kendl, cz.uhk.macroflow.pokemon.story.Fenn.X, cz.uhk.macroflow.pokemon.story.Fenn.Y, cz.uhk.macroflow.pokemon.story.Fenn.NAME)
+            val g = (14 * worldScale)
+            val glow = glowView(g, 0xFF9CC8FF.toInt(), 0x88).apply {
+                x = npc.x + npc.layoutParams.width / 2f - g / 2f; y = npc.y + npc.layoutParams.height * 0.12f - g / 2f; elevation = 1.9f
             }
-            addDecor(npc)
-            crystalAnimators += android.animation.ObjectAnimator.ofFloat(npc, "scaleY", 1f, 1.035f, 1f).apply {
-                duration = 1600L + (t.x * 7 + t.y) % 700; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+            addDecor(glow)
+            crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.5f, 1f, 0.7f, 0.95f, 0.5f).apply {
+                duration = 1400; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+            }
+        } else if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_KEY) && !fennCutscenePlaying) playFennCutscene(meet = true)
+    }
+
+    /** Cutscéna „Světlo mezi stromy“; [meet] = poprvé ve hře (pak se Fenn objeví a promluví), jinak jen přehrání. */
+    private fun playFennCutscene(meet: Boolean) {
+        fennCutscenePlaying = true
+        cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
+            cz.uhk.macroflow.pokemon.cutscene.FennCutsceneView(this)) {
+            fennCutscenePlaying = false
+            if (meet && !isFinishing) {
+                StoryFlags.set(this, cz.uhk.macroflow.pokemon.story.Fenn.MET_KEY)
+                refreshStoryDecor()
+                questManager.recheck()
             }
         }
     }
@@ -2235,6 +2351,8 @@ class MakromonMapActivity : AppCompatActivity() {
             "🌕 Bdění u oltáře splněno (noc)",
             "🗝 Reset Zapomenutého háje",
             "🎬 Přehrát úvod do Makrosvěta",
+            "🕯 Cutscéna: Světlo mezi stromy (sad)",
+            "🕯 Reset questu Fenna (Ztichlý sad)",
             "🍫 +5× Proteinová tyčinka (+250 XP)",
             "💪 +5× Preworkout (+1 level)",
             "🥫 +5× Bílý Monster (+3 levely)"
@@ -2298,10 +2416,23 @@ class MakromonMapActivity : AppCompatActivity() {
                     }
                     11 -> debugResetGrove()
                     12 -> IntroFlyoverView.play(findViewById(android.R.id.content))
-                    13, 14, 15 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 13])
+                    13 -> playFennCutscene(meet = false)
+                    14 -> debugResetFenn()
+                    15, 16, 17 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 15])
                 }
             }
             .show()
+    }
+
+    /** Quest Fenna od začátku: příznaky pryč, postup v DB smazaný. */
+    private fun debugResetFenn() {
+        cz.uhk.macroflow.pokemon.story.Fenn.ALL_KEYS.forEach { StoryFlags.clear(this, it) }
+        lifecycleScope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) { db.questDao().deleteById(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID) }
+            questManager.forget(cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID)
+            refreshStoryDecor()
+            showMapToast("🕯 Debug: quest Fenna začíná od začátku (chalupa ve dne)")
+        }
     }
 
     /** Nakopávače do batohu (docs/adr/0086): 5 ks, použití v deníku → Batoh → Nakopávače. */

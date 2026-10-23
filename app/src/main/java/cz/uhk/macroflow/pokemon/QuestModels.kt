@@ -30,7 +30,9 @@ enum class RequirementType {
      */
     AFK_MINUTES,
     /** Snídaně (jídlo 4:00–10:30) v targetValue různých dnech od začátku fáze; metadata = počet dnů (docs/adr/0095). */
-    BREAKFAST_DAYS
+    BREAKFAST_DAYS,
+    /** Kolik z příznaků příběhu je nastaveno; targetId = "klíč,klíč,…", metadata = počet (docs/adr/0096). */
+    FLAGS_COUNT
 }
 
 data class QuestStage(
@@ -546,7 +548,42 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, SECRET_GROVE_QUEST) }
+    // ── Ztichlý sad: Zahradník, který sázel jména (docs/adr/0096) ──
+    val FENN_QUEST = QuestDefinition(
+        id = cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID,
+        chapter = "🕯 ZTICHLÝ SAD",
+        side = true,
+        farewell = cz.uhk.macroflow.pokemon.story.Fenn.PART_ONE_FAREWELL,
+        stages = listOf(
+            QuestStage(
+                title = "Teplý košík",
+                text = cz.uhk.macroflow.pokemon.story.Fenn.WARM_BASKET,
+                speakerResId = R.drawable.npc_orchard_hut,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.Fenn.NELLE_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.Fenn.WARM_BASKET_HINT
+            ),
+            QuestStage(
+                title = "Kdo sbírá jablka",
+                text = cz.uhk.macroflow.pokemon.story.Fenn.WHO_PICKS,
+                speakerResId = R.drawable.makromon_07_flori, speakerName = cz.uhk.macroflow.pokemon.story.Fenn.NELLE,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.Fenn.MET_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.Fenn.WHO_PICKS_HINT
+            ),
+            QuestStage(
+                title = "Jména stromů",
+                text = cz.uhk.macroflow.pokemon.story.Fenn.TREE_NAMES,
+                speakerResId = R.drawable.makromon_43_kendl, speakerName = cz.uhk.macroflow.pokemon.story.Fenn.NAME,
+                requirementType = RequirementType.FLAGS_COUNT,
+                targetValue = cz.uhk.macroflow.pokemon.story.Fenn.CLUE_KEYS.size,
+                targetId = cz.uhk.macroflow.pokemon.story.Fenn.CLUE_KEYS.joinToString(","),
+                hint = cz.uhk.macroflow.pokemon.story.Fenn.TREE_NAMES_HINT
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST) }
 
     /** Pořadí kapitoly v deníku (neznámé na konec). */
     fun journalOrder(id: String): Int {

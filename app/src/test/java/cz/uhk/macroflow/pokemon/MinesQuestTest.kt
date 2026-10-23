@@ -82,7 +82,7 @@ class MinesQuestTest {
     fun `deník řadí kapitoly podle příběhu, vedlejší a tajné na konec`() {
         val order = QuestRegistry.ALL.sortedBy { QuestRegistry.journalOrder(it.id) }.map { it.id }
         assertEquals(listOf("town_intro_oliver", "meadow_mastery", "mountains_macro_king", "forest_heart",
-            cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID, Vendelin.QUEST_ID, cz.uhk.macroflow.pokemon.story.Hunfrey.QUEST_ID, "secret_grove"), order)
+            cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID, Vendelin.QUEST_ID, cz.uhk.macroflow.pokemon.story.Hunfrey.QUEST_ID, cz.uhk.macroflow.pokemon.story.Fenn.QUEST_ID, "secret_grove"), order)
         assertTrue(QuestRegistry.SECRET_GROVE_QUEST.secret)
         assertEquals(Int.MAX_VALUE, QuestRegistry.journalOrder("neznamy"))
         assertTrue(QuestRegistry.ALL.all { it.chapter.isNotBlank() })

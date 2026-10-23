@@ -24,11 +24,13 @@ object QuietOrchard {
             CaveNode(ENTRY_NODE, 152, 80),
             CaveNode("s1", 80, 80), CaveNode("s2", 80, 160), CaveNode("s3", 40, 160), CaveNode("s4", 120, 160),
             CaveNode("jezirko_sad", 64, 214), CaveNode("ule", 120, 216), CaveNode(WELL_NODE, 96, 232),
-            CaveNode("s5", 80, 238), CaveNode("stara_jablon", 52, 292), CaveNode("trava_sad", 28, 270), CaveNode(HUT_NODE, 124, 300)
+            CaveNode("s5", 80, 238), CaveNode("stara_jablon", 52, 292), CaveNode("trava_sad", 28, 270), CaveNode(HUT_NODE, 124, 300),
+            CaveNode(cz.uhk.macroflow.pokemon.story.Fenn.NODE, 94, 306)
         ),
         edges = listOf(
             ENTRY_NODE to "s1", "s1" to "s2", "s2" to "s3", "s2" to "s4", "s3" to "jezirko_sad",
-            "s4" to "ule", "s2" to WELL_NODE, "s2" to "s5", "s5" to "stara_jablon", "s5" to "trava_sad", "s5" to HUT_NODE
+            "s4" to "ule", "s2" to WELL_NODE, "s2" to "s5", "s5" to "stara_jablon", "s5" to "trava_sad", "s5" to HUT_NODE,
+            "s5" to cz.uhk.macroflow.pokemon.story.Fenn.NODE
         ),
         exitNode = ENTRY_NODE,
         mountainNode = PLAIN_NODE,
@@ -44,11 +46,12 @@ object QuietOrchard {
             WELL_NODE to Triple(96, 216, 10),
             "stara_jablon" to Triple(80, 270, 24),
             "trava_sad" to Triple(28, 272, 18),
-            HUT_NODE to Triple(126, 278, 22)
+            HUT_NODE to Triple(126, 278, 22),
+            cz.uhk.macroflow.pokemon.story.Fenn.NODE to Triple(cz.uhk.macroflow.pokemon.story.Fenn.X, cz.uhk.macroflow.pokemon.story.Fenn.Y - 12, 9)
         )
     )
 
-    val ACTION_NODES = setOf(ENTRY_NODE, WELL_NODE, HUT_NODE)
+    val ACTION_NODES = setOf(ENTRY_NODE, WELL_NODE, HUT_NODE, cz.uhk.macroflow.pokemon.story.Fenn.NODE)
 
     const val WELL_TEXT = "🪣 Studna je hluboká a voda v ní stojí bez jediné vlnky. Když se nakloníš, odraz se pohne o chvilku později než ty."
     const val HUT_TEXT = "🏚 Zahradníkova chalupa. Na stole leží seznam stromů a u každého je škrtnuté jméno.\n" +

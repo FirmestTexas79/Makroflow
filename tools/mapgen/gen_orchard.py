@@ -38,10 +38,12 @@ NODES = {
     "s1": (80, 80), "s2": (80, 160), "s3": (40, 160), "s4": (120, 160),
     "jezirko_sad": (64, 214), "ule": (120, 216), "studna": (96, 232),
     "s5": (80, 238), "stara_jablon": (52, 292), "trava_sad": (28, 270), "bouda": (124, 300),
+    "fenn": (94, 306),                                       # zahradník Fenn v noci (story/Fenn.kt, ADR 0096)
 }
 EDGES = [
     ("vstup_ze_plane", "s1"), ("s1", "s2"), ("s2", "s3"), ("s2", "s4"), ("s3", "jezirko_sad"),
     ("s4", "ule"), ("s2", "studna"), ("s2", "s5"), ("s5", "stara_jablon"), ("s5", "trava_sad"), ("s5", "bouda"),
+    ("s5", "fenn"),
 ]
 
 G = [c(0x3E5A2E), c(0x527438), c(0x648A44), c(0x7AA052), c(0xA6C67C)]
@@ -121,6 +123,10 @@ for (spr, cx, by, foot, shade) in sorted(placed, key=lambda p: p[2]):
     pix.paste(img, spr, int(cx - spr.w // 2), int(by - spr.h))
     if foot:                                            # silueta, ne jen pata (walkmask.py, ADR 0094)
         walkmask.silhouette(block, spr.a[:, :, 3], int(cx - spr.w // 2), int(by - spr.h))
+
+# portrét chalupy do dialogu (vypravěč prologu questu Fenna, ADR 0096): výřez ze dne, 4× bez vyhlazení
+_cot = S.cottage()
+Image.fromarray(_cot.a).resize((_cot.w * 4, _cot.h * 4), Image.NEAREST).save(os.path.join(RES, "npc_orchard_hut.png"))
 
 # ── 3) DEN se uloží tak, jak je; NOC: přebarvení do měsíčního světla, pak zdroje světla ──
 day = img.copy()

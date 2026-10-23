@@ -94,6 +94,11 @@ class QuestManager(
                 activeQuest = quest
 
                 val stored = withContext(Dispatchers.IO) { db.questDao().getQuestById(questId) }
+                    ?.let { old ->
+                        // pokračování příběhu: hotový quest s novými fázemi se znovu otevře (docs/adr/0096)
+                        QuestProgression.reopenIfExtended(old, quest, System.currentTimeMillis())
+                            .also { if (it !== old) withContext(Dispatchers.IO) { db.questDao().saveQuestProgress(it) } }
+                    }
                 currentProgress = stored ?: QuestProgressEntity(
                     questId = questId,
                     metadata = "0",
@@ -222,6 +227,9 @@ class QuestManager(
                     QuestProgression.waterPercent(drank, target)
                 }
                 RequirementType.STORY_FLAG -> storyFlagProvider?.let { if (it(stage.targetId.orEmpty())) 1 else 0 }
+                RequirementType.FLAGS_COUNT -> storyFlagProvider?.let { has ->
+                    stage.targetId.orEmpty().split(",").map { it.trim() }.count { it.isNotEmpty() && has(it) }
+                }
                 RequirementType.HAVE_ITEM -> itemCounter?.invoke(listOf(stage.targetId.orEmpty()))
                     ?.let { if ((it[stage.targetId.orEmpty()] ?: 0) > 0) 1 else 0 }
                 RequirementType.AFK_MINUTES -> afkMinutesProvider?.invoke(QuestProgression.afkSkills(stage), progress.stageStartedAt)
