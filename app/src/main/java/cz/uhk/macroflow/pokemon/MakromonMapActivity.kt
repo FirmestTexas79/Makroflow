@@ -235,6 +235,7 @@ class MakromonMapActivity : AppCompatActivity() {
             imageLoader,
             findViewById(R.id.questProgressLine)
         )
+        questDialogManager.onHidden = { mapWorld.postDelayed({ if (!isFinishing) maybePlayStoryCutscene() }, 350) }
 
         questManager = QuestManager(
             db = AppDatabase.getDatabase(this),
@@ -351,6 +352,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 companionManager.refresh()
                 refreshTeamColumn()
                 refreshStoryDecor()     // po souboji se strážcem / legendou
+                mapWorld.postDelayed({ if (!isFinishing) maybePlayStoryCutscene() }, 450)
                 questManager.recheck()  // boss Hvozdu nastavil příznak → fáze questu se splní
                 checkAwards()           // chycení, denní úkoly… (docs/adr/0037)
                 maybeWhiteout()         // padl celý tým → smrt postavy (docs/adr/0052)
@@ -2480,6 +2482,8 @@ class MakromonMapActivity : AppCompatActivity() {
             "🕯 Reset questu Fenna (Ztichlý sad)",
             "🕯 Cutscéna: Bezejmenní (finále sadu)",
             "🕯 Fenn: skok na Noc bez měsíce",
+            "🎬 Cutscéna: Oči (Drakirra na vrcholu)",
+            "🎬 Cutscéna: Modré světlo v trní (Hvozd)",
             "🍫 +5× Proteinová tyčinka (+250 XP)",
             "💪 +5× Preworkout (+1 level)",
             "🥫 +5× Bílý Monster (+3 levely)"
@@ -2548,7 +2552,11 @@ class MakromonMapActivity : AppCompatActivity() {
                     15 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
                         cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this@MakromonMapActivity))
                     16 -> debugFennFinale()
-                    17, 18, 19 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 17])
+                    17 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
+                        cz.uhk.macroflow.pokemon.cutscene.DrakirraCutsceneView(this@MakromonMapActivity))
+                    18 -> cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content),
+                        cz.uhk.macroflow.pokemon.cutscene.GroveCutsceneView(this@MakromonMapActivity))
+                    19, 20, 21 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 19])
                 }
             }
             .show()
@@ -2801,7 +2809,32 @@ class MakromonMapActivity : AppCompatActivity() {
             mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 300)
             return
         }
+        // rozloučení s nápovědou k modrým houbám → po zavření dialogu cutscéna (docs/adr/0098)
+        if (questManager.getCurrentProgress()?.isCompleted == true && StoryFlags.isSet(this, ForestHeart.ROT_DEFEATED_KEY) &&
+            !gamePrefs.getBoolean(cz.uhk.macroflow.pokemon.cutscene.StoryCutscenes.GROVE_SEEN, false))
+            gamePrefs.edit().putBoolean(cz.uhk.macroflow.pokemon.cutscene.StoryCutscenes.GROVE_ARMED, true).apply()
         questManager.checkNpcInteraction()
+    }
+
+    private var storyCutscenePlaying = false
+
+    /** Čekající příběhová cutscéna prvního regionu (po souboji s legendou, po Mydrusově nápovědě). */
+    private fun maybePlayStoryCutscene() {
+        if (storyCutscenePlaying || cinematic || supportFragmentManager.backStackEntryCount > 0 || questDialogManager.isVisible()) return
+        val C = cz.uhk.macroflow.pokemon.cutscene.StoryCutscenes
+        val view: cz.uhk.macroflow.pokemon.cutscene.CutsceneView = when {
+            gamePrefs.getBoolean(C.DRAKIRRA_PENDING, false) -> {
+                gamePrefs.edit().remove(C.DRAKIRRA_PENDING).apply()
+                cz.uhk.macroflow.pokemon.cutscene.DrakirraCutsceneView(this)
+            }
+            gamePrefs.getBoolean(C.GROVE_ARMED, false) && !gamePrefs.getBoolean(C.GROVE_SEEN, false) -> {
+                gamePrefs.edit().remove(C.GROVE_ARMED).putBoolean(C.GROVE_SEEN, true).apply()
+                cz.uhk.macroflow.pokemon.cutscene.GroveCutsceneView(this)
+            }
+            else -> return
+        }
+        storyCutscenePlaying = true
+        cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), view) { storyCutscenePlaying = false }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

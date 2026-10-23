@@ -37,6 +37,12 @@ abstract class CutsceneView(context: Context) : View(context) {
     protected abstract val shots: List<Shot>
     protected abstract val captions: List<Caption>
 
+    /** Mapa v čase t – cutscéna může v půlce přestřihnout na jinou lokaci (záběry pak platí pro ni). */
+    protected open fun worldAt(t: Float): Bitmap = world
+
+    /** Otřes kamery v čase t (px obrazovky). */
+    protected open fun shake(t: Float): Pair<Float, Float> = 0f to 0f
+
     /** Kreslení herců nad mapou; [toX]/[toY] převádí art px na obrazovku, [scale] = px obrazovky na art px. */
     protected abstract fun drawActors(c: Canvas, t: Float, toX: (Float) -> Float, toY: (Float) -> Float, scale: Float)
 
@@ -107,16 +113,23 @@ abstract class CutsceneView(context: Context) : View(context) {
         c.drawColor(Color.BLACK)
         if (w <= 0f) return
         val cam = cameraAt(time)
+        val map = worldAt(time)
         val scale = w / cam.viewW
         val viewH = h / scale
-        val left = (cam.cx - cam.viewW / 2).coerceIn(0f, (world.width - cam.viewW).coerceAtLeast(0f))
-        val top = (cam.cy - viewH / 2).coerceIn(0f, (world.height - viewH).coerceAtLeast(0f))
+        // svisle smí kamera přejet okraj mapy o výšku černého pruhu – přesah schovají pruhy, takže postava
+        // u okraje mapy nezmizí pod titulky
+        val over = viewH * BAR
+        val left = (cam.cx - cam.viewW / 2).coerceIn(0f, (map.width - cam.viewW).coerceAtLeast(0f))
+        val top = (cam.cy - viewH / 2).coerceIn(-over, (map.height - viewH + over).coerceAtLeast(-over))
+        val (sx, sy) = shake(time)
+        c.save(); c.translate(sx, sy)
         matrix.setScale(scale, scale); matrix.postTranslate(-left * scale, -top * scale)
-        c.drawBitmap(world, matrix, pixel)
+        c.drawBitmap(map, matrix, pixel)
         drawActors(c, time, { (it - left) * scale }, { (it - top) * scale }, scale)
+        c.restore()
 
         // černé pruhy (vjedou na začátku) a titulky v dolním
-        val bar = h * 0.12f * ease((time / 900f).coerceIn(0f, 1f))
+        val bar = h * BAR * ease((time / 900f).coerceIn(0f, 1f))
         fill.color = Color.BLACK; fill.alpha = 255
         c.drawRect(0f, 0f, w, bar, fill); c.drawRect(0f, h - bar, w, h, fill)
         captions.firstOrNull { time in it.from..it.to }?.let { cap ->
@@ -149,7 +162,7 @@ abstract class CutsceneView(context: Context) : View(context) {
         text.textSize = w * 0.04f; text.alpha = 200
         val label = "Přeskočit >"
         val tw = text.measureText(label); val pad = w * 0.03f
-        val top = height * 0.12f + pad
+        val top = height * BAR + pad
         skipRect.set(w - tw - pad * 3, top, w - pad, top + text.textSize + pad * 1.4f)
         fill.color = 0xFF0A0F06.toInt(); fill.alpha = 140
         c.drawRoundRect(skipRect, skipRect.height() / 2, skipRect.height() / 2, fill)
@@ -158,6 +171,8 @@ abstract class CutsceneView(context: Context) : View(context) {
 
     companion object {
         const val FADE_MS = 900f
+        /** Výška černého pruhu nahoře i dole (podíl výšky obrazovky). */
+        const val BAR = 0.12f
         private const val GLITCH = "░▒▓█▌▐■□"
 
         /** Přehraje cutscénu přes [root]; [done] se zavolá po skončení (i po přeskočení). */

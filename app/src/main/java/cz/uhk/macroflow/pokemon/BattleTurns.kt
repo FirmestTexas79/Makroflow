@@ -302,6 +302,8 @@ internal fun PokemonBattleView.playerFainted() {
     if (special?.kind == cz.uhk.macroflow.pokemon.legend.SpecialBattle.Kind.LEGEND) {
         // Legenda hráče porazí a uletí → brána na vrcholu se otevře
         cz.uhk.macroflow.pokemon.story.StoryFlags.set(context, cz.uhk.macroflow.pokemon.legend.LegendProgress.LEGEND_KEY)
+        // po návratu na mapu se přehraje cutscéna „Oči“ (docs/adr/0098)
+        gamePrefs().edit().putBoolean(cz.uhk.macroflow.pokemon.cutscene.StoryCutscenes.DRAKIRRA_PENDING, true).apply()
         val (roar, flee) = special.fleeLines(gs.enemy.name)
         say(gs.player.name, "FAINTED!") {
             say(roar.first, roar.second) {

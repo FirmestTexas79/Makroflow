@@ -321,6 +321,9 @@ class QuestDialogManager(
         overlay.animate().alpha(1f).setDuration(300).start()
     }
 
+    /** Zavolá se po každém zavření dialogu (mapa pak může přehrát cutscénu, docs/adr/0098). */
+    var onHidden: (() -> Unit)? = null
+
     fun hide() {
         textHandler.removeCallbacksAndMessages(null)
         isTextAnimating = false
@@ -332,6 +335,7 @@ class QuestDialogManager(
             questProgressLine.visibility = View.GONE
             speakerNameView?.visibility = View.GONE
             questStageNameView?.visibility = View.GONE
+            onHidden?.invoke()
         }.start()
     }
 
