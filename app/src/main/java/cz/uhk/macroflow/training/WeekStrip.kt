@@ -1,43 +1,44 @@
 package cz.uhk.macroflow.training
 
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
-import android.text.style.StyleSpan
 import android.view.Gravity
 import android.view.View
-import android.widget.FrameLayout
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 
 /**
- * Týden na jedné řádce: sedm nafouknutých pastelových pilulek (den, typ tréninku, kardio) a pod nimi souhrn po skupinách
- * („PUSH Po · Čt“, „Volno Pá · So · Ne“). Klepnutím na den se pod pruhem otevře jeho úprava.
+ * Týden na jedné řádce: sedm vzdušných pilulek (den + barevná bublina typu tréninku, tečka = druhý režim),
+ * pod nimi pár pastelových štítků po skupinách. Klepnutím na den se pod pruhem otevře jeho úprava.
  */
 class WeekStrip(private val host: LinearLayout, private val onSelect: (Int) -> Unit) {
 
     class Day(val short: String, val strength: String, val kardio: String)
 
     private val ink = Color.parseColor("#283618")
-    private val cream = Color.parseColor("#FEFAE0")
     private val warm = Color.parseColor("#E9B072")
+    private val restColor = Color.parseColor("#E4E1CC")
 
     private fun label(t: String) = when (t) {
         "full" -> "FULL"; "push" -> "PUSH"; "pull" -> "PULL"; "legs" -> "LEGS"
         "stairs" -> "SCHODY"; "run" -> "BĚH"; "rope" -> "ŠVIH"; "bike" -> "KOLO"; else -> "VOLNO"
     }
 
-    private fun emoji(t: String) = when (t) {
-        "full" -> "🏋️"; "push" -> "💪"; "pull" -> "🧗"; "legs" -> "🦵"
-        "stairs" -> "🪜"; "run" -> "🏃"; "rope" -> "🪢"; "bike" -> "🚴"; else -> ""
-    }
+    /** Jemná paleta jen pro tenhle pruh: měkké, ale od sebe dobře rozlišitelné barvy. */
+    private fun pastel(t: String) = Color.parseColor(when (t) {
+        "push" -> "#9DBE7E"; "pull" -> "#F2B27C"; "legs" -> "#EE9C92"; "full" -> "#B8A4DC"
+        "run" -> "#7FB6DA"; "rope" -> "#C99AD6"; "bike" -> "#F2A47F"; "stairs" -> "#7FC2A5"
+        else -> "#E4E1CC"
+    })
 
-    fun render(days: List<Day>, selected: Int, today: Int, kardio: Boolean, colorOf: (String) -> Int) {
+    fun render(days: List<Day>, selected: Int, today: Int, kardio: Boolean) {
         val ctx = host.context
         val d = ctx.resources.displayMetrics.density
         fun dp(v: Int) = (v * d).toInt()
@@ -48,69 +49,48 @@ class WeekStrip(private val host: LinearLayout, private val onSelect: (Int) -> U
             val main = if (kardio) day.kardio else day.strength
             val other = if (kardio) day.strength else day.kardio
             val on = main != "rest"
-            val base = if (on) colorOf(main) else Color.parseColor("#9A9A86")
+            val base = pastel(main)
             val sel = i == selected
 
-            val blob = FrameLayout(ctx).apply {
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL; gradientType = GradientDrawable.RADIAL_GRADIENT
-                    gradientRadius = dp(24).toFloat(); setGradientCenter(0.35f, 0.3f)
-                    colors = intArrayOf(ColorUtils.blendARGB(base, Color.WHITE, 0.45f), base)
-                }
-                addView(TextView(ctx).apply {
-                    text = if (on) emoji(main) else "–"; textSize = if (on) 16f else 18f; gravity = Gravity.CENTER
-                    setTextColor(Color.WHITE)
-                }, FrameLayout.LayoutParams(-1, -1))
-            }
             val col = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL; setPadding(0, dp(8), 0, dp(6))
-                addView(TextView(ctx).apply { text = day.short; textSize = 11f; setTypeface(null, Typeface.BOLD); setTextColor(ink) })
-                addView(blob, LinearLayout.LayoutParams(dp(34), dp(34)).apply { topMargin = dp(5) })
+                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL; setPadding(0, dp(10), 0, dp(10))
                 addView(TextView(ctx).apply {
-                    text = label(main); textSize = 8.5f; setTypeface(null, Typeface.BOLD); setTextColor(ink); alpha = if (on) 0.85f else 0.5f
-                    setPadding(0, dp(4), 0, 0); maxLines = 1
+                    text = day.short; textSize = 11.5f; setTypeface(null, Typeface.BOLD)
+                    setTextColor(if (i == today) Color.parseColor("#B9772F") else ink); alpha = if (sel || i == today) 1f else 0.7f
                 })
-                addView(TextView(ctx).apply { text = if (other != "rest") emoji(other) else " "; textSize = 10f; maxLines = 1 })
                 addView(View(ctx).apply {
-                    background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(if (i == today) warm else Color.TRANSPARENT) }
-                }, LinearLayout.LayoutParams(dp(5), dp(5)).apply { topMargin = dp(2) })
+                    background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(if (on) base else restColor) }
+                }, LinearLayout.LayoutParams(dp(26), dp(26)).apply { topMargin = dp(8) })
+                addView(View(ctx).apply {
+                    background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(if (other != "rest") pastel(other) else Color.TRANSPARENT) }
+                }, LinearLayout.LayoutParams(dp(7), dp(7)).apply { topMargin = dp(8) })
             }
             row.addView(MaterialCardView(ctx).apply {
-                radius = 20 * d; cardElevation = (if (sel) 8 else 2) * d; useCompatPadding = false
-                setCardBackgroundColor(ColorUtils.blendARGB(base, Color.WHITE, if (on) 0.82f else 0.88f))
-                strokeWidth = if (sel) dp(2) else 0; strokeColor = base
-                scaleX = if (sel) 1.06f else 1f; scaleY = scaleX
+                radius = 22 * d; cardElevation = (if (sel) 5 else 0) * d
+                setCardBackgroundColor(if (sel) ColorUtils.blendARGB(base, Color.WHITE, 0.68f) else Color.parseColor("#FFFDF3"))
+                strokeWidth = dp(if (sel) 2 else 1); strokeColor = if (sel) ink else Color.parseColor("#1F283618")
                 contentDescription = "${day.short}: ${label(main)}"
                 setOnClickListener { onSelect(i) }
-                addView(col)
-            }, LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(3), dp(8), dp(3), dp(12)) })
+                addView(col, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(3), dp(6), dp(3), dp(6)) })
         }
         host.addView(row)
 
-        // Souhrn po skupinách
-        val fg = if (kardio) cream else ink
-        fun group(pick: (Day) -> String): List<Pair<String, List<String>>> =
-            days.groupBy(pick).filterKeys { it != "rest" }.map { (t, l) -> t to l.map { it.short } }
-        val main = group { if (kardio) it.kardio else it.strength }
-        val rest = days.filter { (if (kardio) it.kardio else it.strength) == "rest" }.map { it.short }
-        val extra = group { if (kardio) it.strength else it.kardio }
-
-        fun line(dot: Int, name: String, ds: List<String>, tail: String = "") = TextView(ctx).apply {
-            val sb = SpannableStringBuilder("● ").apply { setSpan(ForegroundColorSpan(dot), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
-            val n = sb.length
-            sb.append(name).setSpan(StyleSpan(Typeface.BOLD), n, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            sb.append("   ").append(ds.joinToString(" · ")).append(tail)
-            this.text = sb; textSize = 13f; setTextColor(fg); setPadding(0, dp(3), 0, dp(3))
+        // Štítky po skupinách (volno se neuvádí, vidět je na světlých pilulkách)
+        val groups = days.groupBy { if (kardio) it.kardio else it.strength }.filterKeys { it != "rest" }
+        val extra = days.groupBy { if (kardio) it.strength else it.kardio }.filterKeys { it != "rest" }
+        val chips = ChipGroup(ctx).apply { chipSpacingHorizontal = dp(6); chipSpacingVertical = dp(2); setPadding(dp(4), dp(4), dp(4), 0) }
+        fun chip(t: String, ds: List<Day>, dot: Boolean) = Chip(ctx).apply {
+            text = "${label(t)}  ${ds.joinToString("·") { it.short }}"
+            isClickable = false; isCheckable = false; textSize = 12f; setTextColor(ink)
+            chipBackgroundColor = ColorStateList.valueOf(ColorUtils.blendARGB(pastel(t), Color.WHITE, if (dot) 0.75f else 0.55f))
+            chipStrokeWidth = 0f; chipMinHeight = 30 * d; setEnsureMinTouchTargetSize(false)
         }
-        val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), 0, dp(8), dp(4)) }
-        if (main.isEmpty()) box.addView(TextView(ctx).apply {
-            this.text = "Zatím žádný ${if (kardio) "kardio" else "silový"} den. Klepni na den a vyber typ."; textSize = 13f; setTextColor(fg); alpha = 0.8f
-        }) else {
-            main.forEach { (t, ds) -> box.addView(line(colorOf(t), label(t), ds)) }
-            if (rest.isNotEmpty()) box.addView(line(Color.parseColor("#9A9A86"), "VOLNO", rest))
-        }
-        if (extra.isNotEmpty()) box.addView(line(warm, if (kardio) "SILA" else "KARDIO", emptyList(),
-            extra.joinToString(" · ") { (t, ds) -> "${label(t)} ${ds.joinToString(" ")}" }))
-        host.addView(box)
+        groups.forEach { (t, ds) -> chips.addView(chip(t, ds, false)) }
+        extra.forEach { (t, ds) -> chips.addView(chip(t, ds, true)) }
+        if (groups.isEmpty() && extra.isEmpty()) host.addView(TextView(ctx).apply {
+            text = "Zatím nic naplánováno. Klepni na den a vyber typ."; textSize = 13f; setTextColor(if (kardio) Color.parseColor("#FEFAE0") else ink)
+            alpha = 0.75f; setPadding(dp(6), dp(2), 0, 0)
+        }) else host.addView(chips)
     }
 }

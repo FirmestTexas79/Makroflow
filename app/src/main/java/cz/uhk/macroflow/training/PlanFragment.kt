@@ -325,7 +325,7 @@ class PlanFragment : Fragment() {
         val days = daysMap.map { (key, _, short) ->
             WeekStrip.Day(short, trainingPrefs.getString("type_$key", "rest") ?: "rest", trainingPrefs.getString("kardio_type_$key", "rest") ?: "rest")
         }
-        strip.render(days, selectedDay, (java.time.LocalDate.now().dayOfWeek.value - 1).coerceIn(0, 6), isKardioMode) { typeColor(it) }
+        strip.render(days, selectedDay, (java.time.LocalDate.now().dayOfWeek.value - 1).coerceIn(0, 6), isKardioMode)
     }
 
     private fun updateStats(view: View) {
