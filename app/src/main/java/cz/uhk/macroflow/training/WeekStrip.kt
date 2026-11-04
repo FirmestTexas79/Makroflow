@@ -23,15 +23,17 @@ class WeekStrip(private val host: LinearLayout, private val onSelect: (Int) -> U
     private val amber = Color.parseColor("#B9772F")
 
     private fun label(t: String) = when (t) {
-        "full" -> "FULL"; "push" -> "PUSH"; "pull" -> "PULL"; "legs" -> "LEGS"
-        "stairs" -> "SCHODY"; "run" -> "BĚH"; "rope" -> "ŠVIH"; "bike" -> "KOLO"; else -> "VOLNO"
+        "full" -> "Celé"; "push" -> "Push"; "pull" -> "Pull"; "legs" -> "Nohy"
+        "stairs" -> "Schody"; "run" -> "Běh"; "rope" -> "Švih"; "bike" -> "Kolo"; else -> "Volno"
     }
 
-    private fun pastel(t: String) = Color.parseColor(when (t) {
-        "push" -> "#A9C98B"; "pull" -> "#F5BC8A"; "legs" -> "#F0A59B"; "full" -> "#C3B1E3"
-        "run" -> "#8CC0E0"; "rope" -> "#D2A7DE"; "bike" -> "#F5AD8A"; "stairs" -> "#8CCBB0"
-        else -> "#ECE9D8"
-    })
+    companion object {
+        fun pastel(t: String) = Color.parseColor(when (t) {
+            "push" -> "#A9C98B"; "pull" -> "#F5BC8A"; "legs" -> "#F0A59B"; "full" -> "#C3B1E3"
+            "run" -> "#8CC0E0"; "rope" -> "#D2A7DE"; "bike" -> "#F5AD8A"; "stairs" -> "#8CCBB0"
+            else -> "#ECE9D8"
+        })
+    }
 
     private fun plural(n: Int, one: String, few: String, many: String) = "$n ${if (n == 1) one else if (n in 2..4) few else many}"
 
@@ -74,29 +76,25 @@ class WeekStrip(private val host: LinearLayout, private val onSelect: (Int) -> U
                     setTextColor(if (i == today) amber else ink); alpha = if (sel || i == today) 1f else 0.75f
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 addView(TextView(ctx).apply {
-                    text = label(m); textSize = 9.5f; gravity = Gravity.CENTER; setTypeface(null, if (on) Typeface.BOLD else Typeface.NORMAL)
+                    text = label(m); textSize = 10.5f; gravity = Gravity.CENTER; setTypeface(null, if (on) Typeface.BOLD else Typeface.NORMAL)
                     setTextColor(ink); alpha = if (on) 1f else 0.5f; maxLines = 1; includeFontPadding = false
                     setPadding(0, dp(6), 0, dp(6))
                     background = GradientDrawable().apply { cornerRadius = 10 * d; setColor(pastel(m)) }
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
                 addView(TextView(ctx).apply {
-                    text = if (o != "rest") "+ ${label(o)}" else " "; textSize = 9f; gravity = Gravity.CENTER; setTextColor(ink); alpha = 0.7f
+                    text = if (o != "rest") "+ ${label(o)}" else " "; textSize = 10f; gravity = Gravity.CENTER; setTextColor(ink); alpha = 0.7f
                     maxLines = 1; includeFontPadding = false
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
             }
             row.addView(pill, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
         }
 
-        val hint = TextView(ctx).apply {
-            text = "Klepni na den a níže ho uprav"; textSize = 12f; setTextColor(ink); alpha = 0.55f; gravity = Gravity.CENTER
-            setPadding(0, dp(10), 0, 0)
-        }
         host.addView(MaterialCardView(ctx).apply {
             radius = 26 * d; cardElevation = 0f; strokeWidth = dp(1); strokeColor = Color.parseColor("#1F283618")
             setCardBackgroundColor(Color.parseColor("#FFFDF3"))
             addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(14), dp(10), dp(12))
-                addView(head); addView(row); addView(hint)
+                orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(14), dp(10), dp(14))
+                addView(head); addView(row)
             })
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10) })
     }

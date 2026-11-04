@@ -644,8 +644,8 @@ class PlanFragment : Fragment() {
 
         override fun onBindViewHolder(holder: PlanViewHolder, position: Int) {
             val (englishName, resId, shortCz) = daysMap[selectedDay]
-            holder.tvDay.text     = shortCz
-            holder.tvDayFull.text = getString(resId)
+            holder.tvDay.text = getString(resId)
+            holder.tvDayFull.text = if (isKardioMode) "Vyber kardio na tento den" else "Vyber, co bude\u0161 cvi\u010Dit"
             applyCardTheme(holder, isKardioMode)
             if (isKardioMode) bindKardio(holder, englishName)
             else              bindPower(holder, englishName)
@@ -675,8 +675,8 @@ class PlanFragment : Fragment() {
             buttons.forEach { (btn, type) ->
                 if (btn != null) {
                     if (selectedType == type) {
-                        btn.setTextColor(Color.WHITE)
-                        btn.backgroundTintList = ColorStateList.valueOf(typeColor(type))
+                        btn.setTextColor(colorDarkGreen)
+                        btn.backgroundTintList = ColorStateList.valueOf(WeekStrip.pastel(type))
                         btn.strokeWidth = 0
                     } else {
                         btn.setTextColor(colorDarkGreen)
@@ -694,10 +694,10 @@ class PlanFragment : Fragment() {
          * Klik na již vybrané tlačítko = odznačit → OFF.
          */
         private fun bindPower(holder: PlanViewHolder, dayEnglish: String) {
-            holder.btnFull?.text = "FULL"
-            holder.btnPush?.text = "PUSH"
-            holder.btnPull?.text = "PULL"
-            holder.btnLegs?.text = "LEGS"
+            holder.btnFull?.text = "Cel\u00E9 t\u011Blo"
+            holder.btnPush?.text = "Push"
+            holder.btnPull?.text = "Pull"
+            holder.btnLegs?.text = "Nohy"
             holder.llKardioExtras?.visibility = View.GONE
 
             val savedType = trainingPrefs.getString("type_$dayEnglish", "rest") ?: "rest"
@@ -755,10 +755,10 @@ class PlanFragment : Fragment() {
          * Klik na již vybrané tlačítko = odznačit → OFF.
          */
         private fun bindKardio(holder: PlanViewHolder, dayEnglish: String) {
-            holder.btnFull?.text = "STAIRS"
-            holder.btnPush?.text = "BĚH"
-            holder.btnPull?.text = "ŠVIH"
-            holder.btnLegs?.text = "KOLO"
+            holder.btnFull?.text = "Schody"
+            holder.btnPush?.text = "B\u011Bh"
+            holder.btnPull?.text = "\u0160vih"
+            holder.btnLegs?.text = "Kolo"
 
             val savedType = trainingPrefs.getString("kardio_type_$dayEnglish", "rest") ?: "rest"
 
@@ -925,7 +925,7 @@ class PlanFragment : Fragment() {
         private fun showTimePicker(dayEnglish: String, holder: PlanViewHolder, isPower: Boolean) {
             val timeKey  = if (isPower) dayEnglish else "kardio_$dayEnglish"
             val existing = TrainingTimeManager.getTrainingTime(requireContext(), timeKey)
-            val label    = if (isPower) "Čas tréninku — ${holder.tvDayFull.text}" else "Čas kardia — ${holder.tvDayFull.text}"
+            val label    = if (isPower) "Čas tréninku — ${holder.tvDay.text}" else "Čas kardia — ${holder.tvDay.text}"
             MakroflowTimePicker.show(
                 parentFragmentManager,
                 existing?.split(":")?.getOrNull(0)?.toIntOrNull() ?: 7,

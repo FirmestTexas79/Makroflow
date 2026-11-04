@@ -7,8 +7,8 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="24dp"
     android:layout_marginBottom="10dp"
-    app:cardBackgroundColor="@color/brand_cream"
-    app:cardCornerRadius="24dp"
+    app:cardBackgroundColor="#FFFDF3"
+    app:cardCornerRadius="28dp"
     app:cardElevation="0dp"
     app:strokeWidth="1.5dp"
     app:strokeColor="#20283618">
@@ -26,11 +26,9 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_marginStart="4dp"
-            app:layout_constraintHorizontal_weight="0.22"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/toggleGroup"
-            app:layout_constraintBottom_toBottomOf="@id/toggleGroup"
-            app:layout_constraintEnd_toStartOf="@id/divider">
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -43,8 +41,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/day_po_short"
-                    android:textColor="@color/black"
-                    android:textSize="18sp"
+                    android:textColor="@color/brand_dark"
+                    android:textSize="24sp"
                     android:fontFamily="sans-serif-black"
                     android:letterSpacing="-0.02" />
 
@@ -65,7 +63,8 @@
                 android:layout_height="wrap_content"
                 android:text="@string/day_monday"
                 android:textColor="@color/brand_primary"
-                android:textSize="10sp"
+                android:textSize="13sp"
+                android:layout_marginTop="2dp"
                 android:alpha="0.7" />
 
         </LinearLayout>
@@ -73,12 +72,10 @@
         <View
             android:id="@+id/divider"
             android:layout_width="1dp"
-            android:layout_height="36dp"
-            android:background="#20283618"
-            app:layout_constraintStart_toEndOf="@id/layoutDayLabel"
-            app:layout_constraintEnd_toStartOf="@id/toggleGroup"
-            app:layout_constraintTop_toTopOf="@id/toggleGroup"
-            app:layout_constraintBottom_toBottomOf="@id/toggleGroup" />
+            android:layout_height="1dp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <!--
             singleSelection="true" ale selectionRequired="false" — umožní clearChecked()
@@ -88,23 +85,22 @@
             android:id="@+id/toggleGroup"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginTop="14dp"
             app:selectionRequired="false"
             app:singleSelection="true"
-            app:layout_constraintHorizontal_weight="0.78"
-            app:layout_constraintStart_toEndOf="@id/divider"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toBottomOf="@id/layoutDayLabel">
 
             <!-- FULL (power) / STAIRS (kardio) — první tlačítko -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnFull"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="54dp"
                 android:layout_weight="1"
                 android:text="FULL"
-                android:textSize="9sp"
+                android:textSize="12.5sp"
                 android:textStyle="bold"
                 android:textColor="@color/brand_dark"
                 android:padding="0dp"
@@ -118,10 +114,10 @@
                 android:id="@+id/btnPush"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="54dp"
                 android:layout_weight="1"
                 android:text="@string/plan_push"
-                android:textSize="9sp"
+                android:textSize="12.5sp"
                 android:textStyle="bold"
                 android:textColor="@color/brand_dark"
                 android:padding="0dp"
@@ -134,10 +130,10 @@
                 android:id="@+id/btnPull"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="54dp"
                 android:layout_weight="1"
                 android:text="@string/plan_pull"
-                android:textSize="9sp"
+                android:textSize="12.5sp"
                 android:textStyle="bold"
                 android:textColor="@color/brand_primary"
                 android:padding="0dp"
@@ -150,10 +146,10 @@
                 android:id="@+id/btnLegs"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="54dp"
                 android:layout_weight="1"
                 android:text="@string/plan_legs"
-                android:textSize="9sp"
+                android:textSize="12.5sp"
                 android:textStyle="bold"
                 android:textColor="@color/brand_accent_deep"
                 android:padding="0dp"
@@ -184,7 +180,7 @@
                 android:layout_weight="1.2"
                 android:layout_marginEnd="4dp"
                 android:background="@drawable/bg_status_pill"
-                android:backgroundTint="#1A283618"
+                android:backgroundTint="#F6E6C8"
                 android:gravity="center"
                 android:text="🕐 ČAS"
                 android:textColor="#283618"
