@@ -44,7 +44,7 @@ object    MacroCalculator {
         val factor = if (!applyAdaptive) 1.0
             else adaptive?.takeIf { it.status == AdaptiveExpenditure.Status.OK.name }?.factor ?: 1.0
 
-        return calculateFor(
+        return cz.uhk.macroflow.loop.LoopData.applyTo(context, if (applyAdaptive) dateKey else "-", calculateFor(
             profile = profile,
             exercises = plannedExercises(context, date),
             strengthLabel = strengthLabel(context, date),
@@ -52,7 +52,7 @@ object    MacroCalculator {
                 else EnergyModel.stepsForDay(recordedSteps, false),
             adaptiveFactor = factor,
             trendWeightKg = adaptive?.trendWeightKg
-        )
+        ))
     }
 
     /** Medián kroků posledních 14 uzavřených dní – „obvyklý den“ pro predikci dneška. */

@@ -61,6 +61,7 @@ class DashboardFragment : Fragment() {
 
     private var sleepCardRefresh: (() -> Unit)? = null
     private var learningPillRefresh: (() -> Unit)? = null
+    private var loopCardRefresh: (() -> Unit)? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -68,6 +69,7 @@ class DashboardFragment : Fragment() {
         val coachCard = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
         sleepCardRefresh = cz.uhk.macroflow.wearable.SleepCard.attach(coachCard, this)
         learningPillRefresh = cz.uhk.macroflow.learning.LearningPill.attach(coachCard, this)
+        loopCardRefresh = cz.uhk.macroflow.loop.LoopCard.attach(coachCard, this) { view?.let { refreshAllData(it) } }
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
         val tvTodaySteps = view.findViewById<TextView>(R.id.tvTotalStepsCount)
@@ -197,6 +199,7 @@ class DashboardFragment : Fragment() {
             updateWorkoutCard(view)
             sleepCardRefresh?.invoke()
         learningPillRefresh?.invoke()
+        loopCardRefresh?.invoke()
         }
     }
 

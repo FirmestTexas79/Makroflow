@@ -9,7 +9,7 @@ import kotlin.math.roundToInt
 
 /** Oblasti, ve kterých se aplikace přizpůsobuje konkrétnímu člověku. */
 enum class Area(val label: String, val icon: String) {
-    ENERGY("Výdej energie", "🔥"), STRENGTH("Síla", "💪"), RITUAL("Ranní rituál", "🌅"), SLEEP("Spánek", "🌙"), WATCH("Hodinky", "⌚")
+    ENERGY("Výdej energie", "🔥"), STRENGTH("Síla", "💪"), RITUAL("Ranní rituál", "🌅"), SLEEP("Spánek", "🌙"), LINKS("Souvislosti", "🔗"), WATCH("Hodinky", "⌚")
 }
 
 /** Jeden poznatek: věta s číslem, rozdíl proti výchozímu stavu a jistota 0–3 (tečky). */
@@ -27,7 +27,7 @@ data class WatchIn(val days: Int, val modelErrPct: Double, val garminErrPct: Dou
 
 data class Inputs(
     val daysUsed: Int, val energy: EnergyIn? = null, val lifts: List<LiftIn> = emptyList(),
-    val ritual: RitualIn? = null, val sleep: SleepIn? = null, val watch: WatchIn? = null
+    val ritual: RitualIn? = null, val sleep: SleepIn? = null, val watch: WatchIn? = null, val links: List<cz.uhk.macroflow.loop.LinkResult> = emptyList()
 )
 
 data class Report(val daysUsed: Int, val unlocked: Boolean, val items: List<Learning>) {
@@ -56,6 +56,7 @@ object LearningModel {
             i.ritual?.takeIf { it.n >= 3 }?.let { add(ritual(it)) }
             i.sleep?.takeIf { it.nights >= 3 && it.tip != null }?.let { add(sleep(it)) }
             i.watch?.takeIf { it.days >= 10 }?.let { add(watch(it)) }
+            i.links.sortedByDescending { it.dots * 100 + it.n }.take(3).forEach { add(link(it)) }
         }
         return Report(i.daysUsed, i.daysUsed >= UNLOCK_DAYS, items)
     }
@@ -93,6 +94,10 @@ object LearningModel {
         val dots = when { s.nights < 7 -> 1; s.nights < 14 -> 2; else -> 3 }
         return Learning(Area.SLEEP, s.tip!!, "Z ${s.nights} nocí z hodinek.", null, null, dots, true)
     }
+
+    private fun link(l: cz.uhk.macroflow.loop.LinkResult) = Learning(Area.LINKS, l.sentence,
+        "Z ${l.n} dní tvých dat. " + (if (l.dots == 1) "Zatím předběžné, s dalšími dny se zpřesní." else "Odhad je stažený k nule, ať nepřeháním."),
+        null, null, l.dots, true)
 
     private fun watch(w: WatchIn): Learning {
         val pct = (w.garminWeight * 100).roundToInt()

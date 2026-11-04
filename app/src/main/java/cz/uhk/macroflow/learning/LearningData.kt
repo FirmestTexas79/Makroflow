@@ -75,7 +75,8 @@ object LearningData {
         val watch =if (wp.contains("days")) WatchIn(wp.getInt("days", 0), wp.getFloat("modelErr", 0f).toDouble(),
             wp.getFloat("garminErr", 0f).toDouble(), wp.getFloat("garminWeight", 0f).toDouble()) else null
 
-        return LearningModel.build(Inputs(daysSince(first, today), energy, lifts, ritual, sleep, watch))
+        return LearningModel.build(Inputs(daysSince(first, today), energy, lifts, ritual, sleep, watch,
+            runCatching { cz.uhk.macroflow.loop.LoopModel.links(cz.uhk.macroflow.loop.LoopData.snapshot(app, today).situation.days) }.getOrDefault(emptyList())))
     }
 
     // ── Stav upozornění ─────────────────────────────────────────────────────
