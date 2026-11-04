@@ -256,7 +256,7 @@ class SleepWindow : DialogFragment() {
                 blob(ctx, "REM", "${(night.remSec ?: 0) / 60} min", state(rp, 21, 31), P_LAV, "${rp.toInt()} %")))
             col.addView(pair(ctx,
                 blob(ctx, "Lehký", "${(night.lightSec ?: 0) / 60} min", state(lp, 30, 64), P_SKY, "${lp.toInt()} %"),
-                blob(ctx, "Vzhůru", "${(night.awakeSec ?: 0) / 60} min", null, P_PEACH, "${ap.toInt()} %")), (10 * d).toInt())
+                blob(ctx, "Vzhůru", "${(night.awakeSec ?: 0) / 60} min", null, P_PEACH, "${ap.toInt()} %"), (10 * d).toInt()))
 
             // ── 5. Regenerace: Body Battery vlevo, kyslík vpravo ──
             val bbBlob = night.bbSleepGain?.let { blob(ctx, "Body Battery", "+$it", null, P_SKY, "nabito spánkem") }
