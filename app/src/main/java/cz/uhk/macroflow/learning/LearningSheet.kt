@@ -112,12 +112,34 @@ class LearningSheet : BottomSheetDialogFragment() {
                 .apply { setPadding(dp(4f), dp(14f), dp(4f), 0) })
         }
 
+        if (r.unlocked) col.addView(MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Sd\u00EDlet shrnut\u00ED"; isAllCaps = false; textSize = 15f; cornerRadius = dp(28f); setTextColor(dark)
+            strokeColor = android.content.res.ColorStateList.valueOf(Color.argb(70, 40, 54, 24))
+            setOnClickListener { share(r) }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(52f)).apply { topMargin = dp(18f) }
+        })
         col.addView(MaterialButton(requireContext()).apply {
             text = "Hotovo"; isAllCaps = false; textSize = 16f; cornerRadius = dp(28f)
             backgroundTintList = android.content.res.ColorStateList.valueOf(primary); setTextColor(cream)
             setOnClickListener { dismiss() }
             layoutParams = LinearLayout.LayoutParams(-1, dp(56f)).apply { topMargin = dp(24f) }
         })
+    }
+
+    private fun share(r: Report) {
+        val app = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            val text = withContext(Dispatchers.IO) {
+                val log = runCatching { cz.uhk.macroflow.loop.LoopData.entries(app) }.getOrDefault(emptyList())
+                    .sortedByDescending { it.date }.take(14).map { Triple(it.date, it.text, it.applied) }
+                LearningModel.exportText(r, log, LocalDate.now())
+            }
+            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, text)
+                putExtra(android.content.Intent.EXTRA_SUBJECT, "Makroflow: co se aplikace nau\u010Dila")
+            }
+            startActivity(android.content.Intent.createChooser(send, null))
+        }
     }
 
     private fun hero(r: Report): View = LinearLayout(requireContext()).apply {

@@ -109,6 +109,25 @@ object LearningModel {
 
     // ── Kdy upozornit ───────────────────────────────────────────────────────
 
+    /** Text ke sdileni: jen poznatky a upravy aplikace, bez jmena, e-mailu a zapsanych jidel. */
+    fun exportText(r: Report, log: List<Triple<String, String, Boolean>>, today: LocalDate): String = buildString {
+        append("Makroflow: co se aplikace nau\u010Dila\n")
+        append("${today.dayOfMonth}. ${today.monthValue}. ${today.year} \u00B7 den ${r.daysUsed} s aplikac\u00ED\n\n")
+        if (r.items.isEmpty()) append("Zat\u00EDm m\u00E1lo dat na poznatky.\n") else {
+            append("Poznatky (${r.differing} z ${r.items.size} se li\u0161\u00ED od v\u00FDchoz\u00EDho nastaven\u00ED)\n")
+            r.items.forEach { l ->
+                append("\n\u2022 ${l.area.label}: ${l.headline}\n")
+                if (l.from != null && l.to != null) append("  V\u00FDchoz\u00ED ${l.from} \u2192 tvoje ${l.to}\n")
+                append("  ${l.detail}\n  Jistota: ${l.dots}/3\n")
+            }
+        }
+        if (log.isNotEmpty()) {
+            append("\n\u00DApravy z uzav\u0159en\u00E9ho kruhu\n")
+            log.forEach { (d, t, applied) -> append("\u2022 $d ${if (applied) "pou\u017Eito" else "ponech\u00E1no"}: $t\n") }
+        }
+        append("\nNeobsahuje jm\u00E9no, e-mail ani zapsan\u00E1 j\u00EDdla.\n")
+    }
+
     fun weekKey(d: LocalDate) = "${d.get(IsoFields.WEEK_BASED_YEAR)}-W${d.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}"
 
     /**
