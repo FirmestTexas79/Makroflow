@@ -264,7 +264,7 @@
     <string name="label_weekly_plan">PLÁN</string>
     <string name="training_schedule_title">Tréninkový\nRozvrh</string>
     <string name="training_schedule_subtitle">Nastav svůj týden. Makra se přizpůsobí.</string>
-    <string name="label_setup_days">NASTAV KAŽDÝ DEN</string>
+    <string name="label_setup_days">TVŮJ TÝDEN · KLEPNI NA DEN</string>
     <string name="tip_macros_adapt_title">Makra se přizpůsobí každému dni</string>
     <string name="tip_push_desc">🏋️ PUSH  +300 kcal · standardní bílkoviny</string>
     <string name="tip_pull_desc">💪 PULL  +350 kcal · vyšší bílkoviny</string>

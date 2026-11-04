@@ -664,6 +664,13 @@
                 <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/brand_dark_alpha12" />
             </LinearLayout>
 
+            <LinearLayout
+                android:id="@+id/llWeekStrip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginHorizontal="12dp" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvTrainingPlan"
                 android:layout_width="match_parent"

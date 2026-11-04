@@ -64,6 +64,8 @@ class PlanFragment : Fragment() {
     }
 
     private var isKardioMode = false
+    private var selectedDay = (java.time.LocalDate.now().dayOfWeek.value - 1).coerceIn(0, 6)
+    private var weekStrip: WeekStrip? = null
 
     private val colorPowerBg   = Color.parseColor("#FEFAE0")
     private val colorKardioBg  = Color.parseColor("#1A2510")
@@ -79,6 +81,13 @@ class PlanFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_plan, container, false)
+        weekStrip = view.findViewById<LinearLayout>(R.id.llWeekStrip)?.let { host ->
+            WeekStrip(host) { i ->
+                selectedDay = i
+                view.findViewById<RecyclerView>(R.id.rvTrainingPlan)?.let { rv -> rv.itemAnimator = null; rv.adapter?.notifyDataSetChanged() }
+                refreshStrip()
+            }
+        }
         view.findViewById<RecyclerView>(R.id.rvTrainingPlan)?.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = TrainingPlanAdapter()
@@ -124,6 +133,7 @@ class PlanFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         isKardioMode = trainingPrefs.getBoolean("is_kardio_mode", false)
+        refreshStrip()
 
         val modeToggle = view.findViewById<MaterialButtonToggleGroup>(R.id.toggleModeGroup)
         modeToggle?.check(if (isKardioMode) R.id.btnModeKardio else R.id.btnModePower)
@@ -309,7 +319,17 @@ class PlanFragment : Fragment() {
         else     -> colorDarkGreen
     }
 
+    private fun refreshStrip() {
+        val strip = weekStrip ?: return
+        if (!isAdded) return
+        val days = daysMap.map { (key, _, short) ->
+            WeekStrip.Day(short, trainingPrefs.getString("type_$key", "rest") ?: "rest", trainingPrefs.getString("kardio_type_$key", "rest") ?: "rest")
+        }
+        strip.render(days, selectedDay, (java.time.LocalDate.now().dayOfWeek.value - 1).coerceIn(0, 6), isKardioMode) { typeColor(it) }
+    }
+
     private fun updateStats(view: View) {
+        refreshStrip()
         var full = 0; var a = 0; var b = 0; var c = 0; var rest = 0
         val prefix    = if (isKardioMode) "kardio_type_" else "type_"
         val typeFull  = if (isKardioMode) "stairs" else "full"
@@ -623,7 +643,7 @@ class PlanFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: PlanViewHolder, position: Int) {
-            val (englishName, resId, shortCz) = daysMap[position]
+            val (englishName, resId, shortCz) = daysMap[selectedDay]
             holder.tvDay.text     = shortCz
             holder.tvDayFull.text = getString(resId)
             applyCardTheme(holder, isKardioMode)
@@ -815,7 +835,7 @@ class PlanFragment : Fragment() {
         }
 
         private fun showKardioPicker(dayEnglish: String, holder: PlanViewHolder) {
-            val dayCz = getString(daysMap[holder.adapterPosition].second)
+            val dayCz = getString(daysMap[selectedDay].second)
             MakroflowKardioPicker.show(parentFragmentManager, dayEnglish, dayCz) {
                 val currentType = trainingPrefs.getString("kardio_type_$dayEnglish", "rest") ?: "rest"
                 updateKardioPills(holder, dayEnglish, currentType)
@@ -924,6 +944,6 @@ class PlanFragment : Fragment() {
             }
         }
 
-        override fun getItemCount() = daysMap.size
+        override fun getItemCount() = 1
     }
 }
