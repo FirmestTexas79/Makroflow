@@ -54,6 +54,15 @@ class LearningTest {
         assertNull(LearningModel.notice(8, 0.93, seen.copy(lastFactor = 0.93, weekKey = LearningModel.weekKey(sun)), sun))
     }
 
+    @Test fun newRecordComesAfterUnlockAndBeforeEnergyShift() {
+        val seen = TriggerState(unlockedSeen = true, pendingPr = "Bench (1RM ≈ 92 kg)")
+        val n = LearningModel.notice(8, 0.9, seen, wed)!!
+        assertEquals("pr:Bench (1RM ≈ 92 kg)", n.key); assertTrue(n.text.contains("Bench"))
+        assertEquals("unlock", LearningModel.notice(8, 0.9, seen.copy(unlockedSeen = false), wed)!!.key)
+        assertNull(LearningModel.notice(6, 0.9, seen, wed))
+        assertNull(LearningModel.notice(8, 1.0, seen.copy(dismissed = n.key), wed))
+    }
+
     @Test fun dismissedNoticeDoesNotRepeat() {
         assertNull(LearningModel.notice(8, 1.0, TriggerState(dismissed = "unlock"), wed))
     }

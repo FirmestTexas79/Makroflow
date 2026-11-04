@@ -43,10 +43,10 @@ class WorkoutSummarySheet : BottomSheetDialogFragment() {
         private const val TAG = "WorkoutSummarySheet"
         /** [date] = den výpisu (yyyy-MM-dd); výchozí je dnešek. [startedAt] a [rewarded] platí jen pro právě dokončený trénink. */
         fun show(fm: FragmentManager, title: String, key: String, startedAt: Long = 0L, rewarded: Boolean = false,
-                 date: String = LocalDate.now().toString()) {
+                 date: String = LocalDate.now().toString(), fresh: Boolean = false) {
             if (fm.findFragmentByTag(TAG) != null) return
             WorkoutSummarySheet().apply {
-                arguments = bundleOf("title" to title, "key" to key, "start" to startedAt, "rew" to rewarded, "date" to date)
+                arguments = bundleOf("title" to title, "key" to key, "start" to startedAt, "rew" to rewarded, "date" to date, "fresh" to fresh)
             }.show(fm, TAG)
         }
     }
@@ -85,13 +85,16 @@ class WorkoutSummarySheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val app = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
+            val date = requireArguments().getString("date") ?: LocalDate.now().toString()
             val data = withContext(Dispatchers.IO) {
-                val db = AppDatabase.getDatabase(app)
-                val today = requireArguments().getString("date") ?: LocalDate.now().toString()
-                Data(db.workoutDao().getAllSync(),
-                    db.wearableDao().getActivitiesSync(today).filter { ActivityGroups.of(it.typeKey) == SportGroup.STRENGTH },
-                    GarminKeyStore.hasKey(app))
+                runCatching {
+                    val db = AppDatabase.getDatabase(app)
+                    Data(db.workoutDao().getAllSync(),
+                        db.wearableDao().getActivitiesSync(date).filter { ActivityGroups.of(it.typeKey) == SportGroup.STRENGTH },
+                        GarminKeyStore.hasKey(app))
+                }.getOrElse { android.util.Log.e("WorkoutSummary", "load failed", it); null }
             }
+            if (data == null) { dismiss(); return@launch }
             build(data)
         }
     }
@@ -151,7 +154,7 @@ class WorkoutSummarySheet : BottomSheetDialogFragment() {
             background = round(dark, 28f); setPadding(dp(22f), dp(18f), dp(10f), dp(18f))
             addView(LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
-                addView(tv("Trénink hotový", 13f, warm, black = true))
+                addView(tv(if (today == LocalDate.now()) "Trénink hotový" else "Trénink", 13f, warm, black = true))
                 addView(tv(if (minutes > 0) "$minutes min" else "–", 48f, cream, black = true).apply { setPadding(0, dp(2f), 0, 0) })
                 addView(tv(args.getString("title").orEmpty(), 15f, cream, alpha = 0.85f))
                 addView(tv("${today.dayOfMonth}. ${today.monthValue}.", 13f, cream, alpha = 0.6f))
@@ -174,6 +177,11 @@ class WorkoutSummarySheet : BottomSheetDialogFragment() {
                 val prev = before[id]?.maxOfOrNull { e1rm(it) } ?: return@mapNotNull null
                 val best = sets.maxByOrNull { e1rm(it) } ?: return@mapNotNull null
                 if (e1rm(best) > prev * 1.01) (ExerciseLibrary.byId(id)?.name ?: id) to best else null
+            }
+            // Rekord hned po dokončení tréninku se oznámí i na Dashboardu (ne při pozdějším otevření výpisu)
+            if (records.isNotEmpty() && args.getBoolean("fresh")) {
+                cz.uhk.macroflow.learning.LearningData.setPendingPr(requireContext(),
+                    records.joinToString(", ") { (name, s) -> "$name (1RM ≈ ${LogSetSheet.kg(e1rm(s))} kg)" })
             }
             val heaviest = mine.maxWithOrNull(compareBy<WorkoutSetEntity>({ it.weightKg }, { it.reps }))
             if (heaviest != null || records.isNotEmpty()) {

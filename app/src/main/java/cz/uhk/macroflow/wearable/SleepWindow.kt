@@ -110,7 +110,7 @@ object SleepCard {
                 val days = withContext(Dispatchers.IO) {
                     if (GarminKeyStore.hasKey(app)) runCatching { WearableSync.runIfStale(app) }
                     val today = LocalDate.now()
-                    AppDatabase.getDatabase(app).wearableDao().getDaysSync(today.minusDays(8).toString(), today.toString())
+                    runCatching { AppDatabase.getDatabase(app).wearableDao().getDaysSync(today.minusDays(8).toString(), today.toString()) }.getOrDefault(emptyList())
                 }
                 val last = latestNight(days)
                 card.visibility = if (last != null || GarminKeyStore.hasKey(app)) View.VISIBLE else View.GONE

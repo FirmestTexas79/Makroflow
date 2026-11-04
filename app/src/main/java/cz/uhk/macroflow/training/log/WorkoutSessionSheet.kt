@@ -139,8 +139,8 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
             val q = cz.uhk.macroflow.training.QuickWorkout.today(ctx)
             val running = q?.running() == true
             val startedAt = q?.startedAt ?: 0L
-            if (running) cz.uhk.macroflow.training.QuickWorkout.finish(ctx, done = true) else cz.uhk.macroflow.training.QuickWorkout.markEnded(ctx)
-            WorkoutSummarySheet.show(fm, title, k, startedAt, running)
+            runCatching { if (running) cz.uhk.macroflow.training.QuickWorkout.finish(ctx, done = true) else cz.uhk.macroflow.training.QuickWorkout.markEnded(ctx) }
+            WorkoutSummarySheet.show(fm, title, k, startedAt, running, fresh = true)
             dismiss()
         }
     }

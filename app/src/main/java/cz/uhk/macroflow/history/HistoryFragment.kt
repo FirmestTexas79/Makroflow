@@ -301,6 +301,21 @@ class HistoryFragment : Fragment() {
 
             tvTraining.text = targetData.trainingType
 
+            // Den s tréninkem: klepnutí na řádek otevře výpis
+            val daySets = withContext(Dispatchers.IO) {
+                runCatching { db.workoutDao().getAllSync().filter { it.date == dateKey } }.getOrDefault(emptyList())
+            }
+            if (daySets.isNotEmpty()) {
+                val tpl = daySets.groupBy { it.template }.maxByOrNull { it.value.size }?.key
+                val title = tpl?.let { runCatching { cz.uhk.macroflow.training.log.WorkoutTemplates.label(it) }.getOrNull() } ?: "Trénink"
+                tvTraining.text = "${targetData.trainingType} · výpis ›"
+                tvTraining.setOnClickListener {
+                    cz.uhk.macroflow.training.log.WorkoutSummarySheet.show(childFragmentManager, title, tpl ?: "", 0L, false, dateKey)
+                }
+            } else {
+                tvTraining.setOnClickListener(null); tvTraining.isClickable = false
+            }
+
             // 7. BIOLOGICKÁ PROJEKCE A SYMETRIE
             updateProjection(dateKey)
             updateSymmetry(dateKey)

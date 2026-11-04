@@ -36,7 +36,9 @@ data class Report(val daysUsed: Int, val unlocked: Boolean, val items: List<Lear
 }
 
 data class TriggerState(val unlockedSeen: Boolean = false, val lastFactor: Double? = null,
-                        val weekKey: String? = null, val dismissed: String? = null)
+                        val weekKey: String? = null, val dismissed: String? = null,
+                        /** Rekord z posledního tréninku, o kterém uživatel ještě neví (např. „Bench (1RM ≈ 92 kg)“). */
+                        val pendingPr: String? = null)
 data class Notice(val key: String, val text: String)
 
 /** Čistá logika bez Androidu: z dat udělá poznatky a rozhodne, kdy upozornit. */
@@ -105,13 +107,14 @@ object LearningModel {
     fun weekKey(d: LocalDate) = "${d.get(IsoFields.WEEK_BASED_YEAR)}-W${d.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}"
 
     /**
-     * Jedno upozornění na Dashboardu, nebo null. Pořadí: odemčení po 7 dnech, výrazný posun odhadu výdeje (≥ 5 %),
+     * Jedno upozornění na Dashboardu, nebo null. Pořadí: odemčení po 7 dnech, nový silový rekord, výrazný posun odhadu výdeje (≥ 5 %),
      * týdenní shrnutí v neděli. Už zavřené upozornění ([TriggerState.dismissed]) se neopakuje.
      */
     fun notice(daysUsed: Int, factor: Double?, s: TriggerState, today: LocalDate): Notice? {
         if (daysUsed < UNLOCK_DAYS) return null
         val n = when {
             !s.unlockedSeen -> Notice("unlock", "Odemkla se nová obrazovka Co se aplikace naučila. Najdeš ji v Profilu.")
+            s.pendingPr != null -> Notice("pr:${s.pendingPr}", "Nový rekord: ${s.pendingPr}. Podívej se, co se o tobě aplikace naučila.")
             factor != null && abs(factor - (s.lastFactor ?: 1.0)) >= 0.05 -> {
                 val pct = ((factor - 1) * 100).roundToInt()
                 Notice("energy:$pct", "Odhad tvého výdeje se posunul na ${signed(pct)} % oproti rovnici.")
