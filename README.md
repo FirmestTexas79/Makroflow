@@ -1,5 +1,5 @@
 <h1>Privacy Policy</h1>
-<p>Last updated: March 24, 2026</p>
+<p>Last updated: November 4, 2026</p>
 <p>This Privacy Policy describes Our policies and procedures on the collection, use and disclosure of Your information when You use the Service and tells You about Your privacy rights and how the law protects You.</p>
 <p>We use Your Personal Data to provide and improve the Service. By using the Service, You agree to the collection and use of information in accordance with this Privacy Policy. This Privacy Policy has been created with the help of the <a href="https://www.termsfeed.com/privacy-policy-generator/" target="_blank">Privacy Policy Generator</a>.</p>
 <h2>Interpretation and Definitions</h2>
@@ -62,6 +62,22 @@
 </ul>
 <p>We use this information to provide features of Our Service, to improve and customize Our Service. The information may be uploaded to the Company's servers and/or a Service Provider's server or it may be simply stored on Your device.</p>
 <p>You can enable or disable access to this information at any time, through Your Device settings.</p>
+<h4>Health and Fitness Data (Health Connect and Smartwatches)</h4>
+<p>Makroflow can read health and fitness data from Android Health Connect and, if You enter Your own Garmin personal API key, from Garmin's servers. This is optional and works only after You grant permission. You can use the app without it.</p>
+<p>The data types We read are: sleep sessions (including sleep stages), steps, heart rate, resting heart rate, active and total calories burned, and exercise sessions. We read them only to show Your sleep, energy expenditure and training in the app, to estimate Your energy needs and to adjust suggestions for Your meals and training.</p>
+<ul>
+<li>This data is stored only on Your device. We do not upload it to Our servers or to Firebase, and We do not sell it or share it with third parties.</li>
+<li>We do not use it for advertising or for creditworthiness, insurance or similar decisions.</li>
+<li>Values that You confirm yourself in the morning ritual (for example a 1-5 sleep rating that may be pre-filled from Your watch) are saved like any other entry. If You are signed in, they are included in the cloud backup described below.</li>
+<li>You can withdraw permission at any time in Health Connect settings or in the app (Settings, watch connection). Clearing the app data or uninstalling the app removes the stored copy.</li>
+<li>If You use a Garmin key, the app contacts Garmin directly from Your device. The key is stored encrypted on Your device and is never sent to Us.</li>
+</ul>
+<p>Makroflow's use and transfer of information received from Health Connect adheres to the Health Connect Permissions policy, including the Limited Use requirements. Makroflow is not a medical device and does not provide medical advice.</p>
+<h4>Account and Cloud Backup</h4>
+<p>If You sign in, Your profile, training plan, morning check-ins, water log, custom snacks and logged workout sets are stored in Google Firebase (Cloud Firestore and Firebase Authentication) under Your account so that they can be restored on another device. Without signing in, this data stays only on Your device.</p>
+<h4>Food Photo Analysis</h4>
+<p>If You use the optional photo analysis of food, the photo is sent to the Google Gemini API to estimate the food and its nutritional values. We do not store the photo on Our servers. Barcode scanning and barbell tracking by camera are processed on Your device.</p>
+
 <h3>Use of Your Personal Data</h3>
 <p>The Company may use Personal Data for the following purposes:</p>
 <ul>
