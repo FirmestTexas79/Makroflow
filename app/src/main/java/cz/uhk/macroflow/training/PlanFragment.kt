@@ -389,6 +389,9 @@ class PlanFragment : Fragment() {
                 sub.text = if (doneToday > 0) "$count cviků · dnes zapsáno $doneToday sérií"
                     else "$count cviků · střídá se s ${WorkoutTemplates.label(WorkoutTemplates.key(kind, if (variant == 'A') 'B' else 'A'))}"
                 start.text = if (doneToday > 0) "Pokračovat" else "Začít trénink"
+                val summaryBtn = view.findViewById<View>(R.id.btnWorkoutSummary)
+                summaryBtn.visibility = if (doneToday > 0) View.VISIBLE else View.GONE
+                summaryBtn.setOnClickListener { cz.uhk.macroflow.training.log.WorkoutSummarySheet.show(childFragmentManager, title.text.toString(), key) }
                 start.setOnClickListener { WorkoutSessionSheet.show(childFragmentManager, kind, variant) }
             } else {
                 title.text = "Bez šablony"

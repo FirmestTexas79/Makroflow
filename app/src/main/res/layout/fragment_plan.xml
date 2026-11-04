@@ -232,6 +232,16 @@
                             app:iconTint="@color/brand_dark" />
 
                         <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnWorkoutSummary"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="52dp"
+                            android:layout_marginStart="8dp"
+                            android:text="Výpis"
+                            android:textColor="@color/brand_accent_warm"
+                            android:visibility="gone" />
+
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnPickWorkout"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"

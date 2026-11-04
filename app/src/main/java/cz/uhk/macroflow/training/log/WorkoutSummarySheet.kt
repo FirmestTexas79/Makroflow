@@ -41,10 +41,12 @@ class WorkoutSummarySheet : BottomSheetDialogFragment() {
 
     companion object {
         private const val TAG = "WorkoutSummarySheet"
-        fun show(fm: FragmentManager, title: String, key: String, startedAt: Long, rewarded: Boolean) {
+        /** [date] = den výpisu (yyyy-MM-dd); výchozí je dnešek. [startedAt] a [rewarded] platí jen pro právě dokončený trénink. */
+        fun show(fm: FragmentManager, title: String, key: String, startedAt: Long = 0L, rewarded: Boolean = false,
+                 date: String = LocalDate.now().toString()) {
             if (fm.findFragmentByTag(TAG) != null) return
             WorkoutSummarySheet().apply {
-                arguments = bundleOf("title" to title, "key" to key, "start" to startedAt, "rew" to rewarded)
+                arguments = bundleOf("title" to title, "key" to key, "start" to startedAt, "rew" to rewarded, "date" to date)
             }.show(fm, TAG)
         }
     }
@@ -85,7 +87,7 @@ class WorkoutSummarySheet : BottomSheetDialogFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val data = withContext(Dispatchers.IO) {
                 val db = AppDatabase.getDatabase(app)
-                val today = LocalDate.now().toString()
+                val today = requireArguments().getString("date") ?: LocalDate.now().toString()
                 Data(db.workoutDao().getAllSync(),
                     db.wearableDao().getActivitiesSync(today).filter { ActivityGroups.of(it.typeKey) == SportGroup.STRENGTH },
                     GarminKeyStore.hasKey(app))
@@ -119,7 +121,7 @@ class WorkoutSummarySheet : BottomSheetDialogFragment() {
 
     private fun build(data: Data) {
         val args = requireArguments()
-        val today = LocalDate.now()
+        val today = args.getString("date")?.let { LocalDate.parse(it) } ?: LocalDate.now()
         val key = args.getString("key")
         val startedAt = args.getLong("start")
         val rewarded = args.getBoolean("rew")
@@ -134,12 +136,28 @@ class WorkoutSummarySheet : BottomSheetDialogFragment() {
             val end = if (startedAt > 0) maxOf(System.currentTimeMillis(), mine.last().createdAt) else mine.last().createdAt
             ((end - start) / 60_000).toInt().coerceAtLeast(0)
         }
+        // Hrdina: vlevo čas a název, vpravo postava s rozsvícenými svaly, které dnes dostaly nejvíc práce
+        val intensity = mine.groupBy { it.exerciseId }.flatMap { (id, sets) ->
+            (ExerciseLibrary.byId(id)?.primary ?: emptySet()).map { m -> m to sets.size / 4.0 }
+        }.groupBy({ it.first }, { it.second }).mapValues { (_, v) -> (v.sum() + 0.25).coerceAtMost(1.0) }
+        val body = cz.uhk.macroflow.training.body.BodyMapView(requireContext()).apply {
+            showCaptions = false; sides = listOf(cz.uhk.macroflow.training.body.BodySide.FRONT)
+            baseColor = Color.parseColor("#3B4A28"); idleMuscleColor = Color.parseColor("#4A5A33"); outlineColor = cream
+            setIntensities(intensity, warm)
+            contentDescription = "Zatížené svaly"
+        }
         col.addView(LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL; background = round(dark, 28f); setPadding(dp(22f), dp(18f), dp(22f), dp(20f))
-            addView(tv("TRÉNINK HOTOVÝ", 11f, warm, black = true).apply { letterSpacing = 0.12f })
-            addView(tv(if (minutes > 0) "$minutes min" else "–", 48f, cream, black = true).apply { setPadding(0, dp(4f), 0, 0) })
-            addView(tv("${args.getString("title").orEmpty()} · ${today.dayOfMonth}. ${today.monthValue}.", 14f, cream, alpha = 0.8f))
-            if (rewarded) addView(tv("+15 ⚡ Energie čeká v Makrosvětu.", 13f, warm).apply { setPadding(0, dp(10f), 0, 0) })
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            background = round(dark, 28f); setPadding(dp(22f), dp(18f), dp(10f), dp(18f))
+            addView(LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(tv("Trénink hotový", 13f, warm, black = true))
+                addView(tv(if (minutes > 0) "$minutes min" else "–", 48f, cream, black = true).apply { setPadding(0, dp(2f), 0, 0) })
+                addView(tv(args.getString("title").orEmpty(), 15f, cream, alpha = 0.85f))
+                addView(tv("${today.dayOfMonth}. ${today.monthValue}.", 13f, cream, alpha = 0.6f))
+                if (rewarded) addView(tv("+15 ⚡ Energie čeká v Makrosvětu.", 13f, warm).apply { setPadding(0, dp(10f), 0, 0) })
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            addView(body, LinearLayout.LayoutParams(dp(120f), dp(190f)))
         })
 
         if (mine.isEmpty()) {
