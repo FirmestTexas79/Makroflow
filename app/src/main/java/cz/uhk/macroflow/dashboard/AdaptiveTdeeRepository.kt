@@ -49,6 +49,9 @@ object AdaptiveTdeeRepository {
         WearableCompare.compare(pairs, e.observedTdee)?.let {
             Log.d("WearableCompare", "%d dni: model %.0f (%.1f %%) garmin %.0f (%.1f %%) realita %.0f -> vaha garminu %.2f".format(
                 it.days, it.modelMean, it.modelErrPct, it.garminMean, it.garminErrPct, it.observed, it.garminWeight))
+            context.getSharedPreferences("WearableCompare", Context.MODE_PRIVATE).edit().putInt("days", it.days)
+                .putFloat("modelErr", it.modelErrPct.toFloat()).putFloat("garminErr", it.garminErrPct.toFloat())
+                .putFloat("garminWeight", it.garminWeight.toFloat()).apply()
         }
 
         db.adaptiveTdeeDao().upsert(

@@ -102,6 +102,17 @@ class ProfileFragment : Fragment() {
 
         view.findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveAllData() }
         view.findViewById<View>(R.id.cardOptionalMetrics).setOnClickListener { showMetricsBottomSheet() }
+        view.findViewById<View>(R.id.cardLearning).setOnClickListener { cz.uhk.macroflow.learning.LearningSheet.show(childFragmentManager) }
+        val appCtx = requireContext().applicationContext
+        Thread {
+            val days = runCatching { cz.uhk.macroflow.learning.LearningData.quick(appCtx).daysUsed }.getOrDefault(0)
+            val unlock = cz.uhk.macroflow.learning.LearningModel.UNLOCK_DAYS
+            view.post {
+                view.findViewById<TextView>(R.id.tvLearningSub)?.text =
+                    if (days >= unlock) "Čím se tvoje aplikace liší od výchozí"
+                    else "Odemkne se za ${cz.uhk.macroflow.learning.LearningModel.days((unlock - days).coerceAtLeast(1))}"
+            }
+        }.start()
 
         setupAccountSection(view)
 

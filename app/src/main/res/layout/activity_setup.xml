@@ -315,6 +315,17 @@
 
                 <View style="@style/ProfDivider" />
 
+                <LinearLayout android:id="@+id/cardLearning" style="@style/ProfRow">
+                    <TextView style="@style/ProfRowIcon" android:text="🌱" />
+                    <LinearLayout style="@style/ProfileOptionTexts">
+                        <TextView style="@style/ProfileOptionTitle" android:text="Co se aplikace naučila" />
+                        <TextView android:id="@+id/tvLearningSub" style="@style/ProfileOptionSub" android:text="Poznatky z tvých dat" />
+                    </LinearLayout>
+                    <ImageView style="@style/ProfRowChevron" />
+                </LinearLayout>
+
+                <View style="@style/ProfDivider" />
+
                 <LinearLayout android:id="@+id/cardOptionalMetrics" style="@style/ProfRow">
                     <TextView style="@style/ProfRowIcon" android:text="📏" />
                     <LinearLayout style="@style/ProfileOptionTexts">
