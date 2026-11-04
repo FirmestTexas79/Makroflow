@@ -49,6 +49,8 @@ object HealthConnectSource {
         HealthPermission.getReadPermission(ExerciseSessionRecord::class)
     )
     val permissions: Set<String> get() = readPermissions
+    /** Co se vyp\u00ED\u0161e v \u017E\u00E1dosti o povolen\u00ED: ke \u010Dten\u00ED nav\u00EDc i na pozad\u00ED (Android 14+). */
+    val requestSet: Set<String> get() = if (android.os.Build.VERSION.SDK_INT >= 34) readPermissions + "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" else readPermissions
 
     private fun prefs(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     fun isEnabled(ctx: Context) = prefs(ctx).getBoolean(K_ON, false)

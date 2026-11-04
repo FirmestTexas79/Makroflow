@@ -132,7 +132,7 @@ class WatchSetupSheet : BottomSheetDialogFragment() {
         root.addView(body("Až to máš zapnuté, povol aplikaci číst tyto údaje.", 14))
         when (HealthConnectSource.status(ctx)) {
             HealthConnectSource.Status.AVAILABLE -> {
-                root.addView(button("Povolit čtení dat") { perm.launch(HealthConnectSource.permissions) })
+                root.addView(button("Povolit čtení dat") { perm.launch(HealthConnectSource.requestSet) })
                 root.addView(button("Otevřít Health Connect", primary = false) { open(Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)) })
                 root.addView(body("Kdyby se okno s povolením neukázalo (Android ho po dvou odmítnutích přestane zobrazovat), povol čtení ručně v Health Connect → Přístup aplikací → Makroflow.", 10))
             }
