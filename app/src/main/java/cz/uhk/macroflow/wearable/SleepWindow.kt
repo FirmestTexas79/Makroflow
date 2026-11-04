@@ -251,8 +251,25 @@ class SleepWindow : DialogFragment() {
             heading(ctx, "Stavba noci")
             fun state(p: Float, lo: Int, hi: Int) = if (p < lo) "málo" else if (p > hi) "moc" else "ok"
             val dp = pct(night.deepSec); val rp = pct(night.remSec); val lp = pct(night.lightSec); val ap = pct(night.awakeSec)
+            col.addView(StagesMoonView(ctx, listOf(dp to P_PERI, rp to P_LAV, lp to P_SKY, ap to P_PEACH)).apply {
+                contentDescription = "Složení noci: hluboký ${dp.toInt()} %, REM ${rp.toInt()} %, lehký ${lp.toInt()} %, vzhůru ${ap.toInt()} %"
+            }, LinearLayout.LayoutParams(-1, (120 * d).toInt()))
+            col.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                fun leg(name: String, p: Float, color: Int) = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
+                    addView(LinearLayout(ctx).apply {
+                        gravity = Gravity.CENTER_VERTICAL
+                        addView(View(ctx).apply { background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(color) } }, LinearLayout.LayoutParams((10 * d).toInt(), (10 * d).toInt()).apply { rightMargin = (6 * d).toInt() })
+                        addView(TextView(ctx).apply { text = "${p.toInt()} %"; setTextColor(TXT); textSize = 16f; typeface = Typeface.create("sans-serif-black", Typeface.NORMAL) })
+                    })
+                    addView(TextView(ctx).apply { text = name; setTextColor(TXT2); textSize = 12f })
+                }
+                listOf(leg("Hluboký", dp, P_PERI), leg("REM", rp, P_LAV), leg("Lehký", lp, P_SKY), leg("Vzhůru", ap, P_PEACH))
+                    .forEach { addView(it, LinearLayout.LayoutParams(0, -2, 1f)) }
+            }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = (12 * d).toInt() })
             col.addView(pair(ctx,
-                blob(ctx, "Hluboký", "${(night.deepSec ?: 0) / 60} min", state(dp, 16, 33), P_PERI, "${dp.toInt()} %"),
+                blob(ctx, "Hluboký","${(night.deepSec ?: 0) / 60} min", state(dp, 16, 33), P_PERI, "${dp.toInt()} %"),
                 blob(ctx, "REM", "${(night.remSec ?: 0) / 60} min", state(rp, 21, 31), P_LAV, "${rp.toInt()} %")))
             col.addView(pair(ctx,
                 blob(ctx, "Lehký", "${(night.lightSec ?: 0) / 60} min", state(lp, 30, 64), P_SKY, "${lp.toInt()} %"),
@@ -327,7 +344,9 @@ class SleepWindow : DialogFragment() {
 
         sub("Noc v číslech")
         night.sleepScore?.let { c.addView(kv(ctx, "Skóre", "$it")) }
-        c.addView(kv(ctx, "Hluboký / REM / lehký / vzhůru", "${fmtDur(night.deepSec)} / ${fmtDur(night.remSec)} / ${fmtDur(night.lightSec)} / ${fmtDur(night.awakeSec)}"))
+        val tot = (night.sleepSec ?: 1).coerceAtLeast(1)
+        fun stage(name: String, sec: Int?) = c.addView(kv(ctx, name, "${fmtDur(sec)} · ${(sec ?: 0) * 100 / tot} %"))
+        stage("Hluboký", night.deepSec); stage("REM", night.remSec); stage("Lehký", night.lightSec); stage("Vzhůru", night.awakeSec)
         night.avgResp?.let { c.addView(kv(ctx, "Dech", "${it.toInt()} / min")) }
         night.sleepAvgHr?.let { c.addView(kv(ctx, "Tep ve spánku", "${it.toInt()}")) }
         night.sleepStress?.let { c.addView(kv(ctx, "Stres ve spánku", "${it.toInt()}")) }
@@ -528,6 +547,41 @@ class MoonView(ctx: Context, private val animate: Boolean) : View(ctx) {
         c.drawPath(litPath(cx, cy, r, shown), paint)
         paint.reset(); paint.isAntiAlias = true; paint.style = Paint.Style.STROKE; paint.strokeWidth = 2 * d; paint.color = Color.argb(120, 200, 215, 245)
         c.drawCircle(cx, cy, r, paint)
+    }
+}
+
+/** Půlměsíc ze čtyř barevných oblouků: podíl hlubokého, REM, lehkého spánku a bdění. */
+class StagesMoonView(ctx: Context, private val parts: List<Pair<Float, Int>>) : View(ctx) {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    init { setLayerType(LAYER_TYPE_SOFTWARE, null) }
+
+    override fun onDraw(c: Canvas) {
+        val d = resources.displayMetrics.density
+        val sw = 28 * d
+        val r = min(width / 2f - sw / 2 - 6 * d, height - sw / 2 - 14 * d)
+        if (r <= 0f) return
+        val cx = width / 2f; val cy = height - 10 * d
+        val rect = RectF(cx - r, cy - r, cx + r, cy + r)
+        val total = parts.sumOf { it.first.toDouble() }.toFloat()
+        var start = 180f
+        val gap = 2.5f
+        paint.reset(); paint.isAntiAlias = true; paint.style = Paint.Style.STROKE; paint.strokeWidth = sw; paint.strokeCap = Paint.Cap.BUTT
+        if (total <= 0f) { paint.color = Color.argb(60, 255, 255, 255); c.drawArc(rect, 180f, 180f, false, paint) }
+        else parts.forEach { (v, color) ->
+            val sweep = 180f * v / total
+            if (sweep <= 0.2f) return@forEach
+            val a0 = start + gap / 2; val sw2 = maxOf(sweep - gap, 0.4f)
+            paint.reset(); paint.isAntiAlias = true; paint.style = Paint.Style.STROKE; paint.strokeWidth = sw
+            paint.color = ColorUtils.blendARGB(color, Color.parseColor("#4B4FA0"), 0.22f)
+            c.drawArc(rect, a0, sw2, false, paint)
+            paint.strokeWidth = sw * 0.5f; paint.color = ColorUtils.blendARGB(color, Color.WHITE, 0.45f)
+            paint.maskFilter = BlurMaskFilter(3 * d, BlurMaskFilter.Blur.NORMAL)
+            c.drawArc(RectF(rect.left + sw * 0.1f, rect.top + sw * 0.1f, rect.right - sw * 0.1f, rect.bottom - sw * 0.1f), a0, sw2, false, paint)
+            start += sweep
+        }
+        val my = cy - (r - sw / 2) * 0.45f; val mr = 17 * d
+        paint.reset(); paint.isAntiAlias = true; paint.color = Color.parseColor("#101F55"); c.drawCircle(cx, my, mr, paint)
+        paint.color = MOON; c.drawPath(litPath(cx, my, mr, 0.3f), paint)
     }
 }
 
