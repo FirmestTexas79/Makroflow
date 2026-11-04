@@ -174,6 +174,9 @@ class MainActivity : AppCompatActivity() {
         runItemSpawner()
         // Větvený vývoj Spirry podle toho, co s ní děláš (docs/adr/0031)
         checkSpirraEvolution()
+        // Hodinky: kdyz je v aplikaci neco noveho (trenink, spanek), stahne se to samo, nejvys jednou za 10 minut
+        val hubApp = applicationContext
+        Thread { runCatching { cz.uhk.macroflow.wearable.WearableHub.runIfStale(hubApp, 10 * 60_000L) } }.start()
     }
 
     /** Větvený vývoj Spirry: od levelu 12 do cesty, kterou splnila první (docs/adr/0031, 0055). */
