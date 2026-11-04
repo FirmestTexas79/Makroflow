@@ -59,10 +59,13 @@ class DashboardFragment : Fragment() {
         return inflater.inflate(R.layout.activity_dashboard, container, false)
     }
 
+    private var sleepCardRefresh: (() -> Unit)? = null
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val coachCard = view.findViewById<MaterialCardView>(R.id.cardCoachAdvice)
+        sleepCardRefresh = cz.uhk.macroflow.wearable.SleepCard.attach(coachCard, this)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveRitual)
 
         val tvTodaySteps = view.findViewById<TextView>(R.id.tvTotalStepsCount)
@@ -111,6 +114,15 @@ class DashboardFragment : Fragment() {
                     view.findViewById<Slider>(R.id.sliderEnergy).value = todayCheckIn.energyLevel.toFloat()
                     view.findViewById<Slider>(R.id.sliderSleep).value  = todayCheckIn.sleepQuality.toFloat()
                     view.findViewById<Slider>(R.id.sliderHunger).value = todayCheckIn.hungerLevel.toFloat()
+                } else {
+                    // Bez hodinek (nebo bez dnesni noci) se nic nepredvyplni a rituál zustane jako dřív
+                    val pre = withContext(Dispatchers.IO) { runCatching { cz.uhk.macroflow.wearable.RitualPrefill.forToday(requireContext().applicationContext) }.getOrNull() }
+                    if (pre != null) {
+                        view.findViewById<Slider>(R.id.sliderEnergy).value = pre.energy.toFloat()
+                        view.findViewById<Slider>(R.id.sliderSleep).value  = pre.sleep.toFloat()
+                        view.findViewById<Slider>(R.id.sliderHunger).value = pre.hunger.toFloat()
+                        android.widget.Toast.makeText(requireContext(), "Předvyplněno podle hodinek – uprav, co nesedí.", android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
 
                 showRitual(view, true)
@@ -181,6 +193,7 @@ class DashboardFragment : Fragment() {
             updateWaterUI(view, status)
             updateTrainingStatusUI(view, context)
             updateWorkoutCard(view)
+            sleepCardRefresh?.invoke()
         }
     }
 
@@ -194,6 +207,8 @@ class DashboardFragment : Fragment() {
         requireContext()
             .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
             .edit { putString("weightAkt", weightVal.toString()) }
+
+        cz.uhk.macroflow.wearable.RitualPrefill.record(requireContext(), today, sleep, energy, hunger)
 
         val checkInEntity = CheckInEntity(
             date         = today,

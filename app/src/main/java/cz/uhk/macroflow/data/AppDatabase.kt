@@ -37,9 +37,11 @@ import kotlin.concurrent.thread
         BarbellRepEntity::class,
         WorkoutSetEntity::class,
         WorkoutTemplateEntity::class,
-        MealTemplateEntity::class
+        MealTemplateEntity::class,
+        cz.uhk.macroflow.wearable.WearableDayEntity::class,
+        cz.uhk.macroflow.wearable.WearableActivityEntity::class
     ],
-    version = 41,
+    version = 42,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -65,6 +67,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun barbellDao(): BarbellDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun mealTemplateDao(): MealTemplateDao
+    abstract fun wearableDao(): cz.uhk.macroflow.wearable.WearableDao
 
     companion object {
 
@@ -80,6 +83,13 @@ abstract class AppDatabase : RoomDatabase() {
 
 
         /** v41: stálé ID chyceného Makromona (docs/adr/0076, stávající dostanou náhodné) a původní trenér (0077). */
+        /** v42: data z hodinek (Garmin / Health Connect) - dny a aktivity. */
+        val MIGRATION_41_42 = object : Migration(41, 42) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `wearable_day` (`date` TEXT NOT NULL, `source` TEXT NOT NULL, `totalKcal` INTEGER, `activeKcal` INTEGER, `restingKcal` INTEGER, `steps` INTEGER, `restingHr` INTEGER, `stressAvg` INTEGER, `bbMin` INTEGER, `bbMax` INTEGER, `bbSleepGain` INTEGER, `sleepSec` INTEGER, `deepSec` INTEGER, `lightSec` INTEGER, `remSec` INTEGER, `awakeSec` INTEGER, `sleepStartMs` INTEGER, `sleepEndMs` INTEGER, `sleepScore` INTEGER, `awakeCount` INTEGER, `avgSpo2` REAL, `lowSpo2` INTEGER, `avgResp` REAL, `sleepStress` REAL, `sleepAvgHr` REAL, `syncedAt` INTEGER NOT NULL, PRIMARY KEY(`date`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `wearable_activity` (`id` INTEGER NOT NULL, `date` TEXT NOT NULL, `startLocal` TEXT NOT NULL, `typeKey` TEXT NOT NULL, `name` TEXT NOT NULL, `kcal` INTEGER, `durationSec` INTEGER NOT NULL, `avgHr` INTEGER, `maxHr` INTEGER, PRIMARY KEY(`id`))")
+            }
+        }
         val MIGRATION_40_41 = object : Migration(40, 41) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `captured_pokemon` ADD COLUMN `uid` TEXT NOT NULL DEFAULT ''")
@@ -193,7 +203,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_40, MIGRATION_40_41)
+                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_40, MIGRATION_40_41, MIGRATION_41_42)
                     // Destruktivní fallback jen pro verze PŘED zavedením migrací.
                     // Od v33 se lokální data uživatelů už nikdy nesmažou potichu:
                     // chybějící migrace = pád při vývoji, ne ztráta dat v produkci.

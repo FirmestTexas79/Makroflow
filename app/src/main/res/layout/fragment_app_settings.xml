@@ -148,6 +148,10 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <TextView style="@style/ProfileSection" android:text="HODINKY" />
+            <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
+                <LinearLayout android:id="@+id/llWearable" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" />
+            </com.google.android.material.card.MaterialCardView>
             <TextView style="@style/ProfileSection" android:text="O APLIKACI" />
             <com.google.android.material.card.MaterialCardView style="@style/ProfileCard">
                 <LinearLayout android:id="@+id/llAbout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="4dp" />

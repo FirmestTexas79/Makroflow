@@ -5,6 +5,8 @@ import android.util.Log
 import cz.uhk.macroflow.data.AdaptiveTdeeEntity
 import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.energy.AdaptiveExpenditure
+import cz.uhk.macroflow.wearable.GarminParser
+import cz.uhk.macroflow.wearable.WearableCompare
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -38,6 +40,17 @@ object AdaptiveTdeeRepository {
         }
 
         val e = AdaptiveExpenditure.estimate(days)
+
+        // Hodinky jako druhy nezavisly odhad vydeje: porovnani model vs. Garmin vs. realita z vahy (jen log, bez zasahu do cilu)
+        val byDay = days.associateBy { it.day }
+        val pairs = db.wearableDao().getDaysSync(today.minusDays(AdaptiveExpenditure.WINDOW_DAYS.toLong()).toString(), today.minusDays(1).toString())
+            .filter { GarminParser.isWorn(it) }
+            .mapNotNull { w -> byDay[LocalDate.parse(w.date).toEpochDay().toInt()]?.let { WearableCompare.Day(it.modelTdeeKcal, w.totalKcal!!.toDouble()) } }
+        WearableCompare.compare(pairs, e.observedTdee)?.let {
+            Log.d("WearableCompare", "%d dni: model %.0f (%.1f %%) garmin %.0f (%.1f %%) realita %.0f -> vaha garminu %.2f".format(
+                it.days, it.modelMean, it.modelErrPct, it.garminMean, it.garminErrPct, it.observed, it.garminWeight))
+        }
+
         db.adaptiveTdeeDao().upsert(
             AdaptiveTdeeEntity(
                 date = today.toString(),
