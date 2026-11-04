@@ -79,20 +79,29 @@ object GarminKeyStore {
 }
 
 object WearableSync {
-    /** Stahne poslednich [days] dni a ulozi je. Volat mimo hlavni vlakno. Bez klice / bez hodinek nic nedela. Vraci pocet dni. */
-    fun run(context: Context, days: Int = 14, today: LocalDate = LocalDate.now()): Int {
+    /**
+     * Stahne [days] dni po 14denních blocích a ulozi je. Bez [days]: prvni synchronizace dotahne 90 dni historie, dalsi jen 14.
+     * Volat mimo hlavni vlakno. Bez klice / bez hodinek nic nedela. Vraci pocet dni.
+     */
+    fun run(context: Context, days: Int? = null, today: LocalDate = LocalDate.now()): Int {
         val key = GarminKeyStore.load(context) ?: return 0
         val c = GarminClient(key)
-        val from = today.minusDays(days.toLong())
-        val sleeps = GarminParser.sleeps(c.sleeps(from, today)).associateBy { it.date }
-        val merged = GarminParser.summaries(c.summaries(from, today)).map { GarminParser.merge(it, sleeps[it.date]) }
-        val acts = GarminParser.activities(c.activities(from, today))
         val dao = AppDatabase.getDatabase(context).wearableDao()
-        dao.upsertDays(merged)
-        dao.upsertActivities(acts)
-        return merged.size
+        var left = days ?: if (dao.countSync() < 45) 90 else 14
+        var end = today
+        var total = 0
+        while (left > 0) {
+            val span = minOf(left, 14)
+            val from = end.minusDays(span - 1L)
+            val sleeps = GarminParser.sleeps(c.sleeps(from, end)).associateBy { it.date }
+            val merged = GarminParser.summaries(c.summaries(from, end)).map { GarminParser.merge(it, sleeps[it.date]) }
+            dao.upsertDays(merged)
+            dao.upsertActivities(GarminParser.activities(c.activities(from, end)))
+            total += merged.size
+            end = from.minusDays(1); left -= span
+        }
+        return total
     }
-
     /** Sync nejvyse jednou za [maxAgeMs]; chyby sit/klic resi volajici (runCatching). */
     fun runIfStale(context: Context, maxAgeMs: Long = 2 * 3600_000L): Int {
         val prefs = context.getSharedPreferences("WearablePrefs", Context.MODE_PRIVATE)

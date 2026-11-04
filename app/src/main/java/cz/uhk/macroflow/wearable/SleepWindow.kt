@@ -121,6 +121,7 @@ object SleepCard {
 
 class SleepWindow : DialogFragment() {
     private lateinit var col: LinearLayout
+    private var selected: String? = null   // datum zobrazené noci; null = nejnovější
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -150,8 +151,8 @@ class SleepWindow : DialogFragment() {
                 val prefs = app.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
                 val dayName = java.text.SimpleDateFormat("EEEE", Locale.ENGLISH).format(java.util.Date())
                 Data(
-                    dao.getDaysSync(today.minusDays(8).toString(), today.toString()),
-                    dao.getActivitiesSync(today.minusDays(1).toString()) + dao.getActivitiesSync(today.toString()),
+                    dao.getDaysSync(today.minusDays(90).toString(), today.toString()),
+                    dao.getActivitiesBetweenSync(today.minusDays(90).toString(), today.toString()),
                     prefs.getString("type_$dayName", "rest"),
                     (prefs.getString("kardio_type_$dayName", "rest") ?: "rest") != "rest",
                     RitualPrefill.accuracy(app)
@@ -165,8 +166,28 @@ class SleepWindow : DialogFragment() {
         val ctx = requireContext(); val d = ctx.resources.displayMetrics.density
         val days = data.days
         col.removeAllViews()
-        val night = latestNight(days)
+        val nights = days.filter { it.sleepSec != null }.sortedBy { it.date }
+        val night = nights.firstOrNull { it.date == selected } ?: nights.lastOrNull()
         val isToday = night?.date == LocalDate.now().toString()
+        val idx = nights.indexOfFirst { it.date == night?.date }
+
+        // ── Listování nocemi ──
+        if (night != null) col.addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            fun arrow(label: String, desc: String, enabled: Boolean, to: Int) = TextView(ctx).apply {
+                text = label; textSize = 26f; gravity = Gravity.CENTER; setTextColor(if (enabled) TXT else Color.parseColor("#4DBCD0F0"))
+                contentDescription = desc; minimumWidth = (48 * d).toInt(); minimumHeight = (48 * d).toInt()
+                isClickable = enabled; isFocusable = enabled
+                if (enabled) setOnClickListener { selected = nights[to].date; render(data) }
+            }
+            addView(arrow("‹", "Předchozí noc", idx > 0, idx - 1))
+            addView(TextView(ctx).apply {
+                val dt = LocalDate.parse(night.date)
+                text = dt.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("cs")) + " ${dt.dayOfMonth}. ${dt.monthValue}." + if (isToday) " · dnes" else ""
+                setTextColor(TXT); textSize = 15f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            addView(arrow("›", "Další noc", idx < nights.size - 1, idx + 1))
+        })
 
         // ── Hrdina okna: měsíc svítí podle toho, kolik z 8 hodin se přespalo ──
         val frac = ((night?.sleepSec ?: 0) / NEED_SEC.toFloat()).coerceIn(0f, 1f)
@@ -175,7 +196,7 @@ class SleepWindow : DialogFragment() {
         }
         val heroText = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL; setPadding((20 * d).toInt(), 0, 0, 0)
-            addView(small(ctx, if (night == null) "Zatím žádná noc" else if (isToday) "Tuto noc" else "Poslední změřená noc, ${night.date}"))
+            addView(small(ctx, if (night == null) "Zatím žádná noc" else if (isToday) "Tuto noc" else "Noc na ${night.date}"))
             addView(TextView(ctx).apply {
                 setTextColor(TXT); typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
                 text = if (night?.sleepSec == null) "–" else bigDuration(night.sleepSec)
@@ -189,8 +210,19 @@ class SleepWindow : DialogFragment() {
             addView(heroText, LinearLayout.LayoutParams(0, -2, 1f))
         })
         moon.setFraction(frac)
-        if (night != null && !isToday)
+        if (night != null && nights.last().date != LocalDate.now().toString() && night.date == nights.last().date)
             col.addView(small(ctx, "Dnešní noc se ještě nenačetla. Nech hodinky synchronizovat přes Garmin Connect a pak zde.").apply { setPadding(0, (12 * d).toInt(), 0, 0) })
+
+        if (night != null) section(ctx, "Za delší dobu") { c ->
+            val s = SleepInsights.summarize(days, night.date)
+            c.addView(kv(ctx, "Průměr 7 nocí", fmtDur(s.avg7Sec) + (s.trendSec?.let { t -> "  (${if (t >= 0) "+" else "−"}${abs(t) / 60} min)" } ?: "")))
+            c.addView(kv(ctx, "Průměr 30 nocí", "${fmtDur(s.avg30Sec)} · ${s.nights} nocí"))
+            c.addView(kv(ctx, "Dluh za 7 nocí", if (s.debt7Sec == 0) "žádný" else fmtDur(s.debt7Sec), if (s.debt7Sec >= 4 * 3600) C_AWAKE else TXT))
+            s.avgBedtimeMin?.let { m -> c.addView(kv(ctx, "Usínání", "kolem %02d:%02d ±%d min".format((m / 60) % 24, m % 60, s.bedtimeSdMin ?: 0))) }
+            s.avgScore7?.let { c.addView(kv(ctx, "Skóre 7 nocí", "$it")) }
+            val recs = SleepInsights.recommendations(s, SleepInsights.stressEffect(days, night.date))
+            recs.forEach { r -> c.addView(TextView(ctx).apply { text = r; setTextColor(C_OK); textSize = 14f; setPadding(0, (8 * d).toInt(), 0, 0) }) }
+        }
 
         if (night != null) {
             val total = (night.sleepSec ?: 1).coerceAtLeast(1).toFloat()
@@ -216,21 +248,23 @@ class SleepWindow : DialogFragment() {
             }
         }
 
-        section(ctx, "Posledních 7 nocí") { c ->
+        section(ctx, "Posledních 14 nocí") { c ->
             val byDate = days.associateBy { it.date }
-            val items = (6 downTo 0).map { back ->
-                val dt = LocalDate.now().minusDays(back.toLong())
-                dt.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("cs")) to byDate[dt.toString()]?.sleepSec
+            val endDay = LocalDate.parse((nights.lastOrNull()?.date) ?: LocalDate.now().toString())
+            val items = (13 downTo 0).map { back ->
+                val dt = endDay.minusDays(back.toLong())
+                Triple(dt.dayOfMonth.toString(), byDate[dt.toString()]?.sleepSec, dt.toString())
             }
-            c.addView(WeekBarsView(ctx, items).apply {
-                contentDescription = "Délka spánku za posledních 7 nocí, čárkovaně osm hodin"
-            }, LinearLayout.LayoutParams(-1, (140 * d).toInt()))
-            c.addView(small(ctx, "Čárkovaně 8 h"))
+            c.addView(NightsChartView(ctx, items, night?.date) { date ->
+                if (nights.any { it.date == date }) { selected = date; render(data) }
+            }.apply { contentDescription = "Délka spánku za posledních 14 nocí. Klepnutím vybereš noc." }, LinearLayout.LayoutParams(-1, (140 * d).toInt()))
+            c.addView(small(ctx, "Čárkovaně 8 h · klepnutím vybereš noc"))
         }
 
-        val sums = ActivityGroups.summarize(data.acts)
-        val note = ActivityGroups.planNote(data.plan, data.planCardio, data.acts.filter { it.date == LocalDate.now().toString() })
-        val fullDay = days.lastOrNull { it.totalKcal != null && GarminParser.isWorn(it) }
+        val dayActs = data.acts.filter { it.date == night?.date }
+        val sums = ActivityGroups.summarize(dayActs)
+        val note = if (isToday) ActivityGroups.planNote(data.plan, data.planCardio, dayActs) else null
+        val fullDay = days.lastOrNull { it.date <= (night?.date ?: "") && it.totalKcal != null && GarminParser.isWorn(it) }
         if (sums.isNotEmpty() || note != null || fullDay != null) section(ctx, "Pohyb z hodinek") { c ->
             sums.forEach { c.addView(kv(ctx, "${it.group.label} (${it.count}×)", "${it.minutes} min · ${it.kcal} kcal")) }
             note?.let { c.addView(TextView(ctx).apply { text = it; setTextColor(C_AWAKE); textSize = 14f; setPadding(0, (6 * d).toInt(), 0, 0) }) }
@@ -386,28 +420,39 @@ class GainBarView(ctx: Context, private val gain: Int) : View(ctx) {
     }
 }
 
-class WeekBarsView(ctx: Context, private val items: List<Pair<String, Int?>>) : View(ctx) {
+/** Sloupce posledních nocí; klepnutím se vybere noc, vybraná je zvýrazněná. */
+class NightsChartView(ctx: Context, private val items: List<Triple<String, Int?, String>>, private val selected: String?,
+                      private val onPick: (String) -> Unit) : View(ctx) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    override fun onTouchEvent(e: android.view.MotionEvent): Boolean {
+        if (e.action == android.view.MotionEvent.ACTION_UP) {
+            val i = (e.x / (width / items.size.toFloat())).toInt().coerceIn(0, items.size - 1)
+            performClick(); onPick(items[i].third)
+        }
+        return true
+    }
+    override fun performClick(): Boolean = super.performClick()
     override fun onDraw(c: Canvas) {
         val d = resources.displayMetrics.density; val labelH = 18 * d; val top = 16 * d
         val maxSec = maxOf(9 * 3600, items.maxOfOrNull { it.second ?: 0 } ?: 0).toFloat()
-        val plotH = height - labelH - top; val slot = width / items.size.toFloat(); val bw = slot * 0.46f
+        val plotH = height - labelH - top; val slot = width / items.size.toFloat(); val bw = slot * 0.62f
         fun y(sec: Float) = top + plotH * (1 - sec / maxSec)
         paint.color = TXT2; paint.strokeWidth = d; paint.style = Paint.Style.STROKE
         paint.pathEffect = DashPathEffect(floatArrayOf(6 * d, 5 * d), 0f)
         c.drawLine(0f, y(NEED_SEC.toFloat()), width.toFloat(), y(NEED_SEC.toFloat()), paint)
         paint.pathEffect = null; paint.style = Paint.Style.FILL
-        paint.textAlign = Paint.Align.CENTER; paint.textSize = 11 * d
-        val lastIdx = items.indexOfLast { it.second != null }
-        items.forEachIndexed { i, (label, sec) ->
-            val cx = slot * (i + 0.5f)
+        paint.textAlign = Paint.Align.CENTER; paint.textSize = 10 * d
+        items.forEachIndexed { i, (label, sec, date) ->
+            val cx = slot * (i + 0.5f); val sel = date == selected
             if (sec != null) {
                 val base = if (sec >= 7 * 3600) C_LIGHT else if (sec >= 6 * 3600) C_REM else C_AWAKE
-                paint.color = base; paint.alpha = if (i == lastIdx) 255 else 150
-                c.drawRoundRect(cx - bw / 2, y(sec.toFloat()), cx + bw / 2, y(0f), 6 * d, 6 * d, paint)
-                paint.alpha = 255; paint.color = TXT; c.drawText("%.1f".format(sec / 3600f), cx, y(sec.toFloat()) - 4 * d, paint)
+                paint.color = base; paint.alpha = if (sel) 255 else 120
+                c.drawRoundRect(cx - bw / 2, y(sec.toFloat()), cx + bw / 2, y(0f), 4 * d, 4 * d, paint)
+                paint.alpha = 255
+                if (sel) { paint.color = TXT; c.drawText("%.1f".format(sec / 3600f), cx, y(sec.toFloat()) - 4 * d, paint) }
             }
-            paint.color = TXT2; c.drawText(label, cx, height - 3 * d, paint)
+            paint.color = if (sel) TXT else TXT2; c.drawText(label, cx, height - 3 * d, paint)
         }
     }
 }

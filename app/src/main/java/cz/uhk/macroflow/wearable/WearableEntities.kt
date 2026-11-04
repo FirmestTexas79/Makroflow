@@ -54,4 +54,6 @@ interface WearableDao {
     @Query("SELECT * FROM wearable_day WHERE date = :date") fun dayFlow(date: String): kotlinx.coroutines.flow.Flow<WearableDayEntity?>
     @Query("SELECT * FROM wearable_day WHERE date BETWEEN :from AND :to ORDER BY date") fun getDaysSync(from: String, to: String): List<WearableDayEntity>
     @Query("SELECT * FROM wearable_activity WHERE date = :date ORDER BY startLocal") fun getActivitiesSync(date: String): List<WearableActivityEntity>
+    @Query("SELECT * FROM wearable_activity WHERE date BETWEEN :from AND :to ORDER BY startLocal") fun getActivitiesBetweenSync(from: String, to: String): List<WearableActivityEntity>
+    @Query("SELECT COUNT(*) FROM wearable_day") fun countSync(): Int
 }
