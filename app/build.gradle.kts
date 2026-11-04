@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation("androidx.health.connect:connect-client:1.1.0")
     testImplementation(libs.junit)
     // Skutečná implementace org.json pro JVM unit testy (android.jar má jen stuby)
     testImplementation("org.json:json:20240303")

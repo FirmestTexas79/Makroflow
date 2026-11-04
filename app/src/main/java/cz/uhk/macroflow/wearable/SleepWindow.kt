@@ -108,12 +108,12 @@ object SleepCard {
             host.viewLifecycleOwner.lifecycleScope.launch {
                 val app = ctx.applicationContext
                 val days = withContext(Dispatchers.IO) {
-                    if (GarminKeyStore.hasKey(app)) runCatching { WearableSync.runIfStale(app) }
+                    if (WearableHub.hasAny(app)) runCatching { WearableHub.runIfStale(app) }
                     val today = LocalDate.now()
                     runCatching { AppDatabase.getDatabase(app).wearableDao().getDaysSync(today.minusDays(8).toString(), today.toString()) }.getOrDefault(emptyList())
                 }
                 val last = latestNight(days)
-                card.visibility = if (last != null || GarminKeyStore.hasKey(app)) View.VISIBLE else View.GONE
+                card.visibility = if (last != null || WearableHub.hasAny(app)) View.VISIBLE else View.GONE
                 icon.setFraction((last?.sleepSec ?: 0) / NEED_SEC.toFloat())
                 sub.text = when {
                     last == null -> "Zatím žádná noc z hodinek – klepni a synchronizuj"
@@ -316,11 +316,11 @@ class SleepWindow : DialogFragment() {
         }
 
         val actions = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(0, (18 * d).toInt(), 0, 0) }
-        if (GarminKeyStore.hasKey(ctx)) actions.addView(button(ctx, "Synchronizovat hodinky", true) { b ->
+        if (WearableHub.hasAny(ctx)) actions.addView(button(ctx, "Synchronizovat hodinky", true) { b ->
             b.isEnabled = false
             viewLifecycleOwner.lifecycleScope.launch {
                 val msg = withContext(Dispatchers.IO) {
-                    runCatching { WearableSync.run(ctx.applicationContext) }.fold({ "Načteno dní: $it" }, { "Synchronizace selhala: ${it.message}" })
+                    runCatching { WearableHub.run(ctx.applicationContext) }.fold({ "Načteno dní: $it" }, { "Synchronizace selhala: ${it.message}" })
                 }
                 Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show(); reload()
             }

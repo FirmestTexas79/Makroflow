@@ -25,7 +25,7 @@ import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.WorkoutSetEntity
 import cz.uhk.macroflow.training.exercises.ExerciseLibrary
 import cz.uhk.macroflow.wearable.ActivityGroups
-import cz.uhk.macroflow.wearable.GarminKeyStore
+import cz.uhk.macroflow.wearable.WearableHub
 import cz.uhk.macroflow.wearable.SportGroup
 import cz.uhk.macroflow.wearable.WearableActivityEntity
 import kotlinx.coroutines.Dispatchers
@@ -91,7 +91,7 @@ class WorkoutSummarySheet : BottomSheetDialogFragment() {
                     val db = AppDatabase.getDatabase(app)
                     Data(db.workoutDao().getAllSync(),
                         db.wearableDao().getActivitiesSync(date).filter { ActivityGroups.of(it.typeKey) == SportGroup.STRENGTH },
-                        GarminKeyStore.hasKey(app))
+                        WearableHub.hasAny(app))
                 }.getOrElse { android.util.Log.e("WorkoutSummary", "load failed", it); null }
             }
             if (data == null) { dismiss(); return@launch }

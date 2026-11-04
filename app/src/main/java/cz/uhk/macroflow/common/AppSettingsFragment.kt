@@ -273,18 +273,21 @@ class AppSettingsFragment : Fragment() {
     private fun buildWearable(box: LinearLayout) {
         val ctx = requireContext()
         val status = TextView(ctx).apply { textSize = 14f }
-        val keyBtn = com.google.android.material.button.MaterialButton(ctx)
+        val setupBtn = com.google.android.material.button.MaterialButton(ctx)
         val syncBtn = com.google.android.material.button.MaterialButton(ctx).apply { text = "Synchronizovat hodinky" }
+        val keyBtn = com.google.android.material.button.MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle)
         fun refresh() {
-            val has = cz.uhk.macroflow.wearable.GarminKeyStore.hasKey(ctx)
-            keyBtn.text = if (has) "Změnit / smazat Garmin klíč" else "Zadat Garmin klíč"
-            syncBtn.isEnabled = has
-            status.text = if (has) "Garmin připojen. Bez hodinek aplikace funguje dál po svém."
-                else "Volitelné: osobní klíč z connect.garmin.com → Nastavení → Personal API. Slouží jen k tvým vlastním datům, ukládá se šifrovaně v telefonu."
+            status.text = cz.uhk.macroflow.wearable.WearableHub.describe(ctx)
+            syncBtn.isEnabled = cz.uhk.macroflow.wearable.WearableHub.hasAny(ctx)
+            setupBtn.text = if (cz.uhk.macroflow.wearable.HealthConnectSource.isEnabled(ctx)) "Změnit hodinky" else "Připojit hodinky"
+            keyBtn.text = if (cz.uhk.macroflow.wearable.GarminKeyStore.hasKey(ctx)) "Změnit / smazat Garmin klíč (pro vývojáře)" else "Garmin klíč (pro vývojáře)"
         }
+        setupBtn.setOnClickListener { cz.uhk.macroflow.wearable.WatchSetupSheet.show(childFragmentManager) }
+        childFragmentManager.setFragmentResultListener("watch_setup", viewLifecycleOwner) { _, _ -> refresh() }
         keyBtn.setOnClickListener {
             val input = TextInputEditText(ctx).apply { hint = "Klíč (prázdný = smazat)"; setSingleLine() }
             MaterialAlertDialogBuilder(ctx).setTitle("Garmin Personal API klíč").setView(input)
+                .setMessage("Osobní klíč z connect.garmin.com → Nastavení → Personal API. Slouží jen k tvým vlastním datům, ukládá se šifrovaně v telefonu.")
                 .setPositiveButton("Uložit") { _, _ -> cz.uhk.macroflow.wearable.GarminKeyStore.save(ctx, input.text?.toString().orEmpty()); refresh() }
                 .setNegativeButton("Zrušit", null).show()
         }
@@ -292,14 +295,14 @@ class AppSettingsFragment : Fragment() {
             syncBtn.isEnabled = false
             viewLifecycleOwner.lifecycleScope.launch {
                 val msg = withContext(Dispatchers.IO) {
-                    runCatching { cz.uhk.macroflow.wearable.WearableSync.run(ctx) }
+                    runCatching { cz.uhk.macroflow.wearable.WearableHub.run(ctx) }
                         .fold({ "Načteno dní: $it" }, { "Synchronizace selhala: ${it.message}" })
                 }
                 Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
                 refresh()
             }
         }
-        box.addView(status); box.addView(keyBtn); box.addView(syncBtn)
+        box.addView(status); box.addView(setupBtn); box.addView(syncBtn); box.addView(keyBtn)
         refresh()
     }
 }

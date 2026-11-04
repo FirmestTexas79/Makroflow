@@ -82,5 +82,5 @@ object GarminParser {
         )
 
     /** Den, kdy hodinky skutecne byly na ruce (Garmin dava stres -1 a minimum kroku jinak). */
-    fun isWorn(d: WearableDayEntity): Boolean = (d.stressAvg ?: -1) >= 0 && (d.steps ?: 0) >= 500 && (d.totalKcal ?: 0) > 0
+    fun isWorn(d: WearableDayEntity): Boolean = if (d.source == HealthConnectMap.SOURCE) HealthConnectMap.worn(d) else (d.stressAvg ?: -1) >= 0 && (d.steps ?: 0) >= 500 && (d.totalKcal ?: 0) > 0
 }
