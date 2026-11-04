@@ -110,6 +110,9 @@ object QuickWorkout {
 
     fun endedAt(ctx: Context): Long = prefs(ctx).getLong(K_ENDED, 0)
 
+    /** Označí konec tréninku (zastaví pauzu v Makrosvětu), aniž by existoval záznam rychlého tréninku. */
+    fun markEnded(ctx: Context) = prefs(ctx).edit().putLong(K_ENDED, System.currentTimeMillis()).apply()
+
     private fun prefs(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private fun today() = LocalDate.now().toString()
 

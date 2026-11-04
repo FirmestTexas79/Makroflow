@@ -120,6 +120,19 @@
                 android:layout_marginTop="6dp"
                 android:orientation="vertical" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFinishSession"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="16dp"
+                android:backgroundTint="@color/brand_primary"
+                android:text="Dokončit trénink"
+                android:textAllCaps="false"
+                android:textColor="@color/brand_cream"
+                android:textSize="16sp"
+                android:visibility="gone"
+                app:cornerRadius="28dp" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

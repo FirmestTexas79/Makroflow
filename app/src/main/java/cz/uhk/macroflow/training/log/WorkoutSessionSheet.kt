@@ -85,6 +85,7 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         variant = (savedInstanceState?.getString(ARG_VARIANT) ?: requireArguments().getString(ARG_VARIANT) ?: "A").first()
 
         view.findViewById<View>(R.id.btnCloseSession).setOnClickListener { dismiss() }
+        view.findViewById<View>(R.id.btnFinishSession).setOnClickListener { finishWorkout() }
         view.findViewById<View>(R.id.btnEditTemplate).setOnClickListener {
             TemplateEditorSheet.show(childFragmentManager, key())
         }
@@ -119,6 +120,31 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         }
     }
 
+    private var finishArmed = false
+
+    /** Dokončení tréninku: první klepnutí si vyžádá potvrzení, druhé ukončí pauzu a otevře výpis. */
+    private fun finishWorkout() {
+        val v = view ?: return
+        val btn = v.findViewById<TextView>(R.id.btnFinishSession)
+        if (!finishArmed) {
+            finishArmed = true; btn.text = "Opravdu dokončit?"
+            v.postDelayed({ finishArmed = false; view?.findViewById<TextView>(R.id.btnFinishSession)?.text = "Dokončit trénink" }, 3000)
+            return
+        }
+        val ctx = requireContext().applicationContext
+        val title = requireArguments().getString(ARG_TITLE) ?: WorkoutTemplates.label(key())
+        val k = key()
+        val fm = parentFragmentManager
+        viewLifecycleOwner.lifecycleScope.launch {
+            val q = cz.uhk.macroflow.training.QuickWorkout.today(ctx)
+            val running = q?.running() == true
+            val startedAt = q?.startedAt ?: 0L
+            if (running) cz.uhk.macroflow.training.QuickWorkout.finish(ctx, done = true) else cz.uhk.macroflow.training.QuickWorkout.markEnded(ctx)
+            WorkoutSummarySheet.show(fm, title, k, startedAt, running)
+            dismiss()
+        }
+    }
+
     private fun key() = if (customIds != null) CUSTOM_TEMPLATE else WorkoutTemplates.key(kind, variant)
 
     /** Série i šablona jako Flow – po zápisu, smazání nebo úpravě šablony se vše přepočítá. */
@@ -149,6 +175,7 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
             }
         }
         v.removeCallbacks(restTick); restTick.run()
+        v.findViewById<View>(R.id.btnFinishSession).visibility = if (todayCount > 0) View.VISIBLE else View.GONE
         lastTodayCount?.let { if (todayCount > it && cz.uhk.macroflow.common.AppSettings.gymBubble(requireContext())) MakrosvetBubble.show(v, todayCount) }
         lastTodayCount = todayCount
 
