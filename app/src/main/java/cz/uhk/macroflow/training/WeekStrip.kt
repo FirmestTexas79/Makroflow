@@ -1,6 +1,5 @@
 package cz.uhk.macroflow.training
 
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -11,32 +10,30 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 
 /**
- * Týden na jedné řádce: sedm vzdušných pilulek (den + barevná bublina typu tréninku, tečka = druhý režim),
- * pod nimi pár pastelových štítků po skupinách. Klepnutím na den se pod pruhem otevře jeho úprava.
+ * Týden v jedné kartě. Každý den je úzká pilulka se třemi řádky: den, barevný štítek s názvem tréninku (PUSH, PULL…)
+ * a případně druhý režim („+ BĚH“). Nahoře je shrnutí týdne, dole nápověda. Klepnutím na den se pod kartou otevře jeho úprava.
  */
 class WeekStrip(private val host: LinearLayout, private val onSelect: (Int) -> Unit) {
 
     class Day(val short: String, val strength: String, val kardio: String)
 
     private val ink = Color.parseColor("#283618")
-    private val warm = Color.parseColor("#E9B072")
-    private val restColor = Color.parseColor("#E4E1CC")
+    private val amber = Color.parseColor("#B9772F")
 
     private fun label(t: String) = when (t) {
         "full" -> "FULL"; "push" -> "PUSH"; "pull" -> "PULL"; "legs" -> "LEGS"
         "stairs" -> "SCHODY"; "run" -> "BĚH"; "rope" -> "ŠVIH"; "bike" -> "KOLO"; else -> "VOLNO"
     }
 
-    /** Jemná paleta jen pro tenhle pruh: měkké, ale od sebe dobře rozlišitelné barvy. */
     private fun pastel(t: String) = Color.parseColor(when (t) {
-        "push" -> "#9DBE7E"; "pull" -> "#F2B27C"; "legs" -> "#EE9C92"; "full" -> "#B8A4DC"
-        "run" -> "#7FB6DA"; "rope" -> "#C99AD6"; "bike" -> "#F2A47F"; "stairs" -> "#7FC2A5"
-        else -> "#E4E1CC"
+        "push" -> "#A9C98B"; "pull" -> "#F5BC8A"; "legs" -> "#F0A59B"; "full" -> "#C3B1E3"
+        "run" -> "#8CC0E0"; "rope" -> "#D2A7DE"; "bike" -> "#F5AD8A"; "stairs" -> "#8CCBB0"
+        else -> "#ECE9D8"
     })
+
+    private fun plural(n: Int, one: String, few: String, many: String) = "$n ${if (n == 1) one else if (n in 2..4) few else many}"
 
     fun render(days: List<Day>, selected: Int, today: Int, kardio: Boolean) {
         val ctx = host.context
@@ -44,53 +41,63 @@ class WeekStrip(private val host: LinearLayout, private val onSelect: (Int) -> U
         fun dp(v: Int) = (v * d).toInt()
         host.removeAllViews()
 
-        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false; clipToPadding = false }
+        val main = { x: Day -> if (kardio) x.kardio else x.strength }
+        val other = { x: Day -> if (kardio) x.strength else x.kardio }
+        val active = days.count { main(it) != "rest" }
+
+        val head = LinearLayout(ctx).apply {
+            gravity = Gravity.CENTER_VERTICAL; setPadding(dp(6), 0, dp(6), dp(10))
+            addView(TextView(ctx).apply { text = "Tvůj týden"; textSize = 16f; setTypeface(null, Typeface.BOLD); setTextColor(ink) },
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(TextView(ctx).apply {
+                text = if (active == 0) "zatím nic" else plural(active, if (kardio) "kardio den" else "trénink", if (kardio) "kardio dny" else "tréninky",
+                    if (kardio) "kardio dní" else "tréninků") + " · " + (7 - active) + " volno"
+                textSize = 12.5f; setTextColor(ink); alpha = 0.7f
+            })
+        }
+
+        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 7f }
         days.forEachIndexed { i, day ->
-            val main = if (kardio) day.kardio else day.strength
-            val other = if (kardio) day.strength else day.kardio
-            val on = main != "rest"
-            val base = pastel(main)
-            val sel = i == selected
-
-            val col = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL; setPadding(0, dp(10), 0, dp(10))
-                addView(TextView(ctx).apply {
-                    text = day.short; textSize = 11.5f; setTypeface(null, Typeface.BOLD)
-                    setTextColor(if (i == today) Color.parseColor("#B9772F") else ink); alpha = if (sel || i == today) 1f else 0.7f
-                })
-                addView(View(ctx).apply {
-                    background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(if (on) base else restColor) }
-                }, LinearLayout.LayoutParams(dp(26), dp(26)).apply { topMargin = dp(8) })
-                addView(View(ctx).apply {
-                    background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(if (other != "rest") pastel(other) else Color.TRANSPARENT) }
-                }, LinearLayout.LayoutParams(dp(7), dp(7)).apply { topMargin = dp(8) })
-            }
-            row.addView(MaterialCardView(ctx).apply {
-                radius = 22 * d; cardElevation = (if (sel) 5 else 0) * d
-                setCardBackgroundColor(if (sel) ColorUtils.blendARGB(base, Color.WHITE, 0.68f) else Color.parseColor("#FFFDF3"))
-                strokeWidth = dp(if (sel) 2 else 1); strokeColor = if (sel) ink else Color.parseColor("#1F283618")
-                contentDescription = "${day.short}: ${label(main)}"
+            val m = main(day); val o = other(day)
+            val on = m != "rest"; val sel = i == selected
+            val pill = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL; setPadding(dp(2), dp(9), dp(2), dp(9))
+                background = GradientDrawable().apply {
+                    cornerRadius = 18 * d
+                    setColor(if (sel) ColorUtils.blendARGB(pastel(m), Color.WHITE, 0.6f) else Color.TRANSPARENT)
+                    setStroke(dp(if (sel) 2 else 1), if (sel) ink else Color.parseColor("#1F283618"))
+                }
+                contentDescription = "${day.short}: ${label(m)}"
                 setOnClickListener { onSelect(i) }
-                addView(col, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(3), dp(6), dp(3), dp(6)) })
+                addView(TextView(ctx).apply {
+                    text = day.short; textSize = 12f; gravity = Gravity.CENTER; setTypeface(null, Typeface.BOLD)
+                    setTextColor(if (i == today) amber else ink); alpha = if (sel || i == today) 1f else 0.75f
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                addView(TextView(ctx).apply {
+                    text = label(m); textSize = 9.5f; gravity = Gravity.CENTER; setTypeface(null, if (on) Typeface.BOLD else Typeface.NORMAL)
+                    setTextColor(ink); alpha = if (on) 1f else 0.5f; maxLines = 1; includeFontPadding = false
+                    setPadding(0, dp(6), 0, dp(6))
+                    background = GradientDrawable().apply { cornerRadius = 10 * d; setColor(pastel(m)) }
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+                addView(TextView(ctx).apply {
+                    text = if (o != "rest") "+ ${label(o)}" else " "; textSize = 9f; gravity = Gravity.CENTER; setTextColor(ink); alpha = 0.7f
+                    maxLines = 1; includeFontPadding = false
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
+            }
+            row.addView(pill, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
         }
-        host.addView(row)
 
-        // Štítky po skupinách (volno se neuvádí, vidět je na světlých pilulkách)
-        val groups = days.groupBy { if (kardio) it.kardio else it.strength }.filterKeys { it != "rest" }
-        val extra = days.groupBy { if (kardio) it.strength else it.kardio }.filterKeys { it != "rest" }
-        val chips = ChipGroup(ctx).apply { chipSpacingHorizontal = dp(6); chipSpacingVertical = dp(2); setPadding(dp(4), dp(4), dp(4), 0) }
-        fun chip(t: String, ds: List<Day>, dot: Boolean) = Chip(ctx).apply {
-            text = "${label(t)}  ${ds.joinToString("·") { it.short }}"
-            isClickable = false; isCheckable = false; textSize = 12f; setTextColor(ink)
-            chipBackgroundColor = ColorStateList.valueOf(ColorUtils.blendARGB(pastel(t), Color.WHITE, if (dot) 0.75f else 0.55f))
-            chipStrokeWidth = 0f; chipMinHeight = 30 * d; setEnsureMinTouchTargetSize(false)
+        val hint = TextView(ctx).apply {
+            text = "Klepni na den a níže ho uprav"; textSize = 12f; setTextColor(ink); alpha = 0.55f; gravity = Gravity.CENTER
+            setPadding(0, dp(10), 0, 0)
         }
-        groups.forEach { (t, ds) -> chips.addView(chip(t, ds, false)) }
-        extra.forEach { (t, ds) -> chips.addView(chip(t, ds, true)) }
-        if (groups.isEmpty() && extra.isEmpty()) host.addView(TextView(ctx).apply {
-            text = "Zatím nic naplánováno. Klepni na den a vyber typ."; textSize = 13f; setTextColor(if (kardio) Color.parseColor("#FEFAE0") else ink)
-            alpha = 0.75f; setPadding(dp(6), dp(2), 0, 0)
-        }) else host.addView(chips)
+        host.addView(MaterialCardView(ctx).apply {
+            radius = 26 * d; cardElevation = 0f; strokeWidth = dp(1); strokeColor = Color.parseColor("#1F283618")
+            setCardBackgroundColor(Color.parseColor("#FFFDF3"))
+            addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(14), dp(10), dp(12))
+                addView(head); addView(row); addView(hint)
+            })
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10) })
     }
 }
