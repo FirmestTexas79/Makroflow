@@ -61,7 +61,22 @@ object LoopData {
             weeklyLossPct = loss
         )
         val r = LoopModel.readiness(situation)
+        // Trénink si návrh přečte z preferencí (bez nového přepočtu)
+        LoopModel.advice(situation, r ?: return Snapshot(situation, null, null, prefs(app).getString("dec:$today", null))).let { a ->
+            prefs(app).edit().putString("train:$today", "${a.volumeFactor}|${a.rirDelta}|${a.score}").apply()
+        }
         return Snapshot(situation, r, r?.let { LoopModel.advice(situation, it) }, prefs(app).getString("dec:$today", null))
+    }
+
+    /** Dnešní úprava tréninku: jen zmírnění (slabší forma). Null, když je forma v pořádku nebo uživatel zvolil „nechat podle plánu“. */
+    class Training(val factor: Double, val rir: Int, val score: Int)
+
+    fun training(ctx: Context, today: LocalDate = LocalDate.now()): Training? {
+        val p = prefs(ctx)
+        if (p.getString("dec:$today", null) == "kept") return null
+        val s = p.getString("train:$today", null)?.split("|") ?: return null
+        val t = Training(s[0].toDouble(), s[1].toInt(), s[2].toInt())
+        return t.takeIf { it.factor < 0.97 || it.rir > 0 }
     }
 
     // ── Rozhodnutí a záznam ─────────────────────────────────────────────────

@@ -189,8 +189,19 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
 
         val box = v.findViewById<LinearLayout>(R.id.llSessionExercises)
         box.removeAllViews()
+                val tr = cz.uhk.macroflow.loop.LoopData.training(requireContext())
+        if (tr != null) box.addView(TextView(requireContext()).apply {
+            val d = resources.displayMetrics.density
+            text = "Dnešní forma ${tr.score}/100: ber objem na ${(tr.factor * 100).roundToInt()} % plánu (třeba o sérii méně u cviku) a drž v rezervě o ${tr.rir} opakování víc." +
+                (if (tr.rir > 0) " Navrhované váhy jsou o ${3 * tr.rir} % lehčí." else "")
+            textSize = 13.5f; setTextColor(ContextCompat.getColor(requireContext(), R.color.brand_dark))
+            setPadding((14 * d).toInt(), (10 * d).toInt(), (14 * d).toInt(), (10 * d).toInt())
+            background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 16 * d; setColor(ContextCompat.getColor(requireContext(), R.color.brand_primary_alpha10)) }
+            layoutParams = android.view.ViewGroup.MarginLayoutParams(-1, -2).apply { bottomMargin = (8 * d).toInt() }
+        })
         ids.mapNotNull { ExerciseLibrary.byId(it) }.forEachIndexed { i, e ->
             val insight = ExerciseInsight.of(e, all, todayDay)
+            val readyW = insight.readyWeightKg?.let { loopAdjust(it, Progression.increment(e), tr) }
             val row = layoutInflater.inflate(R.layout.item_session_exercise, box, false)
             row.findViewById<TextView>(R.id.tvSxIndex).text = (i + 1).toString()
             row.findViewById<TextView>(R.id.tvSxName).text = e.name
@@ -202,7 +213,7 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
             } ?: "Rozsah ${range.min}–${range.max} opakování · zatím bez zápisu"
             row.findViewById<View>(R.id.rowExHeader).setOnClickListener { ExerciseDetailSheet.show(childFragmentManager, e.id) }
 
-            row.findViewById<TextView>(R.id.tvSxReady).text = insight.readyWeightKg?.let { "${LogSetSheet.kg(it)} kg × ${insight.readyReps}" }
+            row.findViewById<TextView>(R.id.tvSxReady).text = readyW?.let { "${LogSetSheet.kg(it)} kg × ${insight.readyReps}" }
                 ?: if (Progression.increment(e) == 0.0) "${insight.readyReps} opakování" else "${range.min}–${range.max} ×"
             row.findViewById<TextView>(R.id.tvSxNext).text = insight.nextEstimate?.takeIf { insight.estimate != null }?.let {
                 "Příště (~${insight.nextInDays} d)\n1RM ≈ ${LogSetSheet.kg(it.e1rm)} kg"
@@ -231,7 +242,7 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
                 text = if (todaySets.isEmpty()) "Zapsat sérii" else "Zapsat ${todaySets.size + 1}. sérii"
                 setOnClickListener {
                     LogSetSheet.show(requireContext(), viewLifecycleOwner.lifecycleScope, e, key(), all, todaySets,
-                        prefillWeight = insight.readyWeightKg ?: insight.suggestion?.weightKg, prefillReps = insight.readyReps)
+                        prefillWeight = readyW ?: insight.suggestion?.weightKg, prefillReps = insight.readyReps)
                 }
             }
             box.addView(row)
@@ -299,6 +310,12 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
     override fun onDestroyView() {
         view?.removeCallbacks(restTick)
         super.onDestroyView()
+    }
+
+    /** Slabší forma: každé extra opakování v rezervě ≈ 3 % váhy. Zaokrouhleno dolů na krok kotouče. */
+    private fun loopAdjust(w: Double, inc: Double, tr: cz.uhk.macroflow.loop.LoopData.Training?): Double {
+        if (tr == null || tr.rir == 0 || inc <= 0.0) return w
+        return (Math.floor(w * (1 - 0.03 * tr.rir) / inc) * inc).coerceAtLeast(inc)
     }
 
     private fun label(w: Double, r: Int, slow: Boolean, rir: Int = StrengthModel.DEFAULT_RIR) =
