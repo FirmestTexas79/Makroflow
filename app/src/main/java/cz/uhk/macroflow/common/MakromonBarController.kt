@@ -2,6 +2,9 @@ package cz.uhk.macroflow.common
 
 import android.os.Handler
 import android.os.Looper
+import android.view.GestureDetector
+import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import androidx.lifecycle.LifecycleCoroutineScope
@@ -114,9 +117,39 @@ class MakromonBarController(
         behavior = null
     }
 
+    private var touchReady = false
+    private var dragging = false
+
+    /** Klepnutí = reakce Makromona, dlouhé podržení = uchopí ho a jde s ním hýbat (pustíš = spadne zpátky na lištu). */
     private fun setupClickListener() {
-        ivPokemon.setOnClickListener {
-            behavior?.onSpriteClicked()
+        if (touchReady) return
+        touchReady = true
+        fun point(e: MotionEvent): Pair<Float, Float> {
+            val loc = IntArray(2)
+            (ivPokemon.parent as android.view.View).getLocationOnScreen(loc)
+            return (e.rawX - loc[0]) to (e.rawY - loc[1])
+        }
+        val gestures = GestureDetector(activity, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent) = true
+            override fun onSingleTapUp(e: MotionEvent): Boolean { behavior?.onSpriteClicked(); return true }
+            override fun onLongPress(e: MotionEvent) {
+                val (x, y) = point(e)
+                if (behavior?.grab(x, y) == true) {
+                    dragging = true
+                    ivPokemon.parent.requestDisallowInterceptTouchEvent(true)
+                    ivPokemon.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                }
+            }
+        })
+        ivPokemon.setOnTouchListener { _, e ->
+            if (dragging && behavior == null) dragging = false
+            if (dragging) {
+                when (e.actionMasked) {
+                    MotionEvent.ACTION_MOVE -> { val (x, y) = point(e); behavior?.carry(x, y) }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { dragging = false; behavior?.release() }
+                }
+            } else gestures.onTouchEvent(e)
+            true
         }
     }
 

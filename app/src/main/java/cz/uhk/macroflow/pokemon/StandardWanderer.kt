@@ -28,7 +28,14 @@ internal fun relTx(v: android.view.View, vararg d: Float): FloatArray { val base
 interface PokemonBehavior {
     fun start()
     fun stop()
-    fun onSpriteClicked()
+    fun onSpriteClicked()
+
+    /** Uchopení prstem (dlouhé podržení), souřadnice prstu v rodiči. Vrací true, když se Makromon nechal chytit. */
+    fun grab(fingerX: Float, fingerY: Float): Boolean = false
+    /** Nošení: Makromon následuje prst kamkoli na obrazovce. */
+    fun carry(fingerX: Float, fingerY: Float) {}
+    /** Puštění: spadne zpátky na lištu a chodí dál. */
+    fun release() {}
 }
 
 interface TransitionEffect {
@@ -259,6 +266,7 @@ class StandardWanderer(
     }
 
     override fun stop() {
+        if (held || dropAnim != null) abortHold()
         running = false
         isCrossing = false
         afterWalk = null
@@ -268,6 +276,120 @@ class StandardWanderer(
         wobbleAnim?.cancel()
         idleAnim?.cancel()
         handler.removeCallbacksAndMessages(null)
+    }
+
+    // ─────────────────────────────────────────
+    // UCHOPENÍ PRSTEM: dlouhé podržení = bounce (zmenšení a zvětšení), pak se dá nosit kamkoli;
+    // po puštění spadne na lištu (s odskokem) a chodí dál odtud
+    // ─────────────────────────────────────────
+
+    private var held = false
+    private var grabDx = 0f
+    private var grabDy = 0f
+    private var dropAnim: ValueAnimator? = null
+    private val heldScale = 1.12f
+
+    private fun feetY(): Float = pokemonView.top + pokemonView.height + pokemonView.translationY
+
+    override fun grab(fingerX: Float, fingerY: Float): Boolean {
+        if (!running || isCrossing || held || dropAnim != null) return false
+        stop()                                   // zastaví chůzi, idle i houpání (running = false)
+        held = true
+        grabDx = feetX() - fingerX
+        grabDy = feetY() - fingerY - 14f * dp    // trochu nad prstem, ať ho prst nezakrývá
+        pokemonView.alpha = 1f
+        pokemonView.rotation = 0f
+        val s = facingSign()
+        val overshoot = android.view.animation.OvershootInterpolator(3.2f)
+        ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 420
+            addUpdateListener {
+                if (!held) return@addUpdateListener
+                val t = it.animatedValue as Float
+                val m = if (t < 0.3f) 1f - 0.22f * (t / 0.3f)
+                        else 0.78f + (heldScale - 0.78f) * overshoot.getInterpolation((t - 0.3f) / 0.7f)
+                pokemonView.scaleX = baseScale * s * m
+                pokemonView.scaleY = baseScale * m
+            }
+            start()
+        }
+        return true
+    }
+
+    override fun carry(fingerX: Float, fingerY: Float) {
+        if (!held) return
+        val parent = pokemonView.parent as? ViewGroup ?: return
+        val ground = groundFeetY()
+        val visH = (pokemonView.height * abs(baseScale) * heldScale).coerceAtMost(ground)
+        val fx = (fingerX + grabDx).coerceIn(halfW, (parent.width - halfW).coerceAtLeast(halfW))
+        val fy = (fingerY + grabDy).coerceIn(visH, ground)
+        val dx = fx - feetX()
+        placeFeet(fx, fy)
+        // Při rychlém pohybu se nakloní proti směru, když se prst zastaví, srovná se
+        val cur = pokemonView.rotation
+        val target = (-dx / dp * 2.2f).coerceIn(-18f, 18f)
+        pokemonView.animate().cancel()
+        pokemonView.rotation = cur + (target - cur) * 0.4f
+        pokemonView.animate().rotation(0f).setStartDelay(80).setDuration(380).start()
+    }
+
+    override fun release() {
+        if (!held) return
+        held = false
+        pokemonView.animate().cancel()
+        val parent = pokemonView.parent as? ViewGroup
+        val o = obstacle()
+        var fx = feetX()
+        // Tlačítko uprostřed není podložka: Makromon se vedle něj posune na nejbližší stranu
+        if (fx > o.left - halfW && fx < o.right + halfW) fx = if (fx < o.cx) o.left - 6f * dp - halfW else o.right + 6f * dp + halfW
+        if (parent != null) fx = fx.coerceIn(halfW, (parent.width - halfW).coerceAtLeast(halfW))
+        val x0 = feetX(); val y0 = feetY(); val y1 = groundFeetY()
+        val rot0 = pokemonView.rotation
+        val s = facingSign()
+        val dist = ((y1 - y0) / dp).coerceAtLeast(0f)
+        val bounce = android.view.animation.BounceInterpolator()
+        var cancelled = false
+        val anim = ValueAnimator.ofFloat(0f, 1f)
+        anim.duration = (380 + dist * 2.2f).toLong().coerceIn(450L, 950L)
+        anim.addUpdateListener {
+            val t = it.animatedValue as Float
+            val ease = 1f - (1f - t) * (1f - t)
+            placeFeet(x0 + (fx - x0) * ease, y0 + (y1 - y0) * bounce.getInterpolation(t))
+            val m = heldScale + (1f - heldScale) * ease
+            pokemonView.scaleX = baseScale * s * m
+            pokemonView.scaleY = baseScale * m
+            pokemonView.rotation = rot0 * (1f - ease)
+        }
+        anim.addListener(object : android.animation.AnimatorListenerAdapter() {
+            override fun onAnimationCancel(a: Animator) { cancelled = true }
+            override fun onAnimationEnd(a: Animator) {
+                if (cancelled) return
+                dropAnim = null
+                resumeAfterDrop()
+            }
+        })
+        dropAnim = anim
+        anim.start()
+    }
+
+    private fun resumeAfterDrop() {
+        running = true
+        pokemonView.rotation = 0f
+        pokemonView.translationY = targetTranslationY
+        pokemonView.scaleY = baseScale
+        applyFacing(facingRight)
+        startIdleAnimation()
+        if (!isFlying && !isSleeping) startWobble()
+        scheduleStep(randomIdle())
+    }
+
+    /** Přerušení držení nebo pádu zvenku (pauza aplikace, nový Makromon): postaví ho zpátky na zem. */
+    private fun abortHold() {
+        held = false
+        dropAnim?.cancel(); dropAnim = null
+        pokemonView.animate().cancel()
+        pokemonView.rotation = 0f
+        pokemonView.translationY = targetTranslationY
     }
 
     // ─────────────────────────────────────────
