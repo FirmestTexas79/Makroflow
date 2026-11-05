@@ -60,6 +60,7 @@ object MakroflowNotifications {
     const val ID_EVENING_LOG     = 1005
     const val ID_STREAK_RISK     = 1006
     const val ID_WEEKLY          = 1007
+    const val ID_REST            = 1008
 
     // ── Request codes pro PendingIntent ──────────────────────────────
     const val REQ_MORNING_RITUAL = 2001
@@ -69,6 +70,7 @@ object MakroflowNotifications {
     const val REQ_EVENING_LOG    = 2005
     const val REQ_STREAK_RISK    = 2006
     const val REQ_WEEKLY         = 2007
+    const val REQ_REST           = 2008
 
     // ── STICKY ───────────────────────────────────
 
@@ -82,6 +84,7 @@ object MakroflowNotifications {
     const val ACTION_EVENING_LOG    = "cz.uhk.macroflow.EVENING_LOG"
     const val ACTION_STREAK_RISK    = "cz.uhk.macroflow.STREAK_RISK"
     const val ACTION_WEEKLY         = "cz.uhk.macroflow.WEEKLY_REPORT"
+    const val ACTION_REST           = "cz.uhk.macroflow.REST_DAY"
 
     const val CHANNEL_STICKY = "makroflow_ongoing"
 
@@ -127,6 +130,7 @@ object MakroflowNotifications {
         if (on(Reminder.EVENING)) scheduleEveningLog(context) else cancelAlarm(context, REQ_EVENING_LOG, ACTION_EVENING_LOG)
         if (on(Reminder.STREAK)) scheduleStreakRisk(context) else cancelAlarm(context, REQ_STREAK_RISK, ACTION_STREAK_RISK)
         if (on(Reminder.WEEKLY)) scheduleWeekly(context) else cancelAlarm(context, REQ_WEEKLY, ACTION_WEEKLY)
+        if (on(Reminder.REST)) scheduleRest(context) else cancelAlarm(context, REQ_REST, ACTION_REST)
     }
 
     /** Čas denního upozornění v ms podle nastavení. */
@@ -219,6 +223,14 @@ object MakroflowNotifications {
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // 8. UPOZORNĚNÍ NA ODPOČINEK — denně v nastavený čas, ozve se jen při slabé regeneraci
+    // ═══════════════════════════════════════════════════════════════
+    private fun scheduleRest(context: Context) {
+        setRepeatingAlarm(context, nextDailyMs(context, Reminder.REST),
+            AlarmManager.INTERVAL_DAY, REQ_REST, ACTION_REST)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // Helpers
     // ═══════════════════════════════════════════════════════════════
     private fun setExactAlarm(context: Context, timeMs: Long, reqCode: Int, action: String) {
@@ -271,6 +283,7 @@ class NotificationReceiver : BroadcastReceiver() {
             MakroflowNotifications.ACTION_EVENING_LOG -> Reminder.EVENING
             MakroflowNotifications.ACTION_STREAK_RISK -> Reminder.STREAK
             MakroflowNotifications.ACTION_WEEKLY -> Reminder.WEEKLY
+            MakroflowNotifications.ACTION_REST -> Reminder.REST
             else -> null
         }
         if (reminder != null && !AppSettings.isOn(context, reminder)) return
@@ -282,6 +295,7 @@ class NotificationReceiver : BroadcastReceiver() {
             MakroflowNotifications.ACTION_EVENING_LOG    -> handleEveningLog(context)
             MakroflowNotifications.ACTION_STREAK_RISK    -> handleStreakRisk(context)
             MakroflowNotifications.ACTION_WEEKLY         -> handleWeekly(context)
+            MakroflowNotifications.ACTION_REST           -> handleRest(context)
             // Obnoví alarmy po restartu telefonu
             Intent.ACTION_BOOT_COMPLETED                 -> MakroflowNotifications.scheduleAll(context)
         }
@@ -436,6 +450,31 @@ class NotificationReceiver : BroadcastReceiver() {
                 }
             } catch (_: Exception) {
                 // report se nepovedl spočítat: radši žádné upozornění
+            } finally {
+                pending.finish()
+            }
+        }.start()
+    }
+
+    // 8. Odpočinek: stejné skóre připravenosti jako karta „Dnešní forma“, upozorní jen pod 40 (a když uživatel návrh neodmítl)
+    private fun handleRest(context: Context) {
+        val app = context.applicationContext
+        val pending = goAsync()
+        Thread {
+            try {
+                val s = cz.uhk.macroflow.loop.LoopData.snapshot(app)
+                val a = s.advice
+                if (a != null && a.score < 40 && s.decision != "kept") {
+                    showNotification(app,
+                        id      = MakroflowNotifications.ID_REST,
+                        channel = MakroflowNotifications.CHANNEL_DAILY,
+                        title   = "🌿 Dnes to pojeď klidněji",
+                        text    = a.headline,
+                        priority = NotificationCompat.PRIORITY_DEFAULT
+                    )
+                }
+            } catch (_: Exception) {
+                // bez dat radši žádné upozornění
             } finally {
                 pending.finish()
             }

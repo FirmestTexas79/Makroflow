@@ -96,6 +96,7 @@ class DashboardFragment : Fragment() {
         }
 
         view.findViewById<View>(R.id.tvCoachCta)?.setOnClickListener { coachCard.performClick() }
+        view.findViewById<View>(R.id.cardRitualBanner)?.setOnClickListener { coachCard.performClick() }
         view.findViewById<View>(R.id.ritualScrim)?.setOnClickListener { showRitual(view, false) }
         coachCard.setOnClickListener {
             lifecycleScope.launch(Dispatchers.Main) {
@@ -451,6 +452,8 @@ class DashboardFragment : Fragment() {
 
     /** Výzva pod tipem trenéra: rituál ještě čeká, nebo je hotový. */
     private fun updateCoachCta(view: View, done: Boolean) {
+        view.findViewById<View>(R.id.cardRitualBanner)?.visibility = if (done) View.GONE else View.VISIBLE
+        view.findViewById<View>(R.id.tvCoachCta)?.visibility = if (done) View.VISIBLE else View.GONE
         val cta = view.findViewById<TextView>(R.id.tvCoachCta) ?: return
         val ctx = cta.context
         if (done) {

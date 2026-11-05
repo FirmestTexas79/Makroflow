@@ -68,7 +68,8 @@ class AppSettingsFragment : Fragment() {
         Reminder.WATER to R.drawable.ic_line_drop,
         Reminder.EVENING to R.drawable.ic_line_moon,
         Reminder.STREAK to R.drawable.ic_line_flame,
-        Reminder.WEEKLY to R.drawable.ic_line_repeat
+        Reminder.WEEKLY to R.drawable.ic_line_repeat,
+        Reminder.REST to R.drawable.ic_line_moon
     )
 
     private fun buildNotifications(box: LinearLayout) {
