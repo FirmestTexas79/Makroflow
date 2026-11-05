@@ -323,6 +323,16 @@
                     </LinearLayout>
                     <ImageView style="@style/ProfRowChevron" />
                 </LinearLayout>
+                <View style="@style/ProfDivider" />
+
+                <LinearLayout android:id="@+id/cardWeekly" style="@style/ProfRow">
+                    <TextView style="@style/ProfRowIcon" android:text="📊" />
+                    <LinearLayout style="@style/ProfileOptionTexts">
+                        <TextView style="@style/ProfileOptionTitle" android:text="Týdenní report" />
+                        <TextView style="@style/ProfileOptionSub" android:text="Jak se ti tenhle týden dařilo" />
+                    </LinearLayout>
+                    <ImageView style="@style/ProfRowChevron" />
+                </LinearLayout>
 
                 <View style="@style/ProfDivider" />
 

@@ -103,6 +103,7 @@ class ProfileFragment : Fragment() {
         view.findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveAllData() }
         view.findViewById<View>(R.id.cardOptionalMetrics).setOnClickListener { showMetricsBottomSheet() }
         view.findViewById<View>(R.id.cardLearning).setOnClickListener { cz.uhk.macroflow.learning.LearningSheet.show(childFragmentManager) }
+        view.findViewById<View>(R.id.cardWeekly).setOnClickListener { cz.uhk.macroflow.report.WeeklyReportSheet.show(childFragmentManager) }
         val appCtx = requireContext().applicationContext
         Thread {
             val days = runCatching { cz.uhk.macroflow.learning.LearningData.quick(appCtx).daysUsed }.getOrDefault(0)

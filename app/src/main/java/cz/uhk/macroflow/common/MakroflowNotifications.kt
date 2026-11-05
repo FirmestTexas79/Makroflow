@@ -59,6 +59,7 @@ object MakroflowNotifications {
     const val ID_WATER_REMINDER  = 1004
     const val ID_EVENING_LOG     = 1005
     const val ID_STREAK_RISK     = 1006
+    const val ID_WEEKLY          = 1007
 
     // ── Request codes pro PendingIntent ──────────────────────────────
     const val REQ_MORNING_RITUAL = 2001
@@ -67,6 +68,7 @@ object MakroflowNotifications {
     const val REQ_WATER          = 2004
     const val REQ_EVENING_LOG    = 2005
     const val REQ_STREAK_RISK    = 2006
+    const val REQ_WEEKLY         = 2007
 
     // ── STICKY ───────────────────────────────────
 
@@ -79,6 +81,7 @@ object MakroflowNotifications {
     const val ACTION_WATER_REMINDER = "cz.uhk.macroflow.WATER_REMINDER"
     const val ACTION_EVENING_LOG    = "cz.uhk.macroflow.EVENING_LOG"
     const val ACTION_STREAK_RISK    = "cz.uhk.macroflow.STREAK_RISK"
+    const val ACTION_WEEKLY         = "cz.uhk.macroflow.WEEKLY_REPORT"
 
     const val CHANNEL_STICKY = "makroflow_ongoing"
 
@@ -123,6 +126,7 @@ object MakroflowNotifications {
         if (on(Reminder.WATER)) scheduleWaterReminders(context) else cancelAlarm(context, REQ_WATER, ACTION_WATER_REMINDER)
         if (on(Reminder.EVENING)) scheduleEveningLog(context) else cancelAlarm(context, REQ_EVENING_LOG, ACTION_EVENING_LOG)
         if (on(Reminder.STREAK)) scheduleStreakRisk(context) else cancelAlarm(context, REQ_STREAK_RISK, ACTION_STREAK_RISK)
+        if (on(Reminder.WEEKLY)) scheduleWeekly(context) else cancelAlarm(context, REQ_WEEKLY, ACTION_WEEKLY)
     }
 
     /** Čas denního upozornění v ms podle nastavení. */
@@ -207,6 +211,14 @@ object MakroflowNotifications {
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // 7. TÝDENNÍ REPORT — alarm chodí denně v nastavený čas, ukáže se jen v neděli (docs/adr/0100)
+    // ═══════════════════════════════════════════════════════════════
+    private fun scheduleWeekly(context: Context) {
+        setRepeatingAlarm(context, nextDailyMs(context, Reminder.WEEKLY),
+            AlarmManager.INTERVAL_DAY, REQ_WEEKLY, ACTION_WEEKLY)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // Helpers
     // ═══════════════════════════════════════════════════════════════
     private fun setExactAlarm(context: Context, timeMs: Long, reqCode: Int, action: String) {
@@ -258,6 +270,7 @@ class NotificationReceiver : BroadcastReceiver() {
             MakroflowNotifications.ACTION_WATER_REMINDER -> Reminder.WATER
             MakroflowNotifications.ACTION_EVENING_LOG -> Reminder.EVENING
             MakroflowNotifications.ACTION_STREAK_RISK -> Reminder.STREAK
+            MakroflowNotifications.ACTION_WEEKLY -> Reminder.WEEKLY
             else -> null
         }
         if (reminder != null && !AppSettings.isOn(context, reminder)) return
@@ -268,6 +281,7 @@ class NotificationReceiver : BroadcastReceiver() {
             MakroflowNotifications.ACTION_WATER_REMINDER -> handleWater(context)
             MakroflowNotifications.ACTION_EVENING_LOG    -> handleEveningLog(context)
             MakroflowNotifications.ACTION_STREAK_RISK    -> handleStreakRisk(context)
+            MakroflowNotifications.ACTION_WEEKLY         -> handleWeekly(context)
             // Obnoví alarmy po restartu telefonu
             Intent.ACTION_BOOT_COMPLETED                 -> MakroflowNotifications.scheduleAll(context)
         }
@@ -401,6 +415,31 @@ class NotificationReceiver : BroadcastReceiver() {
             text    = "Ještě jsi dnes nevyplnil ranní rituál. Zbývají hodiny — nezlam sérii!",
             priority = NotificationCompat.PRIORITY_DEFAULT
         )
+    }
+    // 7. Týdenní report: v neděli večer, jen když už je co hodnotit
+    private fun handleWeekly(context: Context) {
+        if (java.time.LocalDate.now().dayOfWeek != java.time.DayOfWeek.SUNDAY) return
+        val app = context.applicationContext
+        val pending = goAsync()
+        Thread {
+            try {
+                val used = cz.uhk.macroflow.learning.LearningData.quick(app).daysUsed
+                if (used >= cz.uhk.macroflow.learning.LearningModel.UNLOCK_DAYS) {
+                    val r = cz.uhk.macroflow.report.WeeklyReportData.load(app)
+                    showNotification(app,
+                        id      = MakroflowNotifications.ID_WEEKLY,
+                        channel = MakroflowNotifications.CHANNEL_DAILY,
+                        title   = "📅 Týdenní report je hotový",
+                        text    = r.headline,
+                        priority = NotificationCompat.PRIORITY_LOW
+                    )
+                }
+            } catch (_: Exception) {
+                // report se nepovedl spočítat: radši žádné upozornění
+            } finally {
+                pending.finish()
+            }
+        }.start()
     }
 
     // ── Zobrazení notifikace ──────────────────────────────────────────

@@ -19,7 +19,8 @@ enum class Reminder(
     WORKOUT("n_workout", "Trénink", "30 minut před tréninkem a po něm – podle času v Plánu", null),
     WATER("n_water", "Pitný režim", "Každé 2 hodiny mezi 9 a 21, jen když dlouho nepiješ", null),
     EVENING("n_evening", "Večerní přehled", "Shrnutí dne, nebo připomínka zapsat jídlo", 20 * 60),
-    STREAK("n_streak", "Série v ohrožení", "Když ti chybí dnešní check-in a máš rozjetou sérii", 21 * 60)
+    STREAK("n_streak", "Série v ohrožení", "Když ti chybí dnešní check-in a máš rozjetou sérii", 21 * 60),
+    WEEKLY("n_weekly", "Týdenní report", "V neděli večer: jak se ti tenhle týden dařilo", 19 * 60)
 }
 
 object ReminderSchedule {

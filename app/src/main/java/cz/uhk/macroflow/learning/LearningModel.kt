@@ -144,7 +144,7 @@ object LearningModel {
                 Notice("energy:$pct", "Odhad tvého výdeje se posunul na ${signed(pct)} % oproti rovnici.")
             }
             today.dayOfWeek == DayOfWeek.SUNDAY && s.weekKey != weekKey(today) ->
-                Notice("week:${weekKey(today)}", "Týdenní shrnutí je hotové. Podívej se, co se aplikace tenhle týden naučila.")
+                Notice("week:${weekKey(today)}", "Týdenní report je hotový. Podívej se, jak se ti tenhle týden dařilo.")
             else -> null
         }
         return n?.takeIf { it.key != s.dismissed }

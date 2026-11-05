@@ -265,7 +265,12 @@ object LearningPill {
         var current: Notice? = null
         var factor: Double? = null
         fun ack() { current?.let { LearningData.acknowledge(ctx, it, factor) }; card.visibility = View.GONE }
-        card.setOnClickListener { ack(); LearningSheet.show(host.childFragmentManager) }
+        card.setOnClickListener {
+            val weekly = current?.key?.startsWith("week:") == true
+            ack()
+            if (weekly) cz.uhk.macroflow.report.WeeklyReportSheet.show(host.childFragmentManager)
+            else LearningSheet.show(host.childFragmentManager)
+        }
         close.setOnClickListener { ack() }
 
         return {
