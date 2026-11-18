@@ -30,4 +30,7 @@ interface ConsumedSnackDao {
 
     @Query("DELETE FROM consumed_snacks") // Toto tam musí být!
     fun deleteAllConsumedLocally()
+
+    @Query("DELETE FROM consumed_snacks WHERE mealContext = :tag")
+    fun deleteDemoMeals(tag: String)
 }

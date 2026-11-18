@@ -28,4 +28,7 @@ interface WaterDao {
 
     @Query("DELETE FROM water_log")
     fun deleteAllWaterLocally()
+
+    @Query("DELETE FROM water_log WHERE timestamp IN (:ts)")
+    fun deleteByTimestamps(ts: List<Long>)
 }

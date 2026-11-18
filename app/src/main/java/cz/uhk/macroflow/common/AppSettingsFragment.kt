@@ -1,4 +1,4 @@
-package cz.uhk.macroflow.common
+﻿package cz.uhk.macroflow.common
 
 import android.Manifest
 import android.content.Intent
@@ -236,6 +236,10 @@ class AppSettingsFragment : Fragment() {
             chevron(r); r.setOnClickListener { AboutInfo.show(requireContext()) }
         })
         box.addView(divider())
+        box.addView(row(box, R.drawable.ic_nav_info, "Ukázková data", "Naplní prázdnou aplikaci 14 dny jídla, vody a kroků na vyzkoušení").also { r ->
+            chevron(r); r.setOnClickListener { toggleDemo() }
+        })
+        box.addView(divider())
         box.addView(row(box, R.drawable.ic_nav_info, "Verze", "Makroflow ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"))
         if (BuildConfig.DEBUG) {
             box.addView(divider())
@@ -245,6 +249,28 @@ class AppSettingsFragment : Fragment() {
         }
     }
 
+    private fun toggleDemo() {
+        val ctx = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            val active = cz.uhk.macroflow.demo.DemoData.isActive(ctx)
+            val empty = withContext(Dispatchers.IO) { cz.uhk.macroflow.demo.DemoData.isEmptyApp(ctx) }
+            if (!active && !empty) {
+                Toast.makeText(ctx, "Ukázková data jdou zapnout jen do prázdné aplikace.", Toast.LENGTH_LONG).show(); return@launch
+            }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(if (active) "Smazat ukázková data?" else "Zapnout ukázková data?")
+                .setMessage(if (active) "Odstraní jen data vložená demem, tvoje vlastní záznamy zůstanou." else "Vloží vymyšlených 14 dní, abys viděl grafy a přehledy. Kdykoli je jde smazat.")
+                .setNegativeButton("Zrušit", null)
+                .setPositiveButton(if (active) "Smazat" else "Zapnout") { _, _ ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        withContext(Dispatchers.IO) {
+                            if (active) cz.uhk.macroflow.demo.DemoData.disable(ctx) else cz.uhk.macroflow.demo.DemoData.enable(ctx)
+                        }
+                        Toast.makeText(ctx, if (active) "Ukázková data smazána." else "Ukázková data vložena.", Toast.LENGTH_SHORT).show()
+                    }
+                }.show()
+        }
+    }
     // ── Pomocné ─────────────────────────────────────────────────────────────
 
     private fun row(parent: ViewGroup, icon: Int, title: String, sub: String): View =

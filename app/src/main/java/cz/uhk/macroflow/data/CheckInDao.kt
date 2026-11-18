@@ -16,4 +16,7 @@ interface CheckInDao {
 
     @Query("DELETE FROM checkins")
     fun deleteAllCheckInsLocally()
+
+    @Query("DELETE FROM checkins WHERE mood = :tag")
+    fun deleteDemoCheckIns(tag: String)
 }

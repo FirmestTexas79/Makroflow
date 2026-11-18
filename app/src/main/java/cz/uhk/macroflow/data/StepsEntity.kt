@@ -25,6 +25,9 @@ interface StepsDao {
     @Query("DELETE FROM steps")
     fun deleteAll(): Int // 👈 Bez suspend!
 
+    @Query("DELETE FROM steps WHERE date IN (:dates)")
+    fun deleteByDates(dates: List<String>)
+
     @Query("SELECT * FROM steps")
     fun getAllStepsSync(): List<StepsEntity>
 }
