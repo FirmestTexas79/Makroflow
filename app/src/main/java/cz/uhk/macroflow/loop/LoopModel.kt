@@ -38,7 +38,9 @@ data class Readiness(val score: Int, val parts: List<Part>, val coverage: Double
 data class Advice(
     val score: Int, val band: String, val volumeFactor: Double, val rirDelta: Int,
     val kcalPct: Double, val waterDeltaMl: Int, val bedtimeMin: Int?,
-    val headline: String, val reasons: List<String>, val warnings: List<String>
+    val headline: String, val reasons: List<String>, val warnings: List<String>,
+    /** Jedna věta co dnes udělat (bez hodnocení formy), pro kartu. */
+    val action: String = ""
 ) {
     /** Úprava, kterou má smysl nabídnout k potvrzení (jinak stačí text). */
     val hasProposal get() = kcalPct != 0.0 || waterDeltaMl != 0
@@ -164,7 +166,7 @@ object LoopModel {
             r.score < 40 -> " Dnes raději odpočinek nebo klidná chůze."
             else -> ""
         }
-        return Advice(r.score, band(r.score), vf, rir, pct, water, bedtime, "${band(r.score)}$why.$train", reasons, warnings)
+        return Advice(r.score, band(r.score), vf, rir, pct, water, bedtime, "${band(r.score)}$why.$train", reasons, warnings, train.trim().ifBlank { if (r.score >= 75) "Den je tvůj, klidně přitlač." else "" })
     }
 
     // ── Naučené vazby ───────────────────────────────────────────────────────
