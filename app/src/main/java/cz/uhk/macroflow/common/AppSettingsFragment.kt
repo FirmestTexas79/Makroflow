@@ -236,6 +236,14 @@ class AppSettingsFragment : Fragment() {
             chevron(r); r.setOnClickListener { AboutInfo.show(requireContext()) }
         })
         box.addView(divider())
+        box.addView(row(box, R.drawable.ic_line_gift, "Pozvi kamaráda do testu", "Pošli odkaz na testovací verzi z Google Play").also { r ->
+            chevron(r); r.setOnClickListener { inviteTester() }
+        })
+        box.addView(divider())
+        box.addView(row(box, R.drawable.ic_line_pencil, "Napsat zpětnou vazbu", "Chyba, nápad nebo co tě štve, přečtu všechno").also { r ->
+            chevron(r); r.setOnClickListener { sendFeedback() }
+        })
+        box.addView(divider())
         box.addView(row(box, R.drawable.ic_nav_info, "Ukázková data", "Naplní prázdnou aplikaci 14 dny jídla, vody a kroků na vyzkoušení").also { r ->
             chevron(r); r.setOnClickListener { toggleDemo() }
         })
@@ -246,6 +254,28 @@ class AppSettingsFragment : Fragment() {
             box.addView(row(box, R.drawable.ic_nav_tools, "Vývojářské nástroje", "Jen v debug buildu").also { r ->
                 chevron(r); r.setOnClickListener { (activity as? MainActivity)?.replaceFragment(SettingsFragment()) }
             })
+        }
+    }
+
+    private fun inviteTester() {
+        val text = "Ahoj, testuju svoji appku Makroflow (jídlo, trénink a k tomu malá hra s Makromony). " +
+            "Pomohl bys mi? Pošli mi svůj Gmail, přidám tě do testu a pak se přihlas tady:\n" +
+            "https://play.google.com/apps/testing/${BuildConfig.APPLICATION_ID}\n" +
+            "Appku pak stáhneš tady: https://play.google.com/store/apps/details?id=${BuildConfig.APPLICATION_ID}\n" +
+            "Stačí ji mít 14 dní nainstalovanou, díky!"
+        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text)
+        }, "Pozvat kamaráda přes…"))
+    }
+
+    private fun sendFeedback() {
+        val intent = Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:")).apply {
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("matasovsky.samuel@seznam.cz"))
+            putExtra(Intent.EXTRA_SUBJECT, "Makroflow ${BuildConfig.VERSION_NAME} – zpětná vazba")
+            putExtra(Intent.EXTRA_TEXT, "\n\n—\nVerze ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · ${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}")
+        }
+        runCatching { startActivity(intent) }.onFailure {
+            Toast.makeText(requireContext(), "Nemáš nastavený e-mail. Napiš na matasovsky.samuel@seznam.cz", Toast.LENGTH_LONG).show()
         }
     }
 
