@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Base.Theme.Makroflow" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.Makroflow" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/brand_primary</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/brand_dark</item>
@@ -49,7 +49,7 @@
         <item name="cornerSize">25dp</item>
     </style>
 
-    <style name="MacroflowCalendarTheme" parent="Theme.Material3.DayNight">
+    <style name="MacroflowCalendarTheme" parent="Theme.Material3.Light">
         <item name="colorPrimary">@color/brand_accent_deep</item>
         <item name="colorOnSurface">@color/brand_dark</item>
         <item name="colorOnSurfaceVariant">@color/brand_primary</item>
