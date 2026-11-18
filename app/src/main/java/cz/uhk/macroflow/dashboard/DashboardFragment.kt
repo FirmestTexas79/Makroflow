@@ -452,8 +452,11 @@ class DashboardFragment : Fragment() {
 
     /** Výzva pod tipem trenéra: rituál ještě čeká, nebo je hotový. */
     private fun updateCoachCta(view: View, done: Boolean) {
-        view.findViewById<View>(R.id.cardRitualBanner)?.visibility = if (done) View.GONE else View.VISIBLE
-        view.findViewById<View>(R.id.tvCoachCta)?.visibility = if (done) View.VISIBLE else View.GONE
+        view.findViewById<View>(R.id.cardRitualBanner)?.visibility = View.VISIBLE
+        view.findViewById<TextView>(R.id.tvRitualBannerTitle)?.text = if (done) "Ranní rituál hotový ✓" else "Ranní rituál čeká"
+        view.findViewById<TextView>(R.id.tvRitualBannerSub)?.text = if (done) "Máš splněno, dobrá práce." else "Váha, energie a spánek. Trvá půl minuty."
+        view.findViewById<TextView>(R.id.tvRitualBannerBtn)?.apply { text = if (done) "✓" else "Začít"; alpha = if (done) 0.7f else 1f }
+        view.findViewById<View>(R.id.tvCoachCta)?.visibility = View.GONE
         val cta = view.findViewById<TextView>(R.id.tvCoachCta) ?: return
         val ctx = cta.context
         if (done) {
