@@ -206,6 +206,10 @@ class AppSettingsFragment : Fragment() {
             }
         }
         box.addView(restRow)
+        box.addView(divider())
+        box.addView(row(box, R.drawable.ic_line_shield, "Hlášení pádů", "Když aplikace spadne, odešle se anonymní chybový záznam bez tvých údajů. Pomáhá nám to opravit chyby").also { r ->
+            switchOf(r, AppSettings.crashReports(ctx)) { on -> AppSettings.setCrashReports(ctx, on) }
+        })
     }
 
     // ── Promo kódy ──────────────────────────────────────────────────────────

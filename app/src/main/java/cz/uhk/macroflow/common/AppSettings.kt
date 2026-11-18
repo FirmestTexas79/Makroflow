@@ -72,4 +72,13 @@ object AppSettings {
     fun restSecondsFor(ctx: Context, exerciseId: String?) =
         restSeconds(ctx).takeIf { it != REST_AUTO } ?: cz.uhk.macroflow.training.exercises.RestTimes.seconds(exerciseId)
     fun setRestSeconds(ctx: Context, s: Int) = prefs(ctx).edit().putInt("rest_seconds", s).apply()
+
+    // ── Hlášení pádů (Firebase Crashlytics) ─────────────────────────────────
+
+    /** Při pádu se odešle anonymní chybový záznam (zásobník volání, model telefonu, verze). Bez osobních údajů, jde vypnout. */
+    fun crashReports(ctx: Context) = prefs(ctx).getBoolean("crash_reports", true)
+    fun setCrashReports(ctx: Context, on: Boolean) {
+        prefs(ctx).edit().putBoolean("crash_reports", on).apply()
+        runCatching { com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(on) }
+    }
 }

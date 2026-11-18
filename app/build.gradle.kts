@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.devtools.ksp)
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -22,8 +23,8 @@ android {
         applicationId = "cz.uhk.macroflow"
         minSdk = 26
         targetSdk = 36
-        versionCode = 34
-        versionName = "1.5.0"
+        versionCode = 36
+        versionName = "1.5.2"
 
         // --- TADY JE TA ZMĚNA: Načtení klíče ze souboru ---
         val localProperties = Properties()
@@ -104,6 +105,7 @@ dependencies {
 
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
     implementation("io.coil-kt:coil:2.6.0")
