@@ -328,6 +328,31 @@
                 </LinearLayout>
             </FrameLayout>
 
+            <!-- ── Co dnes sníst: zkratka do plánovače zbytku dne ───── -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardDayPlan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/profile_card"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/brand_dark_alpha12"
+                app:strokeWidth="1dp">
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="16dp">
+                    <ImageView android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_status_pill" android:backgroundTint="@color/brand_primary_alpha20" android:importantForAccessibility="no" android:padding="11dp" android:src="@drawable/ic_line_bowl" app:tint="@color/brand_dark" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-black" android:text="Co dnes sníst?" android:textColor="@color/brand_dark" android:textSize="17sp" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Navrhnu jídla na zbytek dne podle toho, co ti chybí" android:textColor="@color/brand_primary" android:textSize="12sp" />
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="36dp" android:layout_marginStart="10dp" android:background="@drawable/bg_status_pill" android:backgroundTint="@color/brand_dark" android:fontFamily="sans-serif-black" android:gravity="center" android:importantForAccessibility="no" android:paddingHorizontal="14dp" android:text="Navrhnout" android:textColor="@color/brand_cream" android:textSize="13sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- ── Voda a čas tréninku ──────────────────────────────── -->
             <LinearLayout
                 android:id="@+id/rowWaterWorkout"

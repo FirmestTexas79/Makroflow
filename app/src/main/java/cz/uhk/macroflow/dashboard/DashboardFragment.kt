@@ -1,4 +1,4 @@
-package cz.uhk.macroflow.dashboard
+﻿package cz.uhk.macroflow.dashboard
 
 import android.animation.ObjectAnimator
 import android.content.Context
@@ -97,6 +97,11 @@ class DashboardFragment : Fragment() {
 
         view.findViewById<View>(R.id.tvCoachCta)?.setOnClickListener { coachCard.performClick() }
         view.findViewById<View>(R.id.cardRitualBanner)?.setOnClickListener { coachCard.performClick() }
+        view.findViewById<View>(R.id.cardDayPlan)?.setOnClickListener {
+            val mc = TrainingTimeManager.getMealContext(requireContext())
+            cz.uhk.macroflow.nutrition.plan.DayPlanSheet.show(parentFragmentManager,
+                mc == TrainingTimeManager.MealContext.PRE_WORKOUT || mc == TrainingTimeManager.MealContext.IMMINENT)
+        }
         view.findViewById<View>(R.id.ritualScrim)?.setOnClickListener { showRitual(view, false) }
         coachCard.setOnClickListener {
             lifecycleScope.launch(Dispatchers.Main) {
