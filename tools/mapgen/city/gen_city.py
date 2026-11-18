@@ -262,13 +262,16 @@ NODES = {
     "namesti": (124, 336), "vyveska": (116, 284), "kasna": (192, 368), "c_jih": (192, 410),
     "arena": (318, 494), "vez": (192, 572), "vytah": (170, 588), "sklad": (352, 560),
     "lida": (164, 310), "jarda": (220, 208), "korinek": (252, 398),    # obyvatelé – Makromoni (OzvenaCity.TOWNSFOLK)
+    "corra": (76, 336), "oswin": (321, 349), "pell": (184, 406), "pip": (200, 406), "lio": (164, 180), "sabeth": (296, 286),   # ADR 0101
 }
 EDGES = [("vstup_z_plane", "c_sever"), ("c_sever", "venka"), ("c_sever", "pekarna"), ("c_sever", "namesti"),
          ("namesti", "vyveska"), ("namesti", "kasna"), ("namesti", "c_jih"), ("c_jih", "arena"), ("c_jih", "vez"),
          ("vez", "vytah"), ("vez", "sklad"),
-         ("namesti", "lida"), ("c_sever", "jarda"), ("c_jih", "korinek")]
+         ("namesti", "lida"), ("c_sever", "jarda"), ("c_jih", "korinek"),
+         ("namesti", "corra"), ("c_jih", "oswin"), ("c_jih", "pell"), ("c_jih", "pip"), ("c_sever", "lio"), ("pekarna", "sabeth")]
 # obyvatelé (Makromoni v OzvenaCity.TOWNSFOLK – pata x, y): nejde se skrz ně
-for (x, y) in ((298, 256), (78, 256), (150, 308), (206, 208), (234, 392)):
+for (x, y) in ((298, 256), (78, 256), (150, 308), (206, 208), (234, 392),
+               (62, 332), (335, 345), (172, 404), (212, 404), (150, 178), (310, 282)):   # + ADR 0101
     block[y - 6:y, x - 7:x + 7] = True
 block[:100, :] = True
 block[:112, 180:205] = False                            # průjezd branou

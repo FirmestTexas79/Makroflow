@@ -34,13 +34,13 @@ class OzvenaArenaHallTest {
 
     @Test fun obyvateleStojiVeMesteAMluvi() {
         val m = OzvenaCity.MAP
-        assertEquals(5, OzvenaCity.TOWNSFOLK.size)
+        assertEquals(11, OzvenaCity.TOWNSFOLK.size)   // + šest obyvatel z docs/adr/0101
         val sprites = listOf("src/main/res/drawable", "app/src/main/res/drawable").map { java.io.File(it) }.first { it.exists() }.list()!!.toList()
         OzvenaCity.TOWNSFOLK.forEach { t -> assertTrue(t.id, sprites.any { it.startsWith("makromon_%02d_".format(t.species)) }) }
         OzvenaCity.TOWNSFOLK.forEach { t ->
             assertTrue(t.id, t.x in 0 until m.artW && t.y in 0 until m.artH && m.node(t.node) != null && t.node in OzvenaCity.ACTION_NODES)
         }
-        for (n in listOf(OzvenaCity.LIDA_NODE, OzvenaCity.JARDA_NODE, OzvenaCity.KORINEK_NODE)) {
+        for (n in OzvenaCity.RESIDENT_NODES) {
             assertTrue(n, OzvenaCity.residentLine(n, 1) != OzvenaCity.residentLine(n, 2))   // repliky se střídají po dnech
             assertTrue(n, OzvenaCity.residentLine(n, -5) != null)
         }

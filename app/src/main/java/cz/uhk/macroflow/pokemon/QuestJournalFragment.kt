@@ -202,11 +202,13 @@ class QuestJournalFragment : Fragment() {
     private fun renderBag() {
         val ctx = context?.applicationContext ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            val counts = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.counts(ctx) }
+            val counts = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.counts(ctx) } +
+                (if (cz.uhk.macroflow.pokemon.story.MemoryBookStore.hasBook(ctx)) mapOf(cz.uhk.macroflow.pokemon.story.MemoryBook.ITEM_ID to 1) else emptyMap())
             if (!isAdded) return@launch
             cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.bag(rootView.findViewById(R.id.llBag), rootView as FrameLayout, counts,
                 readText = { item -> bagReadText(item.id) },
                 onUse = { item ->
+                    if (item.id == cz.uhk.macroflow.pokemon.story.MemoryBook.ITEM_ID) cz.uhk.macroflow.pokemon.story.MemoryBookStore.showBook(rootView as FrameLayout, viewLifecycleOwner)
                     if (item.id == cz.uhk.macroflow.pokemon.bag.BagItems.LURE_LAMP) viewLifecycleOwner.lifecycleScope.launch {
                         val ok = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.bag.PocketActions.useLureLamp(ctx) }
                         if (!isAdded) return@launch

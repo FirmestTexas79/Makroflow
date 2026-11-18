@@ -900,11 +900,12 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_TEXT)
-                cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIDA_NODE, cz.uhk.macroflow.pokemon.cave.OzvenaCity.JARDA_NODE,
-                cz.uhk.macroflow.pokemon.cave.OzvenaCity.KORINEK_NODE -> when {
+                in cz.uhk.macroflow.pokemon.cave.OzvenaCity.RESIDENT_NODES -> when {
                     nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.KORINEK_NODE && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.END_A_KEY) -> showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.TOBBEN_GONE)
                     nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIDA_NODE && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.NELLE_TRUTH_KEY) -> showMapToast(cz.uhk.macroflow.pokemon.story.Fenn.NELLE_AFTER_TRUTH)
-                    else -> cz.uhk.macroflow.pokemon.cave.OzvenaCity.residentLine(nodeName, java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR))?.let { showMapToast(it) }
+                    cz.uhk.macroflow.pokemon.story.MemoryBookStore.isGone(this, nodeName) -> cz.uhk.macroflow.pokemon.story.MemoryBook.TRACES[nodeName]?.let { showMapToast(it) }
+                    else -> cz.uhk.macroflow.pokemon.cave.OzvenaCity.residentLine(nodeName, java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR),
+                        cz.uhk.macroflow.pokemon.story.MemoryBookStore.isGone(this, cz.uhk.macroflow.pokemon.cave.OzvenaCity.PIP_NODE))?.let { showMapToast(it) }
                 }
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.GATE_NODE -> replaceMapContent(cz.uhk.macroflow.pokemon.trainer.ArenaFragment())
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.COMMANDER_NODE -> showCommander(0)
@@ -1828,13 +1829,17 @@ class MakromonMapActivity : AppCompatActivity() {
      */
     private fun placeTownsfolk() {
         for (t in cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWNSFOLK) {
-            if (t.node == cz.uhk.macroflow.pokemon.cave.OzvenaCity.KORINEK_NODE && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Fenn.END_A_KEY)) continue   // Bezejmenní si ho vzali
+            if (cz.uhk.macroflow.pokemon.story.MemoryBookStore.isGone(this, t.id)) continue   // Bezejmenní si ho vzali (Tobben i koncem A u Fenna, docs/adr/0101)
             val res = when (t.species) {
                 1 -> R.drawable.makromon_01_ignar; 38 -> R.drawable.makromon_38_johnsova; 7 -> R.drawable.makromon_07_flori
-                32 -> R.drawable.makromon_32_mysnic; else -> R.drawable.makromon_44_gemak
+                32 -> R.drawable.makromon_32_mysnic; 4 -> R.drawable.makromon_04_aqulin; 31 -> R.drawable.makromon_31_axlu
+                20 -> R.drawable.makromon_20_finlet; 39 -> R.drawable.makromon_39_grifben; 27 -> R.drawable.makromon_27_phantil
+                else -> R.drawable.makromon_44_gemak
             }
             placeMakromonNpc(res, t.x, t.y, t.id)
         }
+        // Pamětní kniha (docs/adr/0101): aktivní den v Ozvěně, mizení a scéna prvního neviděného zmizení
+        cz.uhk.macroflow.pokemon.story.MemoryBookStore.onEnter(this)?.let { scene -> mapWorld.postDelayed({ if (!isFinishing) showMapToast(scene) }, 700) }
     }
 
     /**
@@ -2077,6 +2082,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val O = cz.uhk.macroflow.pokemon.story.Ozvena
         val p = questManager.getCurrentProgress()
         val ours = questManager.getActiveQuestId() == O.QUEST_ID && p != null
+        if (venka) cz.uhk.macroflow.pokemon.story.MemoryBookStore.takeVessaComment(this)?.let { showMapToast(it); return }
         when {
             !ours -> showMapToast(if (venka) vessaText() else cz.uhk.macroflow.pokemon.cave.OzvenaCity.BAKERY_TEXT)
             venka && !p!!.isCompleted && p.currentStageIndex == O.NAME_STAGE -> {
