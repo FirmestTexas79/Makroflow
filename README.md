@@ -1,5 +1,5 @@
 <h1>Privacy Policy</h1>
-<p>Last updated: November 4, 2026</p>
+<p>Last updated: November 18, 2026</p>
 <p>This Privacy Policy describes Our policies and procedures on the collection, use and disclosure of Your information when You use the Service and tells You about Your privacy rights and how the law protects You.</p>
 <p>We use Your Personal Data to provide and improve the Service. By using the Service, You agree to the collection and use of information in accordance with this Privacy Policy. This Privacy Policy has been created with the help of the <a href="https://www.termsfeed.com/privacy-policy-generator/" target="_blank">Privacy Policy Generator</a>.</p>
 <h2>Interpretation and Definitions</h2>
@@ -77,6 +77,9 @@
 <p>If You sign in, Your profile, training plan, morning check-ins, water log, custom snacks and logged workout sets are stored in Google Firebase (Cloud Firestore and Firebase Authentication) under Your account so that they can be restored on another device. Without signing in, this data stays only on Your device.</p>
 <h4>Food Photo Analysis</h4>
 <p>If You use the optional photo analysis of food, the photo is sent to the Google Gemini API to estimate the food and its nutritional values. We do not store the photo on Our servers. Barcode scanning and barbell tracking by camera are processed on Your device.</p>
+<h4>Crash Reports</h4>
+<p>When the app crashes, it sends an anonymous crash report to Google Firebase Crashlytics so that We can find and fix the error. The report contains technical information only: the error and the place in the code where it happened, the app version, the device model, the Android version and a random installation identifier. It does not contain Your name, email, food log, weight, health data or any other content You enter.</p>
+<p>Crash reports are turned on by default. You can turn them off at any time in the app under Settings, Display, Crash reports. Google processes the reports on Our behalf and keeps them for 90 days.</p>
 
 <h3>Use of Your Personal Data</h3>
 <p>The Company may use Personal Data for the following purposes:</p>
