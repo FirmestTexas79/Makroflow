@@ -27,22 +27,53 @@
             android:paddingHorizontal="20dp"
             android:paddingBottom="16dp">
 
-            <TextView
-                android:id="@+id/tvEditorTitle"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:fontFamily="sans-serif-black"
-                android:textColor="@color/brand_dark"
-                android:textSize="26sp" />
+                android:background="@drawable/bg_editor_hero"
+                android:orientation="vertical"
+                android:padding="18dp">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:alpha="0.75"
-                android:text="Pořadí šipkami, křížkem odebereš. Historie cviků zůstává."
-                android:textColor="@color/brand_primary"
-                android:textSize="13sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.12"
+                    android:text="ŠABLONA TRÉNINKU"
+                    android:textColor="@color/brand_accent_warm"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tvEditorTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif-black"
+                    android:textColor="@color/brand_cream"
+                    android:textSize="28sp" />
+
+                <TextView
+                    android:id="@+id/tvEditorCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_editor_pill"
+                    android:fontFamily="sans-serif-medium"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="4dp"
+                    android:textColor="@color/brand_cream"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:alpha="0.8"
+                    android:text="Pořadí šipkami, křížkem odebereš. Historie cviků zůstává."
+                    android:textColor="@color/brand_cream"
+                    android:textSize="13sp" />
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/llEditorRows"
