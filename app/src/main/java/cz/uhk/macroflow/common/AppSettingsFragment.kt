@@ -270,12 +270,12 @@ class AppSettingsFragment : Fragment() {
 
     private fun sendFeedback() {
         val intent = Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:")).apply {
-            putExtra(Intent.EXTRA_EMAIL, arrayOf("matasovsky.samuel@seznam.cz"))
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("samuel.matasovsk@gmail.com"))
             putExtra(Intent.EXTRA_SUBJECT, "Makroflow ${BuildConfig.VERSION_NAME} – zpětná vazba")
             putExtra(Intent.EXTRA_TEXT, "\n\n—\nVerze ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · ${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}")
         }
         runCatching { startActivity(intent) }.onFailure {
-            Toast.makeText(requireContext(), "Nemáš nastavený e-mail. Napiš na matasovsky.samuel@seznam.cz", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), "Nemáš nastavený e-mail. Napiš na samuel.matasovsk@gmail.com", Toast.LENGTH_LONG).show()
         }
     }
 
