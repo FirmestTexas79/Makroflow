@@ -107,7 +107,10 @@ object LogSetSheet {
         /** Číslo v poli (kg, nebo lb při automatickém převodu). */
         fun typed() = etW.text.toString().replace(',', '.').toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
         /** Váha v kg – to se ukládá a počítá. */
-        fun w() = if (swLbs.isChecked) Lbs.toKg(typed()) else typed()
+        // Přesná váha v kg, když číslo v poli vzniklo převodem (ne psaním) – přepnutí tam a zpět nesmí váhu posunout
+        var exactKg: Double? = null
+        var settingText = false
+        fun w() = if (swLbs.isChecked) exactKg ?: Lbs.toKg(typed()) else typed()
         fun shown(kg: Double) = if (swLbs.isChecked) Lbs.fromKg(kg) else kg
         fun r() = etR.text.toString().toIntOrNull()?.coerceAtLeast(0) ?: 0
         val prevBest = history.filter { it.exerciseId == exercise.id }.mapNotNull { StrengthModel.setEstimate(it) }.maxOrNull()
@@ -147,9 +150,12 @@ object LogSetSheet {
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: Editable?) = refresh()
+            override fun afterTextChanged(s: Editable?) { if (!settingText) exactKg = null; refresh() }
         }
+        /** Nastaví pole programově; [exact] = přesná váha v kg, kterou číslo v librách zastupuje. */
+        fun setWeight(text: String, exact: Double? = null) { settingText = true; etW.setText(text); settingText = false; exactKg = exact; refresh() }
         etW.setText(plain(shown(startW))); etR.setText(startR.toString())
+        if (swLbs.isChecked) exactKg = startW
         etW.addTextChangedListener(watcher); etR.addTextChangedListener(watcher)
         swSlow.setOnCheckedChangeListener { _, _ -> refresh() }
         fun wStep() = if (swLbs.isChecked) Lbs.STEP else if (inc > 0.0) inc else 2.5
@@ -158,9 +164,8 @@ object LogSetSheet {
         // přepnutí přepočítá číslo v poli, váha zůstane stejná
         swLbs.setOnCheckedChangeListener { _, on ->
             prefs.edit().putBoolean(LBS_KEY, on).apply()
-            val t = typed()
-            etW.setText(plain(if (on) Lbs.fromKg(t) else Lbs.toKg(t)))
-            refresh()
+            val kgNow = if (on) typed() else (exactKg ?: Lbs.toKg(typed()))
+            if (on) setWeight(plain(Lbs.fromKg(kgNow)), exact = kgNow) else setWeight(plain(kgNow))
         }
         v.findViewById<View>(R.id.rowLogLbs).setOnClickListener { swLbs.toggle() }
         v.findViewById<View>(R.id.btnRepsMinus).setOnClickListener { etR.setText((r() - 1).coerceAtLeast(1).toString()) }
