@@ -835,7 +835,7 @@ def elevator3d(W=40, H=58):
     return selout(s, 0.55, 0.85)
 
 
-def floor_dial3d(r=15, at=0, n=10):
+def floor_dial3d(r=15, at=0, n=12):
     """Ukazatel pater: mosazný půlkruh s okosením, krémový ciferník s ryskami 0–7, červená ručička na 0, odlesk
     skla; pod ním dvě zaslepené kovové destičky (skrytá patra)."""
     w, h = r * 2 + 5, r + 9

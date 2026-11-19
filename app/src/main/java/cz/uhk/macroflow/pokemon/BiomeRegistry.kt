@@ -49,7 +49,8 @@ enum class BiomeType {
     TOWER_DORM,
     TOWER_ICE,
     TOWER_FIRE,
-    TOWER_OFFICE
+    TOWER_OFFICE,
+    TOWER_FAIRY
 }
 
 object BiomeRegistry {
@@ -176,7 +177,8 @@ object BiomeRegistry {
         BiomeDefinition(BiomeType.TOWER_DORM, R.drawable.tower_dorm, graphOf(cz.uhk.macroflow.pokemon.cave.TowerDorm.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerDorm.MAP),
         BiomeDefinition(BiomeType.TOWER_ICE, R.drawable.tower_ice, graphOf(cz.uhk.macroflow.pokemon.cave.TowerIce.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerIce.MAP),
         BiomeDefinition(BiomeType.TOWER_FIRE, R.drawable.tower_fire, graphOf(cz.uhk.macroflow.pokemon.cave.TowerFire.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerFire.MAP),
-        BiomeDefinition(BiomeType.TOWER_OFFICE, R.drawable.tower_office, graphOf(cz.uhk.macroflow.pokemon.cave.TowerOffice.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerOffice.MAP)
+        BiomeDefinition(BiomeType.TOWER_OFFICE, R.drawable.tower_office, graphOf(cz.uhk.macroflow.pokemon.cave.TowerOffice.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerOffice.MAP),
+        BiomeDefinition(BiomeType.TOWER_FAIRY, R.drawable.tower_fairy, graphOf(cz.uhk.macroflow.pokemon.cave.TowerFairy.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerFairy.MAP)
         ).associateBy { it.type }
     }
 

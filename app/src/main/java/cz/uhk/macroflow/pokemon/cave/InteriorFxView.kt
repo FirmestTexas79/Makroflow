@@ -110,6 +110,8 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         chute(canvas, now)
         orrery(canvas, t)
         quill(canvas, now)
+        rainbow(canvas, t)
+        pixies(canvas, t, now)
         postInvalidateOnAnimation()
     }
 
@@ -387,7 +389,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
 
     /** Padající listí: každý list se odlepí od koruny, kolébá se ze strany na stranu, dopadne a vybledne. */
     private fun leaves(c: Canvas, t: Float) {
-        val cols = intArrayOf(0xFF5A9040.toInt(), 0xFF84B254.toInt(), 0xFFC89838.toInt(), 0xFFB06A28.toInt())
+        val cols = fx.leafColors ?: intArrayOf(0xFF5A9040.toInt(), 0xFF84B254.toInt(), 0xFFC89838.toInt(), 0xFFB06A28.toInt())
         for ((bi, b) in fx.leaves.withIndex()) for (i in 0 until 3) {
             val k = bi * 3 + i
             val period = 7f + (k % 4) * 1.3f
@@ -1155,6 +1157,51 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         }
     }
 
+    /** Třpyt duhy: po oblouku putují bílé jiskřičky (za výtahem se nekreslí). */
+    private fun rainbow(c: Canvas, t: Float) {
+        val r = fx.rainbow ?: return
+        for (i in 0 until 7) {
+            val k = ((t * 0.08f + i / 7f) % 1f)
+            val a = PI.toFloat() * (1f - k)
+            val band = (i * 3) % 7
+            val rr = r.r - band * 3 - 1
+            val x = r.cx + kotlin.math.cos(a) * rr; val y = r.cy - sin(a) * rr / 1.15f
+            if (x > 60 && x < 116) continue
+            val al = (sin(k * PI.toFloat()) * 255).toInt().coerceIn(0, 255)
+            px(c, x.roundToInt(), y.roundToInt(), (al shl 24) or 0xFFFFFF)
+            if ((t * 6 + i).toInt() % 2 == 0) { px(c, x.roundToInt() - 1, y.roundToInt(), (al / 2 shl 24) or 0xFFFFFF); px(c, x.roundToInt() + 1, y.roundToInt(), (al / 2 shl 24) or 0xFFFFFF) }
+        }
+    }
+
+    private var dartAt = t0 + 6000L + rnd.nextInt(8000)
+
+    /** Pixies: svítící tečky s mihotavými křidélky a jiskřivou stopou, kličkují po zahradě; jednou za čas
+     *  jedna prudce prosviští napříč (zvuk sfx_chime). */
+    private fun pixies(c: Canvas, t: Float, now: Long) {
+        val cols = intArrayOf(0xFFB0E0, 0xB0E8FF, 0xFFF0A0, 0xC8B0FF, 0xB0FFC8)
+        val dms = now - dartAt
+        if (dms > 1400) dartAt = now + 12000L + rnd.nextInt(14000)
+        for ((bi, b) in fx.pixies.withIndex()) for (i in 0 until 2) {
+            val k = bi * 2 + i
+            val w = b.x1 - b.x0; val h = b.y1 - b.y0
+            val sp = if (k == 0 && dms in 0..1400) 3.2f else 1f
+            if (k == 0 && dms in 0..1400) cue("dart", dartAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.CHIME, 0.4f)
+            fun pos(tt: Float) = Pair(b.x0 + w / 2f + sin(tt * (0.7f + k * 0.13f) * sp + k) * w / 2.3f + sin(tt * 2.7f + k * 3) * 4f,
+                b.y0 + h / 2f + sin(tt * (0.9f + k * 0.11f) * sp + k * 1.9f) * h / 2.3f + sin(tt * 3.3f + k) * 3f)
+            val col = cols[k % cols.size]
+            for (j in 1..4) {                                                         // jiskřivá stopa
+                val (tx, ty) = pos(t - j * 0.09f)
+                px(c, tx.roundToInt(), ty.roundToInt(), ((180 - j * 40) shl 24) or col)
+            }
+            val (x, y) = pos(t)
+            val xi = x.roundToInt(); val yi = y.roundToInt()
+            for (dy in -2..2) for (dx in -2..2) if (dx * dx + dy * dy <= 4) px(c, xi + dx, yi + dy, (40 shl 24) or col)
+            px(c, xi, yi, 0xFFFFFFFF.toInt())
+            val flap = ((t * 14 + k) % 2f) < 1f
+            px(c, xi - 1, yi - if (flap) 1 else 0, (200 shl 24) or 0xE8F4FF); px(c, xi + 1, yi - if (flap) 1 else 0, (200 shl 24) or 0xE8F4FF)
+        }
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -1300,6 +1347,21 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0xC8D4FF
         )
 
+        /** Duhová zahrada (11.): pixies, třpyt duhy, motýli, pastelové okvětní lístky, světlušky, sklenice, hrnec zlata. */
+        val FAIRY = InteriorFx(
+            rainbow = FxArc(88, 92, 72),
+            pixies = listOf(FxBox(20, 110, 80, 200), FxBox(100, 140, 160, 230), FxBox(30, 220, 150, 330)),
+            butterflies = listOf(FxBox(20, 120, 160, 200), FxBox(20, 240, 160, 320)),
+            leaves = listOf(FxBox(14, 100, 160, 104), FxBox(14, 190, 160, 194), FxBox(14, 260, 160, 264)),
+            leafColors = intArrayOf(0xFFFFB0C8.toInt(), 0xFFFFE0F0.toInt(), 0xFFE8D0FF.toInt(), 0xFFFFF0B0.toInt()),
+            glowworms = FxBox(14, 150, 162, 330),
+            glows = listOf(FxGlow(150, 112, 14, 9, 0xFFE070, 2.5f), FxGlow(19, 230, 3, 4, 0xFFB0E0, 1.7f),
+                FxGlow(28, 228, 3, 5, 0xB0E8FF, 2.1f), FxGlow(37, 230, 3, 4, 0xFFF0A0, 1.4f), FxGlow(45, 229, 3, 5, 0xC8B0FF, 2.4f),
+                FxGlow(53, 230, 3, 4, 0xB0FFC8, 1.9f), FxGlow(146, 176, 4, 4, 0xFFE8A0, 3f), FxGlow(159, 219, 3, 3, 0xFFE8A0, 3.4f),
+                FxGlow(44, 185, 16, 9, 0xFFC0F0, 4f), FxGlow(130, 253, 16, 9, 0xFFC0F0, 4.4f), FxGlow(46, 311, 16, 9, 0xFFC0F0, 3.8f)),
+            sparkles = listOf(FxBox(138, 100, 162, 114), FxBox(16, 100, 36, 128))
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -1365,8 +1427,14 @@ data class InteriorFx(
     val steam: List<Pair<Int, Int>> = emptyList(),
     val chute: FxPath? = null,
     val orrery: Pair<Int, Int>? = null,
-    val quill: Pair<Int, Int>? = null
+    val quill: Pair<Int, Int>? = null,
+    val rainbow: FxArc? = null,
+    val pixies: List<FxBox> = emptyList(),
+    val leafColors: IntArray? = null
 )
+
+/** Oblouk (duha): střed [cx], [cy] a vnější poloměr [r] (svisle zploštělý 1,15×). */
+data class FxArc(val cx: Int, val cy: Int, val r: Int)
 
 /** Pulzující záře (krystal): střed, poloměry, barva RGB a perioda v sekundách. */
 data class FxGlow(val cx: Int, val cy: Int, val rx: Int, val ry: Int, val color: Int, val periodS: Float)

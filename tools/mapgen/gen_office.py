@@ -113,7 +113,7 @@ for yy in range(22, WALL_H):                                              # rám
                 col = P.GOLD[2]
             img[yy, xx] = col
 wall_put(F.elevator3d(40, 58), 88 - 20, WALL_H + 2 - 58)
-wall_put(F.floor_dial3d(10, at=11), 88 - 12, 2)                          # ručička za koncem stupnice
+wall_put(F.floor_dial3d(10, at=13), 88 - 12, 2)                          # ručička za koncem stupnice
 
 for y in range(WALL_H - 6, AH):                                           # boční stěny: mahagon se zlatou lištou
     for x in range(SIDE):

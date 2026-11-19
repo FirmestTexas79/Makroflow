@@ -14,7 +14,7 @@ enum class ArenaTheme {
     companion object {
         fun fromBiome(name: String?): ArenaTheme = when (name) {
             "TOWN" -> TOWN
-            "MEADOW" -> MEADOW
+            "MEADOW", "TOWER_FAIRY" -> MEADOW
             "FOREST", "HIDDEN_GROVE", "QUIET_ORCHARD", "TOWER_FOREST" -> FOREST
             "MOUNTAINS", "SKY_PASS", "ASH_PLAIN", "ECHO_CANYON", "TOWER_ROCK", "TOWER_ICE", "TOWER_FIRE" -> MOUNTAINS
             "CAVE_OPEN", "TOWER_CAVE" -> CAVE_OPEN

@@ -108,7 +108,8 @@ class MakromonMapActivity : AppCompatActivity() {
         cz.uhk.macroflow.pokemon.cave.TowerWater.MAP.encounterNodes +
         cz.uhk.macroflow.pokemon.cave.TowerDorm.MAP.encounterNodes +
             cz.uhk.macroflow.pokemon.cave.TowerIce.MAP.encounterNodes +
-            cz.uhk.macroflow.pokemon.cave.TowerFire.MAP.encounterNodes
+            cz.uhk.macroflow.pokemon.cave.TowerFire.MAP.encounterNodes +
+            cz.uhk.macroflow.pokemon.cave.TowerFairy.MAP.encounterNodes
 
     /** Přechod mezi mapami. */
     private enum class MapTransition { NONE, FADE, CAVE_IN, CAVE_OUT,
@@ -135,7 +136,7 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
@@ -913,11 +914,12 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.SEPT_NODE -> onSept()
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE -> onElevator()
                 // Archiv okruhů – 1. patro Věže (Spis 212)
-                cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerMeasure.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerPlain.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerForest.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerRock.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerCave.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerWater.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerDorm.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerIce.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerFire.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerOffice.ELEVATOR_NODE -> onElevator()
+                cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerMeasure.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerPlain.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerForest.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerRock.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerCave.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerWater.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerDorm.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerIce.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerFire.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerOffice.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerFairy.ELEVATOR_NODE -> onElevator()
                 in cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerFire.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerFire.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS.getValue(nodeName))
+                in cz.uhk.macroflow.pokemon.cave.TowerFairy.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerFairy.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerWater.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerWater.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerCave.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerCave.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerRock.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerRock.TEXTS.getValue(nodeName))
@@ -1041,6 +1043,7 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun emptyEncounterText(node: String): String = cz.uhk.macroflow.pokemon.cave.AshPlain.emptyEncounterText(node) ?: cz.uhk.macroflow.pokemon.cave.QuietOrchard.emptyEncounterText(node) ?: cz.uhk.macroflow.pokemon.cave.EchoCanyon.emptyEncounterText(node) ?: when (node) {
         in cz.uhk.macroflow.pokemon.cave.TowerIce.DRIFT_NODES -> cz.uhk.macroflow.pokemon.cave.TowerIce.EMPTY_TEXT
         in cz.uhk.macroflow.pokemon.cave.TowerFire.ASH_NODES -> cz.uhk.macroflow.pokemon.cave.TowerFire.EMPTY_TEXT
+        in cz.uhk.macroflow.pokemon.cave.TowerFairy.RING_NODES -> cz.uhk.macroflow.pokemon.cave.TowerFairy.EMPTY_TEXT
         "jezirko" -> "Na hladině podzemního jezírka se jen zavlnil odraz hub. Zkus to znovu."
         "houby" -> "Svítící houby pomalu pulzují… nikdo tu není. Zkus to znovu."
         "krystaly_j", "balvany_j" -> "Mezi kameny to jen zapraskalo. Zkus to znovu."
@@ -1436,6 +1439,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.TOWER_ICE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ICE)
                 currentBiome == BiomeType.TOWER_FIRE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.FIRE)
                 currentBiome == BiomeType.TOWER_OFFICE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.OFFICE)
+                currentBiome == BiomeType.TOWER_FAIRY -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.FAIRY)
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)
@@ -1665,9 +1669,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 if (free && currentBiome != BiomeType.TOWER_DORM) add("Patro 8 · Dormitoř" to { walkInto(BiomeType.TOWER_DORM, cz.uhk.macroflow.pokemon.cave.TowerDorm.ELEVATOR_NODE, MapTransition.FADE) })
                 if (free && currentBiome != BiomeType.TOWER_ICE) add("Patro 9 · Mrazírna" to { walkInto(BiomeType.TOWER_ICE, cz.uhk.macroflow.pokemon.cave.TowerIce.ELEVATOR_NODE, MapTransition.FADE) })
                 if (free && currentBiome != BiomeType.TOWER_FIRE) add("Patro 10 · Spalovna spisů" to { walkInto(BiomeType.TOWER_FIRE, cz.uhk.macroflow.pokemon.cave.TowerFire.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_OFFICE) add("Patro 11 · Kancelář Řádu" to { walkInto(BiomeType.TOWER_OFFICE, cz.uhk.macroflow.pokemon.cave.TowerOffice.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free && currentBiome != BiomeType.TOWER_FAIRY) add("Patro 11 · Duhová zahrada" to { walkInto(BiomeType.TOWER_FAIRY, cz.uhk.macroflow.pokemon.cave.TowerFairy.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free && currentBiome != BiomeType.TOWER_OFFICE) add("Patro 13 · Kancelář Řádu" to { walkInto(BiomeType.TOWER_OFFICE, cz.uhk.macroflow.pokemon.cave.TowerOffice.ELEVATOR_NODE, MapTransition.FADE) })
             }
-            val at = when (currentBiome) { BiomeType.TOWER_ARCHIVE -> 1; BiomeType.TOWER_MEASURE -> 2; BiomeType.TOWER_PLAIN -> 3; BiomeType.TOWER_FOREST -> 4; BiomeType.TOWER_ROCK -> 5; BiomeType.TOWER_CAVE -> 6; BiomeType.TOWER_WATER -> 7; BiomeType.TOWER_DORM -> 8; BiomeType.TOWER_ICE -> 9; BiomeType.TOWER_FIRE -> 10; BiomeType.TOWER_OFFICE -> 11; else -> 0 }
+            val at = when (currentBiome) { BiomeType.TOWER_ARCHIVE -> 1; BiomeType.TOWER_MEASURE -> 2; BiomeType.TOWER_PLAIN -> 3; BiomeType.TOWER_FOREST -> 4; BiomeType.TOWER_ROCK -> 5; BiomeType.TOWER_CAVE -> 6; BiomeType.TOWER_WATER -> 7; BiomeType.TOWER_DORM -> 8; BiomeType.TOWER_ICE -> 9; BiomeType.TOWER_FIRE -> 10; BiomeType.TOWER_FAIRY -> 11; BiomeType.TOWER_OFFICE -> 13; else -> 0 }
             cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this), floors, at)
         }, 150)
     }
