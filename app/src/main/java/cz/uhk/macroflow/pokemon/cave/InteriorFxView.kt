@@ -80,6 +80,11 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         glowworms(canvas, t)
         bat(canvas, now)
         stalDrips(canvas, now)
+        fish(canvas, t)
+        bubbles(canvas, t)
+        ripples(canvas, now)
+        floaters(canvas, t)
+        frog(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -670,6 +675,99 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         }
     }
 
+    /** Ryby v akváriu: plavou sem a tam po vlnovce, na kraji se otočí; každá má svou barvu a velikost. */
+    private fun fish(c: Canvas, t: Float) {
+        val cols = intArrayOf(0xFFF08A3A.toInt(), 0xFFF4D060.toInt(), 0xFF7AC8F0.toInt(), 0xFFE86A8A.toInt(), 0xFFC8E0E8.toInt())
+        for ((bi, b) in fx.fish.withIndex()) for (i in 0 until 3) {
+            val k = bi * 3 + i
+            val w = b.x1 - b.x0; val h = b.y1 - b.y0
+            val sp = 0.06f + (k % 4) * 0.025f
+            val ph = (t * sp + k * 0.37f) % 2f
+            val right = ph < 1f
+            val u = if (right) ph else 2f - ph
+            val x = (b.x0 + u * w).roundToInt()
+            val y = (b.y0 + h * (0.2f + 0.6f * ((k * 0.29f) % 1f)) + sin(t * 1.3f + k) * 3f).roundToInt()
+            val col = cols[k % cols.size]
+            val len = 3 + k % 3
+            val d = if (right) 1 else -1
+            for (j in 0 until len) px(c, x - j * d, y, col)
+            px(c, x - len * d, y - 1, col); px(c, x - len * d, y + 1, col)                 // ocas
+            if (len > 3) px(c, x - d, y - 1, col)
+            px(c, x, y, 0xFF101418.toInt())                                             // oko
+        }
+    }
+
+    /** Bubliny: stoupají sloupcem, kolébají se a nahoře zmizí. */
+    private fun bubbles(c: Canvas, t: Float) {
+        for ((bi, b) in fx.bubbles.withIndex()) for (i in 0 until 4) {
+            val h = b.y1 - b.y0
+            val ph = ((t * 0.35f + i * 0.25f + bi * 0.13f) % 1f)
+            val y = (b.y1 - ph * h).roundToInt()
+            val x = (b.x0 + sin(t * 3f + i * 2f + bi) * 1.4f).roundToInt()
+            px(c, x, y, 0xB0D8F4FF.toInt())
+            if (i % 2 == 0) px(c, x + 1, y - 1, 0x80FFFFFF.toInt())
+        }
+    }
+
+    private val rippleAt = LongArray(fx.ripples.size) { t0 + rnd.nextInt(3000).toLong() }
+    private val ripplePt = Array(fx.ripples.size) { 0 to 0 }
+
+    /** Kruhy na hladině: tu ryba, tu kapka – kroužek se rozběhne a zmizí. */
+    private fun ripples(c: Canvas, now: Long) {
+        for ((i, b) in fx.ripples.withIndex()) {
+            val ms = now - rippleAt[i]
+            if (ms < 0) continue
+            if (ms == 0L || ripplePt[i].first == 0) ripplePt[i] = (b.x0 + rnd.nextInt(maxOf(1, b.x1 - b.x0))) to (b.y0 + rnd.nextInt(maxOf(1, b.y1 - b.y0)))
+            if (ms > 1600) { rippleAt[i] = now + 1200L + rnd.nextInt(3500); ripplePt[i] = 0 to 0; continue }
+            val (cx, cy) = ripplePt[i]
+            for (ring in 0..1) {
+                val k = ((ms - ring * 350) / 1250f)
+                if (k < 0f || k > 1f) continue
+                val r = 1 + k * 7
+                val a = ((1 - k) * 150).toInt()
+                val n = (r * 5).toInt().coerceAtLeast(6)
+                for (j in 0 until n) {
+                    val ang = j * 2f * PI.toFloat() / n
+                    px(c, (cx + kotlin.math.cos(ang) * r).roundToInt(), (cy + sin(ang) * r * 0.45f).roundToInt(), (a shl 24) or 0xA8E0EC)
+                }
+            }
+        }
+    }
+
+    /** Plovoucí list papíru: pomalu se nechá unášet tam a zpět a lehce se pohupuje. */
+    private fun floaters(c: Canvas, t: Float) {
+        for ((i, p) in fx.floaters.withIndex()) {
+            val k = (sin(t * 0.08f + i * 2f) + 1f) / 2f
+            val x = (p.x0 + (p.x1 - p.x0) * k).roundToInt()
+            val y = (p.y0 + (p.y1 - p.y0) * k + sin(t * 1.4f + i) * 0.8f).roundToInt()
+            row(c, x, x + 3, y, 0xFFE8ECE4.toInt()); row(c, x, x + 3, y + 1, 0xFFC4CCC4.toInt())
+            px(c, x + 1, y, 0xFF8A9AA0.toInt()); px(c, x + 2, y + 1, 0xFF8A9AA0.toInt())
+            px(c, x - 1, y + 2, 0x60A8E0EC); px(c, x + 4, y + 2, 0x60A8E0EC)
+        }
+    }
+
+    private var frogAt = t0 + 8000L + rnd.nextInt(10000)
+    private var frogPad = 0; private var frogNext = 1
+
+    /** Žába sedí na lekníně, mrká, a jednou za čas skočí obloukem na vedlejší list. */
+    private fun frog(c: Canvas, now: Long) {
+        val pads = fx.frog ?: return
+        val ms = now - frogAt
+        val jump = 600L
+        val (x, y) = if (ms in 0 until jump) {
+            val a = pads[frogPad]; val b = pads[frogNext]; val k = ms / jump.toFloat()
+            (a.first + (b.first - a.first) * k).roundToInt() to (a.second + (b.second - a.second) * k - sin(k * PI.toFloat()) * 10).roundToInt()
+        } else {
+            if (ms >= jump) { frogPad = frogNext; frogNext = (frogPad + 1 + rnd.nextInt(pads.size - 1)) % pads.size; frogAt = now + 7000L + rnd.nextInt(12000) }
+            pads[frogPad]
+        }
+        val g = 0xFF4E9A3A.toInt(); val gd = 0xFF2E6A26.toInt()
+        row(c, x - 2, x + 2, y, g); row(c, x - 2, x + 2, y + 1, gd)
+        px(c, x - 3, y + 1, gd); px(c, x + 3, y + 1, gd)
+        val blink = (now / 2400) % 7 == 0L
+        px(c, x - 1, y - 1, if (blink) g else 0xFFF4E070.toInt()); px(c, x + 1, y - 1, if (blink) g else 0xFFF4E070.toInt())
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -747,6 +845,17 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0x9AE8F0
         )
 
+        /** Zatopené patro (7.): ryby a bubliny v akváriu, kruhy na hladině, plovoucí papír, žába na leknínech. */
+        val WATER = InteriorFx(
+            fish = listOf(FxBox(4, 18, 58, 76), FxBox(118, 18, 172, 76)),
+            bubbles = listOf(FxBox(22, 16, 22, 80), FxBox(46, 24, 46, 82), FxBox(132, 16, 132, 80), FxBox(160, 26, 160, 82)),
+            ripples = listOf(FxBox(16, 112, 72, 178), FxBox(104, 112, 164, 250), FxBox(16, 232, 72, 330), FxBox(104, 318, 120, 336)),
+            floaters = listOf(FxPath(108, 124, 150, 134), FxPath(18, 262, 52, 282)),
+            frog = listOf(110 to 233, 126 to 208, 142 to 190),
+            motes = listOf(FxBox(16, 110, 160, 320)),
+            moteColor = 0xBCE8F0
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -791,7 +900,12 @@ data class InteriorFx(
     val glowworms: FxBox? = null,
     val bats: FxBox? = null,
     val stalDrips: List<FxPath> = emptyList(),
-    val miniMouse: Boolean = false
+    val miniMouse: Boolean = false,
+    val fish: List<FxBox> = emptyList(),
+    val bubbles: List<FxBox> = emptyList(),
+    val ripples: List<FxBox> = emptyList(),
+    val floaters: List<FxPath> = emptyList(),
+    val frog: List<Pair<Int, Int>>? = null
 )
 
 /** Pulzující záře (krystal): střed, poloměry, barva RGB a perioda v sekundách. */

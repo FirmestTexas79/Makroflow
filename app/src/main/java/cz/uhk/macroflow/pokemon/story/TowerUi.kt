@@ -70,7 +70,7 @@ object TowerUi {
 
     /** Výtah Věže: [floors] = patra, kam smí jet (popisek → přesun), [at] = patro, kde právě stojí. */
     fun showElevator(root: FrameLayout, insight: Int, floors: List<Pair<String, () -> Unit>> = emptyList(), at: Int = 0) {
-        val here = listOf("nule", "jedničce", "dvojce", "trojce", "čtyřce", "pětce", "šestce").getOrElse(at) { "$at" }
+        val here = listOf("nule", "jedničce", "dvojce", "trojce", "čtyřce", "pětce", "šestce", "sedmičce").getOrElse(at) { "$at" }
         val sub = if (floors.isEmpty()) "Ručička ukazatele stojí na $here." else "Ručička stojí na $here. Kam to bude?"
         WorkshopMenus.show(root, "Výtah", sub) { ui, body, close ->
             body.addView(ui.text(Calibration.elevatorText(insight), 15f).apply { typeface = android.graphics.Typeface.MONOSPACE })
