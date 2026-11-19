@@ -81,6 +81,16 @@ object SpawnManager {
             return BattleFactory.createById("016")
         }
 
+        // Patra Věže zaměřená na typ: všechny divoké druhy daného typu, každý s nejčastější raritou
+        TYPED_FLOORS[currentBiome]?.let { type ->
+            val typed = POOL.filter { sp -> sp.conditions.all { it.isMet(context) } }.groupBy { it.id }
+                .mapNotNull { (_, l) -> l.maxByOrNull { it.rarity.weight }?.takeIf { it.createMakromon().speciesType == type } }
+            if (typed.isNotEmpty()) {
+                var r = kotlin.random.Random.nextInt(typed.sumOf { it.rarity.weight })
+                for (spawn in typed) { r -= spawn.rarity.weight; if (r < 0) return spawn.createMakromon() }
+            }
+        }
+
         // Filtrování podle biomu a podmínek
         val active = POOL.filter { spawn ->
             spawn.biomes.contains(currentBiome) && spawn.conditions.all { it.isMet(context) }
@@ -98,6 +108,9 @@ object SpawnManager {
 
         return BattleFactory.createById("012")
     }
+
+    /** Patra Věže Řádu Váhy, kde žijí jen Makromoni jednoho typu (od 3. patra). */
+    val TYPED_FLOORS = mapOf(BiomeType.TOWER_PLAIN to MakromonType.NORMAL)
 
     fun findById(id: String): SpawnPool? = POOL.find { it.id == id }
     val allEntries: List<SpawnPool> get() = POOL

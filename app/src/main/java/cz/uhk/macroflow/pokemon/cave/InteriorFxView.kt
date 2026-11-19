@@ -60,6 +60,10 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         mouse(canvas, now)
         tubes(canvas, now)
         torches(canvas, t)
+        grass(canvas, t)
+        butterflies(canvas, t)
+        sprinklers(canvas, now)
+        sunFlicker(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -239,6 +243,70 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         }
     }
 
+    /** Vysoká tráva ve větru z ventilace: konce stébel se pohupují (vlna běží přes trs). */
+    private fun grass(c: Canvas, t: Float) {
+        for ((bi, b) in fx.grass.withIndex()) {
+            val w = b.x1 - b.x0
+            for (i in 0 until w / 2) {
+                val x = b.x0 + 1 + i * 2 + ((bi * 7 + i) % 3) / 2
+                val h = 2 + (bi * 13 + i * 7) % 3
+                val top = b.y0 + (bi * 5 + i * 11) % 5
+                val sway = sin(t * 2.1f - x * 0.18f + bi) * 1.4f
+                for (k in 0 until h) {
+                    val dx = (sway * (h - k) / h).roundToInt()
+                    px(c, x + dx, top + k, if (k == 0) 0xFFA0C462.toInt() else 0xFF78A44A.toInt())
+                }
+            }
+        }
+    }
+
+    /** Motýli: bílí a žlutí, mávají křídly a kličkují v oblasti. */
+    private fun butterflies(c: Canvas, t: Float) {
+        for ((bi, b) in fx.butterflies.withIndex()) for (i in 0 until 2) {
+            val k = bi * 2 + i
+            val w = b.x1 - b.x0; val h = b.y1 - b.y0
+            val x = (b.x0 + w / 2 + sin(t * (0.35f + k * 0.07f) + k) * w / 2.2f + sin(t * 1.3f + k * 2) * 3).toInt()
+            val y = (b.y0 + h / 2 + sin(t * (0.5f + k * 0.05f) + k * 1.7f) * h / 2.2f + sin(t * 2.2f + k) * 2).toInt()
+            val col = if (k % 2 == 0) 0xFFF8F4E8.toInt() else 0xFFF4D860.toInt()
+            val flap = ((t * 9 + k) % 2f) < 1f
+            px(c, x - 1, y, col); px(c, x + 1, y, col)
+            if (flap) { px(c, x - 1, y - 1, col); px(c, x + 1, y - 1, col) }
+            px(c, x, y, 0xFF3A2A1A.toInt())
+        }
+    }
+
+    private val sprayAt = LongArray(fx.sprinklers.size) { t0 + 3000L + rnd.nextInt(12000) }
+
+    /** Postřikovač: na pár vteřin se roztočí a rozhazuje kapky do kruhu. */
+    private fun sprinklers(c: Canvas, now: Long) {
+        for ((i, p) in fx.sprinklers.withIndex()) {
+            val ms = now - sprayAt[i]
+            if (ms < 0) continue
+            if (ms > 3500) { sprayAt[i] = now + 12000L + rnd.nextInt(20000); continue }
+            val a0 = ms / 1000f * 5f
+            for (j in 0 until 10) {
+                val a = a0 + j * 0.63f
+                val r = 3f + ((ms / 60 + j * 3) % 12)
+                val x = p.first + (kotlin.math.cos(a) * r).roundToInt()
+                val y = p.second - 2 + (sin(a) * r * 0.55f).roundToInt() - (if (r < 7) 2 else 0)
+                px(c, x, y, if (j % 3 == 0) 0xFFE8F6FF.toInt() else 0xC09CCCEE.toInt())
+            }
+        }
+    }
+
+    private var sunAt = t0 + 20000L + rnd.nextInt(25000)
+
+    /** „Slunce“ je jen lampa: občas zakolísá a celé patro na okamžik potemní. */
+    private fun sunFlicker(c: Canvas, now: Long) {
+        if (!fx.sunFlicker || now < sunAt) return
+        val ms = now - sunAt
+        val a = when { ms < 90 -> 120; ms < 160 -> 0; ms < 300 -> 150; ms < 380 -> 40; ms < 700 -> 70; else -> {
+            sunAt = now + 25000L + rnd.nextInt(35000); return } }
+        if (a == 0) return
+        paint.color = (a shl 24) or 0x0A1420
+        c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -270,6 +338,16 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0xF4FAFA
         )
 
+        /** Kalibrační louka (3. patro): tráva ve větru, motýli, postřikovače, pyl, „slunce“, které občas zabliká. */
+        val PLAIN = InteriorFx(
+            grass = listOf(FxBox(16, 174, 56, 182), FxBox(120, 246, 160, 254), FxBox(18, 300, 58, 308)),
+            butterflies = listOf(FxBox(20, 120, 80, 220), FxBox(100, 200, 160, 300)),
+            sprinklers = listOf(70 to 162, 108 to 286),
+            motes = listOf(FxBox(20, 110, 156, 330)),
+            moteColor = 0xFFF0A0,
+            sunFlicker = true
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -294,5 +372,9 @@ data class InteriorFx(
     val blinks: List<FxBlink> = emptyList(),
     val mouse: List<Pair<Int, Int>>? = null,
     val tubes: List<FxBox> = emptyList(),
-    val torches: List<FxBox> = emptyList()
+    val torches: List<FxBox> = emptyList(),
+    val grass: List<FxBox> = emptyList(),
+    val butterflies: List<FxBox> = emptyList(),
+    val sprinklers: List<Pair<Int, Int>> = emptyList(),
+    val sunFlicker: Boolean = false
 )
