@@ -15,7 +15,7 @@ object MusicMap {
         "TOWN", "OZVENA", "ARENA_HALL", "TOWER_LOBBY", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_OFFICE" -> TOWN
         "MEADOW", "FOREST", "LAKE", "WATER", "QUIET_ORCHARD", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_WATER", "TOWER_FAIRY" -> MEADOW
         "MOUNTAINS", "SKY_PASS", "ASH_PLAIN", "ECHO_CANYON", "TOWER_ROCK", "TOWER_ICE", "TOWER_FIRE" -> MOUNTAINS
-        "CAVE_OPEN", "CAVE_MAZE", "HIDDEN_GROVE", "MINES", "TOWER_CAVE", "TOWER_DORM" -> CAVE
+        "CAVE_OPEN", "CAVE_MAZE", "HIDDEN_GROVE", "MINES", "TOWER_CAVE", "TOWER_DORM", "TOWER_POISON" -> CAVE
         else -> null
     }
 
@@ -34,6 +34,7 @@ object MusicMap {
         "TOWER_FIRE" -> "amb_furnace"
         "TOWER_OFFICE" -> "amb_observatory"
         "TOWER_FAIRY" -> "amb_fairy"
+        "TOWER_POISON" -> "amb_toxic"
         else -> null
     }
 

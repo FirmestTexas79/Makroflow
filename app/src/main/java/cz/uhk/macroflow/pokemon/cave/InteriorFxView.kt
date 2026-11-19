@@ -112,6 +112,8 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         quill(canvas, now)
         rainbow(canvas, t)
         pixies(canvas, t, now)
+        brew(canvas, t)
+        traps(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -903,8 +905,8 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             val x = b.x0 + (((t * (2f + i * 0.6f) + i * 17 + bi * 9) % (w + len)) - len).roundToInt()
             val y = b.y0 + (i * 7 + bi * 3) % maxOf(1, b.y1 - b.y0)
             val a = (34 + sin(t * 0.7f + i) * 14).toInt()
-            row(c, maxOf(b.x0, x), minOf(b.x1, x + len), y, (a shl 24) or 0xC8D0E8)
-            row(c, maxOf(b.x0, x + 2), minOf(b.x1, x + len - 2), y - 1, ((a / 2) shl 24) or 0xC8D0E8)
+            row(c, maxOf(b.x0, x), minOf(b.x1, x + len), y, (a shl 24) or fx.fogColor)
+            row(c, maxOf(b.x0, x + 2), minOf(b.x1, x + len - 2), y - 1, ((a / 2) shl 24) or fx.fogColor)
         }
     }
 
@@ -1202,6 +1204,57 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         }
     }
 
+    /** Bublající hladina (káď, louže, baňka): bublina se nafoukne, praskne do kroužku a vypustí obláček páry. */
+    private fun brew(c: Canvas, t: Float) {
+        for ((bi, b) in fx.brew.withIndex()) for (i in 0 until 3) {
+            val per = 1.6f + (i + bi) % 3 * 0.5f
+            val ph = ((t + i * 0.7f + bi * 0.37f) % per) / per
+            val h = (((t + i * 0.7f + bi * 0.37f) / per).toInt() * 7919 + i * 31 + bi * 97) ushr 1
+            val w = maxOf(1, b.x1 - b.x0); val hh = maxOf(1, b.y1 - b.y0)
+            val x = b.x0 + h % w; val y = b.y0 + (h / 7) % hh
+            when {
+                ph < 0.55f -> {                                                         // bublina roste
+                    val r = (ph / 0.55f * 2.2f).roundToInt()
+                    for (dy in -r..0) for (dx in -r..r) if (dx * dx + dy * dy <= r * r) px(c, x + dx, y + dy, 0xC0A8F070.toInt())
+                    px(c, x - (r / 2), y - r, 0xFFE0FFB0.toInt())
+                }
+                ph < 0.7f -> {                                                          // prasknutí
+                    val r = 3
+                    px(c, x - r, y, 0xA0A8F070.toInt()); px(c, x + r, y, 0xA0A8F070.toInt())
+                    px(c, x, y - 1, 0xA0A8F070.toInt()); px(c, x - 1, y + 1, 0x80A8F070.toInt()); px(c, x + 1, y + 1, 0x80A8F070.toInt())
+                }
+                else -> {                                                               // obláček páry
+                    val k = (ph - 0.7f) / 0.3f
+                    val a = ((1f - k) * 110).toInt()
+                    px(c, x + (sin(k * 6f) * 1.5f).roundToInt(), y - 2 - (k * 9).roundToInt(), (a shl 24) or 0xB8F0A0)
+                    px(c, x + 1 + (sin(k * 6f) * 1.5f).roundToInt(), y - 3 - (k * 9).roundToInt(), (a / 2 shl 24) or 0xB8F0A0)
+                }
+            }
+        }
+    }
+
+    private val trapAt = LongArray(fx.traps.size) { t0 + 5000L + rnd.nextInt(10000) }
+
+    /** Masožravka: čelisti občas prudce sklapnou (zvuk sfx_snap), chvíli zůstanou zavřené a pomalu se rozevřou. */
+    private fun traps(c: Canvas, now: Long) {
+        for ((i, tr) in fx.traps.withIndex()) {
+            val ms = now - trapAt[i]
+            if (ms < 0) continue
+            if (ms > 2600) { trapAt[i] = now + 11000L + rnd.nextInt(16000); continue }
+            cue("trap$i", trapAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.SNAP, 0.5f)
+            val (cx, cy, rx) = tr
+            val open = when { ms < 90 -> 1f - ms / 90f; ms < 1800 -> 0f; else -> (ms - 1800) / 800f }
+            if (open >= 0.95f) continue
+            val ry = (1f + open * 4f)
+            for (dy in -ry.toInt() - 1..ry.toInt() + 1) {
+                val hw = (rx * sqrt((1f - (dy / (ry + 1f)).let { it * it }).coerceAtLeast(0f))).roundToInt()
+                if (hw > 0) row(c, cx - hw, cx + hw, cy + dy, if (dy < 0) 0xFF3E6C22.toInt() else 0xFF2C5218.toInt())
+            }
+            for (x in cx - rx + 1..cx + rx - 1 step 2) { px(c, x, cy, 0xFFD8F0A0.toInt()); px(c, x + 1, cy + 1, 0xFF8E2A40.toInt()) }
+            if (ms < 220) { px(c, cx - rx - 1, cy - 2, 0xC0D8F0A0.toInt()); px(c, cx + rx + 1, cy - 2, 0xC0D8F0A0.toInt()) }   // cuknutí
+        }
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -1362,6 +1415,23 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             sparkles = listOf(FxBox(138, 100, 162, 114), FxBox(16, 100, 36, 128))
         )
 
+        /** Jedová laboratoř (12.): bublající kádě a louže, zelená mlha, spory, pára z přístroje, masožravka sklapne. */
+        val POISON = InteriorFx(
+            brew = listOf(FxBox(22, 201, 42, 207), FxBox(140, 217, 160, 223), FxBox(80, 174, 96, 179), FxBox(44, 290, 60, 295),
+                FxBox(118, 298, 134, 303), FxBox(94, 248, 98, 251)),
+            fog = listOf(FxBox(14, 280, 70, 300), FxBox(104, 290, 164, 310), FxBox(60, 170, 120, 186), FxBox(14, 230, 60, 250)),
+            fogColor = 0x70D070,
+            traps = listOf(Triple(136, 133, 8), Triple(157, 138, 7)),
+            steam = listOf(104 to 216),
+            glows = listOf(FxGlow(32, 204, 16, 8, 0x80F060, 2.4f), FxGlow(150, 220, 16, 8, 0x80F060, 2.9f),
+                FxGlow(96, 250, 6, 5, 0xA0FF80, 1.8f), FxGlow(88, 176, 14, 7, 0x80F060, 3.3f), FxGlow(52, 292, 13, 7, 0x80F060, 2.7f),
+                FxGlow(126, 300, 14, 7, 0x80F060, 3.1f), FxGlow(29, 321, 3, 2, 0xC890E0, 2f), FxGlow(40, 321, 3, 2, 0xC890E0, 2.6f),
+                FxGlow(51, 321, 3, 2, 0xC890E0, 2.2f), FxGlow(125, 321, 3, 2, 0xC890E0, 2.4f), FxGlow(136, 321, 3, 2, 0xC890E0, 1.9f),
+                FxGlow(147, 321, 3, 2, 0xC890E0, 2.8f)),
+            motes = listOf(FxBox(16, 110, 160, 330)),
+            moteColor = 0xA8F070
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -1430,7 +1500,10 @@ data class InteriorFx(
     val quill: Pair<Int, Int>? = null,
     val rainbow: FxArc? = null,
     val pixies: List<FxBox> = emptyList(),
-    val leafColors: IntArray? = null
+    val leafColors: IntArray? = null,
+    val brew: List<FxBox> = emptyList(),
+    val fogColor: Int = 0xC8D0E8,
+    val traps: List<Triple<Int, Int, Int>> = emptyList()
 )
 
 /** Oblouk (duha): střed [cx], [cy] a vnější poloměr [r] (svisle zploštělý 1,15×). */

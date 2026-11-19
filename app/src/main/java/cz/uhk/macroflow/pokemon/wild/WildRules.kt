@@ -23,7 +23,7 @@ object WildLevels {
         BiomeType.MINES -> (8..14).associateWith { 1 }
         BiomeType.ASH_PLAIN, BiomeType.QUIET_ORCHARD -> (12..18).associateWith { 1 }
         BiomeType.ECHO_CANYON -> (14..20).associateWith { 1 }
-        BiomeType.TOWER_PLAIN, BiomeType.TOWER_FOREST, BiomeType.TOWER_ROCK, BiomeType.TOWER_CAVE, BiomeType.TOWER_WATER, BiomeType.TOWER_DORM, BiomeType.TOWER_ICE, BiomeType.TOWER_FIRE, BiomeType.TOWER_FAIRY -> (14..20).associateWith { 1 }               // Věž: patra s divokými Makromony
+        BiomeType.TOWER_PLAIN, BiomeType.TOWER_FOREST, BiomeType.TOWER_ROCK, BiomeType.TOWER_CAVE, BiomeType.TOWER_WATER, BiomeType.TOWER_DORM, BiomeType.TOWER_ICE, BiomeType.TOWER_FIRE, BiomeType.TOWER_FAIRY, BiomeType.TOWER_POISON -> (14..20).associateWith { 1 }               // Věž: patra s divokými Makromony
         BiomeType.OZVENA, BiomeType.ARENA_HALL, BiomeType.TOWER_LOBBY, BiomeType.TOWER_ARCHIVE, BiomeType.TOWER_MEASURE, BiomeType.TOWER_OFFICE -> (12..18).associateWith { 1 }   // ve městě divocí nejsou
     }
 
