@@ -108,6 +108,8 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         embers(canvas, t)
         steam(canvas, now)
         chute(canvas, now)
+        orrery(canvas, t)
+        quill(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -1115,6 +1117,44 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         px(c, x.roundToInt() - 1, y.roundToInt() + 1, 0xFFB83A30.toInt())
     }
 
+    /** Orloj: sedm planet obíhá po mosazných drahách (elipsy 3/4), jedna černá jde opačně. Vzadu za sluncem
+     *  se planeta nekreslí přes něj. */
+    private fun orrery(c: Canvas, t: Float) {
+        val (cx, cy) = fx.orrery ?: return
+        val pl = listOf(Triple(8f, 0.9f, 0xFF9AB4E0.toInt()), Triple(8f, 0.9f, 0xFFD08A5A.toInt()), Triple(13f, 0.55f, 0xFF7AC08A.toInt()),
+            Triple(13f, 0.55f, 0xFFE0C070.toInt()), Triple(18f, 0.32f, 0xFFC8A0E0.toInt()), Triple(18f, 0.32f, 0xFF8AB0C0.toInt()),
+            Triple(18f, 0.32f, 0xFFE09090.toInt()))
+        for ((i, p) in pl.withIndex()) {
+            val a = t * p.second + i * 2.4f
+            val x = cx + kotlin.math.cos(a) * p.first; val y = cy + sin(a) * p.first * 0.42f
+            if (sin(a) < 0 && abs(x - cx) < 4) continue
+            px(c, x.roundToInt(), y.roundToInt(), p.third); px(c, x.roundToInt(), y.roundToInt() - 1, p.third)
+        }
+        val a = -t * 0.4f                                                                // černá planeta, opačně
+        val x = cx + kotlin.math.cos(a) * 13f; val y = cy + sin(a) * 13f * 0.42f
+        if (!(sin(a) < 0 && abs(x - cx) < 4)) { px(c, x.roundToInt(), y.roundToInt(), 0xFF101016.toInt()); px(c, x.roundToInt() + 1, y.roundToInt(), 0xFF2A2A34.toInt()) }
+    }
+
+    private var quillAt = t0 + 5000L + rnd.nextInt(6000)
+
+    /** Brk v Registru nádob: sám se zvedne, dopíše řádek inkoustu a zase si lehne (zvuk sfx_quill). */
+    private fun quill(c: Canvas, now: Long) {
+        val (qx, qy) = fx.quill ?: return
+        val ms = now - quillAt
+        if (ms < 0) return
+        if (ms > 3200) { quillAt = now + 14000L + rnd.nextInt(18000); return }
+        cue("quill", quillAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.QUILL, 0.5f)
+        val k = (ms / 2200f).coerceAtMost(1f)
+        val n = (k * 10).toInt()
+        val fade = if (ms > 2600) ((3200 - ms) / 600f * 255).toInt().coerceIn(0, 255) else 255
+        for (i in 0 until n) if (i % 3 != 2) px(c, qx + i, qy, (fade shl 24) or 0x16161E)       // čerstvý inkoust
+        if (ms < 2400) {
+            val bx = qx + n; val by = qy - 1 - (if ((ms / 120) % 2 == 0L) 1 else 0)
+            for (j in 0..5) px(c, bx + j, by - j, if (j < 2) 0xFF2A2A34.toInt() else 0xFFF4F0E4.toInt())   // brk šikmo
+            px(c, bx + 5, by - 6, 0xFFDCD6C8.toInt())
+        }
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -1246,6 +1286,19 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0x8A7A70
         )
 
+        /** Kancelář Řádu (11.): Foucaultovo kyvadlo, orloj, padající hvězda ve štěrbině, brk píše sám, lampa, krystal. */
+        val OFFICE = InteriorFx(
+            stars = listOf(FxBox(18, 3, 42, 66)),
+            sparkles = listOf(FxBox(18, 3, 42, 60)),
+            pendulums = listOf(FxPendulum(88, 112, 122, 12f, 7f, rod = 0x90C8B070.toInt())),
+            orrery = 142 to 164,
+            quill = 125 to 308,
+            glows = listOf(FxGlow(147, 293, 9, 6, 0xFFE0A0, 5f), FxGlow(142, 164, 5, 4, 0xFFE08A, 3f),
+                FxGlow(50, 292, 4, 4, 0x80D8FF, 2.5f)),
+            motes = listOf(FxBox(16, 100, 70, 240)),
+            moteColor = 0xC8D4FF
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -1309,7 +1362,9 @@ data class InteriorFx(
     val flames: FxBox? = null,
     val embers: List<FxBox> = emptyList(),
     val steam: List<Pair<Int, Int>> = emptyList(),
-    val chute: FxPath? = null
+    val chute: FxPath? = null,
+    val orrery: Pair<Int, Int>? = null,
+    val quill: Pair<Int, Int>? = null
 )
 
 /** Pulzující záře (krystal): střed, poloměry, barva RGB a perioda v sekundách. */

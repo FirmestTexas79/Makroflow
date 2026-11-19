@@ -12,7 +12,7 @@ object MusicMap {
 
     /** Název res/raw skladby podle BiomeType.name; null = ticho. */
     fun trackFor(biome: String): String? = when (biome) {
-        "TOWN", "OZVENA", "ARENA_HALL", "TOWER_LOBBY", "TOWER_ARCHIVE", "TOWER_MEASURE" -> TOWN
+        "TOWN", "OZVENA", "ARENA_HALL", "TOWER_LOBBY", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_OFFICE" -> TOWN
         "MEADOW", "FOREST", "LAKE", "WATER", "QUIET_ORCHARD", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_WATER" -> MEADOW
         "MOUNTAINS", "SKY_PASS", "ASH_PLAIN", "ECHO_CANYON", "TOWER_ROCK", "TOWER_ICE", "TOWER_FIRE" -> MOUNTAINS
         "CAVE_OPEN", "CAVE_MAZE", "HIDDEN_GROVE", "MINES", "TOWER_CAVE", "TOWER_DORM" -> CAVE
@@ -32,6 +32,7 @@ object MusicMap {
         "TOWER_WATER" -> "amb_pond"
         "TOWER_ICE" -> "amb_blizzard"
         "TOWER_FIRE" -> "amb_furnace"
+        "TOWER_OFFICE" -> "amb_observatory"
         else -> null
     }
 
