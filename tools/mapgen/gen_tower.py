@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "tower")); sys.path.insert(0, os.path.join(HERE, "ashplain"))
 import walkmask  # noqa: E402
-import tower_parts as P, light as L  # noqa: E402
+import tower_parts as P, light as L, figures as F  # noqa: E402
 from pix import c, Spr, outline  # noqa: E402
 
 ROOT = os.path.join(HERE, "..", "..")
@@ -58,9 +58,9 @@ def place(spr, cx, by, z=None, collide=True, pad=2, shadow=True, foot=None):
         else:
             walkmask.silhouette(block, spr.a[:, :, 3], int(cx - spr.w // 2), int(by - spr.h), pad)
 
-sept = P.sept(); desk = P.desk(66, 30)
+sept = F.sept(); desk = P.desk(66, 30)
 DESK_X, DESK_Y = 132, 198
-place(sept, DESK_X + 4, DESK_Y - 17, z=DESK_Y - 40, collide=False, shadow=False)
+place(sept, DESK_X + 4, DESK_Y - 20, z=DESK_Y - 40, collide=False, shadow=False)
 place(desk, DESK_X, DESK_Y, foot=(66, 22))
 place(P.stanchion_line(52), DESK_X + 6, 228, pad=1)
 place(P.queue_board(), 26, 186)
@@ -215,7 +215,7 @@ Image.fromarray(fac[:, :, :3]).save(os.path.join(ROOT, "app", "src", "main", "re
 leaf = P.door_leaf(portal[2], portal[3])
 Image.fromarray(leaf, "RGBA").save(os.path.join(ROOT, "app", "src", "main", "res", "drawable-nodpi", "tower_door_leaf.png"))
 # portrét archiváře Septa pro deník a dialogy (10× bez vyhlazení, jako Makromoni)
-sp = P.sept().a
+sp = F.sept().a
 Image.fromarray(sp, "RGBA").resize((sp.shape[1] * 10, sp.shape[0] * 10), Image.NEAREST).save(
     os.path.join(ROOT, "app", "src", "main", "res", "drawable-nodpi", "npc_sept.png"))
 print("ok", AW, AH, "portal", portal, "desk", (DESK_X, DESK_Y))

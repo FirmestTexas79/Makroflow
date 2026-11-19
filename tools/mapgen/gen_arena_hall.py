@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(HERE, "arena")); sys.path.insert(0, os.path.join
 sys.path.insert(0, os.path.join(HERE, "orchard"))
 import hall_parts as P, pix  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "tower"))
-import light as L  # noqa: E402  (vržené stíny, stín u stěn, viněta – docs/adr/0103)
+import light as L, figures as F  # noqa: E402  (vržené stíny, stín u stěn, viněta – docs/adr/0103)
 from pix import c, Spr  # noqa: E402
 from pixart import K, STN, stones  # noqa: E402
 
@@ -105,7 +105,7 @@ for py in range(WALL_H + 40, AH, 56):
 hof = P.hall_of_fame()
 place(hof, 46, 150, foot=(80, 24))
 place(P.rope_barrier(76), 46, 162, foot=(76, 3))
-place(P.commander(), 132, 152, foot=None, z=150)
+place(F.kassar(), 132, 147, foot=None, z=150)
 place(P.desk(), 132, 168, foot=(64, 16))
 # nástěnka HLEDÁ SE u vchodu vlevo
 src = Image.open(glob.glob(os.path.join(ROOT, "app", "src", "main", "res", "drawable*", "makromon_19_drakirra.png"))[0]).convert("RGBA")
