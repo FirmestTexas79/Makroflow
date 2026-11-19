@@ -115,7 +115,8 @@ object SpawnManager {
         BiomeType.TOWER_ROCK to setOf("ZEMĚ"), BiomeType.TOWER_CAVE to setOf("PSYCHO", "BLESK"),
         BiomeType.TOWER_WATER to setOf("VODA"),
         BiomeType.TOWER_DORM to setOf("DUCH"),
-        BiomeType.TOWER_ICE to setOf("LED"))
+        BiomeType.TOWER_ICE to setOf("LED"),
+        BiomeType.TOWER_FIRE to setOf("OHEŇ"))
 
     /** Typ druhu tak, jak ho ukazuje Makrodex (první slovo dexType: „ZEMĚ / KÁMEN“ → ZEMĚ). */
     private val DEX_TYPE: Map<String, String> by lazy {

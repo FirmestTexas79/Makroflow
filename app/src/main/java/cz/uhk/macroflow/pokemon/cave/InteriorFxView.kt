@@ -104,6 +104,10 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         snow(canvas, t)
         gust(canvas, now)
         hare(canvas, now)
+        flames(canvas, t, now)
+        embers(canvas, t)
+        steam(canvas, now)
+        chute(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -1022,6 +1026,95 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         }
     }
 
+    private var pageAt = t0 + 6000L + rnd.nextInt(8000)
+
+    /** Plameny v ústí pece: jazyky stoupají ze žhavého lože, každý sloupec svým tempem; občas do pece spadne
+     *  spis, plameny vyšlehnou výš, nahoru vyletí hořící stránka a zčerná (zvuk sfx_fire_whoosh). */
+    private fun flames(c: Canvas, t: Float, now: Long) {
+        val b = fx.flames ?: return
+        val pms = now - pageAt
+        if (pms > 2600) pageAt = now + 12000L + rnd.nextInt(16000)
+        val flare = if (pms in 0..900) 1f - pms / 900f else 0f
+        if (pms in 0..2600) cue("page", pageAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.FIRE_WHOOSH, 0.6f)
+        val h = b.y1 - b.y0
+        for (x in b.x0..b.x1) {
+            val d = abs(x - (b.x0 + b.x1) / 2f) / ((b.x1 - b.x0) / 2f)
+            val n = sin(t * 7f + x * 1.3f) * 0.25f + sin(t * 11f + x * 0.6f) * 0.15f + sin(t * 3f + x * 0.2f) * 0.2f
+            val len = (h * ((0.45f + n) * (1f - d * 0.7f) + flare * 0.5f)).coerceIn(2f, h.toFloat())
+            for (k in 0 until len.toInt()) {
+                val f = k / len
+                val col = when { f < 0.3f -> 0xFFF2C0; f < 0.6f -> 0xFCD058; f < 0.85f -> 0xF48A22; else -> 0xD24E10 }
+                val a = (230 * (1f - f * 0.6f)).toInt()
+                px(c, x, b.y1 - k, (a shl 24) or col)
+            }
+        }
+        if (pms in 0..2600) {                                                          // hořící stránka
+            val k = pms / 2600f
+            val px0 = ((b.x0 + b.x1) / 2 + sin(k * 9f) * 6).roundToInt(); val py0 = (b.y0 + 4 - k * 70).roundToInt()
+            val paper = when { k < 0.3f -> 0xFFE8E2CE.toInt(); k < 0.6f -> 0xFF8A6A3A.toInt(); else -> 0xFF241E20.toInt() }
+            val a = if (k > 0.8f) ((1f - k) * 5 * 255).toInt() else 255
+            for (dy in 0..2) for (dx in 0..3) px(c, px0 + dx, py0 + dy, (a shl 24) or (paper and 0xFFFFFF))
+            if (k in 0.2f..0.75f) { px(c, px0 - 1, py0 + 1, 0xE0F48A22.toInt()); px(c, px0 + 4, py0, 0xE0FCD058.toInt()) }
+        }
+    }
+
+    /** Jiskry: stoupají z pece a z kup popela, kolébají se a hasnou. */
+    private fun embers(c: Canvas, t: Float) {
+        for ((bi, b) in fx.embers.withIndex()) for (i in 0 until 7) {
+            val hsh = ((bi * 41 + i + 9) * 2654435761L).toInt() ushr 1
+            val hh = b.y1 - b.y0 + 1; val w = b.x1 - b.x0 + 1
+            val sp = 6f + i % 3 * 4f
+            val k = ((hsh % 1000) / 1000f + t * sp / hh) % 1f
+            val y = b.y1 - k * hh
+            val x = b.x0 + (hsh / 3 % w) + sin(t * 2f + i * 1.9f) * 2.5f * k
+            val a = ((1f - k) * 255).toInt()
+            px(c, x.roundToInt(), y.roundToInt(), (a shl 24) or (if (k < 0.4f) 0xFCD058 else 0xF48A22))
+        }
+    }
+
+    private val steamAt = LongArray(fx.steam.size) { t0 + 3000L + rnd.nextInt(9000) }
+
+    /** Pára z ventilu: krátký syčivý obláček (sfx_steam), rozplyne se nahoru a do strany. */
+    private fun steam(c: Canvas, now: Long) {
+        for ((i, p) in fx.steam.withIndex()) {
+            val ms = now - steamAt[i]
+            if (ms < 0) continue
+            if (ms > 1600) { steamAt[i] = now + 9000L + rnd.nextInt(14000); continue }
+            cue("steam$i", steamAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.STEAM, 0.35f)
+            val k = ms / 1600f
+            for (j in 0 until 14) {
+                val r = k * (6 + j % 5)
+                val ang = j * 0.9f
+                val x = p.first + 3 + (kotlin.math.cos(ang) * r * 0.7f + k * 10).roundToInt()
+                val y = p.second + (sin(ang) * r * 0.5f - k * 12).roundToInt()
+                val a = ((1f - k) * 150).toInt()
+                px(c, x, y, (a shl 24) or 0xE8ECF4)
+            }
+        }
+    }
+
+    private var chuteAt = t0 + 4000L + rnd.nextInt(7000)
+
+    /** Skluz: shora sjede složka, žlabem dolů a žuchne do vozíku (sfx_paper_slide). */
+    private fun chute(c: Canvas, now: Long) {
+        val p = fx.chute ?: return
+        val ms = now - chuteAt
+        if (ms < 0) return
+        if (ms > 1500) { chuteAt = now + 15000L + rnd.nextInt(20000); return }
+        cue("chute", chuteAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.PAPER_SLIDE, 0.45f)
+        val slide = 900f
+        val (x, y) = if (ms < slide) {
+            val k = (ms / slide).let { it * it }
+            Pair(p.x0 + (p.x1 - p.x0) * k, p.y0 + (p.y1 - p.y0) * k)
+        } else {
+            val k = ((ms - slide) / 300f).coerceAtMost(1f)
+            Pair(p.x1.toFloat(), p.y1 + 14f * k * k)
+        }
+        if (ms > slide + 300) return
+        for (dy in 0..2) for (dx in 0..5) px(c, x.roundToInt() - 3 + dx, y.roundToInt() + dy, if (dy == 0) 0xFFD0AC64.toInt() else 0xFF8E6A34.toInt())
+        px(c, x.roundToInt() - 1, y.roundToInt() + 1, 0xFFB83A30.toInt())
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -1138,6 +1231,20 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0xE0F0FF
         )
 
+        /** Spalovna spisů (10.): plameny v peci a hořící stránky, jiskry, pára z ventilu, složka ve skluzu, popel. */
+        val FIRE = InteriorFx(
+            flames = FxBox(72, 254, 104, 282),
+            embers = listOf(FxBox(74, 200, 102, 252), FxBox(26, 270, 42, 292), FxBox(134, 270, 150, 292), FxBox(92, 192, 108, 210),
+                FxBox(78, 120, 98, 150)),
+            steam = listOf(31 to 64),
+            chute = FxPath(150, 54, 156, 92),
+            glows = listOf(FxGlow(88, 270, 46, 32, 0xFF8030, 2.2f), FxGlow(88, 154, 18, 8, 0xFF7020, 1.7f),
+                FxGlow(88, 310, 32, 8, 0xFF7020, 1.9f)),
+            ash = listOf(FxBox(20, 100, 156, 220), FxBox(20, 200, 156, 330)),
+            motes = listOf(FxBox(16, 100, 160, 200)),
+            moteColor = 0x8A7A70
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -1197,7 +1304,11 @@ data class InteriorFx(
     val aurora: FxBox? = null,
     val snow: List<FxBox> = emptyList(),
     val gust: FxBox? = null,
-    val hare: List<Pair<Int, Int>>? = null
+    val hare: List<Pair<Int, Int>>? = null,
+    val flames: FxBox? = null,
+    val embers: List<FxBox> = emptyList(),
+    val steam: List<Pair<Int, Int>> = emptyList(),
+    val chute: FxPath? = null
 )
 
 /** Pulzující záře (krystal): střed, poloměry, barva RGB a perioda v sekundách. */

@@ -28,7 +28,8 @@ object GameAudio {
         FLICKER("sfx_flicker"), PNEUMATIC("sfx_pneumatic"), BULB("sfx_bulb"), SPRINKLER("sfx_sprinkler"),
         PEBBLE("sfx_pebble"), WIND_GUST("sfx_wind_gust"), DRIP("sfx_drip"), ZAP("sfx_zap"),
         SPLASH("sfx_splash"), BUBBLES("sfx_bubbles"),
-        SQUEAK("sfx_squeak"), SKITTER("sfx_skitter"), FROG("sfx_frog")
+        SQUEAK("sfx_squeak"), SKITTER("sfx_skitter"), FROG("sfx_frog"),
+        STEAM("sfx_steam"), FIRE_WHOOSH("sfx_fire_whoosh"), PAPER_SLIDE("sfx_paper_slide")
     }
 
     private const val PREF = "soundEnabled"
