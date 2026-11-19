@@ -203,7 +203,8 @@ class QuestJournalFragment : Fragment() {
         val ctx = context?.applicationContext ?: return
         viewLifecycleOwner.lifecycleScope.launch {
             val counts = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.skills.SkillStore.counts(ctx) } +
-                (if (cz.uhk.macroflow.pokemon.story.MemoryBookStore.hasBook(ctx)) mapOf(cz.uhk.macroflow.pokemon.story.MemoryBook.ITEM_ID to 1) else emptyMap())
+                (if (cz.uhk.macroflow.pokemon.story.MemoryBookStore.hasBook(ctx)) mapOf(cz.uhk.macroflow.pokemon.story.MemoryBook.ITEM_ID to 1) else emptyMap()) +
+                (if (cz.uhk.macroflow.pokemon.story.StoryFlags.isSet(ctx, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY)) mapOf(cz.uhk.macroflow.pokemon.story.Masters.INVITE_ID to 1) else emptyMap())
             if (!isAdded) return@launch
             cz.uhk.macroflow.pokemon.skills.ui.CollectionPages.bag(rootView.findViewById(R.id.llBag), rootView as FrameLayout, counts,
                 readText = { item -> bagReadText(item.id) },

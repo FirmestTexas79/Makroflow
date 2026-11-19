@@ -125,6 +125,8 @@ object Arena {
         if (t.kind == Trainer.Kind.GHOST && cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) REPORTS.launch {
             runCatching { cz.uhk.macroflow.data.FirebaseRepository.reportArenaResult(t.id, arenaName(ctx, cz.uhk.macroflow.data.FirebaseRepository.currentUser?.displayName), won) }
         }
+        // Pět Mistrů (docs/adr/0102): výhra nad Mistrem je příznak příběhu
+        if (won) cz.uhk.macroflow.pokemon.story.Masters.keyOfTrainer(t.id)?.let { cz.uhk.macroflow.pokemon.story.StoryFlags.set(ctx, cz.uhk.macroflow.pokemon.story.Masters.flag(it)) }
         val p = prefs(ctx)
         if (!won) { p.edit().putInt(LOSSES, p.getInt(LOSSES, 0) + 1).apply(); return 0 }
         val tag = "$today|${t.id}"

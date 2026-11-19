@@ -72,6 +72,8 @@ object BagItems {
                 SecretGrove.diaryIcon(), SecretGrove.ICON, Action.READ)
             Insight.PAGES_ITEM -> Item(itemId, Insight.PAGES_LABEL, "Útržky cizích papírů. Čím víc toho víš, tím víc z nich přečteš.", Pocket.KEY,
                 Insight.pageIcon(), Insight.ICON, Action.READ)
+            cz.uhk.macroflow.pokemon.story.Masters.INVITE_ID -> Item(itemId, cz.uhk.macroflow.pokemon.story.Masters.INVITE_LABEL,
+                cz.uhk.macroflow.pokemon.story.Masters.INVITE_TEXT, Pocket.KEY, Insight.pageIcon(), Insight.ICON)
             cz.uhk.macroflow.pokemon.story.MemoryBook.ITEM_ID -> Item(itemId, cz.uhk.macroflow.pokemon.story.MemoryBook.LABEL,
                 cz.uhk.macroflow.pokemon.story.MemoryBook.DESCRIPTION, Pocket.KEY, SecretGrove.diaryIcon(), SecretGrove.ICON, Action.USE)
             LURE_LAMP -> Item(itemId, "Spooky Plate", "Přiláká duchy – na chvíli se častěji objevují duchové Makromoni.", Pocket.OTHER,

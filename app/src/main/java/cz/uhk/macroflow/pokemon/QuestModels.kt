@@ -527,9 +527,9 @@ object QuestRegistry {
     val OZVENA_QUEST = QuestDefinition(
         id = cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID,
         chapter = "V · OZVĚNA",
-        farewell = cz.uhk.macroflow.pokemon.story.Ozvena.MEMORY_BOOK,
-        farewellSpeakerResId = R.drawable.makromon_38_johnsova,
-        farewellSpeakerName = cz.uhk.macroflow.pokemon.story.Ozvena.SCRIBE,
+        farewell = cz.uhk.macroflow.pokemon.story.Masters.FAREWELL,
+        farewellSpeakerResId = R.drawable.makromon_10_umbex,
+        farewellSpeakerName = "Kalibrátor",
         stages = listOf(
             QuestStage(
                 title = "Dobré ráno, Ozvěno",
@@ -546,6 +546,16 @@ object QuestRegistry {
                 requirementType = RequirementType.STORY_FLAG, targetValue = 1,
                 targetId = cz.uhk.macroflow.pokemon.story.Ozvena.BOOK_KEY,
                 hint = cz.uhk.macroflow.pokemon.story.Ozvena.NAME_ON_DOOR_HINT
+            ),
+            // Pět Mistrů (docs/adr/0102): Vessa dá knihu a pošle hráče do Arény
+            QuestStage(
+                title = "Pět Mistrů",
+                text = cz.uhk.macroflow.pokemon.story.Ozvena.MEMORY_BOOK + cz.uhk.macroflow.pokemon.story.Masters.VESSA_ARENA,
+                speakerResId = R.drawable.makromon_38_johnsova, speakerName = cz.uhk.macroflow.pokemon.story.Ozvena.SCRIBE,
+                requirementType = RequirementType.FLAGS_COUNT,
+                targetValue = cz.uhk.macroflow.pokemon.story.Masters.ALL.size,
+                targetId = cz.uhk.macroflow.pokemon.story.Masters.KEYS.joinToString(","),
+                hint = cz.uhk.macroflow.pokemon.story.Masters.STAGE_HINT
             )
         )
     )

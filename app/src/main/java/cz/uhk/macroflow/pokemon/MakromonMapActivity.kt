@@ -897,7 +897,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_TEXT)
-                cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> showMapToast(if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY))
+                    cz.uhk.macroflow.pokemon.story.Masters.TOWER_INVITED else cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_TEXT)
                 in cz.uhk.macroflow.pokemon.cave.OzvenaCity.RESIDENT_NODES -> when {
@@ -911,7 +912,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.COMMANDER_NODE -> showCommander(0)
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.FAME_NODE -> showHallOfFame()
                 cz.uhk.macroflow.pokemon.cave.ArenaHall.WANTED_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.ArenaHall.WANTED_TEXT)
-                cz.uhk.macroflow.pokemon.cave.ArenaHall.TRAINING_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.ArenaHall.TRAINING_TEXT)
+                // Pět Mistrů (docs/adr/0102) – až když má hráč Pamětní knihu od Vessy
+                cz.uhk.macroflow.pokemon.cave.ArenaHall.TRAINING_NODE -> if (cz.uhk.macroflow.pokemon.story.MemoryBookStore.hasBook(this)) showMasters()
+                    else showMapToast(cz.uhk.macroflow.pokemon.cave.ArenaHall.TRAINING_TEXT)
                 // Ztichlý sad (docs/adr/0089) – jen v noci
                 cz.uhk.macroflow.pokemon.cave.QuietOrchard.PLAIN_NODE -> walkInto(BiomeType.QUIET_ORCHARD, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE, MapTransition.FADE)
                 // Ozvěnový kaňon (docs/adr/0090)
@@ -1582,6 +1585,41 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     /** Velitel bojového cechu vysvětluje arénu po stránkách; na konci pozve dál. */
+    /** Pět Mistrů (docs/adr/0102): pořadí, podmínka tréninků za 7 dní, výzva do souboje. */
+    private fun showMasters() {
+        val app = applicationContext
+        val M = cz.uhk.macroflow.pokemon.story.Masters
+        lifecycleScope.launch {
+            val (trainings, levels) = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                cz.uhk.macroflow.pokemon.story.MastersStore.trainingsLast7(app) to cz.uhk.macroflow.pokemon.story.MastersStore.teamLevels(app)
+            }
+            if (isFinishing) return@launch
+            questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID)
+            val beaten = M.ALL.map { it.key }.filter { StoryFlags.isSet(this@MakromonMapActivity, M.flag(it)) }.toSet()
+            cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Pět Mistrů",
+                "Tréninky za posledních 7 dní: $trainings") { ui, body, close ->
+                body.addView(ui.text(M.HALL_INTRO, 15f, ui.inkSoft))
+                body.addView(ui.spacer(10f))
+                M.ALL.forEachIndexed { i, m ->
+                    val st = M.status(i, trainings, beaten)
+                    body.addView(ui.text((if (st == cz.uhk.macroflow.pokemon.story.Masters.Status.BEATEN) "✓ " else "") + "${m.name} · ${m.title}", 18f))
+                    body.addView(ui.text(when (st) {
+                        cz.uhk.macroflow.pokemon.story.Masters.Status.BEATEN -> m.win
+                        cz.uhk.macroflow.pokemon.story.Masters.Status.OPEN -> m.intro
+                        cz.uhk.macroflow.pokemon.story.Masters.Status.NEED_TRAINING -> M.needText(m.need, trainings)
+                        cz.uhk.macroflow.pokemon.story.Masters.Status.NEED_PREVIOUS -> "Nejdřív poraz předchozího Mistra."
+                    }, 15f, ui.inkSoft))
+                    if (st == cz.uhk.macroflow.pokemon.story.Masters.Status.OPEN) body.addView(ui.button("Vyzvat") {
+                        close()
+                        if (levels.isEmpty()) showMapToast("Nejdřív si chyť Makromona.")
+                        else replaceMapContent(PokemonBattleFragment.forTrainer(M.trainer(m, levels, java.time.LocalDate.now().toEpochDay())))
+                    })
+                    body.addView(ui.spacer(12f))
+                }
+            }
+        }
+    }
+
     private fun showCommander(page: Int) {
         val pages = cz.uhk.macroflow.pokemon.cave.ArenaHall.COMMANDER_PAGES
         val root = findViewById<FrameLayout>(R.id.mapRootContainer)

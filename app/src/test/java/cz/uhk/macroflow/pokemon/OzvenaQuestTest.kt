@@ -31,7 +31,8 @@ class OzvenaQuestTest {
         assertTrue(QuestProgression.isStageSatisfied(q.stages[0], "3"))
         assertTrue(!QuestProgression.isStageSatisfied(q.stages[0], "2"))
         assertTrue(StoryProgress.isStoryKey(Ozvena.BOOK_KEY))
-        assertTrue(q.farewell.contains("Pamětní kniha"))
+        assertTrue(q.stages[Ozvena.NAME_STAGE + 1].text.contains("Pamětní kniha"))   // kniha na začátku fáze Pět Mistrů (docs/adr/0102)
+        assertTrue(q.farewell.contains("Pozvánku Řádu Váhy"))
         assertTrue(QuestProgression.reminder(q.stages[0], "1").isNotBlank())
     }
 }
