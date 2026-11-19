@@ -65,12 +65,12 @@ place(desk, DESK_X, DESK_Y, foot=(66, 30))
 place(P.stanchion_line(52), DESK_X + 6, 228, pad=1)
 place(P.queue_board(), 26, 186)
 place(P.calibration_scale(), 46, 140)
-place(P.bench(36), 54, 206); place(P.bench(36), 54, 234)
+place(F.bench3d(36), 54, 208); place(F.bench3d(36), 54, 236)
 place(P.ticket_machine(), 18, 232)
 for i, x in enumerate((24, 48)):
-    place(P.cabinet(i), x, 296)
+    place(F.filing_cabinet(i), x, 296)
 for i, x in enumerate((128, 152)):
-    place(P.cabinet(i + 2), x, 296)
+    place(F.filing_cabinet(i + 2), x, 296)
 place(P.dead_plant(), 20, 112); place(P.dead_plant(), 156, 112)
 place(P.dead_plant(), 68, 300); place(P.dead_plant(), 108, 300)
 for y in (150, 262):
@@ -133,10 +133,10 @@ for i, x in enumerate((54, 122)):
     wall_put(P.portrait(i), x - 8, 26)
 for x in (62, 112):
     wall_put(P.tube_pipe(WALL_H - 12), x, 9)
-elev = P.elevator(40, 58)
+elev = F.elevator3d(40, 58)
 EX0, EY0 = 88 - 20, WALL_H + 2 - 58
 wall_put(elev, EX0, EY0)
-dial = P.floor_dial(15)
+dial = F.floor_dial3d(15)
 wall_put(dial, 88 - dial.w // 2, 8)
 # odlesky v leštěném mramoru: okna a mosazná klec výtahu
 for (wx, wy, ww, wh) in WIN:

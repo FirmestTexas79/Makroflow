@@ -477,3 +477,395 @@ def arena_desk_items(s):
 
 IRON_ = [c(0x16181E), c(0x2A2E38), c(0x464C58), c(0x6A7280), c(0xA0A8B6)]
 GREEN_ = [c(0x0E3020), c(0x1C5034), c(0x2E7A4E), c(0x6ED096)]
+
+
+# ── nábytek a sochy (3/4 pohled, objemově) ─────────────────────────────────
+
+STONE = [c(0x2E2A30), c(0x4C464E), c(0x6E6670), c(0x948A92), c(0xB8AEB4), c(0xD8D0D2)]
+STRAW = [c(0x5A4220), c(0x8A6A32), c(0xB89448), c(0xDCBC6A), c(0xF0D892)]
+CABI = [c(0x1E2028), c(0x323642), c(0x4C5262), c(0x6C7484), c(0x949CAC), c(0xC4CAD6)]
+
+
+def bench3d(w=36, wood=None):
+    """Lavice 3/4: opěradlo (prkno s čelem), sedák s hloubkou (horní plocha, přední hrana, čelo), nohy se stínem."""
+    wd = wood or WALNUT
+    s = Spr(w, 18)
+    # opěradlo: horní hrana + čelo
+    for x in range(1, w - 1):
+        s.px(x, 0, wd[5]); s.px(x, 1, wd[4])
+        for y in range(2, 5):
+            s.px(x, y, wd[3] if not _grain(x, y, 0.4) else wd[2])
+        s.px(x, 5, wd[1])
+    for x in (3, w // 2, w - 4):                                          # sloupky opěradla
+        for y in range(5, 8):
+            s.px(x, y, wd[2]); s.px(x + 1, y, wd[1])
+    # sedák: horní plocha (světlá, hloubka 4 px), přední okosení, čelo
+    for x in range(w):
+        for y in range(8, 12):
+            t = (y - 8) / 4
+            col = wd[3] if t < 0.3 else wd[4]
+            if _grain(x, y, 1.9):
+                col = wd[3]
+            s.px(x, y, col)
+        s.px(x, 12, wd[5])                                                 # okosení
+        s.px(x, 13, wd[2]); s.px(x, 14, wd[1])
+    # nohy
+    for x in (2, w - 4):
+        for y in range(15, 18):
+            s.px(x, y, wd[2]); s.px(x + 1, y, wd[1])
+    s.px(0, 9, wd[2]); s.px(w - 1, 9, wd[1])
+    return selout(s, 0.5, 0.8)
+
+
+def knight_statue():
+    """Rytířská zbroj na kamenném podstavci 24 × 46: helma s hledím a chocholem, náramenníky, plátový krunýř s odleskem,
+    pláty na pažích a nohou, dlouhý meč špičkou dolů v rukou, podstavec s horní plochou a čelem."""
+    s = Canvas(24, 46, oy=2)
+    # podstavec
+    for y in range(38, 46):
+        for x in range(2, 22):
+            col = STONE[4] if y < 41 else STONE[2]
+            if y == 38:
+                col = STONE[5]
+            elif y == 41:
+                col = STONE[1]
+            elif y > 41 and (x + y * 3) % 7 == 0:
+                col = STONE[1]
+            s.px(x, y, col)
+    for y in range(41, 46):
+        s.px(2, y, STONE[3]); s.px(21, y, STONE[0])
+    # nohy (válce) a chodidla
+    cylinder(s, 7, 10, 28, 37, STEEL, amb=0.3); cylinder(s, 13, 16, 28, 37, STEEL, amb=0.3)
+    sphere(s, 8.5, 31, 2.2, 1.6, STEEL, amb=0.35); sphere(s, 14.5, 31, 2.2, 1.6, STEEL, amb=0.35)   # kolena
+    for x in range(6, 18):
+        if x not in (11, 12):
+            s.px(x, 37, STEEL[1])
+    # krunýř a fauld
+    cylinder(s, 6, 17, 16, 27, STEEL, amb=0.3, shape=lambda x, y: abs(x + .5 - 12) < 6 - max(0, y - 23) * 0.6)
+    for y in range(17, 24):
+        s.px(9, y, STEEL[5] if y < 21 else STEEL[4])                       # odlesk na krunýři
+    s.hline(7, 16, 24, STEEL[1]); s.hline(7, 16, 26, STEEL[1])
+    # náramenníky a paže
+    sphere(s, 5, 17, 3.6, 3.0, STEEL, amb=0.3); sphere(s, 19, 17, 3.6, 3.0, STEEL, amb=0.3)
+    cylinder(s, 3, 6, 19, 26, STEEL, amb=0.3); cylinder(s, 17, 20, 19, 26, STEEL, amb=0.3)
+    sphere(s, 9.5, 26.5, 2.0, 1.6, STEEL, amb=0.3); sphere(s, 14.5, 26.5, 2.0, 1.6, STEEL, amb=0.3)   # rukavice
+    # meč: záštita a čepel dolů
+    for y in range(27, 38):
+        s.px(11, y, STEEL[5]); s.px(12, y, STEEL[3])
+    s.hline(8, 15, 26, GOLD[2]); s.hline(8, 15, 27, GOLD[1])
+    s.px(11, 24, GOLD[3]); s.px(12, 25, GOLD[2])
+    # helma s hledím a chocholem
+    sphere(s, 12, 10, 4.6, 5.2, STEEL, amb=0.3)
+    s.hline(8, 16, 10, STEEL[0]); s.hline(9, 15, 11, STEEL[1])               # průzor
+    for y in range(12, 15):
+        s.px(12, y, STEEL[1])
+    s.px(10, 7, STEEL[5]); s.px(11, 6, STEEL[5])
+    blobs(s, [(12, 3.2, 2.0), (14, 2.0, 1.8), (16, 3.0, 1.6)], RED[1:], amb=0.3)
+    s.vline(12, 14, 16, STEEL[2])                                           # krk
+    return selout(s, 0.45, 0.75)
+
+
+def training_dummy():
+    """Tréninková figurína 22 × 36: dřevěný kůl s příčným ramenem, slaměná hlava a trup s prošitím a záplatou,
+    na hrudi terč, provaz kolem pasu, kůl zapuštěný do kamenné patky."""
+    s = Canvas(22, 36, oy=2)
+    for y in range(31, 36):                                                 # patka
+        for x in range(6, 16):
+            s.px(x, y, STONE[4] if y == 31 else STONE[2] if y < 34 else STONE[1])
+    cylinder(s, 10, 12, 20, 31, OAK, amb=0.3)                               # kůl
+    cylinder(s, 1, 20, 12, 13, OAK, amb=0.35, top_lit=True)                 # příčné rameno
+    sphere(s, 2, 12.5, 1.6, 1.6, STRAW); sphere(s, 19, 12.5, 1.6, 1.6, STRAW)   # „ruce“
+    sphere(s, 11, 18, 6.0, 7.0, STRAW, amb=0.3)                             # trup
+    for y in range(12, 25, 2):
+        s.px(11, y, STRAW[0])                                               # šev
+    for i in range(-5, 6, 2):
+        s.px(11 + i, 22, STRAW[1])
+    s.hline(6, 16, 24, LEATHER[2]); s.hline(6, 16, 25, LEATHER[1])           # provaz
+    # terč na hrudi: bílý kotouč, červený kruh a střed
+    for y in range(12, 23):
+        for x in range(6, 17):
+            d = math.hypot(x + .5 - 11, y + .5 - 17)
+            if d <= 3.8:
+                col = c(0xF4EEE0) if (x < 11 and y < 17) else c(0xDCD2BE)
+                if 2.0 < d <= 2.9 or d <= 0.95:
+                    col = RED[3] if y < 17 else RED[2]
+                if d > 3.3:
+                    col = c(0x9A8E78)
+                s.px(x, y, col)
+    sphere(s, 11, 6.5, 4.2, 4.6, STRAW, amb=0.3)                            # hlava
+    s.px(9, 6, STRAW[0]); s.px(13, 6, STRAW[0])                             # křížky místo očí
+    s.px(8, 5, STRAW[1]); s.px(10, 7, STRAW[1]); s.px(12, 5, STRAW[1]); s.px(14, 7, STRAW[1])
+    for x in (7, 9, 13, 15):
+        s.px(x, 2, STRAW[3]); s.px(x, 1, STRAW[2])                           # trčící sláma
+    s.px(15, 20, c(0x9A7A50)); s.px(16, 21, c(0x9A7A50)); s.px(15, 21, c(0x7A5A34))   # záplata
+    return selout(s, 0.45, 0.75)
+
+
+def filing_cabinet(seed=0):
+    """Kartotéka 24 × 38 ve 3/4: horní plocha (vidět shora), čelo se čtyřmi řadami zapuštěných šuplíků
+    s mosaznými štítky a úchyty, pravý bok ve stínu, jeden šuplík pootevřený se spisy."""
+    s = Spr(24, 38)
+    TOPH = 4
+    for y in range(TOPH):                                                   # horní plocha
+        for x in range(0, 21):
+            s.px(x, y, CABI[4] if y < 2 else CABI[3])
+        s.px(0, y, CABI[5])
+    for y in range(TOPH, 38):                                               # čelo
+        for x in range(0, 21):
+            s.px(x, y, CABI[3])
+        for x in range(21, 24):                                             # bok ve stínu (hloubka)
+            if y - TOPH >= (x - 21):
+                s.px(x, y, CABI[1] if x == 21 else CABI[0])
+    for x in range(21, 24):
+        for y in range(0, TOPH):
+            if y >= x - 21 - 1:
+                s.px(x, y, CABI[2])
+    s.hline(0, 20, TOPH, CABI[5])                                           # hrana čela
+    for row in range(4):
+        y0 = TOPH + 2 + row * 8
+        for col in range(2):
+            x0 = 2 + col * 9
+            for y in range(y0, y0 + 7):                                     # zapuštěný šuplík
+                for x in range(x0, x0 + 8):
+                    e = min(x - x0, x0 + 7 - x, y - y0, y0 + 6 - y)
+                    s.px(x, y, CABI[1] if (e == 0 and (x == x0 or y == y0)) else CABI[5] if e == 0 else CABI[3])
+            for x in range(x0 + 2, x0 + 6):                                 # štítek
+                s.px(x, y0 + 1, PAPER[3]); s.px(x, y0 + 2, PAPER[2])
+            s.hline(x0 + 2, x0 + 5, y0 + 4, BRASS[3]); s.hline(x0 + 2, x0 + 5, y0 + 5, BRASS[1])
+    open_row = 1 + seed % 3
+    y0 = TOPH + 2 + open_row * 8
+    for y in range(y0 + 7, y0 + 10):                                        # pootevřený šuplík
+        for x in range(11, 21):
+            s.px(x, y, CABI[2] if y > y0 + 7 else CABI[4])
+    for x in range(12, 20):
+        s.px(x, y0 + 6, PAPER[3] if x % 2 else PAPER[1])
+    for y in range(34, 38):
+        for x in range(0, 21):
+            s.px(x, y, CABI[1] if y > 35 else CABI[2])
+    return selout(s, 0.5, 0.8)
+
+
+# ── brány a výtah (objemově) ───────────────────────────────────────────────
+
+WALLSTONE = [c(0x2E2628), c(0x4A3E40), c(0x685A5A), c(0x8A7A78), c(0xAE9C96), c(0xCCBCB2)]
+DOOR_OAK = [c(0x1E0F08), c(0x351C0E), c(0x52301A), c(0x704428), c(0x925C36), c(0xB47A4C)]
+IRONB = [c(0x121218), c(0x24262E), c(0x3C404C), c(0x5C6270), c(0x8E96A6)]
+
+
+def arena_gate(W=56, H=72):
+    """Brána do arény: kamenný oblouk z jednotlivě stínovaných klenáků s hlubokým ostěním (vlevo světlé, vpravo
+    ve stínu), zlatá archivolta, zlatý svorník se zkříženými meči, zapuštěná dubová křídla z prken s léty,
+    kované pásy s nýty a odleskem, kruhová klepadla, teplé světlo z písku pod dveřmi, schody ve 3/4."""
+    s = Spr(W, H)
+    cx = W / 2 - 0.5
+    ay = 24                                                              # střed oblouku
+    R_OUT, R_IN, R_DOOR = 27, 21, 17
+    STEP0 = H - 9
+    for y in range(STEP0):
+        for x in range(W):
+            if y < ay:
+                r = math.hypot(x - cx, y - ay)
+                band_out, band_in, door = r <= R_OUT, r <= R_IN, r <= R_DOOR
+                ang = math.atan2(ay - y, x - cx)
+            else:
+                d = abs(x - cx)
+                band_out, band_in, door = d <= R_OUT, d <= R_IN, d <= R_DOOR
+                r = d; ang = 0 if x > cx else math.pi
+            if not band_out:
+                continue
+            if band_out and not band_in:                                 # klenáky / ostění zdi
+                if y < ay:
+                    seg = int((math.degrees(ang) + 6) // 15)
+                    joint = abs(((math.degrees(ang) + 6) % 15)) < 1.3 or abs(r - R_OUT) < 0.8
+                    light = 0.6 + 0.4 * math.cos(ang - 2.3)                  # světlo zleva shora
+                    k = int(1 + light * 3.2 + (seg % 2) * 0.4)
+                    col = WALLSTONE[1] if joint else WALLSTONE[min(5, k)]
+                    if R_IN + 0.5 < r < R_IN + 1.6:
+                        col = GOLD[2] if math.cos(ang - 2.3) > 0 else GOLD[1]   # archivolta
+                else:
+                    row = (y - ay) // 7
+                    joint = (y - ay) % 7 == 0
+                    left = x < cx
+                    col = WALLSTONE[1] if joint else WALLSTONE[4 if left else 2] if row % 2 else WALLSTONE[3 if left else 2]
+                    if abs(abs(x - cx) - R_IN) < 1.5:
+                        col = GOLD[2] if left else GOLD[1]
+                s.px(x, y, col)
+            elif not door:                                                  # hluboké ostění (reveal)
+                left = x < cx
+                depth = (R_IN - r) / (R_IN - R_DOOR)
+                col = WALLSTONE[3] if left and y >= ay else WALLSTONE[1] if not left else WALLSTONE[2]
+                if y < ay:
+                    col = WALLSTONE[1] if math.cos(ang - 2.3) < -0.2 else WALLSTONE[2]
+                if depth > 0.75:
+                    col = WALLSTONE[0]
+                s.px(x, y, col)
+            else:                                                           # dubová křídla z prken
+                lx = x - (cx - R_DOOR)
+                plank = int(lx // 4)
+                px = int(lx) % 4
+                base = 3 if plank % 2 else 4
+                ci = base
+                if px == 0:
+                    ci = 1                                                  # spára
+                elif px == 1:
+                    ci = min(5, base + 1)                                   # hrana prkna ve světle
+                elif px == 3 or ((y + plank * 5) % 13 in (0, 1) and px == 2):
+                    ci = base - 1                                           # stín prkna / léto
+                if abs(x - cx) < 0.8:
+                    ci = 0                                                  # spára mezi křídly
+                top = ay - math.sqrt(max(0.0, R_DOOR ** 2 - (x - cx) ** 2))
+                if y - top < 3:
+                    ci = max(0, ci - 2)                                     # stín klenby na křídlech
+                if x > cx + R_DOOR - 3:
+                    ci = max(0, ci - 1)                                     # stín ostění vpravo
+                s.px(x, y, DOOR_OAK[ci])
+    # kované pásy s nýty
+    for by in (32, 46, 58):
+        for x in range(int(cx - R_DOOR) + 1, int(cx + R_DOOR) + 1):
+            if not s.opaque(x, by):
+                continue
+            s.px(x, by - 1, IRONB[4] if x < cx else IRONB[3])
+            s.px(x, by, IRONB[2]); s.px(x, by + 1, IRONB[0])
+            if (x - int(cx - R_DOOR)) % 5 == 2:
+                s.px(x, by, IRONB[4]); s.px(x + 1, by + 1, IRONB[0])
+    # klepadla (kruhy) s odleskem
+    for kx in (cx - 5, cx + 5):
+        for y in range(36, 45):
+            for x in range(int(kx) - 4, int(kx) + 5):
+                d = math.hypot(x + .5 - kx, y + .5 - 40)
+                if 2.2 <= d <= 3.4:
+                    s.px(x, y, GOLD[3] if (x < kx and y < 40) else GOLD[1] if (x > kx and y > 40) else GOLD[2])
+        sphere(s, kx, 37, 1.6, 1.4, GOLD, amb=0.3)
+    # svorník: zlatý blok se zkříženými meči
+    for y in range(0, 10):
+        for x in range(int(cx) - 5, int(cx) + 7):
+            e = min(x - (int(cx) - 5), int(cx) + 6 - x, y, 9 - y)
+            s.px(x, y, GOLD[3] if e == 0 and (x == int(cx) - 5 or y == 0) else GOLD[0] if e == 0 else GOLD[2])
+    for i in range(6):
+        s.px(int(cx) - 2 + i, 2 + i, STEEL[4]); s.px(int(cx) + 3 - i, 2 + i, STEEL[3])
+    # světlo z písku pod dveřmi
+    for x in range(int(cx - R_DOOR) + 1, int(cx + R_DOOR) + 1):
+        s.px(x, STEP0 - 1, c(0xFFE6A0)); s.px(x, STEP0 - 2, c(0xC89A5A) if x % 2 else DOOR_OAK[1])
+    # schody 3/4: horní plocha + čelo, dolní širší
+    for i in range(2):
+        y = STEP0 + i * 4
+        x0, x1 = int(cx - R_OUT + 2 - i * 3), int(cx + R_OUT - 2 + i * 3)
+        for x in range(x0, x1 + 1):
+            s.px(x, y, WALLSTONE[5]); s.px(x, y + 1, WALLSTONE[4])
+            s.px(x, y + 2, WALLSTONE[2]); s.px(x, y + 3, WALLSTONE[1])
+    return selout(s, 0.5, 0.8)
+
+
+def elevator3d(W=40, H=58):
+    """Výtah: mramorové ostění s kanelovanými pilastry a římsou, uvnitř kabina v perspektivě (zadní stěna s panely,
+    boční stěny – levá ve světle, pravá ve stínu, strop se světlem, podlaha), vpředu mosazná nůžková mříž
+    s odleskem, ovládací panel s rozsvíceným tlačítkem, mosazný práh."""
+    s = Spr(W, H)
+    MB = [c(0x5A6070), c(0x8890A0), c(0xB0B6C2), c(0xD2D6DE), c(0xEDEFF3), c(0xFFFFFF)]
+    # ostění a římsa
+    for y in range(H):
+        for x in range(W):
+            s.px(x, y, MB[3])
+    for y in range(0, 7):
+        for x in range(W):
+            s.px(x, y, MB[5] if y == 0 else MB[4] if y < 3 else MB[1] if y == 6 else MB[3])
+    for x in range(1, W - 1, 3):
+        s.px(x, 4, MB[1]); s.px(x, 5, MB[1])                                 # zubořez
+    for (px0, px1) in ((0, 5), (W - 6, W - 1)):                              # kanelované pilastry
+        for y in range(7, H - 3):
+            for x in range(px0, px1 + 1):
+                f = (x - px0) % 2
+                s.px(x, y, MB[4] if f == 0 else MB[2])
+            s.px(px0, y, MB[5]); s.px(px1, y, MB[1])
+    ix0, iy0, ix1, iy1 = 7, 9, W - 8, H - 4                                  # otvor
+    # kabina v perspektivě
+    bx0, bx1, by0, by1 = ix0 + 5, ix1 - 5, iy0 + 4, iy1 - 6                  # zadní stěna
+    for y in range(iy0, iy1 + 1):
+        for x in range(ix0, ix1 + 1):
+            if bx0 <= x <= bx1 and by0 <= y <= by1:
+                col = WALNUT[3] if ((x - bx0) // 6 + (y - by0) // 8) % 2 else WALNUT[2]
+                if (x - bx0) % 6 == 0 or (y - by0) % 8 == 0:
+                    col = WALNUT[1]
+            elif y < by0:                                                    # strop
+                col = c(0xE8DCB8) if bx0 + 3 < x < bx1 - 3 and y == iy0 + 1 else WALNUT[1]
+            elif y > by1:                                                    # podlaha
+                col = WALNUT[4] if (x + y) % 2 else WALNUT[3]
+            elif x < bx0:                                                    # levá stěna (světlo)
+                col = WALNUT[4] if (x - ix0) % 3 else WALNUT[3]
+            else:                                                            # pravá stěna (stín)
+                col = WALNUT[1] if (x - bx1) % 3 else WALNUT[0]
+            s.px(x, y, col)
+    # světlo ze stropu
+    for y in range(iy0 + 2, by1):
+        for x in range(bx0, bx1 + 1):
+            d = math.hypot((x - (bx0 + bx1) / 2) / 1.4, y - iy0)
+            a = max(0.0, 1 - d / 10) * 0.35
+            if a > 0 and s.opaque(x, y):
+                s.a[y, x, :3] = np.clip(s.a[y, x, :3] * (1 - a) + np.array([255, 236, 190]) * a, 0, 255).astype(np.uint8)
+    # nůžková mříž (řídká, aby byla vidět kabina)
+    for y in range(iy0, iy1 + 1):
+        for x in range(ix0, ix1 + 1):
+            u, v = (x - ix0 + y - iy0) % 8, (x - ix0 - (y - iy0)) % 8
+            if u == 0:
+                s.px(x, y, BRASS[4] if y < (iy0 + iy1) / 2 else BRASS[3])
+            elif v == 0:
+                s.px(x, y, BRASS[2])
+            elif v == 1 and u != 1:
+                s.px(x, y, BRASS[0])                                         # stín za mříží
+    for x in (ix0, ix1, (ix0 + ix1) // 2):                                   # svislé tyče
+        for y in range(iy0, iy1 + 1):
+            s.px(x, y, BRASS[4] if x != ix1 else BRASS[2])
+    for y in (iy0, iy1):
+        for x in range(ix0, ix1 + 1):
+            s.px(x, y, BRASS[3])
+    # ostění otvoru: stín nahoře a vpravo (hloubka)
+    for x in range(ix0 - 1, ix1 + 2):
+        s.px(x, iy0 - 1, MB[0])
+    for y in range(iy0, iy1 + 1):
+        s.px(ix1 + 1, y, MB[1]); s.px(ix0 - 1, y, MB[5])
+    # ovládací panel na pravém pilastru
+    for y in range(26, 36):
+        for x in range(W - 5, W - 1):
+            s.px(x, y, BRASS[2] if y not in (26, 35) else BRASS[4] if y == 26 else BRASS[0])
+    s.px(W - 3, 29, c(0xFFC860)); s.px(W - 4, 29, c(0xFFE8A0))              # rozsvícené tlačítko
+    s.px(W - 3, 32, IRONB[2]); s.px(W - 4, 32, IRONB[3])
+    # práh
+    for x in range(3, W - 3):
+        s.px(x, H - 3, BRASS[4]); s.px(x, H - 2, BRASS[2]); s.px(x, H - 1, BRASS[0])
+    return selout(s, 0.55, 0.85)
+
+
+def floor_dial3d(r=15):
+    """Ukazatel pater: mosazný půlkruh s okosením, krémový ciferník s ryskami 0–7, červená ručička na 0, odlesk
+    skla; pod ním dvě zaslepené kovové destičky (skrytá patra)."""
+    w, h = r * 2 + 5, r + 9
+    s = Spr(w, h)
+    cx, cy = r + 2, r + 2
+    for y in range(h):
+        for x in range(w):
+            q = math.hypot(x + .5 - cx, y + .5 - cy)
+            if y <= cy and q <= r + 1.5:
+                if q > r - 1.5:
+                    ang = math.atan2(cy - y, x - cx)
+                    lt = math.cos(ang - 2.2)
+                    s.px(x, y, BRASS[4] if lt > 0.5 else BRASS[3] if lt > -0.2 else BRASS[1])
+                else:
+                    s.px(x, y, c(0xF4ECD4) if q < r - 4 else c(0xE4D8B8))
+    for x in range(cx - r - 1, cx + r + 2):
+        s.px(x, cy + 1, BRASS[1]); s.px(x, cy, BRASS[3])
+    for i in range(8):
+        a = math.pi - i / 7 * math.pi
+        x0, y0 = cx + math.cos(a) * (r - 2.5), cy - math.sin(a) * (r - 2.5)
+        x1, y1 = cx + math.cos(a) * (r - 5), cy - math.sin(a) * (r - 5)
+        s.line(x0, y0, x1, y1, c(0x2A2420) if i else RED[3])
+    s.line(cx, cy - 0.5, cx - r + 5, cy - 1.5, RED[2])                       # ručička na 0
+    sphere(s, cx, cy - 0.5, 1.6, 1.6, BRASS, amb=0.35)
+    for i in range(6):                                                       # odlesk skla
+        a = 2.0 + i * 0.12
+        s.px(round(cx + math.cos(a) * (r - 4)), round(cy - math.sin(a) * (r - 4)), c(0xFFFFFF))
+    for k, x in enumerate((cx - 9, cx + 4)):                                  # zaslepené destičky
+        for y in range(cy + 4, cy + 8):
+            for xx in range(x, x + 6):
+                s.px(xx, y, IRONB[3] if y == cy + 4 else IRONB[2] if y < cy + 7 else IRONB[0])
+        s.px(x + 1 + k, cy + 5, IRONB[0]); s.px(x + 4 - k, cy + 6, IRONB[0])
+    return selout(s, 0.5, 0.8)

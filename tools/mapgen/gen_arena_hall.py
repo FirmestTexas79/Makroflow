@@ -74,7 +74,7 @@ def place(spr, cx, by, foot="auto", z=None):
     if foot:                                            # silueta, ne jen pata (walkmask.py, ADR 0094)
         walkmask.silhouette(block, spr.a[:, :, 3], int(cx - spr.w // 2), int(by - spr.h), 2)
 
-place(P.arena_door(), 88, WALL_H + 6, foot=None, z=1)
+place(F.arena_gate(), 88, WALL_H + 6, foot=None, z=1)
 for bx in (28, 148):
     place(P.banner(), bx, 52, foot=None, z=1)
 for tx in (54, 122):
@@ -114,12 +114,12 @@ d = src.crop(src.getbbox()); d.thumbnail((30, 24), Image.LANCZOS)
 place(P.wanted_board(np.array(d)), 38, 262, foot=(56, 6))
 # tréninkový kout vpravo dole
 place(P.weapon_rack(), 154, 234, foot=(28, 6))
-place(P.dummy(), 124, 254, foot=(8, 4)); place(P.dummy(), 150, 264, foot=(8, 4))
+place(F.training_dummy(), 124, 256, foot=(10, 4)); place(F.training_dummy(), 150, 266, foot=(10, 4))
 # lavice a květiny
-place(P.bench_long(), 46, 196, foot=(34, 5)); place(P.bench_long(), 124, 196, foot=(34, 5))
+place(F.bench3d(34, F.OAK), 46, 198, foot=(34, 6)); place(F.bench3d(34, F.OAK), 124, 226, foot=(34, 6))  # pravá níž: na 198 by zakryla uzel velitele (132,182)
 for (x, y) in ((16, 100), (160, 100)):
     place(P.plant(), x, y, foot=(10, 5))
-place(P.armor_statue(), 62, 286, foot=(16, 8)); place(P.armor_statue(), 114, 286, foot=(16, 8))
+place(F.knight_statue(), 62, 287, foot=(20, 8)); place(F.knight_statue(), 114, 287, foot=(20, 8))
 place(P.guild_flag(), 104, 162, foot=None)                       # vlajka za levým koncem stolu
 # ── hloubka: zadní stěna nahoře tmavne, stín u paty zdí, vržené a kontaktní stíny, záře pochodní na zdi ──
 for y in range(WALL_H):
