@@ -125,6 +125,7 @@ object WeeklyReportData {
             food = food, plannedSoFar = plannedSoFar, doneDays = doneDays,
             weekSets = weekSets, earlierSets = earlier, names = names,
             nights = nights, prevNights = prevNights,
+            watchDaysNoSleep = wear.count { it.date >= monday.toString() && (it.sleepSec ?: 0) <= 0 && ((it.steps ?: 0) > 0 || it.totalKcal != null) },
             weighIns = weighIns, trendKg = end?.level, trendChangeKg = if (end != null && start != null) end.level - start.level else null,
             steps = stepList, stepGoal = profile?.stepGoal ?: 6000,
             waterDays = waterDays, waterLoggedDays = waterLogged, closedDays = closed.size,

@@ -41,6 +41,7 @@ data class WeekIn(
     val names: Map<String, String> = emptyMap(),
     val nights: List<NightIn> = emptyList(),
     val prevNights: List<NightIn> = emptyList(),
+    val watchDaysNoSleep: Int = 0,            // dny týdne, kdy hodinky poslaly data, ale ne spánek
     val weighIns: Int = 0,
     val trendKg: Double? = null,              // vyhlazená hmotnost na konci týdne
     val trendChangeKg: Double? = null,        // změna trendu za 7 dní
@@ -220,7 +221,8 @@ object WeeklyReportModel {
 
     private fun sleep(w: WeekIn): Card {
         val s = sleepStats(w) ?: return Card(Domain.SLEEP, Status.NONE, "–", "Ø spánek za noc",
-            "Z hodinek mám jen ${nights(w.nights.size)}. Potřebuju aspoň $MIN_NIGHTS.", emptyList())
+            if (w.watchDaysNoSleep >= 2) "Hodinky tento týden posílaly kroky, ale spánek jen za ${nights(w.nights.size)}. Nosíš je i v noci?"
+            else "Z hodinek mám jen ${nights(w.nights.size)}. Potřebuju aspoň $MIN_NIGHTS.", emptyList())
         val h = s.avgSec / 3600
         val debtH = s.debtSec / 3600.0
         val status = when {

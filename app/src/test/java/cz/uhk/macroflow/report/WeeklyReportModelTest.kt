@@ -132,4 +132,10 @@ class WeeklyReportModelTest {
         assertFalse(text.contains("@"))
         assertTrue(text.contains("Příští týden"))
     }
+    @Test fun watchWithoutSleepAsksAboutWearingAtNight() {
+        val r = WeeklyReportModel.build(WeekIn(monday = mon, today = mon + 8, nights = nights(7 * 3600, count = 1), watchDaysNoSleep = 6))
+        org.junit.Assert.assertTrue(r.card(Domain.SLEEP).line.contains("Nosíš je i v noci"))
+        val quiet = WeeklyReportModel.build(WeekIn(monday = mon, today = mon + 8))
+        org.junit.Assert.assertTrue(quiet.card(Domain.SLEEP).line.contains("Potřebuju aspoň"))
+    }
 }
