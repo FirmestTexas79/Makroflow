@@ -7,6 +7,7 @@ import android.os.SystemClock
 import android.view.View
 import java.util.Random
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -64,6 +65,10 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         butterflies(canvas, t)
         sprinklers(canvas, now)
         sunFlicker(canvas, now)
+        shafts(canvas, t)
+        leaves(canvas, t)
+        peeks(canvas, now)
+        snail(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -307,6 +312,98 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
     }
 
+    /** Paprsky světla mezi korunami: šikmé pruhy, které se pomalu pohupují a dýchají (víc a míň světla). */
+    private fun shafts(c: Canvas, t: Float) {
+        for ((i, sh) in fx.shafts.withIndex()) {
+            val sway = sin(t * 0.23f + i * 1.9f) * 4f + sin(t * 0.61f + i) * 1.5f
+            val breathe = (sin(t * 0.4f + i * 2.3f) + 1f) / 2f
+            val a = (14 + breathe * 26).toInt()
+            val w = sh.w + (breathe * 2).toInt()
+            for (y in sh.y0..sh.y1) {
+                val x0 = (sh.x + sway + (y - sh.y0) * sh.slant).roundToInt()
+                val fade = 1f - ((y - sh.y0).toFloat() / (sh.y1 - sh.y0)).let { it * it }
+                paint.color = ((a * fade).toInt() shl 24) or 0xFFE8A8
+                c.drawRect(x0 * s, y * s, (x0 + w) * s, (y + 1) * s, paint)
+                paint.color = ((a * fade * 0.5f).toInt() shl 24) or 0xFFE8A8               // měkčí okraj (1 px)
+                c.drawRect((x0 - 1) * s, y * s, x0 * s, (y + 1) * s, paint)
+                c.drawRect((x0 + w) * s, y * s, (x0 + w + 1) * s, (y + 1) * s, paint)
+            }
+        }
+    }
+
+    /** Padající listí: každý list se odlepí od koruny, kolébá se ze strany na stranu, dopadne a vybledne. */
+    private fun leaves(c: Canvas, t: Float) {
+        val cols = intArrayOf(0xFF5A9040.toInt(), 0xFF84B254.toInt(), 0xFFC89838.toInt(), 0xFFB06A28.toInt())
+        for ((bi, b) in fx.leaves.withIndex()) for (i in 0 until 3) {
+            val k = bi * 3 + i
+            val period = 7f + (k % 4) * 1.3f
+            val ph = ((t + k * 2.7f) % period) / period
+            val fall = 34f + (k % 3) * 8
+            val x0 = b.x0 + ((k * 37) % maxOf(1, b.x1 - b.x0))
+            val x = (x0 + sin(ph * 9f + k) * 3f).roundToInt()
+            val y = (b.y1 + minOf(ph * 1.25f, 1f) * fall).roundToInt()
+            if (ph > 0.92f) continue                                                   // dopadlý list zmizí
+            val col = cols[k % cols.size]
+            val tilt = (ph * 9f + k).toInt() % 2 == 0
+            px(c, x, y, col); px(c, x + if (tilt) 1 else -1, y + if (tilt) 0 else 1, col)
+        }
+    }
+
+    private val peekAt = LongArray(fx.peeks.size) { t0 + 6000L + rnd.nextInt(12000) }
+
+    /** Dutina ve stromu: občas se v tmě rozsvítí dvě oči, dvakrát mrknou a zase zmizí. */
+    private fun peeks(c: Canvas, now: Long) {
+        for ((i, p) in fx.peeks.withIndex()) {
+            val ms = now - peekAt[i]
+            if (ms < 0) continue
+            if (ms > 3200) { peekAt[i] = now + 14000L + rnd.nextInt(22000); continue }
+            if (ms in 900..1000 || ms in 1900..2000) continue                           // mrknutí
+            val look = if (ms in 1100..1800) 1 else 0                                   // ohlédne se
+            val eye = 0xFFFFE070.toInt()
+            px(c, p.first - 2 + look, p.second, eye); px(c, p.first + 1 + look, p.second, eye)
+            if (ms in 400..2600) { px(c, p.first - 1 + look, p.second + 2, 0xFF3A2A1A.toInt()); px(c, p.first + look, p.second + 2, 0xFF3A2A1A.toInt()) }
+        }
+    }
+
+    private var snailT0 = t0
+
+    /** Slimák: leze tam a zpátky před padlým kmenem (pár px za vteřinu), za ním lesklá stopa, kroutí tykadly. */
+    private fun snail(c: Canvas, now: Long) {
+        val path = fx.snail ?: return
+        val (a, b) = path
+        val len = abs(b.first - a.first).toFloat()
+        val leg = (len / 2.4f * 1000).toLong()
+        val pause = 4000L
+        val cycle = (leg + pause) * 2
+        val m = (now - snailT0) % cycle
+        val back = m >= leg + pause
+        val mm = if (back) m - leg - pause else m
+        val k = (mm.toFloat() / leg).coerceAtMost(1f)
+        val dir = if (back) -1 else 1
+        val start = if (back) b.first else a.first
+        val x = (start + dir * k * len).roundToInt()
+        val y = a.second
+        val trail = 0x60D8E8F0
+        for (i in 1..(k * len).toInt().coerceAtMost(18)) px(c, x - dir * (i + 4), y, if (i % 3 == 0) 0x90F4FCFF.toInt() else trail)
+        fun p(dx: Int, dy: Int, col: Int) = px(c, x + dx * dir, y + dy, col)
+        val body = 0xFF9AB0A0.toInt(); val bodyD = 0xFF6E8676.toInt()
+        for (dx in -4..3) p(dx, 0, bodyD)
+        for (dx in -3..3) p(dx, -1, body)
+        val wig = ((now / 300) % 2).toInt()
+        p(3, -2, body); p(4, -3 - wig, body); p(2, -3, body); p(2, -4 + wig, body)        // tykadla
+        p(4, -4 - wig, 0xFF1A1A20.toInt()); p(2, -5 + wig, 0xFF1A1A20.toInt())
+        val sh = intArrayOf(0xFFE8C890.toInt(), 0xFFC49A5A.toInt(), 0xFF8A5E30.toInt(), 0xFF5A3A1E.toInt())
+        for (dy in -6..-2) for (dx in -4..0) {                                         // ulita se spirálou
+            val cx = dx + 2f; val cy = dy + 4f
+            if (cx * cx / 6.5f + cy * cy / 7f > 1f) continue
+            val r = kotlin.math.sqrt(cx * cx + cy * cy)
+            val ang = kotlin.math.atan2(cy, cx)
+            val band = ((r * 1.2f + ang / 3.1416f) % 2f + 2f) % 2f
+            p(dx, dy, if (band < 0.7f) sh[1] else if (cx < 0 && cy < 0) sh[0] else sh[2])
+        }
+        p(-2, -4, sh[3])
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -348,6 +445,16 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             sunFlicker = true
         )
 
+        /** Zarostlé patro (4.): paprsky mezi korunami, padající listí, oči v dutině stromu, slimák, prach ve světle. */
+        val FOREST = InteriorFx(
+            shafts = listOf(FxShaft(54, 96, 236, 9, 0.28f), FxShaft(92, 130, 300, 7, 0.28f), FxShaft(70, 236, 336, 6, 0.28f)),
+            leaves = listOf(FxBox(4, 130, 50, 146), FxBox(128, 150, 172, 166), FxBox(4, 240, 52, 256), FxBox(130, 268, 172, 284)),
+            peeks = listOf(153 to 185),
+            snail = (80 to 310) to (122 to 310),
+            motes = listOf(FxBox(56, 110, 120, 300)),
+            moteColor = 0xFFF0B8
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -376,5 +483,12 @@ data class InteriorFx(
     val grass: List<FxBox> = emptyList(),
     val butterflies: List<FxBox> = emptyList(),
     val sprinklers: List<Pair<Int, Int>> = emptyList(),
-    val sunFlicker: Boolean = false
+    val sunFlicker: Boolean = false,
+    val shafts: List<FxShaft> = emptyList(),
+    val leaves: List<FxBox> = emptyList(),
+    val peeks: List<Pair<Int, Int>> = emptyList(),
+    val snail: Pair<Pair<Int, Int>, Pair<Int, Int>>? = null
 )
+
+/** Paprsek světla: horní okraj [x] na řádku [y0], konec na [y1], šířka [w], posun doprava na řádek [slant]. */
+data class FxShaft(val x: Int, val y0: Int, val y1: Int, val w: Int, val slant: Float)

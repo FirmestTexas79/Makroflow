@@ -110,7 +110,7 @@ object SpawnManager {
     }
 
     /** Patra Věže Řádu Váhy, kde žijí jen Makromoni jednoho typu (od 3. patra). */
-    val TYPED_FLOORS = mapOf(BiomeType.TOWER_PLAIN to MakromonType.NORMAL)
+    val TYPED_FLOORS = mapOf(BiomeType.TOWER_PLAIN to MakromonType.NORMAL, BiomeType.TOWER_FOREST to MakromonType.GRASS)
 
     fun findById(id: String): SpawnPool? = POOL.find { it.id == id }
     val allEntries: List<SpawnPool> get() = POOL
