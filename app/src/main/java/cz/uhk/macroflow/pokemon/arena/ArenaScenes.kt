@@ -18,7 +18,7 @@ enum class ArenaTheme {
             "FOREST", "HIDDEN_GROVE", "QUIET_ORCHARD", "TOWER_FOREST" -> FOREST
             "MOUNTAINS", "SKY_PASS", "ASH_PLAIN", "ECHO_CANYON", "TOWER_ROCK" -> MOUNTAINS
             "CAVE_OPEN", "TOWER_CAVE" -> CAVE_OPEN
-            "CAVE_MAZE", "MINES" -> CAVE_MAZE
+            "CAVE_MAZE", "MINES", "TOWER_DORM" -> CAVE_MAZE
             "WATER", "LAKE", "TOWER_WATER" -> WATER
             else -> MEADOW
         }

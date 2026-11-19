@@ -113,7 +113,8 @@ object SpawnManager {
     val TYPED_FLOORS: Map<BiomeType, Set<String>> = mapOf(
         BiomeType.TOWER_PLAIN to setOf("NORMÁLNÍ"), BiomeType.TOWER_FOREST to setOf("PŘÍRODA"),
         BiomeType.TOWER_ROCK to setOf("ZEMĚ"), BiomeType.TOWER_CAVE to setOf("PSYCHO", "BLESK"),
-        BiomeType.TOWER_WATER to setOf("VODA"))
+        BiomeType.TOWER_WATER to setOf("VODA"),
+        BiomeType.TOWER_DORM to setOf("DUCH"))
 
     /** Typ druhu tak, jak ho ukazuje Makrodex (první slovo dexType: „ZEMĚ / KÁMEN“ → ZEMĚ). */
     private val DEX_TYPE: Map<String, String> by lazy {

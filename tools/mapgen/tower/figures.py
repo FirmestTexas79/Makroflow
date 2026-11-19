@@ -835,7 +835,7 @@ def elevator3d(W=40, H=58):
     return selout(s, 0.55, 0.85)
 
 
-def floor_dial3d(r=15, at=0):
+def floor_dial3d(r=15, at=0, n=10):
     """Ukazatel pater: mosazný půlkruh s okosením, krémový ciferník s ryskami 0–7, červená ručička na 0, odlesk
     skla; pod ním dvě zaslepené kovové destičky (skrytá patra)."""
     w, h = r * 2 + 5, r + 9
@@ -853,12 +853,12 @@ def floor_dial3d(r=15, at=0):
                     s.px(x, y, c(0xF4ECD4) if q < r - 4 else c(0xE4D8B8))
     for x in range(cx - r - 1, cx + r + 2):
         s.px(x, cy + 1, BRASS[1]); s.px(x, cy, BRASS[3])
-    for i in range(8):
-        a = math.pi - i / 7 * math.pi
+    for i in range(n + 1):                                                   # rysky 0..n (Věž má víc pater)
+        a = math.pi - i / n * math.pi
         x0, y0 = cx + math.cos(a) * (r - 2.5), cy - math.sin(a) * (r - 2.5)
         x1, y1 = cx + math.cos(a) * (r - 5), cy - math.sin(a) * (r - 5)
         s.line(x0, y0, x1, y1, c(0x2A2420) if i else RED[3])
-    na = math.pi - at / 7 * math.pi                                         # ručička na patře [at]
+    na = math.pi - at / n * math.pi                                         # ručička na patře [at]
     s.line(cx, cy - 0.5, cx + math.cos(na) * (r - 5), cy - 0.5 - math.sin(na) * (r - 5) - (1 if at == 0 else 0), RED[2])
     sphere(s, cx, cy - 0.5, 1.6, 1.6, BRASS, amb=0.35)
     for i in range(6):                                                       # odlesk skla

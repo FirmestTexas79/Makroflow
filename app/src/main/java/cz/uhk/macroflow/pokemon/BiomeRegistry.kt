@@ -44,7 +44,9 @@ enum class BiomeType {
     /** Krystalová jeskyně – 6. patro Věže, psychičtí a električtí Makromoni. */
     TOWER_CAVE,
     /** Zatopené patro – 7. patro Věže, vodní Makromoni. */
-    TOWER_WATER
+    TOWER_WATER,
+    /** Dormitoř – 8. patro Věže, duchové. */
+    TOWER_DORM
 }
 
 object BiomeRegistry {
@@ -167,7 +169,8 @@ object BiomeRegistry {
         BiomeDefinition(BiomeType.TOWER_FOREST, R.drawable.tower_forest, graphOf(cz.uhk.macroflow.pokemon.cave.TowerForest.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerForest.MAP),
         BiomeDefinition(BiomeType.TOWER_ROCK, R.drawable.tower_rock, graphOf(cz.uhk.macroflow.pokemon.cave.TowerRock.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerRock.MAP),
         BiomeDefinition(BiomeType.TOWER_CAVE, R.drawable.tower_cave, graphOf(cz.uhk.macroflow.pokemon.cave.TowerCave.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerCave.MAP),
-        BiomeDefinition(BiomeType.TOWER_WATER, R.drawable.tower_water, graphOf(cz.uhk.macroflow.pokemon.cave.TowerWater.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerWater.MAP)
+        BiomeDefinition(BiomeType.TOWER_WATER, R.drawable.tower_water, graphOf(cz.uhk.macroflow.pokemon.cave.TowerWater.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerWater.MAP),
+        BiomeDefinition(BiomeType.TOWER_DORM, R.drawable.tower_dorm, graphOf(cz.uhk.macroflow.pokemon.cave.TowerDorm.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerDorm.MAP)
         ).associateBy { it.type }
     }
 
