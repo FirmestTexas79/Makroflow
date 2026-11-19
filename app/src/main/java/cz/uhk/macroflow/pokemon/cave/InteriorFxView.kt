@@ -69,6 +69,10 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         leaves(canvas, t)
         peeks(canvas, now)
         snail(canvas, now)
+        pebbles(canvas, now)
+        crumbles(canvas, now)
+        scorpion(canvas, now)
+        dustDevil(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -404,6 +408,109 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         p(-2, -4, sh[3])
     }
 
+    private val pebbleAt = LongArray(fx.pebbles.size) { t0 + 2000L + rnd.nextInt(10000) }
+
+    /** Kamínek se utrhne z vršku sutě, kutálí se dolů, poskočí a zůstane chvíli ležet. */
+    private fun pebbles(c: Canvas, now: Long) {
+        for ((i, p) in fx.pebbles.withIndex()) {
+            val ms = now - pebbleAt[i]
+            if (ms < 0) continue
+            if (ms > 2600) { pebbleAt[i] = now + 6000L + rnd.nextInt(14000); continue }
+            val k = (ms / 900f).coerceAtMost(1f)
+            val ease = k * k
+            var x = p.x0 + (p.x1 - p.x0) * ease
+            var y = p.y0 + (p.y1 - p.y0) * ease
+            if (ms in 900..1300) { val b = (ms - 900) / 400f; x = p.x1 + b * 4; y = p.y1 - sin(b * PI.toFloat()) * 3 }
+            else if (ms > 1300) { x = p.x1 + 4f; y = p.y1.toFloat() }
+            val xi = x.roundToInt(); val yi = y.roundToInt()
+            val roll = (ms / 120) % 2 == 0L && ms < 1300
+            px(c, xi, yi, if (roll) 0xFFAE9A80.toInt() else 0xFF8C7A64.toInt())
+            px(c, xi + 1, yi, 0xFF6A5A4A.toInt()); px(c, xi, yi + 1, 0xFF4A3E34.toInt())
+            if (ms in 900..1100) { px(c, xi - 2, yi + 1, 0x80BEAA8C.toInt()); px(c, xi + 3, yi + 1, 0x80BEAA8C.toInt()) }   // prášek
+        }
+    }
+
+    private val crumbleAt = LongArray(fx.crumbles.size) { t0 + 4000L + rnd.nextInt(16000) }
+    private val crumbleX = IntArray(fx.crumbles.size)
+
+    /** Ze skalní římsy se uvolní drobek, spadne ke zdi a zvedne obláček prachu. */
+    private fun crumbles(c: Canvas, now: Long) {
+        for ((i, b) in fx.crumbles.withIndex()) {
+            val ms = now - crumbleAt[i]
+            if (ms < 0) continue
+            if (crumbleX[i] == 0) crumbleX[i] = b.x0 + rnd.nextInt(maxOf(1, b.x1 - b.x0))
+            val fallMs = 700L
+            if (ms > fallMs + 900) { crumbleAt[i] = now + 9000L + rnd.nextInt(20000); crumbleX[i] = 0; continue }
+            val x = crumbleX[i]
+            if (ms < fallMs) {
+                val k = ms / fallMs.toFloat()
+                val y = b.y0 + ((b.y1 - b.y0) * k * k).roundToInt()
+                px(c, x, y, 0xFF8C7A64.toInt()); px(c, x, y - 1, 0x60AE9A80)
+            } else {
+                val k = (ms - fallMs) / 900f
+                val a = ((1 - k) * 150).toInt()
+                val r = (2 + k * 5).roundToInt()
+                for (dx in -r..r step 2) px(c, x + dx, b.y1 - (k * 3).roundToInt() - (if (dx % 4 == 0) 1 else 0), (a shl 24) or 0xBEAA8C)
+            }
+        }
+    }
+
+    private var scorpAt = t0 + 7000L + rnd.nextInt(15000)
+    private var scorpBack = false
+
+    /** Štír: rychle přeběhne, uprostřed se zastaví, zvedne a zakmitá ocasem, pak zaleze. */
+    private fun scorpion(c: Canvas, now: Long) {
+        val path = fx.scorpion ?: return
+        if (now < scorpAt) return
+        val pts = if (scorpBack) path.reversed() else path
+        val legs = pts.zipWithNext { a, b -> hypot((b.first - a.first).toFloat(), (b.second - a.second).toFloat()) }
+        val speed = 34f / 1000f
+        val pause = 1400L
+        val ms = now - scorpAt
+        val first = (legs[0] / speed).toLong()
+        val total = (legs.sum() / speed).toLong() + pause
+        if (ms > total) { scorpAt = now + 18000L + rnd.nextInt(30000); scorpBack = rnd.nextBoolean(); return }
+        val (x, y, dir, moving) = when {
+            ms < first -> lerp(pts[0], pts[1], ms * speed / legs[0]).let { Quad(it.first, it.second, sign(pts[0], pts[1]), true) }
+            ms < first + pause -> Quad(pts[1].first.toFloat(), pts[1].second.toFloat(), sign(pts[0], pts[1]), false)
+            else -> lerp(pts[1], pts[2], ((ms - first - pause) * speed / legs[1]).coerceAtMost(1f)).let { Quad(it.first, it.second, sign(pts[1], pts[2]), true) }
+        }
+        val sx = x.roundToInt(); val sy = y.roundToInt()
+        fun p(dx: Int, dy: Int, col: Int) = px(c, sx + dx * dir, sy + dy, col)
+        val shell = 0xFF7A4A22.toInt(); val dark = 0xFF4A2A12.toInt(); val lite = 0xFFA8703A.toInt()
+        for (dx in -2..2) { p(dx, -1, shell); p(dx, 0, dark) }
+        p(-1, -2, lite); p(0, -2, lite)
+        val step = moving && (now / 70) % 2 == 0L
+        for (dx in intArrayOf(-2, 0, 2)) p(dx + (if (step) 1 else 0), 1, dark)                    // nohy
+        p(3, -1, shell); p(4, -2, shell); p(4, 0, shell); p(5, -2, lite); p(5, 0, lite)          // klepeta
+        val curl = if (!moving) ((now / 160) % 3).toInt() else 0
+        p(-3, -1, shell); p(-4, -2, shell); p(-4, -3 - curl % 2, shell); p(-3, -4 - curl % 2, shell)  // ocas
+        p(-2, -4 - curl % 2, 0xFF2A1408.toInt())                                                     // žihadlo
+    }
+
+    private var devilAt = t0 + 12000L + rnd.nextInt(18000)
+    private var devilX = 0f; private var devilY = 0f
+
+    /** Prachový vír: malá točící se spirála prachu přejede kus podlahy a rozplyne se. */
+    private fun dustDevil(c: Canvas, now: Long) {
+        val b = fx.dustDevil ?: return
+        if (now < devilAt) return
+        val ms = now - devilAt
+        if (ms > 3200) { devilAt = now + 20000L + rnd.nextInt(30000); devilX = 0f; return }
+        if (devilX == 0f) { devilX = (b.x0 + rnd.nextInt(maxOf(1, (b.x1 - b.x0) / 2))).toFloat(); devilY = (b.y0 + rnd.nextInt(maxOf(1, b.y1 - b.y0))).toFloat() }
+        val k = ms / 3200f
+        val cx = devilX + k * 46f; val cy = devilY - k * 6f
+        val strength = sin(k * PI.toFloat())
+        for (j in 0 until 14) {
+            val h = j / 13f
+            val a = ms / 90f + j * 0.9f
+            val r = 1.5f + h * 4.5f * strength
+            val x = cx + kotlin.math.cos(a) * r
+            val y = cy - h * 12f + sin(a) * r * 0.3f
+            px(c, x.roundToInt(), y.roundToInt(), (((1 - h) * 170 * strength).toInt() shl 24) or 0xBEAA8C)
+        }
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -455,6 +562,16 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0xFFF0B8
         )
 
+        /** Skalní patro (5.): kamínky ze sutí, drobky z říms, štír, prachový vír, prach. */
+        val ROCK = InteriorFx(
+            pebbles = listOf(FxPath(40, 164, 60, 186), FxPath(134, 258, 154, 280), FxPath(44, 298, 64, 320)),
+            crumbles = listOf(FxBox(8, 42, 44, 96), FxBox(124, 36, 166, 96), FxBox(32, 68, 58, 96), FxBox(132, 72, 164, 96)),
+            scorpion = listOf(16 to 276, 48 to 286, 92 to 302),
+            dustDevil = FxBox(20, 280, 120, 330),
+            motes = listOf(FxBox(20, 110, 156, 330)),
+            moteColor = 0xE8D8B8
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -487,8 +604,15 @@ data class InteriorFx(
     val shafts: List<FxShaft> = emptyList(),
     val leaves: List<FxBox> = emptyList(),
     val peeks: List<Pair<Int, Int>> = emptyList(),
-    val snail: Pair<Pair<Int, Int>, Pair<Int, Int>>? = null
+    val snail: Pair<Pair<Int, Int>, Pair<Int, Int>>? = null,
+    val pebbles: List<FxPath> = emptyList(),
+    val crumbles: List<FxBox> = emptyList(),
+    val scorpion: List<Pair<Int, Int>>? = null,
+    val dustDevil: FxBox? = null
 )
+
+/** Úsečka pohybu (odkud – kam), např. kamínek z vršku sutě k zemi. */
+data class FxPath(val x0: Int, val y0: Int, val x1: Int, val y1: Int)
 
 /** Paprsek světla: horní okraj [x] na řádku [y0], konec na [y1], šířka [w], posun doprava na řádek [slant]. */
 data class FxShaft(val x: Int, val y0: Int, val y1: Int, val w: Int, val slant: Float)
