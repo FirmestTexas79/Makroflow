@@ -1288,14 +1288,15 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
 
         /** Kancelář Řádu (11.): Foucaultovo kyvadlo, orloj, padající hvězda ve štěrbině, brk píše sám, lampa, krystal. */
         val OFFICE = InteriorFx(
-            stars = listOf(FxBox(18, 3, 42, 66)),
-            sparkles = listOf(FxBox(18, 3, 42, 60)),
-            pendulums = listOf(FxPendulum(88, 112, 122, 12f, 7f, rod = 0x90C8B070.toInt())),
-            orrery = 142 to 164,
-            quill = 125 to 308,
-            glows = listOf(FxGlow(147, 293, 9, 6, 0xFFE0A0, 5f), FxGlow(142, 164, 5, 4, 0xFFE08A, 3f),
-                FxGlow(50, 292, 4, 4, 0x80D8FF, 2.5f)),
-            motes = listOf(FxBox(16, 100, 70, 240)),
+            stars = listOf(FxBox(14, 16, 40, 60)),
+            sparkles = listOf(FxBox(14, 16, 40, 56)),
+            pendulums = listOf(FxPendulum(88, 110, 122, 12f, 7f, rod = 0x90C8B070.toInt())),
+            orrery = 140 to 140,
+            quill = 60 to 307,
+            candles = listOf(16 to 282, 21 to 282, 26 to 282),
+            glows = listOf(FxGlow(21, 288, 14, 9, 0xFFC070, 3f), FxGlow(140, 140, 6, 5, 0xFFE08A, 3f),
+                FxGlow(150, 292, 4, 4, 0x80D8FF, 2.5f)),
+            motes = listOf(FxBox(14, 100, 80, 230)),
             moteColor = 0xC8D4FF
         )
 
