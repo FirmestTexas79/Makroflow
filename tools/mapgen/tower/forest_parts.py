@@ -255,29 +255,47 @@ def overgrown_cabinet(base):
     return selout(s, 0.5, 0.82)
 
 
-def ivy_wall(wall, seed=2):
-    """Na hotovou zadní stěnu (Spr) přidá liány shora, mech u paty a zelené skvrny na kachlích."""
+def ivy_wall(wall, seed=2, door=None):
+    """Na zadní stěnu (Spr) přidá liány shora, polštáře mechu u paty a zelené skvrny na kachlích.
+    [door] = (x0, x1, y0): otvor výtahu – do něj liány ani mech nezasahují (dveře se musí dát otevřít)."""
     s = wall
     rng = np.random.default_rng(seed)
+
+    def free(x, y):
+        return door is None or not (door[0] <= x <= door[1] and y >= door[2])
+
     for _ in range(18):
         x = int(rng.integers(0, s.w))
         L = int(rng.integers(12, s.h - 6))
         for y in range(4, 4 + L):
             x += int(rng.integers(-1, 2)) if y % 4 == 0 else 0
             x = max(0, min(s.w - 2, x))
+            if not free(x, y):
+                break                                                               # úponek u dveří končí
             s.px(x, y, LEAF[2] if y % 2 else LEAF[3])
-            if y % 3 == 0:
+            if y % 3 == 0 and free(x + 1, y):
                 s.px(x + 1, y, LEAF[4]); s.px(x - 1, y + 1, LEAF[3])
-            if y % 5 == 0:
+            if y % 5 == 0 and free(x + 2, y + 1):
                 s.px(x + 2, y + 1, LEAF[5])
-    for x in range(s.w):                                                            # mech u paty
-        hh = 4 + int(3 * math.sin(x * 0.3) + 2 * math.sin(x * 0.11))
-        for y in range(s.h - hh, s.h):
-            s.px(x, y, MOSS[2] if (x + y) % 3 else MOSS[1])
+    # mech u paty: vrstvené polštáře (zadní řada tmavší a výš, přední světlejší a níž), ne vlnovka
+    for row, (yb, rr, ramp) in enumerate(((s.h - 5, (3.5, 5.5), [MOSS[0], MOSS[1], MOSS[2]]),
+                                         (s.h - 1, (3.0, 5.0), [MOSS[1], MOSS[2], MOSS[3]]))):
+        x = int(rng.integers(-3, 2))
+        cushions = []
+        while x < s.w + 4:
+            r = rng.uniform(*rr)
+            if door is None or not (door[0] - r < x < door[1] + r):
+                cushions.append((x, yb - r * 0.3 + rng.uniform(-1, 1), r))
+            x += int(r * rng.uniform(1.1, 1.7))
+        tmp = Spr(s.w, s.h)
+        blobs(tmp, cushions, ramp + [MOSS[3]], amb=0.25)
+        m = tmp.a[:, :, 3] > 0
+        s.a[m] = tmp.a[m]
     for _ in range(40):
         x, y = int(rng.integers(0, s.w - 3)), int(rng.integers(6, s.h - 8))
         for dx in range(3):
-            s.px(x + dx, y, MOSS[1])
+            if free(x + dx, y):
+                s.px(x + dx, y, MOSS[1])
     return s
 
 

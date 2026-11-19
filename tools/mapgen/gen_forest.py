@@ -129,7 +129,7 @@ EX0, EY0 = 88 - 20, WALL_H + 2 - 58
 wall_put(elev, EX0, EY0)
 wall_put(F.floor_dial3d(13, at=4), 88 - 15, 6)
 from pix import Spr  # noqa: E402
-wall = G.ivy_wall(Spr(AW, WALL_H))
+wall = G.ivy_wall(Spr(AW, WALL_H), door=(EX0 + 2, EX0 + 37, EY0 + 6))   # do dveří výtahu nic neleze
 wa = wall.a
 m = wa[:, :, 3] > 0
 img[:WALL_H][m] = wa[m]
