@@ -20,7 +20,8 @@ import cz.uhk.macroflow.common.AppSettings
  *   v mapě přepíná obojí najednou.
  */
 object GameAudio {
-    enum class Sfx(val res: String) { BATTLE_START("sfx_battle_start"), CATCH("sfx_catch"), VICTORY("sfx_victory") }
+    /** Zvuky; chybí-li soubor v res/raw, zvuk se prostě nepřehraje (THUNDER = hrom v Dormitoři, ElevenLabs). */
+    enum class Sfx(val res: String) { BATTLE_START("sfx_battle_start"), CATCH("sfx_catch"), VICTORY("sfx_victory"), THUNDER("sfx_thunder") }
 
     private const val PREF = "soundEnabled"
     private val handler = Handler(Looper.getMainLooper())

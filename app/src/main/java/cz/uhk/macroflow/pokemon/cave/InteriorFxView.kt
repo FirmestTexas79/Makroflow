@@ -89,6 +89,8 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         candles(canvas, t)
         zzz(canvas, t)
         ghosts(canvas, t)
+        curtains(canvas, t)
+        lightning(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -870,6 +872,47 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         }
     }
 
+    /** Záclony v průvanu: průsvitné pruhy po stranách okna se vlní, dole víc než nahoře. */
+    private fun curtains(c: Canvas, t: Float) {
+        for ((i, w) in fx.curtains.withIndex()) {
+            val h = (w.y1 - w.y0).toFloat()
+            for (y in w.y0..w.y1) {
+                val k = (y - w.y0) / h
+                val gust = sin(t * 0.9f + i * 1.7f) * 0.6f + sin(t * 2.3f + i) * 0.4f
+                val sway = (gust * 3f * k + sin(t * 1.6f + y * 0.18f) * 0.8f * k)
+                val lw = (6 + sway).roundToInt().coerceIn(3, 10)
+                val rw = (6 - sway).roundToInt().coerceIn(3, 10)
+                row(c, w.x0, w.x0 + lw, y, 0x50D8DCE8)
+                row(c, w.x1 - rw, w.x1, y, 0x50D8DCE8)
+                px(c, w.x0 + lw, y, 0x90E8ECF4.toInt()); px(c, w.x1 - rw, y, 0x90E8ECF4.toInt())   // okraj záclony
+            }
+        }
+    }
+
+    private var flashAt = t0 + 15000L + rnd.nextInt(20000)
+    private var thunderDone = false
+    private var thunderDelay = 900L
+
+    /** Blesk: okna dvakrát oslnivě blýsknou, místnost na okamžik zbělá, po chvíli zahřmí (zvuk sfx_thunder). */
+    private fun lightning(c: Canvas, now: Long) {
+        if (!fx.lightning || fx.curtains.isEmpty()) return
+        val ms = now - flashAt
+        if (ms < 0) return
+        if (!thunderDone && ms >= thunderDelay) {
+            thunderDone = true
+            cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.THUNDER)
+        }
+        if (ms > 2600) { flashAt = now + 22000L + rnd.nextInt(30000); thunderDone = false; thunderDelay = 600L + rnd.nextInt(1100); return }
+        val a = when { ms < 80 -> 1f; ms < 160 -> 0.15f; ms < 260 -> 0.9f; ms < 700 -> 0.9f * (1 - (ms - 260) / 440f); else -> 0f }
+        if (a <= 0f) return
+        for (w in fx.curtains) {
+            paint.color = ((a * 220).toInt() shl 24) or 0xE8F0FF
+            c.drawRect(w.x0 * s, w.y0 * s, (w.x1 + 1) * s, (w.y1 + 1) * s, paint)
+        }
+        paint.color = ((a * 70).toInt() shl 24) or 0xC8D8FF
+        c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -965,6 +1008,8 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             ghosts = listOf(FxBox(76, 130, 100, 300), FxBox(14, 264, 70, 310), FxBox(104, 264, 164, 300)),
             fog = listOf(FxBox(14, 284, 70, 300), FxBox(104, 280, 164, 296), FxBox(72, 296, 104, 312)),
             pendulums = listOf(FxPendulum(50, 42, 6, 1.6f, 2f)),
+            curtains = listOf(FxBox(14, 16, 33, 66), FxBox(142, 16, 161, 66)),
+            lightning = true,
             motes = listOf(FxBox(14, 100, 60, 230), FxBox(116, 100, 162, 230)),
             moteColor = 0xC8D4FF
         )
@@ -1022,7 +1067,9 @@ data class InteriorFx(
     val candles: List<Pair<Int, Int>> = emptyList(),
     val zzz: List<Pair<Int, Int>> = emptyList(),
     val ghosts: List<FxBox> = emptyList(),
-    val fog: List<FxBox> = emptyList()
+    val fog: List<FxBox> = emptyList(),
+    val curtains: List<FxBox> = emptyList(),
+    val lightning: Boolean = false
 )
 
 /** Pulzující záře (krystal): střed, poloměry, barva RGB a perioda v sekundách. */
