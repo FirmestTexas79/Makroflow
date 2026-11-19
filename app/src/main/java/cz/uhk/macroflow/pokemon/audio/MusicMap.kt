@@ -26,6 +26,10 @@ object MusicMap {
         "TOWER_FOREST" -> "amb_forest_indoor"
         "TOWER_CAVE" -> "amb_crystals"
         "TOWER_DORM" -> "amb_breathing"
+        "TOWER_LOBBY" -> "amb_hall"
+        "TOWER_PLAIN" -> "amb_meadow"
+        "TOWER_ROCK" -> "amb_mountain_wind"
+        "TOWER_WATER" -> "amb_pond"
         else -> null
     }
 

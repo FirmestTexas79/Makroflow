@@ -188,6 +188,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         val first = (legs[0] / speed).toLong()
         val total = (legs.sum() / speed).toLong() + pause
         if (ms > total) { mouseAt = now + 22000L + rnd.nextInt(45000); mouseBack = rnd.nextInt(3) == 0; return }
+        cue("mouse", mouseAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.SQUEAK, 0.3f)
         val (x, y, dir, moving) = when {
             ms < first -> lerp(pts[0], pts[1], ms * speed / legs[0]).let { Quad(it.first, it.second, sign(pts[0], pts[1]), true) }
             ms < first + pause -> Quad(pts[1].first.toFloat(), pts[1].second.toFloat(), sign(pts[0], pts[1]), false)
@@ -511,6 +512,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         val first = (legs[0] / speed).toLong()
         val total = (legs.sum() / speed).toLong() + pause
         if (ms > total) { scorpAt = now + 18000L + rnd.nextInt(30000); scorpBack = rnd.nextBoolean(); return }
+        cue("scorp", scorpAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.SKITTER, 0.3f)
         val (x, y, dir, moving) = when {
             ms < first -> lerp(pts[0], pts[1], ms * speed / legs[0]).let { Quad(it.first, it.second, sign(pts[0], pts[1]), true) }
             ms < first + pause -> Quad(pts[1].first.toFloat(), pts[1].second.toFloat(), sign(pts[0], pts[1]), false)
@@ -815,6 +817,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         val pads = fx.frog ?: return
         val ms = now - frogAt
         val jump = 600L
+        if (ms in 0 until jump) cue("frog", frogAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.FROG, 0.4f)
         val (x, y) = if (ms in 0 until jump) {
             val a = pads[frogPad]; val b = pads[frogNext]; val k = ms / jump.toFloat()
             (a.first + (b.first - a.first) * k).roundToInt() to (a.second + (b.second - a.second) * k - sin(k * PI.toFloat()) * 10).roundToInt()
