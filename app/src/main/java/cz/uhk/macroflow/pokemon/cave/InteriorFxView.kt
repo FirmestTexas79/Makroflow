@@ -79,6 +79,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         drips(canvas, now)
         glowworms(canvas, t)
         bat(canvas, now)
+        stalDrips(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -180,6 +181,14 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         val sniff = !moving && (now / 140) % 2 == 0L
         val step = moving && (now / 90) % 2 == 0L
         fun m(dx: Int, dy: Int, col: Int) = px(c, mx + dx * dir, my + dy, col)
+        if (fx.miniMouse) {                                                          // minimyš: 4 px tělíčko
+            val fur = 0xFF9A90A4.toInt()
+            m(-2, 0, 0xFFB08890.toInt()); m(-3, -1, 0xFFB08890.toInt())                // ocásek
+            m(-1, -1, fur); m(0, -1, fur); m(1, -1 - if (sniff) 1 else 0, fur)
+            m(2, -1 - if (sniff) 1 else 0, 0xFFE0A0A8.toInt()); m(0, -2, 0xFFE0A0A8.toInt())
+            m(if (step) -1 else 0, 0, 0xFF5E5868.toInt())
+            return
+        }
         val fur = 0xFF8A8494.toInt(); val dark = 0xFF5E5868.toInt(); val pink = 0xFFE0A0A8.toInt()
         m(-4, 0, 0xFFA08088.toInt()); m(-5, 0, 0xFFA08088.toInt()); m(-6, -1, 0xFFA08088.toInt())     // ocásek
         for (dx in -2..0) m(dx, -2, fur)
@@ -632,6 +641,35 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         else { px(c, x - 1, y, col); px(c, x - 2, y + 1, col); px(c, x + 2, y, col); px(c, x + 3, y + 1, col) }
     }
 
+    private val stalAt = LongArray(fx.stalDrips.size) { t0 + rnd.nextInt(4000).toLong() }
+
+    /** Voda z krápníků: na špičce naroste kapka, utrhne se, zrychluje dolů a u paty stěny cákne. */
+    private fun stalDrips(c: Canvas, now: Long) {
+        for ((i, d) in fx.stalDrips.withIndex()) {
+            val ms = now - stalAt[i]
+            if (ms < 0) continue
+            val grow = 600L; val fall = 520L; val splash = 380L
+            if (ms > grow + fall + splash) { stalAt[i] = now + 900L + rnd.nextInt(2600); continue }
+            val drop = 0xE0A8E4F4.toInt(); val dim = 0x8070C8E0.toInt()
+            when {
+                ms < grow -> { if (ms > grow / 2) px(c, d.x0, d.y0 + 1, dim); px(c, d.x0, d.y0, drop) }
+                ms < grow + fall -> {
+                    val k = (ms - grow) / fall.toFloat()
+                    val y = d.y0 + ((d.y1 - d.y0) * k * k).roundToInt()
+                    px(c, d.x0, y, drop); px(c, d.x0, y - 1, dim); if (k > 0.5f) px(c, d.x0, y - 2, 0x4070C8E0)
+                }
+                else -> {
+                    val k = (ms - grow - fall) / splash.toFloat()
+                    val a = ((1 - k) * 220).toInt()
+                    val r = 1 + (k * 3).roundToInt()
+                    px(c, d.x0 - r, d.y1 - (if (k < 0.5f) 1 else 0), (a shl 24) or 0xA8E4F4)
+                    px(c, d.x0 + r, d.y1 - (if (k < 0.5f) 1 else 0), (a shl 24) or 0xA8E4F4)
+                    if (k < 0.4f) px(c, d.x0, d.y1 - 2, (a shl 24) or 0xE0F8FF)
+                }
+            }
+        }
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -702,6 +740,9 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             glowworms = FxBox(4, 4, 172, 56),
             bats = FxBox(10, 120, 166, 260),
             lamps = listOf(FxLamp(76, 134, 24, 15, null)),
+            stalDrips = listOf(FxPath(30, 12, 30, 90), FxPath(53, 20, 53, 91), FxPath(125, 14, 125, 90), FxPath(143, 17, 143, 91), FxPath(155, 20, 155, 90)),
+            mouse = listOf(14 to 334, 40 to 336, 84 to 332),
+            miniMouse = true,
             motes = listOf(FxBox(20, 150, 156, 320)),
             moteColor = 0x9AE8F0
         )
@@ -748,7 +789,9 @@ data class InteriorFx(
     val arcs: List<FxPath> = emptyList(),
     val drips: List<Pair<Int, Int>> = emptyList(),
     val glowworms: FxBox? = null,
-    val bats: FxBox? = null
+    val bats: FxBox? = null,
+    val stalDrips: List<FxPath> = emptyList(),
+    val miniMouse: Boolean = false
 )
 
 /** Pulzující záře (krystal): střed, poloměry, barva RGB a perioda v sekundách. */
