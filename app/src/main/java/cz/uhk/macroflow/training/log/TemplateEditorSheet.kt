@@ -58,7 +58,7 @@ class TemplateEditorSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         key = requireArguments().getString(ARG_KEY)!!
         rows = view.findViewById(R.id.llEditorRows)
-        view.findViewById<TextView>(R.id.tvEditorTitle).text = "Šablona ${WorkoutTemplates.label(key)}"
+        view.findViewById<TextView>(R.id.tvEditorTitle).text = WorkoutTemplates.label(key)
         viewLifecycleOwner.lifecycleScope.launch {
             ids.clear(); ids += WorkoutRepository.templateIds(requireContext().applicationContext, key)
             renderRows()
