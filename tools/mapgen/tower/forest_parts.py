@@ -68,8 +68,8 @@ def big_tree(seed=0, hollow=False, w=60, h=92):
     rng = np.random.default_rng(seed)
     cx = w // 2
     trunk_top, base = 46, h - 6
-    for y in range(trunk_top, base + 1):                                            # kmen
-        hw = 5 + (y - trunk_top) // 9
+    for y in range(26, base + 1):                                                    # kmen (horem mizí v koruně)                                            # kmen
+        hw = 5 + max(0, y - trunk_top) // 9 - (1 if y < 36 else 0)
         for x in range(cx - hw, cx + hw + 1):
             nx = (x - cx) / (hw + .5)
             k = 4 if nx < -0.6 else 3 if nx < -0.1 else 2 if nx < 0.5 else 1
@@ -96,12 +96,24 @@ def big_tree(seed=0, hollow=False, w=60, h=92):
                     s.px(x, y, c(0x0A0604) if d < 0.65 else BARK[0])
                 elif d < 1.5:
                     s.px(x, y, BARK[4] if x < hx else BARK[2])
+    for (dxs, y0) in ((-1, 44), (1, 42), (-1, 37)):                                # větve rozvětvené do koruny
+        for k in range(14):
+            x = cx + dxs * (2 + k * 0.9)
+            y = y0 - k * 0.8
+            for t in (0, 1):
+                s.px(int(x), int(y) + t, BARK[3] if t == 0 else BARK[1])
     clumps = []
     for i in range(16):                                                             # koruna
         a = rng.uniform(0, 2 * math.pi); r = rng.uniform(0, 1) ** 0.6
-        clumps.append((cx + math.cos(a) * r * (w * 0.36), 24 + math.sin(a) * r * 17, rng.uniform(7, 11)))
+        clumps.append((cx + math.cos(a) * r * (w * 0.36), 25 + math.sin(a) * r * 16, rng.uniform(7, 11)))
     clumps.sort(key=lambda c_: c_[1])
+    under = [(cx + dx, 40 + abs(dx) * 0.08, rng.uniform(4.5, 6)) for dx in (-18, -11, -4, 4, 11, 18)]
+    blobs(s, under, LEAF_DARK, amb=0.15)                                            # tmavý spodek koruny (stín)
     blobs(s, clumps, LEAF[1:], amb=0.22)
+    for y in range(36, 58):                                                         # koruna stíní kmen pod sebou
+        for x in range(cx - 9, cx + 10):
+            if s.opaque(x, y) and s.a[y, x, 1] < s.a[y, x, 0] + 10:              # jen kůra, ne listí
+                shade_px(s, x, y, 0.55 if y < 50 else 0.72 if y < 54 else 0.86)
     for _ in range(90):                                                             # lesk listů a díry v koruně
         x, y = int(rng.integers(4, w - 4)), int(rng.integers(6, 44))
         if s.opaque(x, y):
