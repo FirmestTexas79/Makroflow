@@ -30,7 +30,9 @@ enum class BiomeType {
     /** Vstupní hala Arény v Ozvěně (docs/adr/0092). */
     ARENA_HALL,
     /** Vestibul Věže Řádu Váhy v Ozvěně (docs/adr/0103). */
-    TOWER_LOBBY
+    TOWER_LOBBY,
+    /** Archiv okruhů – 1. patro Věže (Spis 212). */
+    TOWER_ARCHIVE
 }
 
 object BiomeRegistry {
@@ -146,7 +148,8 @@ object BiomeRegistry {
                 cave = cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP),
             BiomeDefinition(BiomeType.OZVENA, R.drawable.ozvena, graphOf(cz.uhk.macroflow.pokemon.cave.OzvenaCity.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.OzvenaCity.MAP),
             BiomeDefinition(BiomeType.ARENA_HALL, R.drawable.arena_hall, graphOf(cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP),
-            BiomeDefinition(BiomeType.TOWER_LOBBY, R.drawable.tower_lobby, graphOf(cz.uhk.macroflow.pokemon.cave.TowerLobby.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerLobby.MAP)
+            BiomeDefinition(BiomeType.TOWER_LOBBY, R.drawable.tower_lobby, graphOf(cz.uhk.macroflow.pokemon.cave.TowerLobby.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerLobby.MAP),
+        BiomeDefinition(BiomeType.TOWER_ARCHIVE, R.drawable.tower_archive, graphOf(cz.uhk.macroflow.pokemon.cave.TowerArchive.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerArchive.MAP)
         ).associateBy { it.type }
     }
 

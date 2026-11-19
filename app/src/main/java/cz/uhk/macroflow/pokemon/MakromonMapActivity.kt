@@ -127,7 +127,7 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         // Mydrus zapomíná (docs/adr/0057)
@@ -901,7 +901,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY)) enterTower()
                     else showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.SEPT_NODE -> onSept()
-                cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE -> cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this))
+                cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE -> onElevator()
+                // Archiv okruhů – 1. patro Věže (Spis 212)
+                cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE -> walkInto(BiomeType.TOWER_LOBBY, cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE, MapTransition.FADE)
+                in cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS.getValue(nodeName))
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_TEXT)
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES_TEXT)
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES2_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES2_TEXT)
@@ -1396,7 +1399,10 @@ class MakromonMapActivity : AppCompatActivity() {
                     cz.uhk.macroflow.pokemon.cave.QuietOrchard.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artH * worldScale)
                 }) }
-                currentBiome == BiomeType.ARENA_HALL -> if (worldScale > 0) placeHallPortraits()
+                currentBiome == BiomeType.ARENA_HALL -> if (worldScale > 0) { placeHallPortraits(); addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.HALL) }
+                // živé interiéry Věže: lampy, hvězdy v oknech, kyvadlo, myš, potrubní pošta
+                currentBiome == BiomeType.TOWER_LOBBY -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.LOBBY)
+                currentBiome == BiomeType.TOWER_ARCHIVE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ARCHIVE)
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)
@@ -1603,6 +1609,18 @@ class MakromonMapActivity : AppCompatActivity() {
                 if (!isFinishing) { questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID); questManager.recheck() }
             }, 700)
         }
+    }
+
+    /** Výtah ve vestibulu: po kalibraci (Ozvěna dokončena) jede do 1. patra – Archivu okruhů. */
+    private fun onElevator() {
+        questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            val calibrated = questManager.getActiveQuestId() == cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID &&
+                questManager.getCurrentProgress()?.isCompleted == true
+            cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this),
+                if (calibrated) ({ walkInto(BiomeType.TOWER_ARCHIVE, cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, MapTransition.FADE) }) else null)
+        }, 150)
     }
 
     /** Archivář Sept: stav kalibrace, Spis Subjektu. */
@@ -2241,6 +2259,14 @@ class MakromonMapActivity : AppCompatActivity() {
     /** Dekorace „na zemi“ – pod postavou (hned za pozadím mapy). */
     private fun addGroundDecor(v: View) { mapWorld.addView(v, 1); decorViews += v }
 
+    /** Živé detaily interiéru přes celý svět mapy (InteriorFxView). */
+    private fun addInteriorFx(fx: cz.uhk.macroflow.pokemon.cave.InteriorFx) {
+        val cave = BiomeRegistry.definition(currentBiome)?.cave ?: return
+        addGroundDecor(cz.uhk.macroflow.pokemon.cave.InteriorFxView(this, worldScale, fx).apply {
+            layoutParams = FrameLayout.LayoutParams(cave.artW * worldScale, cave.artH * worldScale)
+        })
+    }
+
     private fun meadowGeometry() = cz.uhk.macroflow.pokemon.walk.MapGeometry(688, 1536, mapWorld.width, mapWorld.height)
 
     private fun placeMeadowWorkshop() {
@@ -2646,7 +2672,8 @@ class MakromonMapActivity : AppCompatActivity() {
             "🌀 Brána se otevírá (průsmyk)" to { play(cz.uhk.macroflow.pokemon.cutscene.GateCutsceneView(this)) },
             "🕯 Světlo mezi stromy (Ztichlý sad)" to { play(cz.uhk.macroflow.pokemon.cutscene.FennCutsceneView(this)) },
             "🌑 Bezejmenní (finále sadu)" to { play(cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this)) },
-            "⚖️ Dveře Věže (Ozvěna)" to { play(cz.uhk.macroflow.pokemon.cutscene.TowerDoorCutsceneView(this)) }
+            "⚖️ Dveře Věže (Ozvěna)" to { play(cz.uhk.macroflow.pokemon.cutscene.TowerDoorCutsceneView(this)) },
+            "📚 Archiv okruhů – patro 1 (test)" to { enterBiomeAtNode(BiomeType.TOWER_ARCHIVE, cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, MapTransition.FADE) }
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("🎬 Cutscény a videa")
