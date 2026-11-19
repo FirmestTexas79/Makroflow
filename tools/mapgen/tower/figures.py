@@ -250,3 +250,230 @@ def kassar():
     # kožené rukavice na pultu
     sphere(s, 7, 35.5, 3.0, 2.0, LEATHER, amb=0.3); sphere(s, 21, 35.5, 3.0, 2.0, LEATHER, amb=0.3)
     return selout(s)
+
+
+# ── pulty (3/4 pohled): horní deska s hloubkou, přední hrana, stín pod přesahem, vystouplé panely, boční křídla ──
+
+MARBLE = [c(0x0C0E14), c(0x1A1E28), c(0x262B38), c(0x323848), c(0x485062), c(0xC8CCD6)]   # černý mramor (Nero)
+WALNUT = [c(0x1C0E08), c(0x2E1A0E), c(0x4A2C18), c(0x6A4026), c(0x8C5836), c(0xB07A50)]
+OAK = [c(0x2E1A0E), c(0x4A2C18), c(0x6E4426), c(0x92603A), c(0xB88252), c(0xD8A676)]
+PAPER = [c(0x9E9682), c(0xC8C0A8), c(0xE8E2CE), c(0xFAF6EA)]
+INK = c(0x16161E)
+
+
+def _grain(x, y, seed):
+    """Léta dřeva: dlouhé vodorovné vlnky (ne cihly)."""
+    v = y + 1.8 * math.sin(x * 0.06 + seed) + 0.7 * math.sin(x * 0.23 + seed * 2.1)
+    return (v % 3.4) < 0.6 and (x * 7 + int(y) * 3) % 11 != 0
+
+
+def counter(w, style="tower"):
+    """Recepční pult w × 44 ve 3/4 pohledu. style "tower" = mramorová deska, ořech, mosaz, váhy;
+    "arena" = dubová deska i čelo, rudo-zlatý cechovní štít. Řádky 0–11 jsou pro předměty a boční křídla,
+    deska 12–21 (hloubka), čelo 22–41, sokl 42–43."""
+    H = 44
+    s = Spr(w, H)
+    TOP, FRONT, PL = 12, 22, 42
+    wood = WALNUT if style == "tower" else OAK
+    topm = MARBLE if style == "tower" else OAK
+    trim = BRASS if style == "tower" else GOLD
+    W2 = 7                                                                # šířka bočních křídel
+    # boční křídla (deska jde dozadu → nahoru), u zadního konce tmavší
+    for x in list(range(0, W2)) + list(range(w - W2, w)):
+        for y in range(2, TOP):
+            t = (y - 2) / (TOP - 2)
+            k = 1 + int(t * 2.4)
+            col = topm[min(len(topm) - 2, k + (1 if x < W2 else 0))]
+            if x in (0, w - 1):
+                col = topm[0]
+            elif x in (W2 - 1, w - W2):
+                col = topm[1] if x == W2 - 1 else topm[3]                    # vnitřní hrana křídla
+            if y == 2:
+                col = topm[1]
+            s.px(x, y, col)
+    # horní deska: vzadu tmavší, vpředu světlá hrana (okosení), lesk/kresba
+    for y in range(TOP, FRONT):
+        t = (y - TOP) / (FRONT - TOP)
+        for x in range(w):
+            if y == TOP:
+                col = topm[1]                                                 # zadní hrana
+            elif y == FRONT - 2:
+                col = topm[-1] if style != "tower" else BRASS[4]               # okosení přední hrany
+            elif y == FRONT - 1:
+                col = trim[2] if style == "tower" else topm[2]
+            else:
+                k = 2 + (1 if t > 0.35 else 0) + (1 if x < w * 0.45 and t > 0.2 else 0)
+                col = topm[min(len(topm) - 2, k)]
+                if style == "tower":
+                    v = (y - TOP) - (1.5 + 0.12 * x + 1.4 * math.sin(x * 0.31))
+                    if abs(v % 7 - 3.5) < 0.45 and (x + y) % 3:
+                        col = c(0x8A90A0)                                     # šedé žilky v černém mramoru
+                    elif abs(v % 7 - 3.5) < 0.9 and (x + y) % 4 == 0:
+                        col = topm[4]
+                elif _grain(x, y, 1.0):
+                    col = topm[2]
+            s.px(x, y, col)
+    # čelo pultu
+    for y in range(FRONT, PL):
+        for x in range(w):
+            col = wood[3]
+            if y in (FRONT, FRONT + 1):
+                col = wood[0] if y == FRONT else wood[1]                     # stín pod přesahem desky
+            elif _grain(x, y, 2.3):
+                col = wood[2]
+            s.px(x, y, col)
+    # vystouplé panely
+    pn = max(3, w // 18)
+    pw = (w - 4) // pn
+    for i in range(pn):
+        x0, x1 = 3 + i * pw, 3 + (i + 1) * pw - 3
+        y0, y1 = FRONT + 4, PL - 3
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                e = min(x - x0, x1 - x, y - y0, y1 - y)
+                if e == 0:
+                    col = wood[5] if (x == x0 or y == y0) else wood[0]
+                elif e == 1:
+                    col = wood[4] if (x == x0 + 1 or y == y0 + 1) else wood[1]
+                else:
+                    col = wood[4] if _grain(x, y, i * 1.7) else wood[3]
+                    if x - x0 < 4 and y - y0 < 4 and (x + y) % 2 == 0:
+                        col = wood[5]                                         # lesk v rohu panelu
+                s.px(x, y, col)
+        # lišta mezi panely (pilastr)
+        px = x1 + 1
+        for y in range(FRONT + 2, PL):
+            s.px(px, y, wood[1]); s.px(px + 1, y, wood[4]); s.px(px + 2, y, wood[2])
+    # sokl
+    for y in range(PL, H):
+        for x in range(w):
+            s.px(x, y, (NAVY if style == "tower" else LEATHER)[2 if y == PL else 0])
+    s.hline(0, w - 1, PL, trim[2] if style == "tower" else wood[1])
+    # znak uprostřed čela
+    mx, my = w // 2, (FRONT + PL) // 2 + 1
+    if style == "tower":
+        sphere(s, mx, my, 7, 7, BRASS, amb=0.35)
+        sphere(s, mx, my, 5.2, 5.2, NAVY, amb=0.3)
+        s.vline(mx, my - 4, my + 3, BRASS[4]); s.hline(mx - 4, mx + 4, my - 2, BRASS[3])
+        for sx in (mx - 4, mx + 4):
+            s.px(sx, my, BRASS[3]); s.px(sx - 1, my + 1, BRASS[2]); s.px(sx + 1, my + 1, BRASS[2])
+        s.hline(mx - 2, mx + 2, my + 3, BRASS[2])
+    else:
+        for y in range(my - 7, my + 8):                                       # štít
+            half = 7 if y < my + 2 else 7 - (y - my - 2) * 1.2
+            for x in range(int(mx - half), int(mx + half) + 1):
+                e = min(x - (mx - half), (mx + half) - x)
+                s.px(x, y, GOLD[3] if e < 1 else RED[3] if x < mx else RED[2])
+        for i in range(-4, 5):
+            s.px(mx + i, my + i * 0.9 // 1 - 1, STEEL[4]); s.px(mx - i, my + i * 0.9 // 1 - 1, STEEL[3])
+    # boční hrany čela (plastičnost)
+    for y in range(FRONT, PL):
+        s.px(0, y, wood[4]); s.px(1, y, wood[3]); s.px(w - 1, y, wood[0]); s.px(w - 2, y, wood[1])
+    return s
+
+
+def _shadow_on(s, x0, y0, x1, y1, k=0.72):
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            shade_px(s, x, y, k)
+
+
+def tower_desk_items(s):
+    """Předměty na Septově pultu (kreslí se do řádků 0–20 spritu counter): psací stroj s papírem, stohy spisů,
+    razítko s poduškou, mosazný zvonek, bankéřská lampa se zeleným stínidlem a kruhem světla, jmenovka."""
+    w = s.w
+    # psací stroj
+    _shadow_on(s, 10, 17, 25, 18)
+    for y in range(9, 18):
+        for x in range(8, 24):
+            t = (y - 9) / 9
+            s.px(x, y, IRON_[3] if y == 9 else IRON_[2] if t < 0.4 else IRON_[1])
+    for row, y in enumerate((13, 15)):
+        for x in range(9 + row, 23, 2):
+            s.px(x, y, PAPER[3]); s.px(x, y + 1, IRON_[0])
+    for y in range(3, 10):
+        for x in range(11, 21):
+            s.px(x, y, PAPER[3] if y < 8 else PAPER[2])
+    for x in range(12, 20):
+        s.px(x, 5, PAPER[0] if x % 3 else PAPER[3])
+    s.hline(9, 22, 9, IRON_[4]); s.px(23, 10, IRON_[4])
+    # stohy spisů
+    for (x0, hh) in ((27, 8), (34, 5)):
+        _shadow_on(s, x0 + 1, 19, x0 + 7, 20)
+        for k in range(hh):
+            y = 18 - k
+            for x in range(x0, x0 + 7):
+                s.px(x, y, PAPER[2] if k % 2 else c(0xD8C8A0))
+            s.px(x0 + 6, y, PAPER[0])
+        for x in range(x0, x0 + 7):
+            s.px(x, 18 - hh, NAVY[3])
+    # razítko
+    _shadow_on(s, 43, 18, 47, 19)
+    for x in range(42, 47):
+        s.px(x, 17, NAVY[2]); s.px(x, 18, NAVY[1])
+    sphere(s, 44.5, 13, 1.6, 2.6, WALNUT[3:], amb=0.3)
+    s.hline(43, 46, 15, WALNUT[4])
+    # zvonek
+    _shadow_on(s, 50, 18, 54, 19)
+    sphere(s, 51.5, 16.5, 2.6, 2.0, BRASS, amb=0.35); s.px(51, 13, BRASS[4])
+    # lampa
+    if w > 60:
+        lx = w - 9
+        for y in range(10, 22):
+            for x in range(lx - 9, lx + 10):
+                d = math.hypot((x - lx) / 1.6, y - 19) / 6
+                if d < 1 and s.opaque(x, y):
+                    a = (1 - d) * 0.35
+                    yy = y
+                    s.a[yy, x, :3] = np.clip(s.a[yy, x, :3] * (1 - a) + np.array([190, 255, 200]) * a, 0, 255).astype(np.uint8)
+        s.hline(lx - 2, lx + 2, 19, BRASS[1]); s.hline(lx - 2, lx + 2, 18, BRASS[3])
+        s.vline(lx, 11, 17, BRASS[2])
+        for y in range(7, 11):
+            for x in range(lx - 4 + (10 - y) // 2, lx + 5 - (10 - y) // 2):
+                s.px(x, y, GREEN_[3] if y == 7 else GREEN_[2] if x < lx else GREEN_[1])
+        s.hline(lx - 3, lx + 3, 11, c(0xFFF6C8))
+    # jmenovka na hraně
+    for x in range(26, 37):
+        s.px(x, 20, BRASS[3]); s.px(x, 21, BRASS[1])
+    for x in range(28, 35, 2):
+        s.px(x, 20, INK)
+
+
+def arena_desk_items(s):
+    """Předměty na pultu velitele: otevřená kniha zápasů s řádky, kalamář s brkem, sloupek mincí, zvonek, svitky."""
+    # kniha
+    _shadow_on(s, 9, 19, 26, 20)
+    for y in range(13, 19):
+        for x in range(8, 25):
+            col = PAPER[3] if x < 16 else PAPER[2]
+            if x in (16, 17):
+                col = PAPER[0]
+            if y in (15, 17) and x not in (16, 17) and (x % 2 == 0):
+                col = PAPER[0]
+            s.px(x, y, col)
+    for x in range(8, 25):
+        s.px(x, 19, RED[2])
+    # kalamář s brkem
+    _shadow_on(s, 29, 18, 33, 19)
+    sphere(s, 30.5, 17, 2.2, 1.8, [c(0x0C0C14), c(0x1C1C2A), c(0x34344A)], amb=0.3)
+    for i in range(7):
+        s.px(31 + i // 2, 15 - i, PAPER[3] if i > 2 else PAPER[1])
+    # mince
+    _shadow_on(s, 37, 18, 42, 19)
+    for k in range(4):
+        for x in range(36, 41):
+            s.px(x, 17 - k, GOLD[3] if x < 38 else GOLD[2])
+        s.px(40, 17 - k, GOLD[1])
+    # zvonek
+    _shadow_on(s, 45, 18, 49, 19)
+    sphere(s, 46.5, 16.5, 2.6, 2.0, BRASS, amb=0.35); s.px(46, 13, BRASS[4])
+    # svitky
+    for (x0, y0) in ((52, 15), (53, 17)):
+        _shadow_on(s, x0 + 1, y0 + 2, x0 + 8, y0 + 2)
+        for x in range(x0, x0 + 8):
+            s.px(x, y0, PAPER[3]); s.px(x, y0 + 1, PAPER[1])
+        s.px(x0 + 3, y0, RED[3]); s.px(x0 + 3, y0 + 1, RED[2])
+
+
+IRON_ = [c(0x16181E), c(0x2A2E38), c(0x464C58), c(0x6A7280), c(0xA0A8B6)]
+GREEN_ = [c(0x0E3020), c(0x1C5034), c(0x2E7A4E), c(0x6ED096)]

@@ -58,10 +58,10 @@ def place(spr, cx, by, z=None, collide=True, pad=2, shadow=True, foot=None):
         else:
             walkmask.silhouette(block, spr.a[:, :, 3], int(cx - spr.w // 2), int(by - spr.h), pad)
 
-sept = F.sept(); desk = P.desk(66, 30)
+sept = F.sept(); desk = F.counter(66, "tower"); F.tower_desk_items(desk); F.selout(desk, 0.55, 0.8)
 DESK_X, DESK_Y = 132, 198
-place(sept, DESK_X + 4, DESK_Y - 20, z=DESK_Y - 40, collide=False, shadow=False)
-place(desk, DESK_X, DESK_Y, foot=(66, 22))
+place(sept, DESK_X + 4, DESK_Y - 26, z=DESK_Y - 60, collide=False, shadow=False)
+place(desk, DESK_X, DESK_Y, foot=(66, 30))
 place(P.stanchion_line(52), DESK_X + 6, 228, pad=1)
 place(P.queue_board(), 26, 186)
 place(P.calibration_scale(), 46, 140)
@@ -92,7 +92,7 @@ for _ in range(70):
 warm = np.zeros((AH, AW)); L.contact_shadow(warm, 88, AH, 46, 34, 1.0); warm *= floor_px
 L.lighten(img, warm, 0.22, (255, 236, 196))
 # zelená záře bankéřské lampy na desce a světlo kabiny výtahu
-glow = np.zeros((AH, AW)); L.contact_shadow(glow, DESK_X + 23, DESK_Y - 26, 14, 9, 1.0)
+glow = np.zeros((AH, AW)); L.contact_shadow(glow, DESK_X + 24, DESK_Y - 30, 14, 9, 1.0)
 L.lighten(img, glow, 0.25, (170, 240, 190))
 eg = np.zeros((AH, AW)); L.contact_shadow(eg, 88, WALL_H + 6, 24, 12, 1.0); eg *= floor_px
 L.lighten(img, eg, 0.25, (255, 226, 150))
@@ -182,10 +182,6 @@ block[AH - 6:, 70:107] = False
 vg = np.zeros((AH, AW)); L.vignette(vg, AW / 2, AH * 0.55, AW * 0.62, AH * 0.62, k=0.45)
 L.darken(img, vg, 0.8, (10, 12, 24), dither=True, steps=10)
 L.tone(img, (150, 170, 220), (230, 210, 180), k=0.08)
-# lampa na pultu svítí (jádro světla se kreslí až po vinětě)
-for (x, y) in ((DESK_X + 22, DESK_Y - 27), (DESK_X + 23, DESK_Y - 27), (DESK_X + 24, DESK_Y - 27)):
-    img[y, x, :3] = (220, 255, 200)
-
 # ── výstupy ──────────────────────────────────────────────────────────────────
 out_png = os.path.join(ROOT, "app", "src", "main", "res", "drawable-nodpi", "tower_lobby.png")
 Image.fromarray(img[:, :, :3]).save(out_png)

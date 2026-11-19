@@ -105,8 +105,9 @@ for py in range(WALL_H + 40, AH, 56):
 hof = P.hall_of_fame()
 place(hof, 46, 150, foot=(80, 24))
 place(P.rope_barrier(76), 46, 162, foot=(76, 3))
-place(F.kassar(), 132, 147, foot=None, z=150)
-place(P.desk(), 132, 168, foot=(64, 16))
+place(F.kassar(), 132, 143, foot=None, z=150)
+_desk = F.counter(64, "arena"); F.arena_desk_items(_desk); F.selout(_desk, 0.55, 0.8)
+place(_desk, 132, 168, foot=(64, 24))
 # nástěnka HLEDÁ SE u vchodu vlevo
 src = Image.open(glob.glob(os.path.join(ROOT, "app", "src", "main", "res", "drawable*", "makromon_19_drakirra.png"))[0]).convert("RGBA")
 d = src.crop(src.getbbox()); d.thumbnail((30, 24), Image.LANCZOS)
