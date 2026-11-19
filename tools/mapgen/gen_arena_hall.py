@@ -20,6 +20,8 @@ import walkmask  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "arena")); sys.path.insert(0, os.path.join(HERE, "ashplain"))
 sys.path.insert(0, os.path.join(HERE, "orchard"))
 import hall_parts as P, pix  # noqa: E402
+sys.path.insert(0, os.path.join(HERE, "tower"))
+import light as L  # noqa: E402  (vržené stíny, stín u stěn, viněta – docs/adr/0103)
 from pix import c, Spr  # noqa: E402
 from pixart import K, STN, stones  # noqa: E402
 
@@ -78,11 +80,21 @@ for bx in (28, 148):
 for tx in (54, 122):
     place(P.torch(), tx, 40, foot=None, z=1)
 # boční zdi se sloupy (pohled shora: hrana zdi, mezi sloupy výklenky)
-for y in range(WALL_H, AH):
-    for x in list(range(0, 8)) + list(range(AW - 8, AW)):
-        e = x if x < 8 else AW - 1 - x
-        img[y, x] = P.WALLST[1] if e < 2 else P.WALLST[3] if e < 6 else P.WALLST[2]
-        block[y, x] = True
+for y in range(WALL_H - 4, AH):                                       # boční zdi: vrch + stínované vnitřní čelo
+    for x in range(8):
+        for (X, inner) in ((x, x), (AW - 1 - x, x)):
+            left = X < AW // 2
+            if inner < 2:
+                col = P.WALLST[4] if inner == 0 else P.WALLST[3]
+            else:
+                t = (inner - 2) / 5
+                col = (P.WALLST[2] if left else P.WALLST[1]).copy()
+                if (y // 7) % 2 == 0 and inner == 7:
+                    col = P.WALLST[0].copy()
+                k = (0.10 + 0.40 * t) if left else (0.30 + 0.40 * t)
+                col[:3] = (col[:3] * (1 - k) + np.array([20, 12, 10]) * k).astype(np.uint8)
+            img[y, X] = col
+            block[y, X] = True
 for py in range(WALL_H + 40, AH, 56):
     for side in (0, 1):
         col = Spr(14, 40)
@@ -108,8 +120,33 @@ for (x, y) in ((16, 100), (160, 100)):
     place(P.plant(), x, y, foot=(10, 5))
 place(P.armor_statue(), 62, 286, foot=(16, 8)); place(P.armor_statue(), 114, 286, foot=(16, 8))
 place(P.guild_flag(), 104, 162, foot=None)                       # vlajka za levým koncem stolu
+# ── hloubka: zadní stěna nahoře tmavne, stín u paty zdí, vržené a kontaktní stíny, záře pochodní na zdi ──
+for y in range(WALL_H):
+    k = round(0.45 * (1 - y / WALL_H) ** 1.5 * 6) / 6
+    if k:
+        img[y, 8:AW - 8, :3] = (img[y, 8:AW - 8, :3] * (1 - k) + np.array([22, 12, 10]) * k).astype(np.uint8)
+glow = np.zeros((AH, AW))
+for tx in (54, 122):
+    L.contact_shadow(glow, tx, 30, 24, 26, 1.0)
+L.lighten(img, glow, 0.22, (255, 190, 110))
+floor_px = np.zeros((AH, AW), bool); floor_px[WALL_H:, 8:AW - 8] = True
+sh = np.zeros((AH, AW))
+L.wall_base_shadow(sh, WALL_H, depth=14, k=0.95)
+L.side_wall_shadow(sh, 8, AW - 8, depth=11, k=0.75, y0=WALL_H)
+for (spr, cx, by, z) in placed:
+    if by <= WALL_H + 8 or z != by:                                     # věci na zdi a velitel za pultem stín nevrhají
+        continue
+    x0, y0 = int(cx - spr.w // 2), int(by - spr.h)
+    L.hard_shadow(sh, spr.a[:, :, 3], x0, y0, 0.50, 0.28, 0.75)
+    L.contact_shadow(sh, cx, by - 1, spr.w / 2 + 1, 2.2, 1.0)
+sh *= floor_px
+L.darken(img, sh, 0.52, (20, 12, 10), dither=False, steps=4)
+L.reflect(img, (66, WALL_H - 60, 110), WALL_H + 2, 14, k=0.22, floor_mask=floor_px)   # brána v leštěné dlažbě
 for (spr, cx, by, z) in sorted(placed, key=lambda p: p[3]):
     pix.paste(img, spr, int(cx - spr.w // 2), int(by - spr.h))
+vg = np.zeros((AH, AW)); L.vignette(vg, AW / 2, AH * 0.55, AW * 0.62, AH * 0.62, k=0.45)
+L.darken(img, vg, 0.8, (18, 8, 6), dither=True, steps=10)
+L.tone(img, (120, 90, 80), (255, 230, 190), k=0.06)
 block[WALL_H - 4:WALL_H + 8, 70:107] = False                          # schody k bráně
 block[AH - 6:, 70:107] = False
 

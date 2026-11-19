@@ -29,7 +29,7 @@ def darken(img, mask, k, col=(16, 18, 30), dither=True, steps=5):
                 img[y, x, :3] = (img[y, x, :3] * (1 - a) + c * a).astype(np.uint8)
 
 
-def lighten(img, mask, k, col):
+def lighten(img, mask, k, col, steps=8):
     H, W = mask.shape
     c = np.array(col, float)
     for y in range(H):
@@ -37,7 +37,7 @@ def lighten(img, mask, k, col):
             m = mask[y, x]
             if m <= 0:
                 continue
-            a = _q(min(1.0, m), x, y) * k
+            a = _q(min(1.0, m), x, y, steps) * k
             if a > 0:
                 img[y, x, :3] = np.clip(img[y, x, :3] * (1 - a) + c * a, 0, 255).astype(np.uint8)
 

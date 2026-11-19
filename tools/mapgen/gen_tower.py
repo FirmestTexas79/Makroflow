@@ -180,7 +180,7 @@ block[AH - 6:, 70:107] = False
 
 # ── 5. viněta a tónování ─────────────────────────────────────────────────────
 vg = np.zeros((AH, AW)); L.vignette(vg, AW / 2, AH * 0.55, AW * 0.62, AH * 0.62, k=0.45)
-L.darken(img, vg, 1.0, (10, 12, 24), dither=False, steps=6)
+L.darken(img, vg, 0.8, (10, 12, 24), dither=True, steps=10)
 L.tone(img, (150, 170, 220), (230, 210, 180), k=0.08)
 # lampa na pultu svítí (jádro světla se kreslí až po vinětě)
 for (x, y) in ((DESK_X + 22, DESK_Y - 27), (DESK_X + 23, DESK_Y - 27), (DESK_X + 24, DESK_Y - 27)):

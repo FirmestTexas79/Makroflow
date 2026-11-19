@@ -1,4 +1,4 @@
-# mapa chÅ¯ze arena_hall: obrÃ¡zek 176x288, buÅˆka 2 px (tools/mapgen/gen_arena_hall.py)
+# mapa chùze arena_hall: obrázek 176x288, buòka 2 px (tools/mapgen/gen_arena_hall.py)
 176 288 2
 ########################################################################################
 ########################################################################################
