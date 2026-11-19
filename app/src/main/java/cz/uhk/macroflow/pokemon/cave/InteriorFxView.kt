@@ -55,7 +55,8 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         ash(canvas, t)
         lamps(canvas, now)
         stars(canvas, now)
-        fx.pendulum?.let { pendulum(canvas, it, t) }
+        fx.pendulums.forEach { pendulum(canvas, it, t) }
+        blinks(canvas, now)
         mouse(canvas, now)
         tubes(canvas, now)
         torches(canvas, t)
@@ -110,12 +111,28 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
     /** Kyvadlo: tyčka po pixelech, mosazná čočka 3×3 se světlem shora zleva. */
     private fun pendulum(c: Canvas, p: FxPendulum, t: Float) {
         val off = sin(t * 2f * PI.toFloat() / p.periodS) * p.amp
-        for (i in 1 until p.len) px(c, (p.px + off * i / p.len).roundToInt(), p.py + i, 0xFFBC9238.toInt())
-        val bx = (p.px + off).roundToInt(); val by = p.py + p.len
+        val dir = if (p.up) -1 else 1
+        for (i in 1 until p.len) px(c, (p.px + off * i / p.len).roundToInt(), p.py + i * dir, p.rod)
+        val bx = (p.px + off).roundToInt(); val by = p.py + p.len * dir
+        if (p.up) { row(c, bx - 1, bx, by + 2, 0xFFE0BC5C.toInt()); return }       // metronom: závažíčko na ramínku
         row(c, bx - 1, bx + 1, by - 1, 0xFFE0BC5C.toInt())
         row(c, bx - 1, bx + 1, by, 0xFFBC9238.toInt())
         row(c, bx - 1, bx + 1, by + 1, 0xFF8A6424.toInt())
         px(c, bx - 1, by - 1, 0xFFFFE9A0.toInt())
+    }
+
+    private val blinkAt = LongArray(fx.blinks.size) { t0 + 5000L + rnd.nextInt(15000) }
+
+    /** Kontrolka (OBSAZENO…), která se občas sama rozsvítí na pár vteřin. */
+    private fun blinks(c: Canvas, now: Long) {
+        for ((i, b) in fx.blinks.withIndex()) {
+            val ms = now - blinkAt[i]
+            if (ms < 0) continue
+            if (ms > 2600) { blinkAt[i] = now + 18000L + rnd.nextInt(30000); continue }
+            if (ms in 200..400) continue                                               // krátké zakolísání
+            for (y in b.box.y0..b.box.y1) row(c, b.box.x0, b.box.x1, y, b.color)
+            px(c, b.box.x0, b.box.y0, 0xFFFFFFFF.toInt())
+        }
     }
 
     /** Myš: přeběhne trasu, uprostřed se zastaví a čenichá; občas běží pozpátku. */
@@ -231,7 +248,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             ash = listOf(FxBox(14, 40, 29, 66), FxBox(146, 40, 161, 66)),
             motes = listOf(FxBox(50, 206, 126, 244), FxBox(74, 258, 112, 290), FxBox(14, 90, 60, 160)),
             moteColor = 0xFFE6B0,
-            pendulum = FxPendulum(42, 40, 6, 1.6f, 2f),
+            pendulums = listOf(FxPendulum(42, 40, 6, 1.6f, 2f)),
             mouse = listOf(12 to 314, 40 to 314, 66 to 313)
         )
 
@@ -242,6 +259,15 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             motes = listOf(FxBox(14, 92, 70, 190), FxBox(110, 92, 166, 190)),
             moteColor = 0xF4F6FF,
             tubes = listOf(FxBox(63, 10, 64, 84), FxBox(113, 10, 114, 84))
+        )
+
+        /** Měřírna (2. patro Věže): kyvadlo hodin, metronom na stole úředníka, potrubní pošta, kontrolky kabin. */
+        val MEASURE = InteriorFx(
+            pendulums = listOf(FxPendulum(131, 21, 6, 1.4f, 2f), FxPendulum(153, 273, 8, 3f, 1f, up = true, rod = 0xFF6A4026.toInt())),
+            tubes = listOf(FxBox(124, 48, 125, 66), FxBox(130, 48, 131, 66), FxBox(136, 48, 137, 66)),
+            blinks = listOf(FxBlink(FxBox(39, 97, 41, 99), 0xFFFF4A3A.toInt()), FxBlink(FxBox(155, 97, 157, 99), 0xFFFF4A3A.toInt())),
+            motes = listOf(FxBox(14, 92, 70, 200), FxBox(110, 92, 166, 200)),
+            moteColor = 0xF4FAFA
         )
 
         /** Hala Arény: dvě pochodně u brány. */
@@ -255,14 +281,17 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
 
 data class FxBox(val x0: Int, val y0: Int, val x1: Int, val y1: Int)
 data class FxLamp(val cx: Int, val cy: Int, val rx: Int, val ry: Int, val glow: FxBox?)
-data class FxPendulum(val px: Int, val py: Int, val len: Int, val amp: Float, val periodS: Float)
+data class FxPendulum(val px: Int, val py: Int, val len: Int, val amp: Float, val periodS: Float,
+                      val up: Boolean = false, val rod: Int = 0xFFBC9238.toInt())
+data class FxBlink(val box: FxBox, val color: Int)
 data class InteriorFx(
     val lamps: List<FxLamp> = emptyList(),
     val stars: List<FxBox> = emptyList(),
     val ash: List<FxBox> = emptyList(),
     val motes: List<FxBox> = emptyList(),
     val moteColor: Int = 0xFFE6B0,
-    val pendulum: FxPendulum? = null,
+    val pendulums: List<FxPendulum> = emptyList(),
+    val blinks: List<FxBlink> = emptyList(),
     val mouse: List<Pair<Int, Int>>? = null,
     val tubes: List<FxBox> = emptyList(),
     val torches: List<FxBox> = emptyList()

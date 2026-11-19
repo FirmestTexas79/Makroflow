@@ -23,7 +23,7 @@ object WildLevels {
         BiomeType.MINES -> (8..14).associateWith { 1 }
         BiomeType.ASH_PLAIN, BiomeType.QUIET_ORCHARD -> (12..18).associateWith { 1 }
         BiomeType.ECHO_CANYON -> (14..20).associateWith { 1 }
-        BiomeType.OZVENA, BiomeType.ARENA_HALL, BiomeType.TOWER_LOBBY, BiomeType.TOWER_ARCHIVE -> (12..18).associateWith { 1 }   // ve městě divocí nejsou
+        BiomeType.OZVENA, BiomeType.ARENA_HALL, BiomeType.TOWER_LOBBY, BiomeType.TOWER_ARCHIVE, BiomeType.TOWER_MEASURE -> (12..18).associateWith { 1 }   // ve městě divocí nejsou
     }
 
     fun range(biome: BiomeType): IntRange = weights(biome).keys.let { it.min()..it.max() }

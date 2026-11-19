@@ -127,7 +127,7 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
@@ -905,7 +905,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.SEPT_NODE -> onSept()
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE -> onElevator()
                 // Archiv okruhů – 1. patro Věže (Spis 212)
-                cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE -> walkInto(BiomeType.TOWER_LOBBY, cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE, MapTransition.FADE)
+                cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerMeasure.ELEVATOR_NODE -> onElevator()
+                in cz.uhk.macroflow.pokemon.cave.TowerMeasure.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerMeasure.TEXTS.getValue(nodeName))
                 cz.uhk.macroflow.pokemon.cave.TowerArchive.FILE_NODE -> cz.uhk.macroflow.pokemon.story.TowerUi.showFile212(findViewById(R.id.mapRootContainer), this)
                 in cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS.getValue(nodeName))
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_TEXT)
@@ -1406,6 +1407,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 // živé interiéry Věže: lampy, hvězdy v oknech, kyvadlo, myš, potrubní pošta
                 currentBiome == BiomeType.TOWER_LOBBY -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.LOBBY)
                 currentBiome == BiomeType.TOWER_ARCHIVE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ARCHIVE)
+                currentBiome == BiomeType.TOWER_MEASURE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.MEASURE)
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)
@@ -1619,11 +1621,17 @@ class MakromonMapActivity : AppCompatActivity() {
         questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID)
         mapWorld.postDelayed({
             if (isFinishing) return@postDelayed
-            val calibrated = questManager.getActiveQuestId() == cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID &&
-                questManager.getCurrentProgress()?.isCompleted == true ||
-                (BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false))
-            cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this),
-                if (calibrated) ({ walkInto(BiomeType.TOWER_ARCHIVE, cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, MapTransition.FADE) }) else null)
+            val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
+            val calibrated = free || (questManager.getActiveQuestId() == cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID &&
+                questManager.getCurrentProgress()?.isCompleted == true)
+            val floors = buildList<Pair<String, () -> Unit>> {
+                if (currentBiome != BiomeType.TOWER_LOBBY) add("Přízemí · Vestibul" to { walkInto(BiomeType.TOWER_LOBBY, cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE, MapTransition.FADE) })
+                if (calibrated && currentBiome != BiomeType.TOWER_ARCHIVE) add(cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_UP to { walkInto(BiomeType.TOWER_ARCHIVE, cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, MapTransition.FADE) })
+                // ponytail: patro 2 zatím jen s debug volným výtahem – příběhové odemčení přijde s další fází
+                if (free && currentBiome != BiomeType.TOWER_MEASURE) add("Patro 2 · Měřírna" to { walkInto(BiomeType.TOWER_MEASURE, cz.uhk.macroflow.pokemon.cave.TowerMeasure.ELEVATOR_NODE, MapTransition.FADE) })
+            }
+            val at = when (currentBiome) { BiomeType.TOWER_ARCHIVE -> 1; BiomeType.TOWER_MEASURE -> 2; else -> 0 }
+            cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this), floors, at)
         }, 150)
     }
 

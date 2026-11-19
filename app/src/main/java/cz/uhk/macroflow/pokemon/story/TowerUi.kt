@@ -68,12 +68,13 @@ object TowerUi {
         }
     }
 
-    /** [onFloor1] = po kalibraci jede výtah do Archivu okruhů (1. patro); jinak jen ukazatel. */
-    fun showElevator(root: FrameLayout, insight: Int, onFloor1: (() -> Unit)? = null) {
-        val sub = if (onFloor1 != null) cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_READY else "Ručička ukazatele stojí na nule."
+    /** Výtah Věže: [floors] = patra, kam smí jet (popisek → přesun), [at] = patro, kde právě stojí. */
+    fun showElevator(root: FrameLayout, insight: Int, floors: List<Pair<String, () -> Unit>> = emptyList(), at: Int = 0) {
+        val here = listOf("nule", "jedničce", "dvojce").getOrElse(at) { "$at" }
+        val sub = if (floors.isEmpty()) "Ručička ukazatele stojí na $here." else "Ručička stojí na $here. Kam to bude?"
         WorkshopMenus.show(root, "Výtah", sub) { ui, body, close ->
             body.addView(ui.text(Calibration.elevatorText(insight), 15f).apply { typeface = android.graphics.Typeface.MONOSPACE })
-            if (onFloor1 != null) body.addView(ui.button(cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_UP) { close(); onFloor1() })
+            for ((label, go) in floors) body.addView(ui.button(label) { close(); go() })
         }
     }
 
