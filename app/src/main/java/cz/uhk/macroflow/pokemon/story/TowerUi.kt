@@ -76,4 +76,43 @@ object TowerUi {
             if (onFloor1 != null) body.addView(ui.button(cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_UP) { close(); onFloor1() })
         }
     }
+
+    /** Noci se spánkem (aspoň 3 h, z hodinek) za posledních 7 dní – každá odkryje jednu stránku Spisu 212. */
+    fun nightsLast7(ctx: Context, today: java.time.LocalDate = java.time.LocalDate.now()): Int =
+        cz.uhk.macroflow.data.AppDatabase.getDatabase(ctx).wearableDao()
+            .getDaysSync(today.minusDays(6).toString(), today.toString())
+            .count { (it.sleepSec ?: 0) >= 3 * 3600 }
+
+    /** Spis 212 na čtecím pultu v Archivu okruhů: stránky se odkrývají zapsanými nocemi spánku (3 za 7 dní). */
+    fun showFile212(root: FrameLayout, owner: LifecycleOwner) {
+        val ctx = root.context
+        owner.lifecycleScope.launch {
+            val n = withContext(Dispatchers.IO) { runCatching { nightsLast7(ctx) }.getOrDefault(0) }
+            WorkshopMenus.show(root, "Spis 212", "Okruh 212 · kartograf · jen pro služební potřebu") { ui, body, _ ->
+                body.addView(ui.text(file212Text(n), 13f, 0xFF1E1A16.toInt()).apply {
+                    typeface = android.graphics.Typeface.MONOSPACE
+                    setBackgroundColor(0xFFF2ECDC.toInt())
+                    setPadding(ui.px(12f), ui.px(12f), ui.px(12f), ui.px(14f))
+                    setLineSpacing(ui.px(2f).toFloat(), 1f)
+                })
+            }
+        }
+    }
+
+    private val PAGES = listOf(
+        "STR. I\nSubjekt přijat. Profese: kartograf.\nSpánek: 7 h 40 min. Výkon v toleranci.\nPoznámka: kreslí mapy i ve volném čase.",
+        "STR. II\nSubjekt žádá o noční směny.\nSpánek: 4 h 10 min. Mapy přesnější.\nPoznámka: ruce se třesou. Neřešit.",
+        "STR. III\nSubjekt přestal spát.\nKALIBRACE NEDOKONČENA.\nSubjekt opustil Věž směrem k Bráně.\n\nNa zadní straně tužkou plánek Věže.\nPatro −1 je zakroužkované."
+    )
+
+    fun file212Text(nights: Int): String = buildString {
+        append("SPIS 212 · OKRUH 212\n████████ ████ ██████\n\n")
+        PAGES.forEachIndexed { i, p ->
+            if (i < nights) append(p) else append("STR. ${"I".repeat(i + 1)}\n████ ██████ ███████\n██████ ████ █████\n███ ████████")
+            append("\n\n")
+        }
+        val open = minOf(nights, PAGES.size)
+        if (open < PAGES.size) append("Odkryto ${open} ze ${PAGES.size}. Každá zapsaná noc spánku (za 7 dní) odkryje další stránku.\nVe spánku rostou svaly. A paměť.")
+        else append("Hunfrey přestal spát. Ty nepřestávej.")
+    }
 }

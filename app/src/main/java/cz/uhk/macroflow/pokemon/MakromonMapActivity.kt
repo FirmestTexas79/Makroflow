@@ -906,6 +906,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE -> onElevator()
                 // Archiv okruhů – 1. patro Věže (Spis 212)
                 cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE -> walkInto(BiomeType.TOWER_LOBBY, cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE, MapTransition.FADE)
+                cz.uhk.macroflow.pokemon.cave.TowerArchive.FILE_NODE -> cz.uhk.macroflow.pokemon.story.TowerUi.showFile212(findViewById(R.id.mapRootContainer), this)
                 in cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS.getValue(nodeName))
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_TEXT)
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES_TEXT)
