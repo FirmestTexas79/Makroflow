@@ -119,6 +119,8 @@ object SleepCard {
                     last == null -> "Zatím žádná noc z hodinek – klepni a synchronizuj"
                     last.date == LocalDate.now().toString() ->
                         listOfNotNull(fmtDur(last.sleepSec), nightWord(last.sleepScore)).joinToString(" · ")
+                    LocalDate.parse(last.date).isBefore(LocalDate.now().minusDays(1)) ->
+                        "Hodinky od ${LocalDate.parse(last.date).plusDays(1).let { "${it.dayOfMonth}. ${it.monthValue}." }} nenahrály spánek (poslední noc ${LocalDate.parse(last.date).let { "${it.dayOfMonth}. ${it.monthValue}." }}: ${fmtDur(last.sleepSec)})"
                     else -> "Dnešní noc ještě není načtená (poslední: ${fmtDur(last.sleepSec)})"
                 }
             }
