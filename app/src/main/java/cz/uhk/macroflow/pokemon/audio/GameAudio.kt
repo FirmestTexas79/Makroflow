@@ -21,7 +21,14 @@ import cz.uhk.macroflow.common.AppSettings
  */
 object GameAudio {
     /** Zvuky; chybí-li soubor v res/raw, zvuk se prostě nepřehraje (THUNDER = hrom v Dormitoři, ElevenLabs). */
-    enum class Sfx(val res: String) { BATTLE_START("sfx_battle_start"), CATCH("sfx_catch"), VICTORY("sfx_victory"), THUNDER("sfx_thunder") }
+    enum class Sfx(val res: String) {
+        BATTLE_START("sfx_battle_start"), CATCH("sfx_catch"), VICTORY("sfx_victory"),
+        // Věž Řádu Váhy (zvuky z ElevenLabs; dokud soubor v res/raw chybí, je ticho)
+        THUNDER("sfx_thunder"), ELEVATOR("sfx_elevator"), TOWER_DOOR("sfx_tower_door"), STAMP("sfx_stamp"),
+        FLICKER("sfx_flicker"), PNEUMATIC("sfx_pneumatic"), BULB("sfx_bulb"), SPRINKLER("sfx_sprinkler"),
+        PEBBLE("sfx_pebble"), WIND_GUST("sfx_wind_gust"), DRIP("sfx_drip"), ZAP("sfx_zap"),
+        SPLASH("sfx_splash"), BUBBLES("sfx_bubbles")
+    }
 
     private const val PREF = "soundEnabled"
     private val handler = Handler(Looper.getMainLooper())
@@ -30,6 +37,8 @@ object GameAudio {
     private var ducked = false
     private var paused = false
     private var soundPool: SoundPool? = null
+    private var amb: MediaPlayer? = null
+    private var ambName: String? = null
     private val sfxIds = HashMap<Sfx, Int>()
 
     private val attrs = AudioAttributes.Builder()
@@ -57,8 +66,25 @@ object GameAudio {
 
     /** Hudba pro lokaci (BiomeType.name). */
     fun playFor(ctx: Context, biome: String) {
+        playAmbient(ctx, MusicMap.ambientFor(biome))
         val t = MusicMap.trackFor(biome) ?: return stopMusic(fade = true)
         playTrack(ctx, t)
+    }
+
+    /** Tichá smyčka prostředí patra (tikání hodin, dech spáčů…): patří k efektům, ne k hudbě. */
+    private fun playAmbient(ctx: Context, name: String?) {
+        if (name == ambName && amb != null) return
+        ambName = name
+        amb?.let { old -> amb = null; runCatching { old.stop(); old.release() } }
+        if (name == null || !AppSettings.sfxEnabled(ctx)) return
+        val res = ctx.resources.getIdentifier(name, "raw", ctx.packageName)
+        if (res == 0) return
+        val mp = MediaPlayer.create(ctx.applicationContext, res) ?: return
+        mp.setAudioAttributes(attrs)
+        mp.isLooping = true
+        mp.setVolume(MusicMap.AMBIENT_VOLUME, MusicMap.AMBIENT_VOLUME)
+        amb = mp
+        if (!paused) mp.start()
     }
 
     private fun playTrack(ctx: Context, name: String) {
@@ -112,10 +138,12 @@ object GameAudio {
     fun pause() {
         paused = true
         runCatching { player?.takeIf { it.isPlaying }?.pause() }
+        runCatching { amb?.takeIf { it.isPlaying }?.pause() }
     }
 
     fun resume(ctx: Context) {
         paused = false
+        if (AppSettings.sfxEnabled(ctx)) runCatching { amb?.start() }
         if (!AppSettings.musicEnabled(ctx)) return
         runCatching { player?.start() }
     }
@@ -124,13 +152,14 @@ object GameAudio {
     fun release() {
         handler.removeCallbacksAndMessages(null)
         runCatching { player?.release() }
+        runCatching { amb?.release() }; amb = null; ambName = null
         player = null; track = null; ducked = false
         soundPool?.release(); soundPool = null; sfxIds.clear()
     }
 
     private fun pool(ctx: Context): SoundPool {
         soundPool?.let { return it }
-        val sp = SoundPool.Builder().setMaxStreams(3).setAudioAttributes(
+        val sp = SoundPool.Builder().setMaxStreams(6).setAudioAttributes(
             AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
         ).build()
@@ -145,9 +174,9 @@ object GameAudio {
     /** Připraví zvuky předem (načtení trvá chvilku – první přehrání by jinak mohlo vypadnout). */
     fun preload(ctx: Context) { pool(ctx) }
 
-    fun sfx(ctx: Context, s: Sfx) {
+    fun sfx(ctx: Context, s: Sfx, vol: Float = 1f) {
         if (!AppSettings.sfxEnabled(ctx)) return
         val id = sfxIds[s] ?: run { pool(ctx); sfxIds[s] } ?: return
-        pool(ctx).play(id, 1f, 1f, 1, 0, 1f)
+        pool(ctx).play(id, vol, vol, 1, 0, 1f)
     }
 }

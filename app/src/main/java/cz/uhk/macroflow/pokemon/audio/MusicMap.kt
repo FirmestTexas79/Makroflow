@@ -19,6 +19,18 @@ object MusicMap {
         else -> null
     }
 
+    /** Smyčka prostředí patra Věže (res/raw, ElevenLabs); null = žádná. */
+    fun ambientFor(biome: String): String? = when (biome) {
+        "TOWER_ARCHIVE" -> "amb_clock"
+        "TOWER_MEASURE" -> "amb_metronome"
+        "TOWER_FOREST" -> "amb_forest_indoor"
+        "TOWER_CAVE" -> "amb_crystals"
+        "TOWER_DORM" -> "amb_breathing"
+        else -> null
+    }
+
+    const val AMBIENT_VOLUME = 0.35f
+
     /** Hlasitost hudby během souboje (zvuky souboje mají být slyšet). */
     const val BATTLE_DUCK = 0.3f
     const val FADE_OUT_MS = 600L

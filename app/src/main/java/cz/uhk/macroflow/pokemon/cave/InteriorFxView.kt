@@ -39,6 +39,15 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
     private var tubeAt = t0 + 3000L + rnd.nextInt(8000)
     private var tubeIdx = 0
 
+    private val cued = HashMap<String, Long>()
+
+    /** Zvuk k události (jednou na každý výskyt [at]); bez souboru v res/raw se nic nepřehraje. */
+    private fun cue(key: String, at: Long, s: cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx, vol: Float) {
+        if (cued[key] == at) return
+        cued[key] = at
+        cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, s, vol)
+    }
+
     private fun px(c: Canvas, x: Int, y: Int, color: Int) {
         paint.color = color
         c.drawRect(x * s, y * s, (x + 1) * s, (y + 1) * s, paint)
@@ -98,6 +107,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
     private fun lamps(c: Canvas, now: Long) {
         if (fx.lamps.isEmpty()) return
         if (now < flickerAt) return
+        cue("lamp", flickerAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.FLICKER, 0.45f)
         val ms = now - flickerAt
         // zap/vyp: 0–70 tma, 70–130 světlo, 130–240 tma, 240–290 světlo, 290–420 napůl
         val dim = when {
@@ -241,6 +251,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
     /** Potrubní pošta: mosazná kapsle proletí trubkou nahoru. */
     private fun tubes(c: Canvas, now: Long) {
         if (fx.tubes.isEmpty() || now < tubeAt) return
+        cue("tube", tubeAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.PNEUMATIC, 0.6f)
         val ms = now - tubeAt
         if (ms > 800) { tubeAt = now + 9000L + rnd.nextInt(18000); tubeIdx = rnd.nextInt(fx.tubes.size); return }
         val b = fx.tubes[tubeIdx]
@@ -318,6 +329,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             val ms = now - sprayAt[i]
             if (ms < 0) continue
             if (ms > 3500) { sprayAt[i] = now + 12000L + rnd.nextInt(20000); continue }
+            cue("spr$i", sprayAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.SPRINKLER, 0.45f)
             val a0 = ms / 1000f * 5f
             for (j in 0 until 10) {
                 val a = a0 + j * 0.63f
@@ -334,6 +346,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
     /** „Slunce“ je jen lampa: občas zakolísá a celé patro na okamžik potemní. */
     private fun sunFlicker(c: Canvas, now: Long) {
         if (!fx.sunFlicker || now < sunAt) return
+        cue("sun", sunAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.BULB, 0.6f)
         val ms = now - sunAt
         val a = when { ms < 90 -> 120; ms < 160 -> 0; ms < 300 -> 150; ms < 380 -> 40; ms < 700 -> 70; else -> {
             sunAt = now + 25000L + rnd.nextInt(35000); return } }
@@ -442,6 +455,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             val ms = now - pebbleAt[i]
             if (ms < 0) continue
             if (ms > 2600) { pebbleAt[i] = now + 6000L + rnd.nextInt(14000); continue }
+            cue("peb$i", pebbleAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.PEBBLE, 0.5f)
             val k = (ms / 900f).coerceAtMost(1f)
             val ease = k * k
             var x = p.x0 + (p.x1 - p.x0) * ease
@@ -467,6 +481,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             if (crumbleX[i] == 0) crumbleX[i] = b.x0 + rnd.nextInt(maxOf(1, b.x1 - b.x0))
             val fallMs = 700L
             if (ms > fallMs + 900) { crumbleAt[i] = now + 9000L + rnd.nextInt(20000); crumbleX[i] = 0; continue }
+            if (ms >= fallMs) cue("crumb$i", crumbleAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.PEBBLE, 0.25f)
             val x = crumbleX[i]
             if (ms < fallMs) {
                 val k = ms / fallMs.toFloat()
@@ -523,6 +538,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         if (now < devilAt) return
         val ms = now - devilAt
         if (ms > 3200) { devilAt = now + 20000L + rnd.nextInt(30000); devilX = 0f; return }
+        cue("devil", devilAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.WIND_GUST, 0.5f)
         if (devilX == 0f) { devilX = (b.x0 + rnd.nextInt(maxOf(1, (b.x1 - b.x0) / 2))).toFloat(); devilY = (b.y0 + rnd.nextInt(maxOf(1, b.y1 - b.y0))).toFloat() }
         val k = ms / 3200f
         val cx = devilX + k * 46f; val cy = devilY - k * 6f
@@ -577,6 +593,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             val ms = now - arcAt[i]
             if (ms < 0) continue
             if (ms > 520) { arcAt[i] = now + 8000L + rnd.nextInt(16000); continue }
+            cue("arc$i", arcAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.ZAP, 0.55f)
             if ((ms / 70) % 2 == 1L) continue
             val seed = (ms / 70).toInt() * 31 + i
             val n = 10
@@ -604,6 +621,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             val ms = now - dripAt[i]
             if (ms < 0) continue
             if (ms > 1500) { dripAt[i] = now + 2500L + rnd.nextInt(5000); continue }
+            if (ms >= 300) cue("drip$i", dripAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.DRIP, 0.35f)
             if (ms < 300) {
                 val y = d.second - 10 + (ms / 30).toInt()
                 px(c, d.first, y, 0xC0B8E8F8.toInt())
@@ -661,6 +679,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             if (ms < 0) continue
             val grow = 600L; val fall = 520L; val splash = 380L
             if (ms > grow + fall + splash) { stalAt[i] = now + 900L + rnd.nextInt(2600); continue }
+            if (ms >= grow + fall && stalAt[i] % 3 == 0L) cue("stal$i", stalAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.DRIP, 0.25f)   // jen každá ~třetí kapka
             val drop = 0xE0A8E4F4.toInt(); val dim = 0x8070C8E0.toInt()
             when {
                 ms < grow -> { if (ms > grow / 2) px(c, d.x0, d.y0 + 1, dim); px(c, d.x0, d.y0, drop) }
@@ -733,6 +752,8 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             }
             val (cx, cy) = ripplePt[i]
             val lead = when (rippleKind[i]) { 1 -> 700L; 2 -> 650L; else -> 0L }
+            if (rippleKind[i] == 1) cue("bub$i", rippleAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.BUBBLES, 0.4f)
+            if (rippleKind[i] == 2 && ms >= lead - 120) cue("fish$i", rippleAt[i], cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.SPLASH, 0.55f)
             if (ms > lead + 1600) { rippleAt[i] = now + 1200L + rnd.nextInt(3500); ripplePt[i] = 0 to 0; continue }
             if (ms < lead) {
                 if (rippleKind[i] == 1) {                                                   // bublinky vystoupají a prasknou
@@ -900,7 +921,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         if (ms < 0) return
         if (!thunderDone && ms >= thunderDelay) {
             thunderDone = true
-            cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.THUNDER)
+            cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.THUNDER, 0.9f)
         }
         if (ms > 2600) { flashAt = now + 22000L + rnd.nextInt(30000); thunderDone = false; thunderDelay = 600L + rnd.nextInt(1100); return }
         val a = when { ms < 80 -> 1f; ms < 160 -> 0.15f; ms < 260 -> 0.9f; ms < 700 -> 0.9f * (1 - (ms - 260) / 440f); else -> 0f }

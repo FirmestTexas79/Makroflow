@@ -78,7 +78,13 @@ class TowerDoorCutsceneView(context: Context) : CutsceneView(context) {
         return sin(t / 17f) * amp to sin(t / 23f) * amp * 0.6f
     }
 
+    private var doorSfx = false
+
     override fun drawActors(c: Canvas, t: Float, toX: (Float) -> Float, toY: (Float) -> Float, scale: Float) {
+        if (!doorSfx && t >= 13_600f) {                                     // závory a skřípění křídel (ElevenLabs)
+            doorSfx = true
+            cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.TOWER_DOOR)
+        }
         when {
             t < CUT1 -> cityAct(c, t, toX, toY, scale)
             t < CUT2 -> gateAct(c, t, toX, toY, scale)

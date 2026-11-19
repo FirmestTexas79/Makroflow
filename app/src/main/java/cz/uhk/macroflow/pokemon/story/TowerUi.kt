@@ -58,6 +58,7 @@ object TowerUi {
     }
 
     fun showFile(root: FrameLayout, st: Calibration.Stats, insight: Int) {
+        if (st.calibrated) cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(root.context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.STAMP)
         WorkshopMenus.show(root, "Spis Subjektu", "Okruh 213 · jen pro služební potřebu") { ui, body, _ ->
             body.addView(ui.text(Calibration.fileText(st, insight), 13f, 0xFF1E1A16.toInt()).apply {
                 typeface = android.graphics.Typeface.MONOSPACE
@@ -74,7 +75,9 @@ object TowerUi {
         val sub = if (floors.isEmpty()) "Ručička ukazatele stojí na $here." else "Ručička stojí na $here. Kam to bude?"
         WorkshopMenus.show(root, "Výtah", sub) { ui, body, close ->
             body.addView(ui.text(Calibration.elevatorText(insight), 15f).apply { typeface = android.graphics.Typeface.MONOSPACE })
-            for ((label, go) in floors) body.addView(ui.button(label) { close(); go() })
+            for ((label, go) in floors) body.addView(ui.button(label) {
+                close(); cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(root.context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.ELEVATOR); go()
+            })
         }
     }
 
