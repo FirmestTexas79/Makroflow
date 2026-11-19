@@ -35,6 +35,44 @@
         android:textColor="@color/brand_primary"
         android:textSize="13sp" />
 
+    <!-- Automatický převod: váha se zadává v librách, ukládá a ukazuje v kg (dvě desetinná místa) -->
+    <LinearLayout
+        android:id="@+id/rowLogLbs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_stat_tile"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp"
+        android:paddingVertical="6dp">
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="Automatický převod"
+                android:textColor="@color/brand_dark"
+                android:textSize="14sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.6"
+                android:text="píšeš v librách (lb), uloží se v kg"
+                android:textColor="@color/brand_dark"
+                android:textSize="11.5sp" />
+        </LinearLayout>
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/swLogLbs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
     <!-- Náčiní (docs/adr/0028): animovaný obrázek podle váhy, volba náčiní a rozpis kotoučů -->
     <LinearLayout
         android:id="@+id/cardEquipment"

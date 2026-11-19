@@ -102,7 +102,7 @@ class WorkoutLogSection(private val fragment: Fragment, private val root: View, 
 
     // ── Formát ──────────────────────────────────────────────────────────────
 
-    private fun kg(v: Double) = String.format(Locale.US, "%.1f", v).replace('.', ',').removeSuffix(",0")
+    private fun kg(v: Double) = LogSetSheet.kg(v)
 
     private fun setLabel(w: Double, r: Int, slow: Boolean = false, rir: Int = StrengthModel.DEFAULT_RIR) =
         (if (w <= 0.0) "$r ×" else "${kg(w)} kg × $r") + listOfNotNull(if (slow) "pomalu" else null, if (rir != StrengthModel.DEFAULT_RIR) "RIR $rir" else null)

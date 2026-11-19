@@ -101,7 +101,14 @@ object LogSetSheet {
         val tvRir = v.findViewById<TextView>(R.id.tvRir)
         var rir = (lastToday?.rir ?: StrengthModel.DEFAULT_RIR).coerceIn(0, StrengthModel.MAX_RIR)
         val tvE = v.findViewById<TextView>(R.id.tvLogSetE1rm)
-        fun w() = etW.text.toString().replace(',', '.').toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+        val swLbs = v.findViewById<MaterialSwitch>(R.id.swLogLbs)
+        swLbs.isChecked = prefs.getBoolean(LBS_KEY, false)
+        val tvUnit = v.findViewById<TextView>(R.id.tvWeightUnit)
+        /** Číslo v poli (kg, nebo lb při automatickém převodu). */
+        fun typed() = etW.text.toString().replace(',', '.').toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+        /** Váha v kg – to se ukládá a počítá. */
+        fun w() = if (swLbs.isChecked) Lbs.toKg(typed()) else typed()
+        fun shown(kg: Double) = if (swLbs.isChecked) Lbs.fromKg(kg) else kg
         fun r() = etR.text.toString().toIntOrNull()?.coerceAtLeast(0) ?: 0
         val prevBest = history.filter { it.exerciseId == exercise.id }.mapNotNull { StrengthModel.setEstimate(it) }.maxOrNull()
 
@@ -130,7 +137,8 @@ object LogSetSheet {
                 e1 == null -> "Přes ${StrengthModel.MAX_REPS} opakování – do odhadu 1RM se nepočítá"
                 prevBest != null && e1 > prevBest -> "Odhad 1RM ${kg(e1)} kg – nový rekord 🏆"
                 else -> "Odhad 1RM ${kg(e1)} kg"
-            }
+            }.let { if (swLbs.isChecked && typed() > 0.0) "${plain(typed())} lb = ${kg(w())} kg · $it" else it }
+            tvUnit.text = if (swLbs.isChecked) "lb" else "kg"
             v.findViewById<View>(R.id.btnLogSetSave).isEnabled = r() > 0
             tvRir.text = if (rir >= StrengthModel.MAX_RIR) "${StrengthModel.MAX_RIR}+" else rir.toString()
             v.findViewById<View>(R.id.btnRirMinus).alpha = if (rir > 0) 1f else 0.35f
@@ -141,12 +149,20 @@ object LogSetSheet {
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun afterTextChanged(s: Editable?) = refresh()
         }
-        etW.setText(plain(startW)); etR.setText(startR.toString())
+        etW.setText(plain(shown(startW))); etR.setText(startR.toString())
         etW.addTextChangedListener(watcher); etR.addTextChangedListener(watcher)
         swSlow.setOnCheckedChangeListener { _, _ -> refresh() }
-        val wStep = if (inc > 0.0) inc else 2.5
-        v.findViewById<View>(R.id.btnWeightMinus).setOnClickListener { etW.setText(plain((w() - wStep).coerceAtLeast(0.0))) }
-        v.findViewById<View>(R.id.btnWeightPlus).setOnClickListener { etW.setText(plain(w() + wStep)) }
+        fun wStep() = if (swLbs.isChecked) Lbs.STEP else if (inc > 0.0) inc else 2.5
+        v.findViewById<View>(R.id.btnWeightMinus).setOnClickListener { etW.setText(plain((typed() - wStep()).coerceAtLeast(0.0))) }
+        v.findViewById<View>(R.id.btnWeightPlus).setOnClickListener { etW.setText(plain(typed() + wStep())) }
+        // přepnutí přepočítá číslo v poli, váha zůstane stejná
+        swLbs.setOnCheckedChangeListener { _, on ->
+            prefs.edit().putBoolean(LBS_KEY, on).apply()
+            val t = typed()
+            etW.setText(plain(if (on) Lbs.fromKg(t) else Lbs.toKg(t)))
+            refresh()
+        }
+        v.findViewById<View>(R.id.rowLogLbs).setOnClickListener { swLbs.toggle() }
         v.findViewById<View>(R.id.btnRepsMinus).setOnClickListener { etR.setText((r() - 1).coerceAtLeast(1).toString()) }
         v.findViewById<View>(R.id.btnRepsPlus).setOnClickListener { etR.setText((r() + 1).toString()) }
         v.findViewById<View>(R.id.btnRirMinus).setOnClickListener { rir = (rir - 1).coerceAtLeast(0); refresh() }
@@ -174,7 +190,9 @@ object LogSetSheet {
     }
 
     private const val RIG_PREFS = "EquipmentPrefs"
+    private const val LBS_KEY = "auto_lbs"
 
-    fun kg(v: Double) = String.format(Locale.US, "%.1f", v).replace('.', ',').removeSuffix(",0")
+    /** Kilogramy pro výpisy: nejvýš dvě desetinná místa, nuly na konci pryč (80 · 82,5 · 20,41). */
+    fun kg(v: Double) = plain(v).replace('.', ',')
     private fun plain(v: Double) = String.format(Locale.US, "%.2f", v).trimEnd('0').trimEnd('.')
 }
