@@ -130,6 +130,8 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
+        /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
+        private const val DEBUG_LIFT_KEY = "DEBUG_FREE_ELEVATOR"
         // Mydrus zapomíná (docs/adr/0057)
         private const val MYDRUS_REMEMBERED = "mydrus_remembered_day"
         private const val MYDRUS_TIMES = "mydrus_forgot_times"
@@ -1617,7 +1619,8 @@ class MakromonMapActivity : AppCompatActivity() {
         mapWorld.postDelayed({
             if (isFinishing) return@postDelayed
             val calibrated = questManager.getActiveQuestId() == cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID &&
-                questManager.getCurrentProgress()?.isCompleted == true
+                questManager.getCurrentProgress()?.isCompleted == true ||
+                (BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false))
             cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this),
                 if (calibrated) ({ walkInto(BiomeType.TOWER_ARCHIVE, cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, MapTransition.FADE) }) else null)
         }, 150)
@@ -2573,6 +2576,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     private fun showDebugMenu() {
         val boots = gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false)
+        val lift = gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
         val items = arrayOf(
             if (boots) "👢 Sedmimílové boty: ZAPNUTO (sundat)" else "👢 Obout sedmimílové boty (hory bez kroků)",
             "✦ Příští setkání bude shiny",
@@ -2591,7 +2595,9 @@ class MakromonMapActivity : AppCompatActivity() {
             "🕯 Fenn: skok na Noc bez měsíce",
             "🍫 +5× Proteinová tyčinka (+250 XP)",
             "💪 +5× Preworkout (+1 level)",
-            "🥫 +5× Bílý Monster (+3 levely)"
+            "🥫 +5× Bílý Monster (+3 levely)",
+            "🎟️ Zlatý kupón (vstup do Věže)",
+            if (lift) "🛗 Výtah volně: ZAPNUTO (vypnout)" else "🛗 Výtah volně (všechna patra)"
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("Debug – Makrosvět")
@@ -2655,6 +2661,14 @@ class MakromonMapActivity : AppCompatActivity() {
                     13 -> debugResetFenn()
                     14 -> debugFennFinale()
                     15, 16, 17 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 15])
+                    18 -> {
+                        StoryFlags.set(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY)
+                        showMapToast("🎟️ Zlatý kupón! Dveře Věže Řádu Váhy se ti otevřou.")
+                    }
+                    19 -> {
+                        gamePrefs.edit().putBoolean(DEBUG_LIFT_KEY, !lift).apply()
+                        showMapToast(if (lift) "🛗 Výtah zase jen po kalibraci." else "🛗 Výtah jezdí volně do všech hotových pater.")
+                    }
                 }
             }
             .show()
