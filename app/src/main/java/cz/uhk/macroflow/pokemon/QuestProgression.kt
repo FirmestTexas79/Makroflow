@@ -107,6 +107,7 @@ object QuestProgression {
             RequirementType.WATER_DAYS -> "Cíl vody zatím splněný $v z ${stage.targetValue} dní. Napij se – sad pije s tebou."
             RequirementType.FLAGS_COUNT -> "Hotovo $v z ${stage.targetValue}. Co přesně chybí, najdeš v deníku."
             RequirementType.BREAKFAST_DAYS -> "Snídaně zatím $v z ${stage.targetValue} rán. Zapiš si snídani do 10:30."
+            RequirementType.MEAL_STREAK -> "Kalibrace: $v z ${stage.targetValue} dnů se zápisem jídla v řadě. Jeden vynechaný den se odpouští."
             RequirementType.HAVE_ITEM -> "Ještě ho nemáš. Až ho budeš mít, stav se."
             RequirementType.AFK_MINUTES -> "Nejméně máš zatím odpracováno ${clock(v)} z ${clock(stage.targetValue)}. " +
                 "Počítá se kácení, těžba i chytání hmyzu – každé zvlášť."

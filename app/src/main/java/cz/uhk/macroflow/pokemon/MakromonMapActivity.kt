@@ -126,7 +126,7 @@ class MakromonMapActivity : AppCompatActivity() {
         ) + cz.uhk.macroflow.pokemon.cave.SkyPass.ACTION_NODES +
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
-            cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
+            cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
             cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
@@ -897,8 +897,15 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_TEXT)
-                cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> showMapToast(if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY))
-                    cz.uhk.macroflow.pokemon.story.Masters.TOWER_INVITED else cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
+                // Věž Řádu Váhy (docs/adr/0103): s Pozvánkou se otevře (poprvé cutscéna dveří)
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY)) enterTower()
+                    else showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
+                cz.uhk.macroflow.pokemon.cave.TowerLobby.SEPT_NODE -> onSept()
+                cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE -> cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this))
+                cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_TEXT)
+                cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES_TEXT)
+                cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES2_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES2_TEXT)
+                cz.uhk.macroflow.pokemon.cave.TowerLobby.PORTRAITS_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.PORTRAITS_TEXT + if (StoryFlags.insight(this) >= 3) cz.uhk.macroflow.pokemon.cave.TowerLobby.PORTRAITS_INSIGHT else "")
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.SHED_TEXT)
                 in cz.uhk.macroflow.pokemon.cave.OzvenaCity.RESIDENT_NODES -> when {
@@ -1585,6 +1592,33 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     /** Velitel bojového cechu vysvětluje arénu po stránkách; na konci pozve dál. */
+    /** Věž Řádu Váhy (docs/adr/0103): poprvé cutscéna obřích dveří, pak rovnou dovnitř. */
+    private fun enterTower() {
+        val T = cz.uhk.macroflow.pokemon.cave.TowerLobby
+        if (StoryFlags.isSet(this, T.VISITED_KEY)) { walkInto(BiomeType.TOWER_LOBBY, T.ENTRY_NODE); return }
+        cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), cz.uhk.macroflow.pokemon.cutscene.TowerDoorCutsceneView(this)) {
+            StoryFlags.set(this, T.VISITED_KEY)
+            enterBiomeAtNode(BiomeType.TOWER_LOBBY, T.ENTRY_NODE, MapTransition.FADE)
+            mapWorld.postDelayed({
+                if (!isFinishing) { questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID); questManager.recheck() }
+            }, 700)
+        }
+    }
+
+    /** Archivář Sept: stav kalibrace, Spis Subjektu. */
+    private fun onSept() {
+        questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            val p = questManager.getCurrentProgress().takeIf { questManager.getActiveQuestId() == cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID }
+            val running = p != null && !p.isCompleted && p.currentStageIndex == cz.uhk.macroflow.pokemon.story.Calibration.STAGE
+            cz.uhk.macroflow.pokemon.story.TowerUi.showSept(findViewById(R.id.mapRootContainer), this,
+                hasInvite = StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY),
+                calibrated = p?.isCompleted == true, stageStartMs = if (running) p!!.stageStartedAt else null)
+            questManager.recheck()
+        }, 150)
+    }
+
     /** Pět Mistrů (docs/adr/0102): pořadí, podmínka tréninků za 7 dní, výzva do souboje. */
     private fun showMasters() {
         val app = applicationContext
@@ -2611,7 +2645,8 @@ class MakromonMapActivity : AppCompatActivity() {
             "💙 Modré světlo v trní (Hvozd)" to { play(cz.uhk.macroflow.pokemon.cutscene.GroveCutsceneView(this)) },
             "🌀 Brána se otevírá (průsmyk)" to { play(cz.uhk.macroflow.pokemon.cutscene.GateCutsceneView(this)) },
             "🕯 Světlo mezi stromy (Ztichlý sad)" to { play(cz.uhk.macroflow.pokemon.cutscene.FennCutsceneView(this)) },
-            "🌑 Bezejmenní (finále sadu)" to { play(cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this)) }
+            "🌑 Bezejmenní (finále sadu)" to { play(cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this)) },
+            "⚖️ Dveře Věže (Ozvěna)" to { play(cz.uhk.macroflow.pokemon.cutscene.TowerDoorCutsceneView(this)) }
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("🎬 Cutscény a videa")

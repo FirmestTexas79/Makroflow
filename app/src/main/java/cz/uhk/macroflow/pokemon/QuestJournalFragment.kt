@@ -728,6 +728,11 @@ class QuestJournalFragment : Fragment() {
                         else QuestProgression.currentValue(stageToDisplay, progress.metadata)
                     "Cíl: $value / ${stageToDisplay.targetValue} – " + (stageToDisplay.hint ?: "dokonči, co po tobě chtějí")
                 }
+                RequirementType.MEAL_STREAK -> {
+                    val value = if (viewingIndex < currentIndex || isAllDone) stageToDisplay.targetValue
+                        else QuestProgression.currentValue(stageToDisplay, progress.metadata)
+                    "Cíl: Dny se zápisem jídla v řadě ($value / ${stageToDisplay.targetValue}) · jeden vynechaný den se odpouští"
+                }
                 RequirementType.BREAKFAST_DAYS -> {
                     val value = if (viewingIndex < currentIndex || isAllDone) stageToDisplay.targetValue
                         else QuestProgression.currentValue(stageToDisplay, progress.metadata)

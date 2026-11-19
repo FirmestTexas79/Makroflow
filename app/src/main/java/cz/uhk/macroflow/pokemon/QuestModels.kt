@@ -34,7 +34,9 @@ enum class RequirementType {
     /** Kolik z příznaků příběhu je nastaveno; targetId = "klíč,klíč,…", metadata = počet (docs/adr/0096). */
     FLAGS_COUNT,
     /** Splněný denní cíl vody v targetValue různých dnech od začátku fáze; metadata = počet dnů (docs/adr/0097). */
-    WATER_DAYS
+    WATER_DAYS,
+    /** Dny se zápisem jídla v řadě od začátku fáze, jeden vynechaný den odpuštěn (Kalibrace, docs/adr/0103). */
+    MEAL_STREAK
 }
 
 data class QuestStage(
@@ -527,9 +529,9 @@ object QuestRegistry {
     val OZVENA_QUEST = QuestDefinition(
         id = cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID,
         chapter = "V · OZVĚNA",
-        farewell = cz.uhk.macroflow.pokemon.story.Masters.FAREWELL,
-        farewellSpeakerResId = R.drawable.makromon_10_umbex,
-        farewellSpeakerName = "Kalibrátor",
+        farewell = cz.uhk.macroflow.pokemon.story.Calibration.STAMPED,
+        farewellSpeakerResId = R.drawable.npc_sept,
+        farewellSpeakerName = cz.uhk.macroflow.pokemon.cave.TowerLobby.SEPT_NAME,
         stages = listOf(
             QuestStage(
                 title = "Dobré ráno, Ozvěno",
@@ -556,6 +558,22 @@ object QuestRegistry {
                 targetValue = cz.uhk.macroflow.pokemon.story.Masters.ALL.size,
                 targetId = cz.uhk.macroflow.pokemon.story.Masters.KEYS.joinToString(","),
                 hint = cz.uhk.macroflow.pokemon.story.Masters.STAGE_HINT
+            ),
+            // Věž Řádu Váhy (docs/adr/0103): Kalibrátor předá Pozvánku, dveře se otevřou, Sept kalibruje
+            QuestStage(
+                title = "Pozvánka",
+                text = cz.uhk.macroflow.pokemon.story.Masters.FAREWELL,
+                speakerResId = R.drawable.makromon_10_umbex, speakerName = "Kalibrátor",
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.cave.TowerLobby.VISITED_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.Calibration.STAGE_INVITE_HINT
+            ),
+            QuestStage(
+                title = "Kalibrace",
+                text = cz.uhk.macroflow.pokemon.story.Calibration.SEPT_START,
+                speakerResId = R.drawable.npc_sept, speakerName = cz.uhk.macroflow.pokemon.cave.TowerLobby.SEPT_NAME,
+                requirementType = RequirementType.MEAL_STREAK, targetValue = cz.uhk.macroflow.pokemon.story.Calibration.DAYS,
+                hint = cz.uhk.macroflow.pokemon.story.Calibration.SEPT_HINT
             )
         )
     )

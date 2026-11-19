@@ -28,7 +28,9 @@ enum class BiomeType {
     /** Město Ozvěna – střed aktu II (docs/adr/0092). */
     OZVENA,
     /** Vstupní hala Arény v Ozvěně (docs/adr/0092). */
-    ARENA_HALL
+    ARENA_HALL,
+    /** Vestibul Věže Řádu Váhy v Ozvěně (docs/adr/0103). */
+    TOWER_LOBBY
 }
 
 object BiomeRegistry {
@@ -143,7 +145,8 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.ECHO_CANYON, R.drawable.echo_canyon, graphOf(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP), questId = null,
                 cave = cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP),
             BiomeDefinition(BiomeType.OZVENA, R.drawable.ozvena, graphOf(cz.uhk.macroflow.pokemon.cave.OzvenaCity.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.OzvenaCity.MAP),
-            BiomeDefinition(BiomeType.ARENA_HALL, R.drawable.arena_hall, graphOf(cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP)
+            BiomeDefinition(BiomeType.ARENA_HALL, R.drawable.arena_hall, graphOf(cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP),
+            BiomeDefinition(BiomeType.TOWER_LOBBY, R.drawable.tower_lobby, graphOf(cz.uhk.macroflow.pokemon.cave.TowerLobby.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerLobby.MAP)
         ).associateBy { it.type }
     }
 

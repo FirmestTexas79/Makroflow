@@ -220,6 +220,12 @@ class QuestManager(
                     val since = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(progress.stageStartedAt))
                     QuestProgression.daysAtLeast(db.waterDao().getWaterSinceSync(since).map { it.date to it.amountMl }, since, target)
                 }
+                RequirementType.MEAL_STREAK -> {
+                    val start = java.time.Instant.ofEpochMilli(progress.stageStartedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                    val logged = db.consumedSnackDao().getConsumedSinceSync(start.toString())
+                        .mapNotNull { runCatching { java.time.LocalDate.parse(it.date) }.getOrNull() }.toSet()
+                    cz.uhk.macroflow.pokemon.story.Calibration.streak(logged, start, java.time.LocalDate.now()).days
+                }
                 RequirementType.BREAKFAST_DAYS -> {
                     val since = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(progress.stageStartedAt))
                     cz.uhk.macroflow.pokemon.story.Ozvena.breakfastDays(
