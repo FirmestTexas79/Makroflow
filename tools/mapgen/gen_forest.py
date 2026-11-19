@@ -25,8 +25,8 @@ WALL_H = 90
 SIDE = 10
 NODES = {
     "les_vytah": (88, 98), "les_stred": (88, 172), "les_krovi_1": (66, 222), "les_krovi_2": (112, 280),
-    "les_krovi_3": (70, 336), "les_dutina": (130, 226), "les_kmen": (100, 318), "les_kartoteka": (52, 146),
-    "les_houby": (106, 182), "les_cedulka": (144, 300),
+    "les_krovi_3": (70, 336), "les_dutina": (130, 226), "les_kmen": (100, 318), "les_kartoteka": (70, 142),
+    "les_houby": (106, 182), "les_cedulka": (62, 300),
 }
 EDGES = [("les_vytah", "les_stred"), ("les_vytah", "les_kartoteka"), ("les_stred", "les_houby"),
          ("les_stred", "les_krovi_1"), ("les_stred", "les_dutina"), ("les_dutina", "les_krovi_2"),
@@ -52,10 +52,10 @@ def place(spr, cx, by, z=None, collide=True, pad=2, shadow=True, foot=None):
             walkmask.silhouette(block, spr.a[:, :, 3], o["x"], o["y"], pad)
     return o
 
-t1 = place(G.big_tree(1), 22, 196, foot=(30, 12))
-t2 = place(G.big_tree(2, hollow=True), 154, 216, foot=(30, 12))
-t3 = place(G.big_tree(3), 24, 306, foot=(30, 12))
-t4 = place(G.big_tree(4), 156, 334, foot=(30, 12))
+t1 = place(G.big_tree(1), 32, 220, foot=(30, 12), shadow=False)          # kořeny nesmí přes boční stěnu
+t2 = place(G.big_tree(2, hollow=True), 144, 216, foot=(30, 12), shadow=False)
+t3 = place(G.big_tree(3), 32, 306, foot=(30, 12), shadow=False)
+t4 = place(G.big_tree(4), 144, 334, foot=(30, 12), shadow=False)
 for o in (t1, t2, t3, t4):                                                # koruny: nepodcházet (hráč by byl nad nimi)
     s = o["spr"]
     for yy in range(46):
@@ -63,18 +63,19 @@ for o in (t1, t2, t3, t4):                                                # koru
             X, Y = o["x"] + xx, o["y"] + yy
             if s.a[yy, xx, 3] and 0 <= X < AW and 0 <= Y < AH:
                 block[Y, X] = True
-place(G.overgrown_cabinet(F.filing_cabinet(1)), 52, 134, foot=(24, 10))
-place(G.overgrown_cabinet(F.filing_cabinet(3)), 124, 134, foot=(24, 10))
+place(G.overgrown_cabinet(F.filing_cabinet(1)), 64, 130, foot=(24, 10))
+place(G.overgrown_cabinet(F.filing_cabinet(3)), 112, 130, foot=(24, 10))
 f1 = place(G.fern(1), 66, 212, collide=False)
 f2 = place(G.fern(2), 112, 270, collide=False)
 f3 = place(G.fern(3), 70, 326, collide=False)
-log = place(G.fallen_log(50), 100, 306, foot=(48, 10))
-place(G.snail_sign(), 140, 296, foot=(4, 3))
+log = place(G.fallen_log(56), 100, 306, foot=(54, 10))
+place(G.snail_sign(), 64, 292, foot=(4, 3))
 import plain_parts as Q  # noqa: E402
 for i, (x, y) in enumerate(((30, 150), (146, 154), (82, 196), (140, 270), (36, 262), (60, 248), (120, 228), (96, 340),
                             (150, 296), (34, 340), (112, 150), (70, 292), (126, 316))):     # drobné kapradí a trsy
     place(G.fern(20 + i, 18, 11) if i % 2 else Q.tall_grass(14, 10, 30 + i), x, y, collide=False, shadow=False)
-for i, (x, y) in enumerate(((106, 176), (44, 226), (132, 252), (52, 290), (90, 236))):
+for i, (x, y) in enumerate(((106, 176), (60, 236), (130, 252), (52, 266), (90, 236), (120, 330), (78, 160),
+                            (42, 324), (150, 236), (100, 214))):                     # houby: pět druhů dokola
     place(G.mushrooms(i), x, y, foot=(6, 3))
 
 # ── šero a skvrny světla mezi korunami ──────────────────────────────────────
@@ -97,8 +98,12 @@ for o in placed:
     s = o["spr"]
     L.hard_shadow(sh, s.a[:, :, 3], o["x"], o["y"], 0.50, 0.28, 0.8)
     L.contact_shadow(sh, o["x"] + s.w / 2, o["y"] + s.h - 1, s.w / 2 + 1, 2.4, 1.0)
+for o in (t1, t2, t3, t4):                                                # stín koruny dopadá kolem kmene, ne vedle
+    cxb, base = o["x"] + o["spr"].w // 2, o["y"] + o["spr"].h - 6
+    L.contact_shadow(sh, cxb + 5, base - 1, 28, 9, 0.9)
+    L.contact_shadow(sh, cxb + 1, base + 1, 15, 4, 1.0)
 sh *= floor_px
-L.darken(img, sh, 0.5, (6, 14, 8), dither=False, steps=4)
+L.darken(img, sh, 0.62, (6, 14, 8), dither=False, steps=4)
 
 # ── zadní stěna: kachle obrostlé břečťanem ──────────────────────────────────
 img[:WALL_H] = M.tiled_wall(AW, WALL_H).a

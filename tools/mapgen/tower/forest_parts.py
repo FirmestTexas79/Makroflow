@@ -78,7 +78,7 @@ def big_tree(seed=0, hollow=False, w=60, h=92):
             s.px(x, y, BARK[k])
     for i, ang in enumerate((0.12, 0.38, 0.62, 0.88)):                            # kořeny (zužující se klíny)
         ang = math.pi * ang + rng.uniform(-0.05, 0.05)
-        L = rng.uniform(14, 19)
+        L = rng.uniform(9, 13)
         for t in np.linspace(0, 1, 40):
             x = cx - math.cos(ang) * (4 + L * t * 1.25)
             y = base - 4 + math.sin(ang) * (2 + L * t * 0.32) + t * 3
@@ -140,27 +140,72 @@ def fern(seed=0, w=40, h=26):
 
 
 def mushrooms(seed=0):
-    """Trs hub: tři kloboučky (červené s bílými tečkami, objemové), bílé nožky."""
-    s = Spr(14, 12)
-    for (x, y, r) in ((4, 5, 3.2), (9, 4, 3.8), (11, 8, 2.4)):
-        for yy in range(int(y), 12):
-            s.px(int(x), yy, MUSH[3]); s.px(int(x) + 1, yy, c(0xC8BEAA))
-        sphere(s, x + .5, y, r, r * 0.7, MUSH[:3] + [c(0xF07A5A)], amb=0.3)
-        s.px(int(x - 1), int(y - 1), MUSH[3]); s.px(int(x + 1), int(y), MUSH[3])
+    """Houby v pěti podobách podle [seed] % 5: 0 muchomůrky (červené s tečkami), 1 hřiby (hnědý klobouk,
+    tlustá nožka), 2 trs drobných václavek na pařízku, 3 bílé hnojníky (vysoké zvonky), 4 bledé modravé
+    „svítivky“ (slabě září – Kustodiát je tu pěstuje na noční směny)."""
+    v = seed % 5
+    s = Spr(16, 14)
+    if v == 0:
+        for (x, y, r) in ((4, 6, 3.2), (10, 4, 3.8), (13, 9, 2.4)):
+            for yy in range(int(y), 14):
+                s.px(int(x), yy, MUSH[3]); s.px(int(x) + 1, yy, c(0xC8BEAA))
+            sphere(s, x + .5, y, r, r * 0.7, MUSH[:3] + [c(0xF07A5A)], amb=0.3)
+            s.px(int(x - 1), int(y - 1), MUSH[3]); s.px(int(x + 1), int(y), MUSH[3])
+    elif v == 1:
+        BOL = [c(0x3A220E), c(0x5E3818), c(0x8A5428), c(0xB07A44)]
+        for (x, y, r, stem) in ((5, 6, 4.2, 3), (12, 8, 3.0, 2)):
+            for yy in range(int(y), 14):                                            # tlustá nožka (soudek)
+                bulge = 1 if yy > y + 3 else 0
+                for xx in range(int(x) - stem // 2 - bulge, int(x) + stem // 2 + bulge + 1):
+                    s.px(xx, yy, c(0xE8DCC0) if xx < x else c(0xC4B494))
+            sphere(s, x + .5, y, r, r * 0.62, BOL, amb=0.3)
+    elif v == 2:
+        for x in range(2, 14):                                                      # pařízek
+            for y in range(9, 14):
+                s.px(x, y, BARK[3] if y == 9 else BARK[2] if x < 10 else BARK[1])
+        HON = [c(0x6A4A1A), c(0xA87A30), c(0xD4A848), c(0xF0D07A)]
+        for (x, y) in ((3, 6), (5, 4), (7, 6), (9, 3), (11, 5), (13, 7), (6, 8), (10, 8)):
+            s.px(x, y + 1, c(0xE8DCC0)); s.px(x, y + 2, c(0xC4B494))
+            sphere(s, x + .5, y, 1.8, 1.2, HON, amb=0.35)
+    elif v == 3:
+        for (x, y, h) in ((4, 2, 11), (9, 4, 9), (13, 6, 7)):
+            for yy in range(y + 4, 14):
+                s.px(x, yy, c(0xF4F2EA))
+            for yy in range(y, y + 5):                                              # zvonek
+                hw = 1 + (yy - y) // 2
+                for xx in range(x - hw, x + hw + 1):
+                    s.px(xx, yy, c(0xFAF8F2) if xx < x else c(0xD8D4CA) if yy < y + 4 else c(0x8A8680))
+    else:
+        GLO = [c(0x2A4A6A), c(0x5A8AB4), c(0x9ACCEE), c(0xDAF4FF)]
+        for (x, y, r) in ((4, 8, 2.2), (8, 6, 2.8), (12, 9, 2.0), (9, 10, 1.6)):
+            for yy in range(int(y), 14):
+                s.px(int(x), yy, c(0xB8D0DA))
+            sphere(s, x + .5, y, r, r * 0.7, GLO, amb=0.5)
     return selout(s, 0.55, 0.85)
 
 
-def fallen_log(w=50):
-    """Padlý kmen ve 3/4: válec ležící na zemi (horní plocha světlejší, čelo s letokruhy), mech navrch, houbička."""
+def fallen_log(w=56):
+    """Padlý kmen ve 3/4: válec ležící na zemi (horní plocha světlejší, boky tmavší), vlevo uříznuté čelo
+    s letokruhy, vpravo zakulacený zlomený konec s třískami a pahýlem větve, mech navrch, houbička."""
     H = 16
     s = Spr(w, H)
-    for y in range(2, H):
-        for x in range(10, w):
-            k = 4 if y < 5 else 3 if y < 9 else 2 if y < 13 else 1
+    end = w - 8                                                                     # kde začíná zakulacený konec
+    for x in range(10, w):
+        t = max(0.0, (x - end) / 8)
+        half = 7 * math.sqrt(max(0.0, 1 - t * t))                                   # profil se ke konci zužuje
+        top, bot = 8.5 - half, 8.5 + half
+        for y in range(1, H):
+            if not (top <= y <= bot):
+                continue
+            rel = (y - top) / max(1, bot - top)
+            k = 4 if rel < 0.2 else 3 if rel < 0.5 else 2 if rel < 0.8 else 1
             if (x * 2 + y * 5) % 13 == 0:
                 k = max(0, k - 1)
             s.px(x, y, BARK[k])
-    for x in range(14, w - 4):                                                      # mech navrch
+    for (x, y) in ((w - 2, 6), (w - 1, 7), (w - 3, 5), (w - 2, 10), (w - 1, 9)):     # třísky zlomu
+        s.px(x, y, c(0xC49A68))
+    s.px(w - 4, 8, c(0x2A1A0E)); s.px(w - 5, 9, c(0x2A1A0E))
+    for x in range(14, end):                                                        # mech navrch
         if math.sin(x * 0.4) > -0.2:
             s.px(x, 2, MOSS[3]); s.px(x, 3, MOSS[2])
     for y in range(1, H):                                                           # čelo s letokruhy
@@ -172,7 +217,9 @@ def fallen_log(w=50):
                 if d > 0.86:
                     s.px(x, y, BARK[1])
     s.px(9, 8, BARK[1])
-    for (x, y) in ((30, 1), (31, 0), (32, 1)):
+    for i in range(5):                                                              # pahýl větve nahoru
+        s.px(36 + i // 2, 1 - 0, BARK[3]); s.px(37 + i // 2, 0, BARK[2])
+    for (x, y) in ((24, 1), (25, 0), (26, 1)):
         s.px(x, y, c(0xE8D4A8))
     return selout(s, 0.5, 0.82)
 

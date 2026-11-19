@@ -447,9 +447,9 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
 
         /** Zarostlé patro (4.): paprsky mezi korunami, padající listí, oči v dutině stromu, slimák, prach ve světle. */
         val FOREST = InteriorFx(
-            shafts = listOf(FxShaft(54, 96, 236, 9, 0.28f), FxShaft(92, 130, 300, 7, 0.28f), FxShaft(70, 236, 336, 6, 0.28f)),
-            leaves = listOf(FxBox(4, 130, 50, 146), FxBox(128, 150, 172, 166), FxBox(4, 240, 52, 256), FxBox(130, 268, 172, 284)),
-            peeks = listOf(153 to 185),
+            shafts = listOf(FxShaft(66, 96, 232, 9, 0.18f), FxShaft(86, 120, 284, 7, 0.1f), FxShaft(64, 236, 336, 6, 0.14f)),
+            leaves = listOf(FxBox(6, 158, 58, 174), FxBox(118, 154, 170, 170), FxBox(6, 244, 58, 260), FxBox(118, 272, 170, 288)),
+            peeks = listOf(143 to 185),
             snail = (80 to 310) to (122 to 310),
             motes = listOf(FxBox(56, 110, 120, 300)),
             moteColor = 0xFFF0B8

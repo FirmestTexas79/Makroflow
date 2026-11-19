@@ -15,8 +15,8 @@ object TowerForest {
         nodes = listOf(
             CaveNode(ELEVATOR_NODE, 88, 98), CaveNode("les_stred", 88, 172), CaveNode("les_krovi_1", 66, 222),
             CaveNode("les_krovi_2", 112, 280), CaveNode("les_krovi_3", 70, 336), CaveNode("les_dutina", 130, 226),
-            CaveNode("les_kmen", 100, 318), CaveNode("les_kartoteka", 52, 146), CaveNode("les_houby", 106, 182),
-            CaveNode("les_cedulka", 144, 300)
+            CaveNode("les_kmen", 100, 318), CaveNode("les_kartoteka", 70, 142), CaveNode("les_houby", 106, 182),
+            CaveNode("les_cedulka", 62, 300)
         ),
         edges = listOf(ELEVATOR_NODE to "les_stred", ELEVATOR_NODE to "les_kartoteka", "les_stred" to "les_houby",
             "les_stred" to "les_krovi_1", "les_stred" to "les_dutina", "les_dutina" to "les_krovi_2",
@@ -30,8 +30,8 @@ object TowerForest {
         isCave = false,
         tapAreas = mapOf(
             ELEVATOR_NODE to Triple(88, 62, 22), "les_krovi_1" to Triple(66, 200, 18), "les_krovi_2" to Triple(112, 258, 18),
-            "les_krovi_3" to Triple(70, 314, 18), "les_dutina" to Triple(153, 186, 10), "les_kmen" to Triple(100, 298, 22),
-            "les_kartoteka" to Triple(52, 116, 16), "les_houby" to Triple(106, 170, 8), "les_cedulka" to Triple(140, 287, 8)
+            "les_krovi_3" to Triple(70, 314, 18), "les_dutina" to Triple(143, 186, 10), "les_kmen" to Triple(100, 298, 22),
+            "les_kartoteka" to Triple(64, 112, 16), "les_houby" to Triple(106, 170, 8), "les_cedulka" to Triple(64, 282, 8)
         )
     )
 
