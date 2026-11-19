@@ -1233,13 +1233,14 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
 
         /** Spalovna spisů (10.): plameny v peci a hořící stránky, jiskry, pára z ventilu, složka ve skluzu, popel. */
         val FIRE = InteriorFx(
-            flames = FxBox(72, 254, 104, 282),
-            embers = listOf(FxBox(74, 200, 102, 252), FxBox(26, 270, 42, 292), FxBox(134, 270, 150, 292), FxBox(92, 192, 108, 210),
-                FxBox(78, 120, 98, 150)),
+            flames = FxBox(76, 252, 100, 274),
+            embers = listOf(FxBox(80, 222, 96, 248), FxBox(80, 122, 96, 150), FxBox(20, 286, 36, 304),
+                FxBox(142, 286, 158, 304), FxBox(92, 318, 118, 330)),
             steam = listOf(31 to 64),
-            chute = FxPath(150, 54, 156, 92),
-            glows = listOf(FxGlow(88, 270, 46, 32, 0xFF8030, 2.2f), FxGlow(88, 154, 18, 8, 0xFF7020, 1.7f),
-                FxGlow(88, 310, 32, 8, 0xFF7020, 1.9f)),
+            chute = FxPath(155, 50, 161, 90),
+            glows = listOf(FxGlow(88, 262, 40, 30, 0xFF8030, 2.2f), FxGlow(88, 152, 16, 7, 0xFF7020, 1.7f),
+                FxGlow(44, 52, 7, 7, 0xFFA040, 1.3f), FxGlow(132, 52, 7, 7, 0xFFA040, 1.6f),
+                FxGlow(48, 170, 10, 7, 0xFFC070, 4.5f)),
             ash = listOf(FxBox(20, 100, 156, 220), FxBox(20, 200, 156, 330)),
             motes = listOf(FxBox(16, 100, 160, 200)),
             moteColor = 0x8A7A70
