@@ -37,7 +37,6 @@ BAL_Y = AH - 12
 floor_px = np.zeros((AH, AW), bool); floor_px[WALL_H:BAL_Y, SIDE:AW - SIDE] = True
 
 V.cave_floor(img, 0, WALL_H, AW, AH)
-V.pool(img, 136, 302, 28, 15)
 for y in range(AH):
     for x in range(AW):
         if ((x - 136) / 30) ** 2 + ((y - 302) / 17) ** 2 < 1:
@@ -146,6 +145,14 @@ L.lighten(img, cyan, 0.24, (90, 230, 240), steps=10)
 L.lighten(img, violet, 0.24, (180, 120, 250), steps=10)
 L.lighten(img, warm, 0.22, (255, 200, 120), steps=10)
 L.reflect(img, (EX0 + 4, EY0 + 8, EX0 + 36), WALL_H + 3, 10, k=0.14, floor_mask=floor_px)
+V.pool(img, 136, 302, 28, 15)                                             # voda odráží krystaly – kreslí se až po tmě
+for o in placed:                                                          # co zasahuje do jezírka, znovu navrch
+    s = o["spr"]
+    if o["x"] < 168 and o["x"] + s.w > 104 and o["y"] < 320 and o["y"] + s.h > 284:
+        for yy in range(s.h):
+            for xx in range(s.w):
+                if s.a[yy, xx, 3] and 0 <= o["y"] + yy < AH and 0 <= o["x"] + xx < AW:
+                    img[o["y"] + yy, o["x"] + xx] = (s.a[yy, xx].astype(int) * [0.6, 0.6, 0.7, 1]).astype(np.uint8)
 vg = np.zeros((AH, AW)); L.vignette(vg, AW / 2, AH * 0.55, AW * 0.6, AH * 0.6, k=0.5)
 L.darken(img, vg, 0.8, (2, 2, 8), dither=True, steps=10)
 

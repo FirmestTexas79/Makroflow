@@ -195,27 +195,59 @@ def apparatus():
 
 
 def mine_cart():
-    """Důlní vozík na kousku kolejí, plný svítících úlomků: železná korba ve 3/4, nýty, kola."""
-    W, H = 30, 24
+    """Důlní vozík ve 3/4 na kousku kolejí: korba se rozšiřuje nahoru, vidíme do ní shora (vnitřní okraj, tmavé
+    vnitřní stěny a navršené svítící úlomky), čelo s nýtovanými pásy, pravý bok ve stínu, kola na kolejích,
+    pražce v perspektivě, na čele mosazný štítek s číslem."""
+    W, H = 38, 32
     s = Spr(W, H)
-    for x in range(W):                                                              # koleje
-        s.px(x, H - 2, IRON_[3]); s.px(x, H - 1, IRON_[1])
-        if x % 5 == 0:
-            for y in range(H - 4, H):
-                s.px(x, y, WOOD[2])
-    for y in range(4, 17):                                                          # korba (lichoběžník)
-        inset = (16 - y) // 4
-        for x in range(3 + inset, W - 3 - inset):
-            s.px(x, y, IRON_[3] if y < 7 else IRON_[2])
-        s.px(3 + inset, y, IRON_[4]); s.px(W - 4 - inset, y, IRON_[0])
-    for x in range(6, W - 6):                                                       # náklad
-        for y in range(1, 5):
-            if ((x - W / 2) / 9) ** 2 + ((y - 4.5) / 3.5) ** 2 < 1:
-                s.px(x, y, (CYAN if (x // 2 + y) % 3 else VIOLET)[3 if y < 3 else 2])
-    for x in range(6, W - 6, 4):
-        s.px(x, 9, IRON_[4]); s.px(x, 14, IRON_[4])
-    for wx in (8, W - 9):
-        sphere(s, wx + .5, H - 4, 2.6, 2.6, IRON_, amb=0.3)
+    RAIL_Y = H - 4
+    for i, x in enumerate(range(1, W - 1, 6)):                                      # pražce
+        for y in range(RAIL_Y - 2, RAIL_Y + 3):
+            for xx in range(x, x + 4):
+                s.px(xx, y, WOOD[3] if y == RAIL_Y - 2 else WOOD[2] if y < RAIL_Y + 2 else WOOD[1])
+    for x in range(W):                                                              # dvě kolejnice
+        for ry in (RAIL_Y - 2, RAIL_Y + 1):
+            s.px(x, ry, IRON_[4]); s.px(x, ry + 1, IRON_[2])
+    top, body_bot = 6, RAIL_Y - 6
+    def span(y):                                                                    # korba: nahoře širší
+        t = (y - top) / (body_bot - top)
+        return int(4 + t * 3), int(W - 6 - t * 3)
+    for y in range(top, body_bot + 1):                                              # čelo korby
+        x0, x1 = span(y)
+        for x in range(x0, x1 + 1):
+            col = IRON_[3] if y < top + 3 else IRON_[2]
+            if x in (x0, x0 + 1):
+                col = IRON_[4]
+            s.px(x, y, col)
+        for x in range(x1 + 1, x1 + 4):                                             # pravý bok (hloubka)
+            if y - top >= x - x1 - 1:
+                s.px(x, y, IRON_[1] if x == x1 + 1 else IRON_[0])
+    for yb in (top + 4, body_bot - 3):                                              # nýtované pásy
+        x0, x1 = span(yb)
+        for x in range(x0, x1 + 1):
+            s.px(x, yb, IRON_[1]); s.px(x, yb - 1, IRON_[4])
+            if (x - x0) % 5 == 2:
+                s.px(x, yb - 1, c(0xD8DCE6))
+    for x in range(W // 2 - 4, W // 2 + 3):                                         # štítek
+        s.px(x, top + 7, BRASS[3]); s.px(x, top + 8, BRASS[2]); s.px(x, top + 9, BRASS[1])
+    s.px(W // 2 - 2, top + 8, INK); s.px(W // 2, top + 8, INK)
+    for y in range(0, top + 1):                                                     # otvor shora (vnitřek + okraj)
+        x0, x1 = 3, W - 5
+        inset = (top - y) // 2
+        for x in range(x0 + inset, x1 - inset + 1):
+            s.px(x, y, IRON_[1])
+    for x in range(3, W - 4):
+        s.px(x, top, IRON_[4]); s.px(x, top - 1, IRON_[3])                          # přední hrana okraje
+    for x in range(6, W - 7):                                                       # navršený náklad
+        hump = 3.5 * math.sin((x - 6) / (W - 13) * math.pi)
+        for y in range(int(top - 1 - hump), top - 1):
+            ramp = CYAN if ((x // 3 + y) % 3) else VIOLET
+            s.px(x, y, ramp[3] if y < top - 2 - hump / 2 else ramp[2])
+        if x % 4 == 1:
+            s.px(x, int(top - 1 - hump), (CYAN if x % 8 == 1 else VIOLET)[4])
+    for wx in (9, W - 12):                                                          # kola na kolejích
+        sphere(s, wx + .5, RAIL_Y - 3, 3.4, 3.4, IRON_, amb=0.3)
+        s.px(wx, RAIL_Y - 3, IRON_[0]); s.px(wx + 1, RAIL_Y - 4, IRON_[4])
     return selout(s, 0.5, 0.82)
 
 
@@ -236,15 +268,30 @@ def lantern_pole():
 
 
 def pool(img, cx, cy, rx, ry):
-    """Podzemní jezírko: tmavá hladina, světlejší pruh u horního břehu (odraz), mokrý lem, kamenný okraj."""
-    for y in range(int(cy - ry) - 3, int(cy + ry) + 4):
-        for x in range(int(cx - rx) - 3, int(cx + rx) + 4):
+    """Podzemní jezírko (voda, ne díra): hladina odráží světlo krystalů – tyrkysový přechod od břehu ke středu,
+    světlé pruhy odrazů a odlesky, mělčina u kraje průhledná na kamenité dno, kolem mokré oblé kameny."""
+    rng = np.random.default_rng(int(cx * 7 + cy))
+    POOLW = [c(0x081E28), c(0x0C2C38), c(0x123C4A), c(0x1A5262), c(0x3A8A98)]
+    for y in range(int(cy - ry) - 4, int(cy + ry) + 5):
+        for x in range(int(cx - rx) - 4, int(cx + rx) + 5):
             d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2
             if d < 1:
+                k = 3 if d > 0.75 else 2 if d > 0.4 else 1                          # u břehu mělčina
                 t = (y - (cy - ry)) / (2 * ry)
-                col = WATER[2] if t < 0.18 else WATER[1] if t < 0.6 else WATER[0]
-                if (x + y * 3) % 17 == 0 and t < 0.5:
-                    col = WATER[3]
+                if t < 0.25 and d < 0.8:
+                    k = min(4, k + 1)                                               # horní okraj odráží stěnu
+                col = POOLW[k]
+                if d > 0.8 and _h(x, y, 4) % 9 == 0:
+                    col = CROCK[2]                                                  # kamínky dna v mělčině
+                if int(y) in (int(cy - ry * 0.45), int(cy + ry * 0.1)) and abs(x - cx) < rx * (0.5 if y < cy else 0.3) and _h(x, 0, 5) % 4:
+                    col = POOLW[4]                                                  # odraz krystalu (pruh)
                 img[y, x] = col
-            elif d < 1.25:
-                img[y, x] = CROCK[3] if y < cy else CROCK[4]
+    for i in range(11):                                                             # mokré kameny kolem
+        a = i / 18 * 2 * math.pi + rng.uniform(-0.1, 0.1)
+        sx, sy = cx + math.cos(a) * (rx + 0.5), cy + math.sin(a) * (ry + 0.5)
+        r = rng.uniform(2.0, 3.4)
+        for y in range(int(sy - r), int(sy + r) + 1):
+            for x in range(int(sx - r), int(sx + r) + 1):
+                dd = ((x - sx) / r) ** 2 + ((y - sy) / (r * 0.75)) ** 2
+                if dd < 1:
+                    img[y, x] = CROCK[4] if (x < sx and y < sy) else CROCK[3] if dd < 0.5 else CROCK[2]
