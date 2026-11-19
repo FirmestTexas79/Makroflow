@@ -19,7 +19,7 @@ object ZoneOne {
     val ZONE2 = setOf("ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA")
 
     /** Interiéry zóny 2 (na mapě nejsou, ale patří do ní). */
-    val ZONE2_INTERIORS = setOf("ARENA_HALL", "TOWER_LOBBY", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_ROCK", "TOWER_CAVE", "TOWER_WATER", "TOWER_DORM")
+    val ZONE2_INTERIORS = setOf("ARENA_HALL", "TOWER_LOBBY", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_ROCK", "TOWER_CAVE", "TOWER_WATER", "TOWER_DORM", "TOWER_ICE")
 
     fun zoneOf(biome: String): Int = if (biome in ZONE2 || biome in ZONE2_INTERIORS) 2 else 1
 

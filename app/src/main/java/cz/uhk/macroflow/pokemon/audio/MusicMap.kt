@@ -14,7 +14,7 @@ object MusicMap {
     fun trackFor(biome: String): String? = when (biome) {
         "TOWN", "OZVENA", "ARENA_HALL", "TOWER_LOBBY", "TOWER_ARCHIVE", "TOWER_MEASURE" -> TOWN
         "MEADOW", "FOREST", "LAKE", "WATER", "QUIET_ORCHARD", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_WATER" -> MEADOW
-        "MOUNTAINS", "SKY_PASS", "ASH_PLAIN", "ECHO_CANYON", "TOWER_ROCK" -> MOUNTAINS
+        "MOUNTAINS", "SKY_PASS", "ASH_PLAIN", "ECHO_CANYON", "TOWER_ROCK", "TOWER_ICE" -> MOUNTAINS
         "CAVE_OPEN", "CAVE_MAZE", "HIDDEN_GROVE", "MINES", "TOWER_CAVE", "TOWER_DORM" -> CAVE
         else -> null
     }
@@ -30,6 +30,7 @@ object MusicMap {
         "TOWER_PLAIN" -> "amb_meadow"
         "TOWER_ROCK" -> "amb_mountain_wind"
         "TOWER_WATER" -> "amb_pond"
+        "TOWER_ICE" -> "amb_blizzard"
         else -> null
     }
 

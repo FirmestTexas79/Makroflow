@@ -100,6 +100,10 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         ghosts(canvas, t)
         curtains(canvas, t)
         lightning(canvas, now)
+        aurora(canvas, t)
+        snow(canvas, t)
+        gust(canvas, now)
+        hare(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -937,6 +941,87 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
     }
 
+    /** Polární záře v okně: přes tabuli se pomalu přelévají zelené a fialové pruhy. */
+    private fun aurora(c: Canvas, t: Float) {
+        val b = fx.aurora ?: return
+        for (x in b.x0..b.x1) {
+            val band = b.y0 + (b.y1 - b.y0) * (0.45f + 0.3f * sin(t * 0.35f + x * 0.28f) + 0.12f * sin(t * 0.9f + x * 0.7f))
+            for (y in b.y0..b.y1) {
+                val d = abs(y - band)
+                val a = when { d < 1f -> 120; d < 2.5f -> 60; else -> 0 }
+                if (a > 0) px(c, x, y, (a shl 24) or (if ((x + (t * 2).toInt()) % 9 < 2) 0xA070E0 else 0x6AF0B0))
+            }
+        }
+    }
+
+    /** Sněžení: vločky se snáší šikmo (vítr od rozbitého okna), každá trochu jinou rychlostí a s kolébáním. */
+    private fun snow(c: Canvas, t: Float) {
+        for ((bi, b) in fx.snow.withIndex()) for (i in 0 until 9) {
+            val h = ((bi * 23 + i + 5) * 2654435761L).toInt() ushr 1
+            val w = b.x1 - b.x0 + 1; val hh = b.y1 - b.y0 + 1
+            val sp = 5f + i % 4 * 2f
+            val y = b.y0 + ((h % hh) + t * sp).let { it % hh }
+            val x = b.x0 + ((h / 5 % w) + t * sp * 0.45f + sin(t * 1.3f + i * 2.1f) * 2f).let { ((it % w) + w) % w }
+            px(c, x.toInt(), y.toInt(), if (i % 3 == 0) 0xF0FFFFFF.toInt() else 0xB0E8F4FF.toInt())
+        }
+    }
+
+    private var gustAt = t0 + 7000L + rnd.nextInt(9000)
+
+    /** Poryv z rozbitého okna: chumel vloček vlétne šikmo do místnosti a rozplyne se (zvuk sfx_wind_gust). */
+    private fun gust(c: Canvas, now: Long) {
+        val b = fx.gust ?: return
+        val ms = now - gustAt
+        if (ms < 0) return
+        if (ms > 1600) { gustAt = now + 14000L + rnd.nextInt(18000); return }
+        cue("gust", gustAt, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.WIND_GUST, 0.45f)
+        val k = ms / 1600f
+        for (i in 0 until 16) {
+            val f = (k * 1.3f - i * 0.03f).coerceIn(0f, 1f)
+            if (f <= 0f || f >= 1f) continue
+            val x = b.x0 + (b.x1 - b.x0) * f + sin(i * 2.3f + f * 6f) * (3 + i % 4)
+            val y = b.y0 + (b.y1 - b.y0) * f * f + (i % 5 - 2) * 2
+            val a = ((1f - f) * 230).toInt()
+            px(c, x.roundToInt(), y.roundToInt(), (a shl 24) or 0xF4FAFF)
+        }
+    }
+
+    private var hareAt = t0 + 12000L + rnd.nextInt(15000)
+    private var hareBack = false
+
+    /** Sněžný zajíc: přeskáče z jedné závěje do druhé, cestou se jednou zastaví a postaví na zadní. */
+    private fun hare(c: Canvas, now: Long) {
+        val path = fx.hare ?: return
+        val ms = now - hareAt
+        if (ms < 0) return
+        val pts = if (hareBack) path.reversed() else path
+        val legs = pts.zipWithNext { a, b -> hypot((b.first - a.first).toFloat(), (b.second - a.second).toFloat()) }
+        val speed = 40f / 1000f; val pause = 1500L
+        val first = (legs[0] / speed).toLong()
+        val total = (legs.sum() / speed).toLong() + pause
+        if (ms > total) { hareAt = now + 26000L + rnd.nextInt(40000); hareBack = rnd.nextBoolean(); return }
+        val moving = ms < first || ms >= first + pause
+        val (x, y, dir) = when {
+            ms < first -> lerp(pts[0], pts[1], ms * speed / legs[0]).let { Triple(it.first, it.second, sign(pts[0], pts[1])) }
+            !moving -> Triple(pts[1].first.toFloat(), pts[1].second.toFloat(), sign(pts[0], pts[1]))
+            else -> lerp(pts[1], pts[2], ((ms - first - pause) * speed / legs[1]).coerceAtMost(1f)).let { Triple(it.first, it.second, sign(pts[1], pts[2])) }
+        }
+        val hop = if (moving) (abs(sin(ms / 1000f * PI.toFloat() * 3.2f)) * 4).roundToInt() else 0
+        val hx = x.roundToInt(); val hy = y.roundToInt() - hop
+        fun p(dx: Int, dy: Int, col: Int) = px(c, hx + dx * dir, hy + dy, col)
+        val fur = 0xFFF4F8FF.toInt(); val sh = 0xFFC8D4E4.toInt(); val ink = 0xFF202430.toInt()
+        val up = !moving && (now / 700) % 2 == 0L
+        if (hop == 0) for (dx in -2..2) px(c, hx + dx, y.roundToInt() + 1, 0x403A5A72)          // stín na ledu
+        if (up) {                                                                               // panáček
+            p(0, 0, sh); p(0, -1, fur); p(-1, -1, fur); p(0, -2, fur); p(-1, -2, sh); p(0, -3, fur); p(1, -3, fur)
+            p(1, -4, ink); p(0, -5, fur); p(0, -6, ink); p(1, -5, fur); p(1, -6, ink)
+        } else {
+            p(-3, -1, fur); p(-2, 0, sh); p(-2, -1, fur); p(-1, -1, fur); p(0, -1, fur); p(-1, -2, fur); p(0, -2, fur)
+            p(1, -2, fur); p(2, -2, fur); p(2, -1, sh); p(2, -3, ink); p(1, -3, fur); p(1, -4, fur); p(0, -4, fur); p(1, -5, ink); p(0, -5, ink)
+            if (hop > 1) { p(-3, 0, sh); p(2, 0, sh) } else { p(-1, 0, sh); p(1, 0, sh) }
+        }
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -1038,6 +1123,21 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0xC8D4FF
         )
 
+        /** Mrazírna (9.): sněžení od rozbitého okna, poryvy, polární záře, kontrolky komor, třpyt ledu, sněžný zajíc. */
+        val ICE = InteriorFx(
+            aurora = FxBox(27, 25, 45, 40),
+            snow = listOf(FxBox(14, 100, 162, 330), FxBox(26, 20, 46, 62)),
+            gust = FxBox(42, 44, 112, 190),
+            glows = listOf(FxGlow(35, 173, 3, 2, 0x5AE0A0, 3.2f), FxGlow(71, 173, 3, 2, 0x5AE0A0, 3.6f),
+                FxGlow(119, 173, 3, 2, 0x5AE0A0, 3.4f), FxGlow(155, 173, 4, 3, 0xE0503A, 1.1f),
+                FxGlow(35, 247, 3, 2, 0x5AE0A0, 3.9f), FxGlow(155, 247, 3, 2, 0x5AE0A0, 3.3f),
+                FxGlow(143, 307, 3, 3, 0xF4F070, 4.5f)),
+            sparkles = listOf(FxBox(20, 110, 156, 330), FxBox(118, 294, 152, 324)),
+            hare = listOf(34 to 296, 88 to 318, 142 to 286),
+            motes = listOf(FxBox(16, 100, 70, 220)),
+            moteColor = 0xE0F0FF
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -1093,7 +1193,11 @@ data class InteriorFx(
     val ghosts: List<FxBox> = emptyList(),
     val fog: List<FxBox> = emptyList(),
     val curtains: List<FxBox> = emptyList(),
-    val lightning: Boolean = false
+    val lightning: Boolean = false,
+    val aurora: FxBox? = null,
+    val snow: List<FxBox> = emptyList(),
+    val gust: FxBox? = null,
+    val hare: List<Pair<Int, Int>>? = null
 )
 
 /** Pulzující záře (krystal): střed, poloměry, barva RGB a perioda v sekundách. */
