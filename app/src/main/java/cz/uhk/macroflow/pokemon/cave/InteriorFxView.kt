@@ -73,6 +73,12 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         crumbles(canvas, now)
         scorpion(canvas, now)
         dustDevil(canvas, now)
+        glows(canvas, t)
+        sparkles(canvas, t)
+        arcs(canvas, now)
+        drips(canvas, now)
+        glowworms(canvas, t)
+        bat(canvas, now)
         postInvalidateOnAnimation()
     }
 
@@ -511,6 +517,121 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         }
     }
 
+    /** Krystaly „dýchají“: kruh světla kolem nich pomalu sílí a slábne (pixelové prstence). */
+    private fun glows(c: Canvas, t: Float) {
+        for ((i, g) in fx.glows.withIndex()) {
+            val k = (sin(t * 2f * PI.toFloat() / g.periodS + i * 1.7f) + 1f) / 2f
+            for (ring in 0..2) {
+                val f = 1f - ring * 0.3f
+                val rx = g.rx * f; val ry = g.ry * f
+                val a = (k * 22 * (ring + 1) / 3).toInt()
+                if (a <= 0) continue
+                for (dy in -ry.toInt()..ry.toInt()) {
+                    val hw = (rx * sqrt((1f - (dy / ry) * (dy / ry)).coerceAtLeast(0f))).roundToInt()
+                    if (hw > 0) row(c, g.cx - hw, g.cx + hw, g.cy + dy, (a shl 24) or g.color)
+                }
+            }
+        }
+    }
+
+    /** Jiskřičky na krystalech: náhodný pixel se na okamžik rozsvítí bíle (křížek). */
+    private fun sparkles(c: Canvas, t: Float) {
+        for ((bi, b) in fx.sparkles.withIndex()) for (i in 0 until 3) {
+            val slot = (t * 2.2f + i * 0.33f + bi * 0.21f).toInt()
+            val ph = (t * 2.2f + i * 0.33f + bi * 0.21f) % 1f
+            val h = ((slot * 2654435761L + bi * 97 + i * 31).toInt() ushr 1)
+            val x = b.x0 + h % maxOf(1, b.x1 - b.x0); val y = b.y0 + (h / 7) % maxOf(1, b.y1 - b.y0)
+            if (ph > 0.5f) continue
+            val a = ((0.5f - kotlin.math.abs(ph - 0.25f) * 2) * 2 * 255).toInt().coerceIn(0, 255)
+            px(c, x, y, (a shl 24) or 0xFFFFFF)
+            if (ph in 0.15f..0.35f) { px(c, x - 1, y, (a / 2 shl 24) or 0xE0FFFF); px(c, x + 1, y, (a / 2 shl 24) or 0xE0FFFF)
+                px(c, x, y - 1, (a / 2 shl 24) or 0xE0FFFF); px(c, x, y + 1, (a / 2 shl 24) or 0xE0FFFF) }
+        }
+    }
+
+    private val arcAt = LongArray(fx.arcs.size) { t0 + 5000L + rnd.nextInt(12000) }
+
+    /** Výboj: mezi krystalem a přístrojem přeskočí klikatá jiskra (pár záblesků, pokaždé jiný tvar). */
+    private fun arcs(c: Canvas, now: Long) {
+        for ((i, a) in fx.arcs.withIndex()) {
+            val ms = now - arcAt[i]
+            if (ms < 0) continue
+            if (ms > 520) { arcAt[i] = now + 8000L + rnd.nextInt(16000); continue }
+            if ((ms / 70) % 2 == 1L) continue
+            val seed = (ms / 70).toInt() * 31 + i
+            val n = 10
+            var px0 = a.x0.toFloat(); var py0 = a.y0.toFloat()
+            for (k in 1..n) {
+                val t = k / n.toFloat()
+                val jx = if (k == n) 0f else (((seed * 7 + k * 13) % 7) - 3).toFloat()
+                val jy = if (k == n) 0f else (((seed * 5 + k * 11) % 5) - 2).toFloat()
+                val x1 = a.x0 + (a.x1 - a.x0) * t + jx; val y1 = a.y0 + (a.y1 - a.y0) * t + jy
+                val steps = maxOf(abs(x1 - px0), abs(y1 - py0)).toInt().coerceAtLeast(1)
+                for (st in 0..steps) {
+                    val x = (px0 + (x1 - px0) * st / steps).roundToInt(); val y = (py0 + (y1 - py0) * st / steps).roundToInt()
+                    px(c, x, y, 0xFFE8FFFF.toInt()); px(c, x, y + 1, 0x8060E0F0.toInt())
+                }
+                px0 = x1; py0 = y1
+            }
+        }
+    }
+
+    private val dripAt = LongArray(fx.drips.size) { t0 + rnd.nextInt(6000).toLong() }
+
+    /** Kapka ze stropu: krátce spadne a na hladině se rozběhne kroužek. */
+    private fun drips(c: Canvas, now: Long) {
+        for ((i, d) in fx.drips.withIndex()) {
+            val ms = now - dripAt[i]
+            if (ms < 0) continue
+            if (ms > 1500) { dripAt[i] = now + 2500L + rnd.nextInt(5000); continue }
+            if (ms < 300) {
+                val y = d.second - 10 + (ms / 30).toInt()
+                px(c, d.first, y, 0xC0B8E8F8.toInt())
+            } else {
+                val k = (ms - 300) / 1200f
+                val r = (1 + k * 6).roundToInt()
+                val a = ((1 - k) * 160).toInt()
+                for (dx in -r..r) {
+                    val dy = (sqrt((1f - (dx.toFloat() / r).let { it * it }).coerceAtLeast(0f)) * r * 0.45f).roundToInt()
+                    px(c, d.first + dx, d.second - dy, (a shl 24) or 0x9AD8EC)
+                    px(c, d.first + dx, d.second + dy, (a shl 24) or 0x9AD8EC)
+                }
+            }
+        }
+    }
+
+    /** Světlušky na stropě jeskyně: drobné tyrkysové tečky, každá svítí a hasne svým tempem. */
+    private fun glowworms(c: Canvas, t: Float) {
+        val b = fx.glowworms ?: return
+        for (i in 0 until 26) {
+            val h = ((i * 2654435761L).toInt() ushr 1)
+            val x = b.x0 + h % (b.x1 - b.x0); val y = b.y0 + (h / 13) % (b.y1 - b.y0)
+            val a = ((sin(t * (0.6f + (h % 7) * 0.1f) + h % 13) + 1) * 0.5f * 200).toInt()
+            if (a > 40) px(c, x, y, (a shl 24) or 0x7AE8EC)
+        }
+    }
+
+    private var batAt = t0 + 9000L + rnd.nextInt(15000)
+    private var batY = 0; private var batBack = false
+
+    /** Netopýr: jednou za čas přeletí místností po vlnovce, křídla mávají. */
+    private fun bat(c: Canvas, now: Long) {
+        val b = fx.bats ?: return
+        if (now < batAt) return
+        val ms = now - batAt
+        val dur = 2600L
+        if (ms > dur) { batAt = now + 16000L + rnd.nextInt(26000); batY = 0; return }
+        if (batY == 0) { batY = b.y0 + rnd.nextInt(maxOf(1, b.y1 - b.y0)); batBack = rnd.nextBoolean() }
+        val k = ms / dur.toFloat()
+        val x = (if (batBack) b.x1 - (b.x1 - b.x0) * k else b.x0 + (b.x1 - b.x0) * k).roundToInt()
+        val y = (batY + sin(k * 12f) * 6f).roundToInt()
+        val up = (now / 90) % 2 == 0L
+        val col = 0xFF2A1E36.toInt(); val ear = 0xFF4A3A5A.toInt()
+        px(c, x, y, col); px(c, x + 1, y, col); px(c, x, y - 1, ear); px(c, x + 1, y - 1, ear)
+        if (up) { px(c, x - 1, y - 1, col); px(c, x - 2, y - 2, col); px(c, x + 2, y - 1, col); px(c, x + 3, y - 2, col) }
+        else { px(c, x - 1, y, col); px(c, x - 2, y + 1, col); px(c, x + 2, y, col); px(c, x + 3, y + 1, col) }
+    }
+
     companion object {
         /** Archiv okruhů (1. patro Věže): lampy, hvězdy v oknech, kyvadlo hodin na 6:12, myš u spodního regálu. */
         val ARCHIVE = InteriorFx(
@@ -572,6 +693,19 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0xE8D8B8
         )
 
+        /** Krystalová jeskyně (6.): dýchající krystaly, jiskřičky, výboj ke přístroji, kapky, světlušky, netopýr, lucerna. */
+        val CAVE = InteriorFx(
+            glows = listOf(FxGlow(40, 186, 30, 20, 0x5AE6F0, 3.4f), FxGlow(140, 206, 30, 20, 0xB478FA, 4.1f), FxGlow(52, 292, 34, 22, 0x5AE6F0, 3.8f)),
+            sparkles = listOf(FxBox(26, 160, 54, 190), FxBox(126, 180, 154, 210), FxBox(36, 262, 68, 298)),
+            arcs = listOf(FxPath(136, 182, 105, 171)),
+            drips = listOf(124 to 300, 146 to 305, 136 to 296),
+            glowworms = FxBox(4, 4, 172, 56),
+            bats = FxBox(10, 120, 166, 260),
+            lamps = listOf(FxLamp(76, 134, 24, 15, null)),
+            motes = listOf(FxBox(20, 150, 156, 320)),
+            moteColor = 0x9AE8F0
+        )
+
         /** Hala Arény: dvě pochodně u brány. */
         val HALL = InteriorFx(
             torches = listOf(FxBox(50, 22, 57, 29), FxBox(118, 22, 125, 29)),
@@ -608,8 +742,17 @@ data class InteriorFx(
     val pebbles: List<FxPath> = emptyList(),
     val crumbles: List<FxBox> = emptyList(),
     val scorpion: List<Pair<Int, Int>>? = null,
-    val dustDevil: FxBox? = null
+    val dustDevil: FxBox? = null,
+    val glows: List<FxGlow> = emptyList(),
+    val sparkles: List<FxBox> = emptyList(),
+    val arcs: List<FxPath> = emptyList(),
+    val drips: List<Pair<Int, Int>> = emptyList(),
+    val glowworms: FxBox? = null,
+    val bats: FxBox? = null
 )
+
+/** Pulzující záře (krystal): střed, poloměry, barva RGB a perioda v sekundách. */
+data class FxGlow(val cx: Int, val cy: Int, val rx: Int, val ry: Int, val color: Int, val periodS: Float)
 
 /** Úsečka pohybu (odkud – kam), např. kamínek z vršku sutě k zemi. */
 data class FxPath(val x0: Int, val y0: Int, val x1: Int, val y1: Int)

@@ -84,7 +84,7 @@ object SpawnManager {
         // Patra Věže zaměřená na typ: všechny divoké druhy daného typu, každý s nejčastější raritou
         TYPED_FLOORS[currentBiome]?.let { type ->
             val typed = POOL.filter { sp -> sp.conditions.all { it.isMet(context) } }.groupBy { it.id }
-                .mapNotNull { (_, l) -> l.maxByOrNull { it.rarity.weight }?.takeIf { it.createMakromon().speciesType == type } }
+                .mapNotNull { (_, l) -> l.maxByOrNull { it.rarity.weight }?.takeIf { DEX_TYPE[it.id] in type } }
             if (typed.isNotEmpty()) {
                 var r = kotlin.random.Random.nextInt(typed.sumOf { it.rarity.weight })
                 for (spawn in typed) { r -= spawn.rarity.weight; if (r < 0) return spawn.createMakromon() }
@@ -110,8 +110,14 @@ object SpawnManager {
     }
 
     /** Patra Věže Řádu Váhy, kde žijí jen Makromoni jednoho typu (od 3. patra). */
-    val TYPED_FLOORS = mapOf(BiomeType.TOWER_PLAIN to MakromonType.NORMAL, BiomeType.TOWER_FOREST to MakromonType.GRASS,
-        BiomeType.TOWER_ROCK to MakromonType.GROUND)
+    val TYPED_FLOORS: Map<BiomeType, Set<String>> = mapOf(
+        BiomeType.TOWER_PLAIN to setOf("NORMÁLNÍ"), BiomeType.TOWER_FOREST to setOf("PŘÍRODA"),
+        BiomeType.TOWER_ROCK to setOf("ZEMĚ"), BiomeType.TOWER_CAVE to setOf("PSYCHO", "BLESK"))
+
+    /** Typ druhu tak, jak ho ukazuje Makrodex (první slovo dexType: „ZEMĚ / KÁMEN“ → ZEMĚ). */
+    private val DEX_TYPE: Map<String, String> by lazy {
+        cz.uhk.macroflow.pokemon.species.SpeciesRegistry.ALL.associate { it.id to it.dexType.substringBefore('/').trim() }
+    }
 
     fun findById(id: String): SpawnPool? = POOL.find { it.id == id }
     val allEntries: List<SpawnPool> get() = POOL
