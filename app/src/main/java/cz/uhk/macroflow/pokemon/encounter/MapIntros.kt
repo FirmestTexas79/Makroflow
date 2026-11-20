@@ -33,6 +33,8 @@ abstract class MapScene(private val map: Img, vw: Int, vh: Int, val ex: Int, val
     protected abstract val shade: Int
     protected open val spot = 30f
     protected open val dimMax = 0.5f
+    /** Barva úderu (rázová vlna, záblesk) – ladí se zábleskem souboje. */
+    protected open val accent = WHITE
     protected var camX = 0; protected var camY = 0
     private val baseX = (ex - w / 2).coerceIn(0, maxOf(0, map.w - w))
     private val baseY = (ey - (h * anchor).toInt()).coerceIn(0, maxOf(0, map.h - h))
@@ -59,6 +61,7 @@ abstract class MapScene(private val map: Img, vw: Int, vh: Int, val ex: Int, val
         before(t)
         grade(t)
         act(t)
+        impact(t)
         letterbox(t)
     }
 
@@ -82,6 +85,30 @@ abstract class MapScene(private val map: Img, vw: Int, vh: Int, val ex: Int, val
             val a = d * (0.25f + 0.75f * k)
             val q = floor(a * 6f + bayer(x, y)) / 6f
             if (q > 0f) blend(x, y, shade, q)
+        }
+    }
+
+    /** Společný filmový úder: soustředné čáry do místa události, rázová vlna, záblesk. */
+    private fun impact(t: Long) {
+        // čáry houstnou a sbíhají se k místu události těsně před výbuchem
+        val fl = p(t, CLIMAX - 420, CLIMAX - 40) * (1f - p(t, CLIMAX + 60, CLIMAX + 260))
+        if (fl > 0f) {
+            val seed = (t / 55).toInt()
+            val n = (10 + 22 * fl).toInt()
+            for (i in 0 until n) {
+                val a = hf(i, seed, 11) * 6.2832f
+                val r0 = 26f + 18f * hf(i, seed, 12) - 10f * fl
+                val r1 = 120f
+                val c = if (i % 3 == 0) accent else BLACK
+                line(cx + cosf(a) * r0, cy + sinf(a) * r0, cx + cosf(a) * r1, cy + sinf(a) * r1, c, (if (c == BLACK) 0.55f else 0.45f) * fl)
+            }
+        }
+        val s = since(t)
+        if (s > 0f && s < 0.6f) {
+            val k = easeOut(minOf(1f, s / 0.45f))
+            ring(cx, cy, 3f + k * 70f, 1.2f, accent, 0.85f * (1f - k))
+            if (s > 0.08f) ring(cx, cy, 3f + easeOut(minOf(1f, (s - 0.08f) / 0.45f)) * 52f, 0.7f, WHITE, 0.6f * (1f - k))
+            if (s < 0.12f) { glow(cx, cy, 30f, WHITE, 1f - s / 0.12f); circle(cx, cy, 4f * (1f - s / 0.12f) + 1f, WHITE) }
         }
     }
 
@@ -236,6 +263,7 @@ abstract class MapScene(private val map: Img, vw: Int, vh: Int, val ex: Int, val
 /** Kalibrační louka: vysoká tráva se dvakrát zavlní, v ní oči – tráva vybuchne, létají stébla a hlína. */
 class PlainIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 138, 262, 3) {
     override val shade = hex(0x10200C)
+    override val accent = hex(0xFFF4C0)
     private val blades = spray(46, 20f, 75f, 40f, PI * 1.4)
     private val clods = spray(14, 15f, 50f, 30f, PI * 1.2)
     private val pollen = motes(22)
@@ -274,6 +302,7 @@ class PlainIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 138, 262, 3) {
 /** Zarostlé patro: z keře vyletí můry, keř se třese, padá listí; dvoje oči – keř se rozletí. */
 class ForestIntro2(m: Img, w: Int, h: Int) : MapScene(m, w, h, 128, 268, 4) {
     override val shade = hex(0x081408)
+    override val accent = hex(0xC8FFA0)
     private val leaves = spray(90, 20f, 90f, 30f)
     private val fall = motes(18)
     private val moths = List(4) { floatArrayOf(rnd.nextFloat() * 6.28f, 0.6f + rnd.nextFloat() * 0.5f, rnd.nextFloat()) }
@@ -318,6 +347,7 @@ class ForestIntro2(m: Img, w: Int, h: Int) : MapScene(m, w, h, 128, 268, 4) {
 /** Skalní patro: kamínky na suti poskakují, dlaždicemi se šíří praskliny; oči mezi kameny – suť vybuchne. */
 class RockIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 134, 264, 5) {
     override val shade = hex(0x1A120A)
+    override val accent = hex(0xFFD090)
     private val stoneR = ramp(0x3A3028, 0x6A5C4C, 0x9C8C76, 0xC8BAA0, 0xE8DCC4)
     private val dust = ramp(0x6A5A44, 0x9A886C, 0xC8B898)
     private val rocks = spray(26, 25f, 90f, 50f)
@@ -351,6 +381,7 @@ class RockIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 134, 264, 5) {
 /** Krystalová jeskyně: krystal pulzuje, k menším krystalům přeskakují výboje; v krystalu oči – roztříští se. */
 class CaveIntro2(m: Img, w: Int, h: Int) : MapScene(m, w, h, 136, 198, 6) {
     override val shade = hex(0x06020E)
+    override val accent = hex(0xE0C0FF)
     override val dimMax = 0.6f
     private val shardR = ramp(0x3A1A6A, 0x7A44C8, 0xB884F4, 0xE8D0FF)
     private val shards = spray(30, 25f, 95f, 30f)
@@ -394,6 +425,7 @@ class CaveIntro2(m: Img, w: Int, h: Int) : MapScene(m, w, h, 136, 198, 6) {
 /** Zatopené patro: pod hladinou krouží stín, stoupají bubliny a kruhy; vynoří se oči – voda vytryskne. */
 class WaterIntro2(m: Img, w: Int, h: Int) : MapScene(m, w, h, 44, 250, 7) {
     override val shade = hex(0x02101A)
+    override val accent = hex(0xB8F0FF)
     private val drop = ramp(0x2A6A8A, 0x5AAACA, 0xA8E4F4, 0xF0FFFF)
     private val foam = ramp(0x8AC4D4, 0xC8EEF6, 0xFFFFFF)
     private val droplets = spray(50, 20f, 70f, 70f)
@@ -428,6 +460,7 @@ class WaterIntro2(m: Img, w: Int, h: Int) : MapScene(m, w, h, 44, 250, 7) {
 /** Dormitoř: svíčky blikají, po podlaze leze chladná mlha; z postele se zvedne duch v prostěradle a vzlétne. */
 class DormIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 53, 220, 8) {
     override val shade = hex(0x05061A)
+    override val accent = hex(0xD0D8FF)
     override val dimMax = 0.62f
     private val sheet = ramp(0x3A4478, 0x7884B8, 0xB8C2E8, 0xE8EEFF)
     private val mist = ramp(0x5A6490, 0x8A94C0, 0xB8C0E4)
@@ -478,6 +511,7 @@ class DormIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 53, 220, 8) {
 /** Mrazírna: od okrajů leze jinovatka, kryokomora praská, zmrzlý tvor otevře oči – led se roztříští. */
 class IceIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 130, 304, 9, 0.55f) {
     override val shade = hex(0x0A1830)
+    override val accent = hex(0xD8FAFF)
     private val iceR = ramp(0x4A7A9A, 0x8AC0DA, 0xC8EEFA, 0xFFFFFF)
     private val snowR = ramp(0xA8BCD0, 0xD8E6F2, 0xFFFFFF)
     private val shards = spray(36, 25f, 90f, 40f)
@@ -523,6 +557,7 @@ class IceIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 130, 304, 9, 0.55f) {
 /** Spalovna spisů: oheň v peci dýchá, vylétají jiskry a hořící útržky; v plamenech oči – pec vychrlí ohnivou kouli. */
 class FireIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 262, 10, 0.5f) {
     override val shade = hex(0x140402)
+    override val accent = hex(0xFFC060)
     override val spot = 36f
     private val fireR = ramp(0x5A0A04, 0xB82A08, 0xF06A10, 0xFFB030, 0xFFE890, 0xFFFFF0)
     private val smoke = ramp(0x1A1412, 0x3A302C, 0x5A4E48)
@@ -566,6 +601,7 @@ class FireIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 262, 10, 0.5f) {
 /** Duhová zahrada: houby v kruhu se rozsvítí dokola, víly krouží; uprostřed oči – kruh vybuchne třpytem. */
 class FairyIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 250, 11) {
     override val shade = hex(0x2A0E3A)
+    override val accent = hex(0xFFB8F0)
     override val dimMax = 0.42f
     private val stars = spray(50, 20f, 70f, 30f)
     private val pixies = List(5) { floatArrayOf(rnd.nextFloat() * 6.28f, 12f + rnd.nextFloat() * 14f, 0.7f + rnd.nextFloat() * 0.6f, rnd.nextFloat() * 8f) }
@@ -607,6 +643,7 @@ class FairyIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 250, 11) {
 /** Jedová laboratoř: louže bublá a kouří, mlha houstne; ve sliznu se otevřou oči – louže vybuchne. */
 class PoisonIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 90, 178, 12) {
     override val shade = hex(0x020A04)
+    override val accent = hex(0xC8FF70)
     override val dimMax = 0.58f
     private val slime = ramp(0x1A4A0C, 0x3E8A1A, 0x7ACC30, 0xC4F070, 0xF4FFC0)
     private val gas = ramp(0x2A5A1A, 0x5A9A3A, 0x9ACC6A)
@@ -648,6 +685,7 @@ class PoisonIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 90, 178, 12) {
 /** Nebeský průsmyk: praporky se třepetají, vítr žene mraky; přes stezku přelétne obří stín, z mraků oči – mrak se rozfoukne. */
 class SkyPassIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 312, 51) {
     override val shade = hex(0x140A2A)
+    override val accent = hex(0xE8F4FF)
     override val dimMax = 0.45f
     private val cloudR = ramp(0x8A84AA, 0xC0BCD8, 0xE8E6F6, 0xFFFFFF)
     private val streaks = List(18) { floatArrayOf(rnd.nextFloat(), rnd.nextFloat(), 4f + rnd.nextFloat() * 8f, 0.6f + rnd.nextFloat()) }
@@ -687,6 +725,7 @@ class SkyPassIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 312, 51) {
 /** Zapomenutý háj: runy na kamenech se rozsvítí, po hladině jezírka běží kruhy; z hvězdné hladiny se dívají oči – vytryskne světlo. */
 class GroveIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 160, 46) {
     override val shade = hex(0x020C0E)
+    override val accent = hex(0xA8FFE8)
     override val dimMax = 0.55f
     private val water = ramp(0x1A3A6A, 0x4A7AB8, 0xA8D0F4, 0xF0FAFF)
     private val spores = motes(30)
@@ -729,6 +768,7 @@ class GroveIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 160, 46) {
 /** Doly: láva dýchá a bublá, ze stropu padá suť; v lávě se otevřou oči – láva vybuchne. */
 class MinesIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 254, 49) {
     override val shade = hex(0x0A0204)
+    override val accent = hex(0xFFA040)
     override val dimMax = 0.55f
     private val lava = ramp(0x3A0A04, 0x9A2008, 0xE85A10, 0xFFA830, 0xFFE890)
     private val rock = ramp(0x1A1416, 0x3E3434, 0x6A5C58, 0x948680)
@@ -767,6 +807,7 @@ class MinesIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 254, 49) {
 /** Popelavá pláň (u brány): obilí se vlní, vlna v něm míří k divákovi; z obilí oči – vyletí ptáci a plevy. */
 class AshIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 122, 142, 88) {
     override val shade = hex(0x1A1408)
+    override val accent = hex(0xFFE8A0)
     private val chaff = ramp(0x8A6A20, 0xC8A040, 0xF0D47A)
     private val dust = ramp(0x9A8A60, 0xC0B48A, 0xE4DAB8)
     private val bits = spray(80, 20f, 80f, 40f)
@@ -797,6 +838,7 @@ class AshIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 122, 142, 88) {
 /** Ztichlý sad v noci: svítí plody a světlušky, koruna se zachvěje a upustí plod; v koruně oči – vylétnou netopýři. */
 class OrchardIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 74, 258, 89) {
     override val shade = hex(0x02040E)
+    override val accent = hex(0xFFE0A0)
     override val dimMax = 0.5f
     private val fruit = ramp(0x6A2A08, 0xC8601A, 0xFFA040, 0xFFE0A0)
     private val leafC = intArrayOf(hex(0x2A4A3A), hex(0x3E6A4E), hex(0x5A8A6A))
@@ -841,6 +883,7 @@ class OrchardIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 74, 258, 89) {
 /** Ozvěnový kaňon: z jeskyně se nesou kruhy ozvěny, po stěně se sypou kamínky a písek; ve tmě oči – z jeskyně vyrazí sesuv. */
 class CanyonIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 98, 168, 90) {
     override val shade = hex(0x1A0A04)
+    override val accent = hex(0xFFD8A0)
     private val rockR = ramp(0x4A2214, 0x8A4428, 0xBA6A3E, 0xDC9A62)
     private val sand = ramp(0xA8784A, 0xD0A070, 0xF0D0A0)
     private val rocks = spray(26, 25f, 80f, 40f, PI * 1.1, PI / 2)
