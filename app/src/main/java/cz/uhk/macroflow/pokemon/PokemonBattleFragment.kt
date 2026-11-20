@@ -448,8 +448,13 @@ class PokemonBattleFragment : Fragment() {
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             setBackgroundColor(Color.BLACK)
         }
-        val scene = cz.uhk.macroflow.pokemon.encounter.PixelEncounterView(ctx, factory = intro.make,
-            revealAt = intro.revealAt, end = intro.end, skipTo = intro.skipTo).apply {
+        // Intro je přiblížený výřez skutečné mapy lokace (1 px scény = 1 px mapy)
+        val bmp = android.graphics.BitmapFactory.decodeResource(resources,
+            resources.getIdentifier(intro.map, "drawable", ctx.packageName), android.graphics.BitmapFactory.Options().apply { inScaled = false })
+        val px = IntArray(bmp.width * bmp.height).also { bmp.getPixels(it, 0, bmp.width, 0, 0, bmp.width, bmp.height) }
+        val map = cz.uhk.macroflow.pokemon.encounter.Img(bmp.width, bmp.height, px)
+        val scene = cz.uhk.macroflow.pokemon.encounter.PixelEncounterView(ctx, factory = { w, h -> intro.make(map, w, h) },
+            revealAt = intro.revealAt, end = intro.end, skipTo = intro.skipTo, targetWidth = intro.targetWidth).apply {
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         }
         overlay.addView(scene)

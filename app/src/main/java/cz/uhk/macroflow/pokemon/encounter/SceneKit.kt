@@ -174,11 +174,13 @@ abstract class KitScene(val w: Int, val h: Int, seed: Int) : PixelScene {
     }
 }
 
-/** Intro jedné lokace: továrna scény a barva záblesku (ARGB). */
-class LocationIntro(val flash: Int, val make: (Int, Int) -> PixelScene) {
+/** Intro jedné lokace: mapa (drawable bez přípony), barva záblesku (ARGB) a scéna nad výřezem mapy. */
+class LocationIntro(val map: String, val flash: Int, val make: (Img, Int, Int) -> PixelScene) {
     val revealAt get() = Kit.REVEAL
     val end get() = Kit.END
     val skipTo get() = Kit.SKIP
+    /** Šířka scény v pixelech mapy (1 pixel mapy = 1 pixel scény). */
+    val targetWidth get() = 72
 }
 
 object LocationIntros {
@@ -186,22 +188,22 @@ object LocationIntros {
 
     /** Podle názvu BiomeType (balíček zůstává bez Androidu); null = lokace má vlastní starší intro. */
     fun forBiome(name: String): LocationIntro? = when (name) {
-        "SKY_PASS" -> LocationIntro(argb(236, 244, 255)) { w, h -> SkyPassScene(w, h) }
-        "HIDDEN_GROVE" -> LocationIntro(argb(210, 255, 236)) { w, h -> HiddenGroveScene(w, h) }
-        "MINES" -> LocationIntro(argb(255, 200, 130)) { w, h -> MinesScene(w, h) }
-        "ASH_PLAIN" -> LocationIntro(argb(236, 228, 220)) { w, h -> AshPlainScene(w, h) }
-        "QUIET_ORCHARD" -> LocationIntro(argb(220, 230, 255)) { w, h -> QuietOrchardScene(w, h) }
-        "ECHO_CANYON" -> LocationIntro(argb(255, 232, 196)) { w, h -> EchoCanyonScene(w, h) }
-        "TOWER_PLAIN" -> LocationIntro(argb(255, 250, 220)) { w, h -> TowerPlainScene(w, h) }
-        "TOWER_FOREST" -> LocationIntro(argb(220, 255, 200)) { w, h -> TowerForestScene(w, h) }
-        "TOWER_ROCK" -> LocationIntro(argb(240, 220, 190)) { w, h -> TowerRockScene(w, h) }
-        "TOWER_CAVE" -> LocationIntro(argb(236, 210, 255)) { w, h -> TowerCaveScene(w, h) }
-        "TOWER_WATER" -> LocationIntro(argb(200, 240, 255)) { w, h -> TowerWaterScene(w, h) }
-        "TOWER_DORM" -> LocationIntro(argb(226, 220, 255)) { w, h -> TowerDormScene(w, h) }
-        "TOWER_ICE" -> LocationIntro(argb(232, 248, 255)) { w, h -> TowerIceScene(w, h) }
-        "TOWER_FIRE" -> LocationIntro(argb(255, 214, 140)) { w, h -> TowerFireScene(w, h) }
-        "TOWER_FAIRY" -> LocationIntro(argb(255, 226, 246)) { w, h -> TowerFairyScene(w, h) }
-        "TOWER_POISON" -> LocationIntro(argb(210, 255, 170)) { w, h -> TowerPoisonScene(w, h) }
+        "SKY_PASS" -> LocationIntro("sky_pass", argb(236, 244, 255)) { m, w, h -> SkyPassIntro(m, w, h) }
+        "HIDDEN_GROVE" -> LocationIntro("hidden_grove", argb(210, 255, 240)) { m, w, h -> GroveIntro(m, w, h) }
+        "MINES" -> LocationIntro("mines", argb(255, 200, 120)) { m, w, h -> MinesIntro(m, w, h) }
+        "ASH_PLAIN" -> LocationIntro("ash_plain", argb(255, 240, 200)) { m, w, h -> AshIntro(m, w, h) }
+        "QUIET_ORCHARD" -> LocationIntro("quiet_orchard_night", argb(220, 230, 255)) { m, w, h -> OrchardIntro(m, w, h) }
+        "ECHO_CANYON" -> LocationIntro("echo_canyon", argb(255, 230, 190)) { m, w, h -> CanyonIntro(m, w, h) }
+        "TOWER_PLAIN" -> LocationIntro("tower_plain", argb(255, 250, 220)) { m, w, h -> PlainIntro(m, w, h) }
+        "TOWER_FOREST" -> LocationIntro("tower_forest", argb(220, 255, 200)) { m, w, h -> ForestIntro2(m, w, h) }
+        "TOWER_ROCK" -> LocationIntro("tower_rock", argb(245, 225, 190)) { m, w, h -> RockIntro(m, w, h) }
+        "TOWER_CAVE" -> LocationIntro("tower_cave", argb(236, 214, 255)) { m, w, h -> CaveIntro2(m, w, h) }
+        "TOWER_WATER" -> LocationIntro("tower_water", argb(200, 240, 255)) { m, w, h -> WaterIntro2(m, w, h) }
+        "TOWER_DORM" -> LocationIntro("tower_dorm", argb(226, 222, 255)) { m, w, h -> DormIntro(m, w, h) }
+        "TOWER_ICE" -> LocationIntro("tower_ice", argb(235, 250, 255)) { m, w, h -> IceIntro(m, w, h) }
+        "TOWER_FIRE" -> LocationIntro("tower_fire", argb(255, 214, 140)) { m, w, h -> FireIntro(m, w, h) }
+        "TOWER_FAIRY" -> LocationIntro("tower_fairy", argb(255, 228, 248)) { m, w, h -> FairyIntro(m, w, h) }
+        "TOWER_POISON" -> LocationIntro("tower_poison", argb(214, 255, 170)) { m, w, h -> PoisonIntro(m, w, h) }
         else -> null
     }
 }
