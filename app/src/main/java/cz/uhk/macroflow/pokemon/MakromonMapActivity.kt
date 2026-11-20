@@ -1724,14 +1724,15 @@ class MakromonMapActivity : AppCompatActivity() {
             if (isFinishing) return@postDelayed
             val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
             val (idx, done) = ozvenaStage() ?: (0 to false)
-            val floors = towerFloors.filter { (f, _, _) -> free || cz.uhk.macroflow.pokemon.story.TowerStory.approved(f, idx, done) }
-                .map { (_, label, target) ->
+            val open = towerFloors.filter { (f, _, _) -> free || cz.uhk.macroflow.pokemon.story.TowerStory.approved(f, idx, done) }
+            val floors = open.map { (_, label, target) ->
                     val (biome, node) = target
                     val go: (() -> Unit)? = if (currentBiome == biome) null else ({ walkInto(biome, node, MapTransition.FADE) })
                     label to go
                 }
             val at = towerFloors.firstOrNull { it.third.first == currentBiome }?.first ?: 0
-            cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this), floors, at)
+            cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this), floors, at,
+                numbers = open.map { it.first })
         }, 150)
     }
 

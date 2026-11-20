@@ -71,16 +71,31 @@ object TowerUi {
     }
 
     /** Výtah Věže: [floors] = odemčená patra (popisek → přesun; null = tady stojíme), [at] = patro, kde právě stojí. */
-    fun showElevator(root: FrameLayout, insight: Int, floors: List<Pair<String, (() -> Unit)?>> = emptyList(), at: Int = 0) {
+    /** [numbers] = čísla pater k [floors] (stejné pořadí) – podle nich se kreslí plánek věže vedle tlačítek. */
+    fun showElevator(root: FrameLayout, insight: Int, floors: List<Pair<String, (() -> Unit)?>> = emptyList(), at: Int = 0,
+                     numbers: List<Int> = emptyList()) {
         val here = listOf("nule", "jedničce", "dvojce", "trojce", "čtyřce", "pětce", "šestce", "sedmičce", "osmičce", "devítce", "desítce", "jedenáctce", "dvanáctce").getOrElse(at) { if (at == -1) "minus jedničce – tam, kde žádné tlačítko není" else if (at < 0) "minus dvojce, hluboko pod stupnicí" else "konci stupnice – a ještě kousek za ním" }
         val sub = if (floors.isEmpty()) "Ručička ukazatele stojí na $here." else "Ručička stojí na $here. Kam to bude?"
         WorkshopMenus.show(root, "Výtah", sub) { ui, body, close ->
             body.addView(ui.text(Calibration.elevatorText(insight, panel = floors.isEmpty()), 15f).apply { typeface = android.graphics.Typeface.MONOSPACE })
-            for ((label, go) in floors) body.addView(
-                if (go == null) ui.button("▶ $label · jste zde") {}.apply { isEnabled = false; alpha = 0.6f }
-                else ui.button(label) {
-                    close(); cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(root.context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.ELEVATOR); go()
-                })
+            fun ride(go: () -> Unit) { close(); cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(root.context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.ELEVATOR); go() }
+            val buttons = ui.column()
+            // shora dolů jako na plánku: 13 … 1, vestibul, −1, −2
+            val ordered = if (numbers.size == floors.size) floors.zip(numbers).sortedByDescending { it.second } else floors.map { it to 0 }
+            for ((pair, _) in ordered) {
+                val (label, go) = pair
+                buttons.addView(
+                    if (go == null) ui.button("▶ $label · jste zde") {}.apply { isEnabled = false; alpha = 0.6f; textSize = 15f }
+                    else ui.button(label) { ride(go) }.apply { textSize = 15f },
+                    ui.lp(-1, -2).apply { bottomMargin = ui.px(4f) })
+            }
+            if (numbers.size == floors.size) {
+                val actions = numbers.zip(floors.map { it.second }).toMap()
+                val row = ui.row().apply { gravity = android.view.Gravity.TOP }
+                row.addView(TowerLiftView(root.context, numbers.toSet(), at) { f -> actions[f]?.let { ride(it) } })
+                row.addView(buttons, ui.lp(0, -2, 1f).apply { marginStart = ui.px(10f) })
+                body.addView(row)
+            } else body.addView(buttons)
         }
     }
 
