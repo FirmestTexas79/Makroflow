@@ -53,7 +53,7 @@ object Calibration {
     const val STAMPED = "Sept poprvé zvedne hlavu. V brýlích se odráží jen světlo.\n\n" +
         "Razítko dopadne na spis tak tvrdě, že se otřese celý pult: KALIBROVÁN.\n\n" +
         "„Subjekt kalibrován. Archiv je… zatím neschválen. Ale už brzy.“"
-    const val SEPT_DONE = "„Subjekt kalibrován. Archiv je zatím neschválen. Ale už brzy.“ Pero se ani na okamžik nezastaví."
+    const val SEPT_DONE = "„Subjekt kalibrován. Měření dokončeno. Další sestup zatím neschválen. Ale už brzy.“ Pero se ani na okamžik nezastaví."
     const val SEPT_BEFORE = "„Subjekt bez pozvánky. Žádost zatím neschválena.“"
 
     /** Ukazatel výtahu: 7 pater nahoru zamčených, nula je vestibul, dvě skrytá dolů jen s Vhledem. */

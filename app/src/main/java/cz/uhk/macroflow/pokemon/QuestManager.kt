@@ -226,6 +226,15 @@ class QuestManager(
                         .mapNotNull { runCatching { java.time.LocalDate.parse(it.date) }.getOrNull() }.toSet()
                     cz.uhk.macroflow.pokemon.story.Calibration.streak(logged, start, java.time.LocalDate.now()).days
                 }
+                RequirementType.SLEEP_NIGHTS -> {
+                    val since = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(progress.stageStartedAt))
+                    val minSec = (stage.targetId?.toIntOrNull() ?: 3) * 3600
+                    db.wearableDao().getDaysSync(since, today()).count { (it.sleepSec ?: 0) >= minSec }
+                }
+                RequirementType.TRAINING_DAYS -> {
+                    val start = java.time.Instant.ofEpochMilli(progress.stageStartedAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                    cz.uhk.macroflow.pokemon.story.MastersStore.trainingDays(db, start, java.time.LocalDate.now())
+                }
                 RequirementType.BREAKFAST_DAYS -> {
                     val since = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(progress.stageStartedAt))
                     cz.uhk.macroflow.pokemon.story.Ozvena.breakfastDays(

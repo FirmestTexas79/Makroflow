@@ -38,13 +38,14 @@ object TowerUi {
             MastersStore.trainingsLast7(ctx), streak, calibrated)
     }
 
-    fun showSept(root: FrameLayout, owner: LifecycleOwner, hasInvite: Boolean, calibrated: Boolean, stageStartMs: Long?) {
+    fun showSept(root: FrameLayout, owner: LifecycleOwner, hasInvite: Boolean, calibrated: Boolean, stageStartMs: Long?, towerHint: String? = null) {
         val ctx = root.context.applicationContext
         owner.lifecycleScope.launch {
             val st = withContext(Dispatchers.IO) { runCatching { stats(ctx, stageStartMs, calibrated) }.getOrNull() }
             val insight = withContext(Dispatchers.IO) { runCatching { StoryFlags.insight(ctx) }.getOrDefault(0) }
             val line = when {
                 !hasInvite -> Calibration.SEPT_BEFORE
+                calibrated && towerHint != null -> "„Subjekt kalibrován. Měření pokračuje.“ Pero se ani na okamžik nezastaví.\n\n$towerHint"
                 calibrated -> Calibration.SEPT_DONE
                 st?.streak != null -> Calibration.septProgress(st.streak)
                 else -> Calibration.SEPT_START
@@ -71,7 +72,7 @@ object TowerUi {
 
     /** Výtah Věže: [floors] = odemčená patra (popisek → přesun; null = tady stojíme), [at] = patro, kde právě stojí. */
     fun showElevator(root: FrameLayout, insight: Int, floors: List<Pair<String, (() -> Unit)?>> = emptyList(), at: Int = 0) {
-        val here = listOf("nule", "jedničce", "dvojce", "trojce", "čtyřce", "pětce", "šestce", "sedmičce", "osmičce", "devítce", "desítce", "jedenáctce", "dvanáctce").getOrElse(at) { "konci stupnice – a ještě kousek za ním" }
+        val here = listOf("nule", "jedničce", "dvojce", "trojce", "čtyřce", "pětce", "šestce", "sedmičce", "osmičce", "devítce", "desítce", "jedenáctce", "dvanáctce").getOrElse(at) { if (at == -1) "minus jedničce – tam, kde žádné tlačítko není" else if (at < 0) "minus dvojce, hluboko pod stupnicí" else "konci stupnice – a ještě kousek za ním" }
         val sub = if (floors.isEmpty()) "Ručička ukazatele stojí na $here." else "Ručička stojí na $here. Kam to bude?"
         WorkshopMenus.show(root, "Výtah", sub) { ui, body, close ->
             body.addView(ui.text(Calibration.elevatorText(insight, panel = floors.isEmpty()), 15f).apply { typeface = android.graphics.Typeface.MONOSPACE })
@@ -90,10 +91,10 @@ object TowerUi {
             .count { (it.sleepSec ?: 0) >= 3 * 3600 }
 
     /** Spis 212 na čtecím pultu v Archivu okruhů: stránky se odkrývají zapsanými nocemi spánku (3 za 7 dní). */
-    fun showFile212(root: FrameLayout, owner: LifecycleOwner) {
+    fun showFile212(root: FrameLayout, owner: LifecycleOwner, read: Boolean = false) {
         val ctx = root.context
         owner.lifecycleScope.launch {
-            val n = withContext(Dispatchers.IO) { runCatching { nightsLast7(ctx) }.getOrDefault(0) }
+            val n = if (read) PAGES.size else withContext(Dispatchers.IO) { runCatching { nightsLast7(ctx) }.getOrDefault(0) }
             WorkshopMenus.show(root, "Spis 212", "Okruh 212 · kartograf · jen pro služební potřebu") { ui, body, _ ->
                 body.addView(ui.text(file212Text(n), 13f, 0xFF1E1A16.toInt()).apply {
                     typeface = android.graphics.Typeface.MONOSPACE

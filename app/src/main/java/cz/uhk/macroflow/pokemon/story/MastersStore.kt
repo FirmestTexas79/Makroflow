@@ -11,13 +11,17 @@ import java.time.LocalDate
 /** Data pro Pět Mistrů (docs/adr/0102). Čte DB – volat mimo hlavní vlákno. */
 object MastersStore {
     /** Dny s tréninkem za posledních 7 dní včetně dneška (stejné pravidlo jako týdenní report). */
-    fun trainingsLast7(ctx: Context, today: LocalDate = LocalDate.now()): Int {
-        val db = AppDatabase.getDatabase(ctx)
-        val days = (0..6).map { today.minusDays(it.toLong()).toString() }
-        val from = days.last(); val to = days.first()
-        val setDays = db.workoutDao().getAllSync().map { it.date }.filter { it in from..to }.toSet()
+    fun trainingsLast7(ctx: Context, today: LocalDate = LocalDate.now()): Int =
+        trainingDays(AppDatabase.getDatabase(ctx), today.minusDays(6), today)
+
+    /** Dny s tréninkem v rozmezí [from]..[to] včetně (deník posilovny, „Jdu na trénink“, kardio, hodinky). */
+    fun trainingDays(db: AppDatabase, from: LocalDate, to: LocalDate): Int {
+        if (to.isBefore(from)) return 0
+        val days = generateSequence(to) { it.minusDays(1) }.takeWhile { !it.isBefore(from) }.map { it.toString() }.toList()
+        val first = days.last(); val last = days.first()
+        val setDays = db.workoutDao().getAllSync().map { it.date }.filter { it in first..last }.toSet()
         val events = db.gameEventDao()
-        val acts = db.wearableDao().getActivitiesBetweenSync(from, to)
+        val acts = db.wearableDao().getActivitiesBetweenSync(first, last)
         return days.count { d ->
             d in setDays || events.countOnDate(GameEventType.WORKOUT_DONE.name, d) > 0 ||
                 events.countOnDate(GameEventType.CARDIO_DONE.name, d) > 0 ||

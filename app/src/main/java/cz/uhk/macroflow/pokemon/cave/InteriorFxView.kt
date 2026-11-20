@@ -1400,6 +1400,25 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0xC8D4FF
         )
 
+        /** Patro −1, Hunfreyho skrýš: svíčky na betonu a na bedně, kapky z trubek, prach ve světle lucerny. */
+        val HIDEOUT = InteriorFx(
+            candles = listOf(65 to 181, 105 to 177, 55 to 291, 78 to 170, 81 to 172, 83 to 171),
+            drips = listOf(26 to 108, 134 to 146, 150 to 292),
+            glows = listOf(FxGlow(120, 244, 8, 6, 0xFFC070, 2.6f), FxGlow(80, 180, 18, 10, 0xFFB060, 3.4f)),
+            motes = listOf(FxBox(60, 150, 140, 300)),
+            moteColor = 0xFFE0B0
+        )
+
+        /** Patro −2, Sektor Hlubiny: modrá světla na větvích, mlha v hlubině, prach nad propastí. */
+        val ABYSS = InteriorFx(
+            sparkles = listOf(FxBox(10, 230, 166, 345)),
+            fog = listOf(FxBox(0, 250, 176, 290), FxBox(0, 300, 176, 340)),
+            fogColor = 0x3A4A70,
+            motes = listOf(FxBox(0, 100, 176, 340)),
+            moteColor = 0x9AC8FF,
+            glows = listOf(FxGlow(88, 240, 10, 8, 0x8AB8FF, 4.5f))
+        )
+
         /** Duhová zahrada (11.): pixies, třpyt duhy, motýli, pastelové okvětní lístky, světlušky, sklenice, hrnec zlata. */
         val FAIRY = InteriorFx(
             rainbow = FxArc(88, 92, 72),

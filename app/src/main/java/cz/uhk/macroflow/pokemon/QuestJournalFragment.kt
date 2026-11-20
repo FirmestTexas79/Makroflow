@@ -733,6 +733,16 @@ class QuestJournalFragment : Fragment() {
                         else QuestProgression.currentValue(stageToDisplay, progress.metadata)
                     "Cíl: Dny se zápisem jídla v řadě ($value / ${stageToDisplay.targetValue}) · jeden vynechaný den se odpouští"
                 }
+                RequirementType.SLEEP_NIGHTS -> {
+                    val value = if (viewingIndex < currentIndex || isAllDone) stageToDisplay.targetValue
+                        else QuestProgression.currentValue(stageToDisplay, progress.metadata)
+                    "Cíl: Noci se spánkem aspoň ${stageToDisplay.targetId ?: "3"} h ($value / ${stageToDisplay.targetValue})"
+                }
+                RequirementType.TRAINING_DAYS -> {
+                    val value = if (viewingIndex < currentIndex || isAllDone) stageToDisplay.targetValue
+                        else QuestProgression.currentValue(stageToDisplay, progress.metadata)
+                    "Cíl: Dny s tréninkem ($value / ${stageToDisplay.targetValue})"
+                }
                 RequirementType.BREAKFAST_DAYS -> {
                     val value = if (viewingIndex < currentIndex || isAllDone) stageToDisplay.targetValue
                         else QuestProgression.currentValue(stageToDisplay, progress.metadata)

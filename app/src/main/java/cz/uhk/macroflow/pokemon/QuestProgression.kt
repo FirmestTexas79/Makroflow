@@ -44,7 +44,8 @@ object QuestProgression {
         "mural_1" to "západní kámen", "mural_2" to "východní kámen", "mural_3" to "severní kámen u oltáře"
     )
 
-    private val biomeNames = mapOf("MOUNTAINS" to "v horách", "FOREST" to "ve Hvozdu", "MEADOW" to "na louce", "TOWN" to "ve městě")
+    private val biomeNames = mapOf("MOUNTAINS" to "v horách", "FOREST" to "ve Hvozdu", "MEADOW" to "na louce", "TOWN" to "ve městě",
+        "TOWER_FOREST" to "na Zarostlém patře", "TOWER_CAVE" to "v Krystalové jeskyni", "TOWER_FIRE" to "ve Spalovně spisů")
 
     /** Kde se souboj fáze BATTLE_BIOME počítá (pro deník a připomínku). */
     fun biomeLabel(stage: QuestStage): String = biomeNames[stage.targetId] ?: "v této lokaci"
@@ -107,6 +108,8 @@ object QuestProgression {
             RequirementType.WATER_DAYS -> "Cíl vody zatím splněný $v z ${stage.targetValue} dní. Napij se – sad pije s tebou."
             RequirementType.FLAGS_COUNT -> "Hotovo $v z ${stage.targetValue}. Co přesně chybí, najdeš v deníku."
             RequirementType.BREAKFAST_DAYS -> "Snídaně zatím $v z ${stage.targetValue} rán. Zapiš si snídani do 10:30."
+            RequirementType.SLEEP_NIGHTS -> "Noci se spánkem aspoň ${stage.targetId ?: "3"} h: $v z ${stage.targetValue}. Ve spánku rostou svaly – a nezapomíná se."
+            RequirementType.TRAINING_DAYS -> "Dny s tréninkem: $v z ${stage.targetValue}. Počítá se deník posilovny, „Jdu na trénink“ i hodinky."
             RequirementType.MEAL_STREAK -> "Kalibrace: $v z ${stage.targetValue} dnů se zápisem jídla v řadě. Jeden vynechaný den se odpouští."
             RequirementType.HAVE_ITEM -> "Ještě ho nemáš. Až ho budeš mít, stav se."
             RequirementType.AFK_MINUTES -> "Nejméně máš zatím odpracováno ${clock(v)} z ${clock(stage.targetValue)}. " +

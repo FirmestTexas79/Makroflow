@@ -36,7 +36,11 @@ enum class RequirementType {
     /** Splněný denní cíl vody v targetValue různých dnech od začátku fáze; metadata = počet dnů (docs/adr/0097). */
     WATER_DAYS,
     /** Dny se zápisem jídla v řadě od začátku fáze, jeden vynechaný den odpuštěn (Kalibrace, docs/adr/0103). */
-    MEAL_STREAK
+    MEAL_STREAK,
+    /** Noci se spánkem aspoň targetId hodin (výchozí 3) od začátku fáze; metadata = počet nocí (docs/adr/0104). */
+    SLEEP_NIGHTS,
+    /** Dny s tréninkem od začátku fáze (deník, „Jdu na trénink“, hodinky); metadata = počet dnů (docs/adr/0104). */
+    TRAINING_DAYS
 }
 
 data class QuestStage(
@@ -525,11 +529,40 @@ object QuestRegistry {
         )
     )
 
+    // ── Kapitola V pokračuje Věží Řádu Váhy: patra 1–13, −1 a −2 (docs/adr/0104) ──
+    private val TOWER_STAGES: List<QuestStage> get() {
+        val T = cz.uhk.macroflow.pokemon.story.TowerStory
+        val sept = R.drawable.npc_sept
+        fun st(title: String, text: String, type: RequirementType, value: Int, id: String? = null, hint: String, res: Int = sept,
+               name: String = T.SEPT) = QuestStage(title = title, text = text, speakerResId = res, speakerName = name,
+            requirementType = type, targetValue = value, targetId = id, hint = hint)
+        return listOf(
+            st("Spis 212", T.T_SPIS, RequirementType.SLEEP_NIGHTS, 3, "3", T.H_SPIS),
+            st("Co váží Měřírna", T.T_MEASURE, RequirementType.STORY_FLAG, 1, T.MEASURE_KEY, T.H_MEASURE, R.drawable.npc_hunfrey, T.HUNFREY_NOTE),
+            st("Kalibrační louka", T.T_PLAIN, RequirementType.WALK_STEPS, 8000, hint = T.H_PLAIN),
+            st("Kontrolní výsadba", T.T_FOREST, RequirementType.BATTLE_BIOME, 3, "TOWER_FOREST", T.H_FOREST),
+            st("Zátěž", T.T_ROCK, RequirementType.TRAINING_DAYS, 2, hint = T.H_ROCK),
+            st("Objekt 019", T.T_CAVE, RequirementType.BATTLE_BIOME, 3, "TOWER_CAVE", T.H_CAVE),
+            st("Hladina stoupá", T.T_WATER, RequirementType.WATER_DAYS, 3, hint = T.H_WATER),
+            st("Postel 213", T.T_DORM, RequirementType.SLEEP_NIGHTS, 3, "6", T.H_DORM),
+            st("Komora v údržbě", T.T_ICE, RequirementType.STORY_FLAG, 1, T.ICE_KEY, T.H_ICE),
+            st("Prosévání popela", T.T_FIRE, RequirementType.BATTLE_BIOME, 3, "TOWER_FIRE", T.H_FIRE),
+            st("Přání se evidují", T.T_FAIRY, RequirementType.STORY_FLAG, 1, T.FAIRY_KEY, T.H_FAIRY),
+            st("Chléb, který voní zapomněním", T.T_POISON, RequirementType.BREAKFAST_DAYS, 2, hint = T.H_POISON),
+            st("Registr nádob", T.T_OFFICE, RequirementType.STORY_FLAG, 1, T.OFFICE_KEY, T.H_OFFICE),
+            st("Hunfreyho mapa", T.T_MAP, RequirementType.FLAGS_COUNT, T.FRAGMENTS.size, T.FRAGMENT_KEYS.joinToString(","), T.H_MAP,
+                R.drawable.npc_hunfrey, T.HUNFREY_NOTE),
+            st("Patro, které neexistuje", T.T_HIDEOUT, RequirementType.STORY_FLAG, 1, T.HIDEOUT_KEY, T.H_HIDEOUT,
+                R.drawable.npc_hunfrey, T.HUNFREY_NOTE),
+            st("Subjekt připraven", T.T_READY, RequirementType.HIT_TARGET, 100, "kcal", T.H_READY)
+        )
+    }
+
     // ── Kapitola V · OZVĚNA (bible příběhu, docs/adr/0095) ──
     val OZVENA_QUEST = QuestDefinition(
         id = cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID,
         chapter = "V · OZVĚNA",
-        farewell = cz.uhk.macroflow.pokemon.story.Calibration.STAMPED,
+        farewell = cz.uhk.macroflow.pokemon.story.TowerStory.FAREWELL,
         farewellSpeakerResId = R.drawable.npc_sept,
         farewellSpeakerName = cz.uhk.macroflow.pokemon.cave.TowerLobby.SEPT_NAME,
         stages = listOf(
@@ -575,7 +608,7 @@ object QuestRegistry {
                 requirementType = RequirementType.MEAL_STREAK, targetValue = cz.uhk.macroflow.pokemon.story.Calibration.DAYS,
                 hint = cz.uhk.macroflow.pokemon.story.Calibration.SEPT_HINT
             )
-        )
+        ) + TOWER_STAGES
     )
 
     // ── Ztichlý sad: Zahradník, který sázel jména (docs/adr/0096) ──

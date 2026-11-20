@@ -33,7 +33,8 @@ class OzvenaQuestTest {
         assertTrue(StoryProgress.isStoryKey(Ozvena.BOOK_KEY))
         assertTrue(q.stages[Ozvena.NAME_STAGE + 1].text.contains("Pamětní kniha"))   // kniha na začátku fáze Pět Mistrů (docs/adr/0102)
         assertTrue(q.stages.any { it.text.contains("Pozvánku Řádu Váhy") })
-        assertTrue(q.farewell.contains("KALIBROVÁN"))   // kapitola zatím končí razítkem Septa (docs/adr/0103)
+        assertTrue(q.stages[cz.uhk.macroflow.pokemon.story.TowerStory.SPIS_212].text.contains("KALIBROVÁN"))   // razítko Septa otevírá Věž (docs/adr/0104)
+        assertTrue(q.farewell.contains("Spící"))   // kapitola končí nad obrácenou korunou Lumiry
         assertTrue(QuestProgression.reminder(q.stages[0], "1").isNotBlank())
     }
 }
