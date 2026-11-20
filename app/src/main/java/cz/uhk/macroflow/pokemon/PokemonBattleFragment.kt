@@ -150,11 +150,12 @@ class PokemonBattleFragment : Fragment() {
             BiomeType.valueOf(gamePrefs.getString("LAST_BIOME", BiomeType.TOWN.name) ?: BiomeType.TOWN.name)
         }.getOrDefault(BiomeType.TOWN)
         val introOverlay = if (trainer != null) buildTrainerIntro(ctx, dp, battleContent, trainer) else when (biome) {
-            BiomeType.MOUNTAINS, BiomeType.ASH_PLAIN, BiomeType.ECHO_CANYON -> buildMountainIntro(ctx, dp, battleContent)
-            BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE, BiomeType.MINES -> buildCaveIntro(ctx, dp, battleContent)
+            BiomeType.MOUNTAINS -> buildMountainIntro(ctx, dp, battleContent)
+            BiomeType.CAVE_OPEN, BiomeType.CAVE_MAZE -> buildCaveIntro(ctx, dp, battleContent)
             BiomeType.WATER, BiomeType.LAKE -> buildWaterIntro(ctx, dp, battleContent)
-            BiomeType.FOREST, BiomeType.QUIET_ORCHARD -> buildForestIntro(ctx, dp, battleContent)
-            else -> buildIntroOverlay(ctx, dp, battleContent, biome)
+            BiomeType.FOREST -> buildForestIntro(ctx, dp, battleContent)
+            else -> cz.uhk.macroflow.pokemon.encounter.LocationIntros.forBiome(biome.name)?.let { buildKitIntro(ctx, dp, battleContent, it) }
+                ?: buildIntroOverlay(ctx, dp, battleContent, biome)
         }
         root.addView(introOverlay)
 
@@ -432,6 +433,29 @@ class PokemonBattleFragment : Fragment() {
             // teplý záblesk světla mezi stromy
             revealBattle(ctx, overlay, battleContent, overlay.width.toFloat(), overlay.height.toFloat(), dp,
                 baseFlash = Color.argb(235, 236, 250, 200))
+        }
+        overlay.setOnClickListener { if (!introDone) scene.skip() }
+        introHandler.postDelayed({ scene.start() }, 120)
+        return overlay
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // OSTATNÍ LOKACE: vlastní pixelové intro z encounter/LocationIntros (patra Věže, průsmyk, doly …)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun buildKitIntro(ctx: Context, dp: Float, battleContent: View, intro: cz.uhk.macroflow.pokemon.encounter.LocationIntro): FrameLayout {
+        val overlay = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(Color.BLACK)
+        }
+        val scene = cz.uhk.macroflow.pokemon.encounter.PixelEncounterView(ctx, factory = intro.make,
+            revealAt = intro.revealAt, end = intro.end, skipTo = intro.skipTo).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+        overlay.addView(scene)
+        scene.onReveal = {
+            introDone = true
+            revealBattle(ctx, overlay, battleContent, overlay.width.toFloat(), overlay.height.toFloat(), dp, baseFlash = intro.flash)
         }
         overlay.setOnClickListener { if (!introDone) scene.skip() }
         introHandler.postDelayed({ scene.start() }, 120)
