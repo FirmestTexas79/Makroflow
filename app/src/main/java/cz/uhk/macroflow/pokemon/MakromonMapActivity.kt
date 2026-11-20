@@ -955,7 +955,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 in cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerFire.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerFire.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerOffice.textFor(nodeName, StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY))!!)
+                in cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerOffice.textFor(nodeName, StoryFlags.isSet(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY))!!)
                 in cz.uhk.macroflow.pokemon.cave.TowerFairy.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerFairy.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerPoison.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerPoison.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerWater.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerWater.TEXTS.getValue(nodeName))
@@ -1268,7 +1268,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
             if (def != null) {
                 val night = def.nightRes != null && cz.uhk.macroflow.pokemon.cave.QuietOrchard.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))
-                val burned = newBiome == BiomeType.TOWER_OFFICE && StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY)
+                val burned = newBiome == BiomeType.TOWER_OFFICE && StoryFlags.isSet(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY)
                 mapBackground.setImageResource(if (night) def.nightRes!! else if (burned) R.drawable.tower_office_burned else def.backgroundRes)
                 layoutWorld(def.cave)
                 movementEngine.updateBiome(def.graph, startPos, walkGridFor(newBiome))
@@ -1478,7 +1478,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.TOWER_DORM -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.DORM)
                 currentBiome == BiomeType.TOWER_ICE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ICE)
                 currentBiome == BiomeType.TOWER_FIRE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.FIRE)
-                currentBiome == BiomeType.TOWER_OFFICE -> if (worldScale > 0) addInteriorFx(if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY)) cz.uhk.macroflow.pokemon.cave.InteriorFxView.OFFICE_BURNED else cz.uhk.macroflow.pokemon.cave.InteriorFxView.OFFICE)
+                currentBiome == BiomeType.TOWER_OFFICE -> if (worldScale > 0) addInteriorFx(if (StoryFlags.isSet(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY)) cz.uhk.macroflow.pokemon.cave.InteriorFxView.OFFICE_BURNED else cz.uhk.macroflow.pokemon.cave.InteriorFxView.OFFICE)
                 currentBiome == BiomeType.TOWER_FAIRY -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.FAIRY)
                 currentBiome == BiomeType.TOWER_POISON -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.POISON)
                 currentBiome == BiomeType.TOWER_HIDEOUT -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.HIDEOUT)
@@ -1756,7 +1756,7 @@ class MakromonMapActivity : AppCompatActivity() {
         }, 150)
     }
 
-    private fun towerFloorText(node: String): String? = cz.uhk.macroflow.pokemon.cave.TowerOffice.textFor(node, StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY))?.takeIf { node in cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS } ?: listOf(
+    private fun towerFloorText(node: String): String? = cz.uhk.macroflow.pokemon.cave.TowerOffice.textFor(node, StoryFlags.isSet(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY))?.takeIf { node in cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS } ?: listOf(
         cz.uhk.macroflow.pokemon.cave.TowerMeasure.TEXTS, cz.uhk.macroflow.pokemon.cave.TowerForest.TEXTS, cz.uhk.macroflow.pokemon.cave.TowerCave.TEXTS, cz.uhk.macroflow.pokemon.cave.TowerWater.TEXTS, cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS,
         cz.uhk.macroflow.pokemon.cave.TowerFairy.TEXTS, cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS, cz.uhk.macroflow.pokemon.cave.TowerHideout.TEXTS
     ).firstNotNullOfOrNull { it[node] }
