@@ -57,14 +57,15 @@ object Calibration {
     const val SEPT_BEFORE = "„Subjekt bez pozvánky. Žádost zatím neschválena.“"
 
     /** Ukazatel výtahu: 7 pater nahoru zamčených, nula je vestibul, dvě skrytá dolů jen s Vhledem. */
-    fun elevatorText(insight: Int): String = buildString {
-        for (f in 7 downTo 1) append("  $f   ─  zatím neschváleno\n")
-        append("▶ 0   ●  vestibul (jste zde)\n")
-        if (insight >= 3) {
-            append("  ▒   ─  tlačítko chybí\n")
-            append("  ▒   ─  tlačítko chybí\n")
-            append("\nPod nulou jsou na panelu dva zaslepené otvory. Někdo je zalepil zevnitř.")
-        } else append("\nPod nulou je panel hladký.")
+    /** [panel] = vypsat i stupnici (před kalibrací); s odemčenými patry ji nahradí tlačítka. */
+    fun elevatorText(insight: Int, panel: Boolean = true): String = buildString {
+        if (panel) {
+            for (f in 7 downTo 1) append("  $f   ─  zatím neschváleno\n")
+            append("▶ 0   ●  vestibul (jste zde)\n")
+            if (insight >= 3) append("  ▒   ─  tlačítko chybí\n  ▒   ─  tlačítko chybí\n")
+            append('\n')
+        }
+        append(if (insight >= 3) "Pod nulou jsou na panelu dva zaslepené otvory. Někdo je zalepil zevnitř." else "Pod nulou je panel hladký.")
     }
 
     private fun dots(label: String, value: String, w: Int = 30): String =

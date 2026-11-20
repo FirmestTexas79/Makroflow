@@ -72,6 +72,21 @@ class MakromonMapActivity : AppCompatActivity() {
     private lateinit var companionManager: CompanionManager
     private lateinit var stepProgressBar:  StepProgressBar
     private lateinit var staminaBar: cz.uhk.macroflow.pokemon.stamina.StaminaBar
+    private val hudViews by lazy {
+        listOf(R.id.btnExitMap, R.id.btnSound, R.id.btnArena, R.id.btnStartTutorial, R.id.btnOpenJournal,
+            R.id.staminaBar, R.id.restPill, R.id.companionBox).mapNotNull { findViewById<View>(it) }
+    }
+    private var hudFocus: View? = null
+
+    private fun hudMenuOpen() = supportFragmentManager.backStackEntryCount > 0 ||
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.isOpen(findViewById(R.id.mapRootContainer))
+
+    /** HUD průsvitný; ťuknutý prvek svítí naplno, dokud je otevřené jeho menu, pak zase pomalu vybledne. */
+    private fun syncHud() {
+        val open = hudMenuOpen()
+        if (!open) hudFocus = null
+        hudViews.forEach { it.animate().alpha(if (open && it == hudFocus) 1f else HUD_ALPHA).setDuration(450).start() }
+    }
     lateinit var questManager:             QuestManager
     private lateinit var gudwinNPC:        ImageView
     private lateinit var starterBush:      ImageView
@@ -118,6 +133,8 @@ class MakromonMapActivity : AppCompatActivity() {
         MINE_DESCENT }
 
     companion object {
+        /** Průhlednost HUD na mapě – scéna musí být vidět (rozsvítí se jen prvek s otevřeným menu). */
+        const val HUD_ALPHA = 0.3f
         /** Vstup s pixelovým přechodem (docs/adr/0070). */
         const val EXTRA_PORTAL = "portal"
         private const val DOUBLE_CLICK_TIME = 300L
@@ -318,6 +335,11 @@ class MakromonMapActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btnStartTutorial).setOnClickListener { questDialogManager.startTutorial() }
         findViewById<View>(R.id.btnExitMap).setOnClickListener { finish() }
+        hudViews.forEach { it.alpha = HUD_ALPHA }
+        findViewById<android.view.ViewGroup>(R.id.mapRootContainer).setOnHierarchyChangeListener(object : android.view.ViewGroup.OnHierarchyChangeListener {
+            override fun onChildViewAdded(parent: View?, child: View?) { syncHud() }
+            override fun onChildViewRemoved(parent: View?, child: View?) { syncHud() }
+        })
         // HUD: všechna tlačítka v dřevěném rámečku jako menu Makrosvěta (docs/adr/0080)
         listOf(R.id.btnExitMap, R.id.btnSound, R.id.btnArena, R.id.btnStartTutorial, R.id.btnOpenJournal).forEach {
             findViewById<View>(it).background = cz.uhk.macroflow.pokemon.skills.ui.WoodPanelDrawable(1.5f * resources.displayMetrics.density, parchment = false)
@@ -359,6 +381,7 @@ class MakromonMapActivity : AppCompatActivity() {
             if (restored > 0 && !isFinishing) refreshStoryDecor()
         }
         supportFragmentManager.addOnBackStackChangedListener {
+            syncHud()
             refreshStepBar()            // nad deníkem / soubojem ukazatel kroků nemá co dělat (a bral dotyky)
             if (supportFragmentManager.backStackEntryCount == 0) {
                 companionManager.refresh()
@@ -714,8 +737,16 @@ class MakromonMapActivity : AppCompatActivity() {
             MotionEvent.ACTION_DOWN -> {
                 touchDownX = event.rawX; touchDownY = event.rawY
                 touchDownOnUi = isOverUi(event.rawX, event.rawY)
+                if (!hudMenuOpen()) {
+                    val r = android.graphics.Rect()
+                    hudViews.firstOrNull { it.isShown && it.getGlobalVisibleRect(r) && r.contains(event.rawX.toInt(), event.rawY.toInt()) }
+                        ?.let { hudFocus = it; it.animate().alpha(1f).setDuration(200).start() }
+                }
             }
-            MotionEvent.ACTION_UP -> if (!touchDownOnUi && handleMapTap(event)) return true
+            MotionEvent.ACTION_UP -> {
+                if (hudFocus != null) mapWorld.postDelayed({ if (!isFinishing) syncHud() }, 700)   // nic se neotevřelo → zpět do průsvitu
+                if (!touchDownOnUi && handleMapTap(event)) return true
+            }
         }
         return super.dispatchTouchEvent(event)
     }
@@ -1660,22 +1691,23 @@ class MakromonMapActivity : AppCompatActivity() {
             val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
             val calibrated = free || (questManager.getActiveQuestId() == cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID &&
                 questManager.getCurrentProgress()?.isCompleted == true)
-            val floors = buildList<Pair<String, () -> Unit>> {
-                if (currentBiome != BiomeType.TOWER_LOBBY) add("Přízemí · Vestibul" to { walkInto(BiomeType.TOWER_LOBBY, cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE, MapTransition.FADE) })
-                if (calibrated && currentBiome != BiomeType.TOWER_ARCHIVE) add(cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_UP to { walkInto(BiomeType.TOWER_ARCHIVE, cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, MapTransition.FADE) })
+            fun go(b: BiomeType, f: () -> Unit): (() -> Unit)? = if (currentBiome == b) null else f
+            val floors = buildList<Pair<String, (() -> Unit)?>> {
+                add("Přízemí · Vestibul" to go(BiomeType.TOWER_LOBBY) { walkInto(BiomeType.TOWER_LOBBY, cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE, MapTransition.FADE) })
+                if (calibrated) add(cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_UP to go(BiomeType.TOWER_ARCHIVE) { walkInto(BiomeType.TOWER_ARCHIVE, cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, MapTransition.FADE) })
                 // ponytail: patro 2 zatím jen s debug volným výtahem – příběhové odemčení přijde s další fází
-                if (free && currentBiome != BiomeType.TOWER_MEASURE) add("Patro 2 · Měřírna" to { walkInto(BiomeType.TOWER_MEASURE, cz.uhk.macroflow.pokemon.cave.TowerMeasure.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_PLAIN) add("Patro 3 · Kalibrační louka" to { walkInto(BiomeType.TOWER_PLAIN, cz.uhk.macroflow.pokemon.cave.TowerPlain.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_FOREST) add("Patro 4 · Zarostlé patro" to { walkInto(BiomeType.TOWER_FOREST, cz.uhk.macroflow.pokemon.cave.TowerForest.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_ROCK) add("Patro 5 · Skalní patro" to { walkInto(BiomeType.TOWER_ROCK, cz.uhk.macroflow.pokemon.cave.TowerRock.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_CAVE) add("Patro 6 · Krystalová jeskyně" to { walkInto(BiomeType.TOWER_CAVE, cz.uhk.macroflow.pokemon.cave.TowerCave.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_WATER) add("Patro 7 · Zatopené patro" to { walkInto(BiomeType.TOWER_WATER, cz.uhk.macroflow.pokemon.cave.TowerWater.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_DORM) add("Patro 8 · Dormitoř" to { walkInto(BiomeType.TOWER_DORM, cz.uhk.macroflow.pokemon.cave.TowerDorm.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_ICE) add("Patro 9 · Mrazírna" to { walkInto(BiomeType.TOWER_ICE, cz.uhk.macroflow.pokemon.cave.TowerIce.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_FIRE) add("Patro 10 · Spalovna spisů" to { walkInto(BiomeType.TOWER_FIRE, cz.uhk.macroflow.pokemon.cave.TowerFire.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_FAIRY) add("Patro 11 · Duhová zahrada" to { walkInto(BiomeType.TOWER_FAIRY, cz.uhk.macroflow.pokemon.cave.TowerFairy.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_POISON) add("Patro 12 · Jedová laboratoř" to { walkInto(BiomeType.TOWER_POISON, cz.uhk.macroflow.pokemon.cave.TowerPoison.ELEVATOR_NODE, MapTransition.FADE) })
-                if (free && currentBiome != BiomeType.TOWER_OFFICE) add("Patro 13 · Kancelář Řádu" to { walkInto(BiomeType.TOWER_OFFICE, cz.uhk.macroflow.pokemon.cave.TowerOffice.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 2 · Měřírna" to go(BiomeType.TOWER_MEASURE) { walkInto(BiomeType.TOWER_MEASURE, cz.uhk.macroflow.pokemon.cave.TowerMeasure.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 3 · Kalibrační louka" to go(BiomeType.TOWER_PLAIN) { walkInto(BiomeType.TOWER_PLAIN, cz.uhk.macroflow.pokemon.cave.TowerPlain.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 4 · Zarostlé patro" to go(BiomeType.TOWER_FOREST) { walkInto(BiomeType.TOWER_FOREST, cz.uhk.macroflow.pokemon.cave.TowerForest.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 5 · Skalní patro" to go(BiomeType.TOWER_ROCK) { walkInto(BiomeType.TOWER_ROCK, cz.uhk.macroflow.pokemon.cave.TowerRock.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 6 · Krystalová jeskyně" to go(BiomeType.TOWER_CAVE) { walkInto(BiomeType.TOWER_CAVE, cz.uhk.macroflow.pokemon.cave.TowerCave.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 7 · Zatopené patro" to go(BiomeType.TOWER_WATER) { walkInto(BiomeType.TOWER_WATER, cz.uhk.macroflow.pokemon.cave.TowerWater.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 8 · Dormitoř" to go(BiomeType.TOWER_DORM) { walkInto(BiomeType.TOWER_DORM, cz.uhk.macroflow.pokemon.cave.TowerDorm.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 9 · Mrazírna" to go(BiomeType.TOWER_ICE) { walkInto(BiomeType.TOWER_ICE, cz.uhk.macroflow.pokemon.cave.TowerIce.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 10 · Spalovna spisů" to go(BiomeType.TOWER_FIRE) { walkInto(BiomeType.TOWER_FIRE, cz.uhk.macroflow.pokemon.cave.TowerFire.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 11 · Duhová zahrada" to go(BiomeType.TOWER_FAIRY) { walkInto(BiomeType.TOWER_FAIRY, cz.uhk.macroflow.pokemon.cave.TowerFairy.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 12 · Jedová laboratoř" to go(BiomeType.TOWER_POISON) { walkInto(BiomeType.TOWER_POISON, cz.uhk.macroflow.pokemon.cave.TowerPoison.ELEVATOR_NODE, MapTransition.FADE) })
+                if (free) add("Patro 13 · Kancelář Řádu" to go(BiomeType.TOWER_OFFICE) { walkInto(BiomeType.TOWER_OFFICE, cz.uhk.macroflow.pokemon.cave.TowerOffice.ELEVATOR_NODE, MapTransition.FADE) })
             }
             val at = when (currentBiome) { BiomeType.TOWER_ARCHIVE -> 1; BiomeType.TOWER_MEASURE -> 2; BiomeType.TOWER_PLAIN -> 3; BiomeType.TOWER_FOREST -> 4; BiomeType.TOWER_ROCK -> 5; BiomeType.TOWER_CAVE -> 6; BiomeType.TOWER_WATER -> 7; BiomeType.TOWER_DORM -> 8; BiomeType.TOWER_ICE -> 9; BiomeType.TOWER_FIRE -> 10; BiomeType.TOWER_FAIRY -> 11; BiomeType.TOWER_POISON -> 12; BiomeType.TOWER_OFFICE -> 13; else -> 0 }
             cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this), floors, at)

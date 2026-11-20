@@ -69,15 +69,17 @@ object TowerUi {
         }
     }
 
-    /** Výtah Věže: [floors] = patra, kam smí jet (popisek → přesun), [at] = patro, kde právě stojí. */
-    fun showElevator(root: FrameLayout, insight: Int, floors: List<Pair<String, () -> Unit>> = emptyList(), at: Int = 0) {
+    /** Výtah Věže: [floors] = odemčená patra (popisek → přesun; null = tady stojíme), [at] = patro, kde právě stojí. */
+    fun showElevator(root: FrameLayout, insight: Int, floors: List<Pair<String, (() -> Unit)?>> = emptyList(), at: Int = 0) {
         val here = listOf("nule", "jedničce", "dvojce", "trojce", "čtyřce", "pětce", "šestce", "sedmičce", "osmičce", "devítce", "desítce", "jedenáctce", "dvanáctce").getOrElse(at) { "konci stupnice – a ještě kousek za ním" }
         val sub = if (floors.isEmpty()) "Ručička ukazatele stojí na $here." else "Ručička stojí na $here. Kam to bude?"
         WorkshopMenus.show(root, "Výtah", sub) { ui, body, close ->
-            body.addView(ui.text(Calibration.elevatorText(insight), 15f).apply { typeface = android.graphics.Typeface.MONOSPACE })
-            for ((label, go) in floors) body.addView(ui.button(label) {
-                close(); cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(root.context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.ELEVATOR); go()
-            })
+            body.addView(ui.text(Calibration.elevatorText(insight, panel = floors.isEmpty()), 15f).apply { typeface = android.graphics.Typeface.MONOSPACE })
+            for ((label, go) in floors) body.addView(
+                if (go == null) ui.button("▶ $label · jste zde") {}.apply { isEnabled = false; alpha = 0.6f }
+                else ui.button(label) {
+                    close(); cz.uhk.macroflow.pokemon.audio.GameAudio.sfx(root.context, cz.uhk.macroflow.pokemon.audio.GameAudio.Sfx.ELEVATOR); go()
+                })
         }
     }
 
