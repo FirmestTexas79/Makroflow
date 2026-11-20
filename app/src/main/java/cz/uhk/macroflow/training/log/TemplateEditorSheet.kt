@@ -39,15 +39,19 @@ class TemplateEditorSheet : BottomSheetDialogFragment() {
 
     companion object {
         private const val ARG_KEY = "key"
+        private const val ARG_TITLE = "title"
+        private const val ARG_DEFAULTS = "defaults"
         private const val TAG = "TemplateEditorSheet"
 
-        fun show(fm: FragmentManager, key: String) {
+        /** [defaults] = výchozí seznam pro klíče mimo šablony A/B („Jiný trénink“ podle partií). */
+        fun show(fm: FragmentManager, key: String, title: String? = null, defaults: List<String>? = null) {
             if (fm.findFragmentByTag(TAG) != null) return
-            TemplateEditorSheet().apply { arguments = bundleOf(ARG_KEY to key) }.show(fm, TAG)
+            TemplateEditorSheet().apply { arguments = bundleOf(ARG_KEY to key, ARG_TITLE to title, ARG_DEFAULTS to defaults?.let { ArrayList(it) }) }.show(fm, TAG)
         }
     }
 
     private lateinit var key: String
+    private val defaults get() = requireArguments().getStringArrayList(ARG_DEFAULTS) ?: WorkoutTemplates.DEFAULTS[key].orEmpty()
     private val ids = mutableListOf<String>()
     private lateinit var rows: LinearLayout
     private val dp get() = resources.displayMetrics.density
@@ -58,14 +62,14 @@ class TemplateEditorSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         key = requireArguments().getString(ARG_KEY)!!
         rows = view.findViewById(R.id.llEditorRows)
-        view.findViewById<TextView>(R.id.tvEditorTitle).text = WorkoutTemplates.label(key)
+        view.findViewById<TextView>(R.id.tvEditorTitle).text = requireArguments().getString(ARG_TITLE) ?: WorkoutTemplates.label(key)
         viewLifecycleOwner.lifecycleScope.launch {
-            ids.clear(); ids += WorkoutRepository.templateIds(requireContext().applicationContext, key)
+            ids.clear(); ids += WorkoutRepository.templateIds(requireContext().applicationContext, key).ifEmpty { defaults }
             renderRows()
         }
         view.findViewById<View>(R.id.btnEditorAdd).setOnClickListener { pickExercise() }
         view.findViewById<View>(R.id.btnEditorReset).setOnClickListener {
-            ids.clear(); ids += WorkoutTemplates.DEFAULTS[key].orEmpty(); renderRows()
+            ids.clear(); ids += defaults; renderRows()
         }
         view.findViewById<View>(R.id.btnEditorSave).setOnClickListener {
             val app = requireContext().applicationContext

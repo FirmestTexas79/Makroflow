@@ -123,7 +123,7 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
         e.strength?.let { WorkoutSessionSheet.show(parentFragmentManager, it, e.variant ?: 'A'); return true }
         val ids = QuickWorkout.exercisesFor(e.muscles)
         if (ids.isEmpty()) return false
-        WorkoutSessionSheet.showCustom(parentFragmentManager, "Jiný trénink", ids)
+        WorkoutSessionSheet.showCustom(parentFragmentManager, "Jiný trénink", ids, WorkoutSessionSheet.customKey(e.muscles.map { it.name }))
         return true
     }
 

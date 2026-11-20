@@ -41,6 +41,7 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         private const val ARG_VARIANT = "variant"
         private const val ARG_IDS = "ids"
         private const val ARG_TITLE = "title"
+        private const val ARG_EDIT_KEY = "editKey"
         /** Šablona zapsaná u sérií z vlastního výběru cviků („Jiný trénink“). */
         const val CUSTOM_TEMPLATE = "OTHER"
         private const val TAG = "WorkoutSessionSheet"
@@ -52,15 +53,20 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
             WorkoutSessionSheet().apply { arguments = bundleOf(ARG_KIND to kind.name, ARG_VARIANT to variant.toString()) }.show(fm, TAG)
         }
 
-        /** Vlastní trénink z vybraných cviků (např. podle partií z „Jdu na trénink“), bez šablony A/B. */
-        fun showCustom(fm: FragmentManager, title: String, exerciseIds: List<String>) {
+        /** Vlastní trénink z vybraných cviků (např. podle partií z „Jdu na trénink“), bez šablony A/B.
+         *  [editKey] = pod jakým klíčem se ukládá upravený seznam cviků (tužka); null = needitovatelné. */
+        fun showCustom(fm: FragmentManager, title: String, exerciseIds: List<String>, editKey: String? = null) {
             if (fm.findFragmentByTag(TAG) != null) return
-            WorkoutSessionSheet().apply { arguments = bundleOf(ARG_TITLE to title, ARG_IDS to ArrayList(exerciseIds)) }.show(fm, TAG)
+            WorkoutSessionSheet().apply { arguments = bundleOf(ARG_TITLE to title, ARG_IDS to ArrayList(exerciseIds), ARG_EDIT_KEY to editKey) }.show(fm, TAG)
         }
+
+        /** Klíč upraveného seznamu cviků pro „Jiný trénink“ podle kombinace partií. */
+        fun customKey(muscles: Collection<String>) = CUSTOM_TEMPLATE + ":" + muscles.sorted().joinToString(",")
     }
 
     private lateinit var kind: WorkoutTemplates.Kind
     private var customIds: List<String>? = null
+    private var editKey: String? = null
     /** Počet dnešních sérií při posledním vykreslení – přírůstek = nová série → bublina do Makrosvěta. */
     private var lastTodayCount: Int? = null
     private var variant = 'A'
@@ -81,18 +87,21 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         customIds = requireArguments().getStringArrayList(ARG_IDS)
+        editKey = requireArguments().getString(ARG_EDIT_KEY)
         kind = WorkoutTemplates.Kind.valueOf(requireArguments().getString(ARG_KIND) ?: WorkoutTemplates.Kind.PUSH.name)
         variant = (savedInstanceState?.getString(ARG_VARIANT) ?: requireArguments().getString(ARG_VARIANT) ?: "A").first()
 
         view.findViewById<View>(R.id.btnCloseSession).setOnClickListener { dismiss() }
         view.findViewById<View>(R.id.btnFinishSession).setOnClickListener { finishWorkout() }
         view.findViewById<View>(R.id.btnEditTemplate).setOnClickListener {
-            TemplateEditorSheet.show(childFragmentManager, key())
+            val ek = editKey
+            if (ek != null) TemplateEditorSheet.show(childFragmentManager, ek, requireArguments().getString(ARG_TITLE), customIds)
+            else TemplateEditorSheet.show(childFragmentManager, key())
         }
         val toggle = view.findViewById<MaterialButtonToggleGroup>(R.id.toggleVariant)
         if (customIds != null) {
             toggle.visibility = View.GONE
-            view.findViewById<View>(R.id.btnEditTemplate).visibility = View.GONE
+            if (editKey == null) view.findViewById<View>(R.id.btnEditTemplate).visibility = View.GONE
         }
         toggle.check(if (variant == 'A') R.id.btnVariantA else R.id.btnVariantB)
         toggle.addOnButtonCheckedListener { _, id, checked ->
@@ -152,8 +161,9 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         observeJob?.cancel()
         val dao = AppDatabase.getDatabase(requireContext()).workoutDao()
         observeJob = viewLifecycleOwner.lifecycleScope.launch {
-            combine(dao.all(), dao.template(key())) { sets, rows -> sets to rows }.collect { (sets, rows) ->
-                val ids = customIds ?: rows.map { it.exerciseId }.ifEmpty { WorkoutTemplates.DEFAULTS[key()].orEmpty() }
+            combine(dao.all(), dao.template(editKey ?: key())) { sets, rows -> sets to rows }.collect { (sets, rows) ->
+                val saved = rows.map { it.exerciseId }
+                val ids = customIds?.let { saved.ifEmpty { it } } ?: saved.ifEmpty { WorkoutTemplates.DEFAULTS[key()].orEmpty() }
                 render(sets, ids)
             }
         }
