@@ -24,16 +24,18 @@ ROOT = os.path.join(HERE, "..", "..")
 AW, AH = 176, 352
 WALL_H = 96
 SIDE = 10
-PUDDLES = [(88, 176, 13, 6), (52, 292, 12, 6), (126, 300, 13, 6)]
+PUDDLES = [(88, 180, 15, 7, "fresh", 0.25), (52, 294, 14, 7, "old", -0.35), (126, 304, 13, 7, "violet", 0.5),   # setkání
+           (66, 282, 9, 4, "film", 0.1), (152, 276, 7, 4, "fresh", -0.6), (114, 142, 8, 4, "film", 0.4),
+           (24, 206, 6, 3, "fresh", 0.0)]
 NODES = {
     "jed_vytah": (88, 104), "jed_masky": (146, 106), "jed_stred": (88, 158), "jed_stul": (44, 170),
     "jed_past": (138, 176), "jed_louze_1": (88, 178), "jed_kad": (34, 244), "jed_kotel": (100, 268),
-    "jed_louze_2": (52, 292), "jed_louze_3": (126, 300), "jed_zahon": (88, 318),
+    "jed_louze_2": (52, 292), "jed_louze_3": (126, 300), "jed_zahon": (88, 318), "jed_valec": (114, 162),
 }
 EDGES = [("jed_vytah", "jed_stred"), ("jed_vytah", "jed_masky"), ("jed_stred", "jed_stul"),
          ("jed_stred", "jed_past"), ("jed_stred", "jed_louze_1"), ("jed_louze_1", "jed_kad"),
          ("jed_louze_1", "jed_kotel"), ("jed_kad", "jed_louze_2"), ("jed_kotel", "jed_louze_3"),
-         ("jed_louze_2", "jed_zahon"), ("jed_louze_3", "jed_zahon")]
+         ("jed_louze_2", "jed_zahon"), ("jed_louze_3", "jed_zahon"), ("jed_stred", "jed_valec")]
 
 img = np.zeros((AH, AW, 4), np.uint8); img[:, :, 3] = 255
 block = np.zeros((AH, AW), bool)
@@ -41,8 +43,12 @@ BAL_Y = AH - 12
 floor_px = np.zeros((AH, AW), bool); floor_px[WALL_H:BAL_Y, SIDE:AW - SIDE] = True
 
 P.lab_floor(img, SIDE, WALL_H, AW - SIDE, AH)
-for i, (x, y, rx, ry) in enumerate(PUDDLES):
-    P.toxic_puddle(img, x, y, rx, ry, seed=i)
+P.roots(img, [(12, 120, 0.2, 40), (164, 170, 3.0, 34), (12, 260, -0.1, 30), (164, 318, 3.3, 26), (70, 98, 1.4, 22),
+              (110, 98, 1.7, 18)], seed=3)
+P.litter(img, 14, 104, 162, 336, n=46, seed=2)
+P.floor_pipes(img, [[(40, 238), (48, 246), (62, 246)], [(140, 252), (126, 252), (126, 246), (112, 246)]])
+for i, (x, y, rx, ry, kind, ang) in enumerate(PUDDLES):
+    P.toxic_puddle(img, x, y, rx, ry, seed=i + 11, kind=kind, ang=ang)
 
 placed = []
 def place(spr, cx, by, z=None, collide=True, pad=2, shadow=True, foot=None):
@@ -58,11 +64,13 @@ def place(spr, cx, by, z=None, collide=True, pad=2, shadow=True, foot=None):
 
 bench = place(P.workbench(), 42, 158, foot=(56, 10))
 trap = place(P.flytrap(), 146, 166, foot=(22, 8))
-vat_l = place(P.vat(1), 32, 232, foot=(34, 12))
-vat_r = place(P.vat(2), 150, 248, foot=(34, 12))
+place(P.lab_stool(), 70, 168, foot=(10, 5))
+tube = place(P.specimen_tube(), 114, 150, foot=(14, 6))
+vat_l = place(P.vat(1), 32, 236, foot=(34, 14))
+vat_r = place(P.vat(2), 150, 252, foot=(34, 14))
 alem = place(P.alembic(), 90, 258, foot=(62, 16))
-place(P.poison_bed(1), 40, 336, foot=(46, 12))
-place(P.poison_bed(2), 136, 336, foot=(46, 12))
+place(P.poison_bed(1), 38, 338, foot=(50, 14))
+place(P.poison_bed(2), 138, 338, foot=(50, 14))
 place(P.drum(1), 156, 296, foot=(16, 8))
 place(P.drum(2), 20, 282, foot=(16, 8))
 place(P.drum(3), 30, 286, foot=(16, 8))
@@ -77,15 +85,18 @@ def ring_pool(mask, cx, cy, rx, ry, k=1.0):
                 mask[y, x] = max(mask[y, x], round(v * k, 1))
 green = np.zeros((AH, AW))
 for o in (vat_l, vat_r):
-    ring_pool(green, o["x"] + 20, o["y"] + 10, 26, 16, 0.9)
-for (x, y, rx, ry) in PUDDLES:
-    ring_pool(green, x, y, rx + 10, ry + 6, 0.7)
+    ring_pool(green, o["x"] + 21, o["y"] + 19, 28, 18, 0.9)
+for (x, y, rx, ry, kind, _) in PUDDLES:
+    if kind != "violet":
+        ring_pool(green, x, y, rx + 8, ry + 5, 0.7 if rx > 10 else 0.4)
 ring_pool(green, alem["x"] + 40, alem["y"] + 60, 18, 10, 0.8)
 ring_pool(green, alem["x"] + 20, alem["y"] + 62, 14, 8, 0.6)
 ring_pool(green, 88, WALL_H + 3, 22, 11, 0.4)
+ring_pool(green, 114, 134, 14, 12, 0.7)
 violet = np.zeros((AH, AW))
 for bx in (40, 136):
-    ring_pool(violet, bx, 320, 28, 12, 0.8)
+    ring_pool(violet, bx, 318, 30, 14, 0.9)
+ring_pool(violet, 126, 304, 22, 11, 0.7)
 sh = np.zeros((AH, AW))
 L.wall_base_shadow(sh, WALL_H, depth=14, k=0.8)
 L.side_wall_shadow(sh, SIDE, AW - SIDE, depth=10, k=0.6, y0=WALL_H)
@@ -96,7 +107,10 @@ for o in placed:
 sh *= floor_px
 L.darken(img, sh, 0.5, (2, 8, 4), dither=False, steps=4)
 
-img[:WALL_H] = P.greenhouse_wall(AW, WALL_H).a
+wall = P.greenhouse_wall(AW, WALL_H)
+P.hanging_vines(wall, 2, 60, WALL_H - 28, seed=1)
+P.hanging_vines(wall, 116, 174, WALL_H - 28, seed=2)
+img[:WALL_H] = wall.a
 block[:WALL_H + 3, :] = True
 
 def wall_put(spr, x, y):

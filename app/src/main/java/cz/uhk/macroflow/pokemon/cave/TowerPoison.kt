@@ -18,12 +18,12 @@ object TowerPoison {
             CaveNode(ELEVATOR_NODE, 88, 104), CaveNode("jed_masky", 146, 106), CaveNode("jed_stred", 88, 158),
             CaveNode("jed_stul", 44, 170), CaveNode("jed_past", 138, 176), CaveNode("jed_louze_1", 88, 178),
             CaveNode("jed_kad", 34, 244), CaveNode("jed_kotel", 100, 268), CaveNode("jed_louze_2", 52, 292),
-            CaveNode("jed_louze_3", 126, 300), CaveNode("jed_zahon", 88, 318)
+            CaveNode("jed_louze_3", 126, 300), CaveNode("jed_zahon", 88, 318), CaveNode("jed_valec", 114, 162)
         ),
         edges = listOf(ELEVATOR_NODE to "jed_stred", ELEVATOR_NODE to "jed_masky", "jed_stred" to "jed_stul",
             "jed_stred" to "jed_past", "jed_stred" to "jed_louze_1", "jed_louze_1" to "jed_kad",
             "jed_louze_1" to "jed_kotel", "jed_kad" to "jed_louze_2", "jed_kotel" to "jed_louze_3",
-            "jed_louze_2" to "jed_zahon", "jed_louze_3" to "jed_zahon"),
+            "jed_louze_2" to "jed_zahon", "jed_louze_3" to "jed_zahon", "jed_stred" to "jed_valec"),
         exitNode = ELEVATOR_NODE,
         mountainNode = TowerLobby.ELEVATOR_NODE,
         crystalNode = null,
@@ -34,7 +34,7 @@ object TowerPoison {
         tapAreas = mapOf(
             ELEVATOR_NODE to Triple(88, 66, 22), "jed_masky" to Triple(152, 72, 14), "jed_stul" to Triple(40, 144, 22),
             "jed_past" to Triple(146, 144, 18), "jed_kad" to Triple(32, 212, 18), "jed_kotel" to Triple(90, 226, 30),
-            "jed_zahon" to Triple(88, 326, 40)
+            "jed_zahon" to Triple(88, 326, 40), "jed_valec" to Triple(114, 128, 12)
         )
     )
 
@@ -44,6 +44,7 @@ object TowerPoison {
         "jed_kotel" to "🧪 Destilační přístroj. Z hadu kape zelená tekutina do baňky s nápisem ZAPOMNĚNÍ – KONCENTRÁT.\nPára voní jako čerstvý chléb z Brannovy pekárny.",
         "jed_kad" to "🫧 Káď plná bublající zelené kaše. Na hladině se občas něco vynoří – možná list, možná prst. Na obruči je vyraženo: ŠARŽE 7.",
         "jed_zahon" to "🍇 Záhony rulíku, bolehlavu a fialových hub. Mezi rostlinami jsou zapíchnuté jmenovky jako na hrobech. Jména jsou vybledlá, čitelná zůstala jen čísla.",
+        "jed_valec" to "🧫 Preparátový válec. V zelené tekutině se vznáší bledý zárodek rostliny s kořínky jako prsty. Když se pohneš, pomalu se za tebou otočí.\nŠtítek: KONTROLNÍ VZOREK – SPÍ OD OKRUHU 1.",
         "jed_masky" to "😷 Plynové masky na háčcích. Jeden háček je prázdný a visí na něm cedulka: VYDÁNO – SUBJEKT 212. NEVRÁCENO."
     )
 
