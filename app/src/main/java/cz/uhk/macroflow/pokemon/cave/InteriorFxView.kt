@@ -1417,16 +1417,16 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
 
         /** Jedová laboratoř (12.): bublající kádě a louže, zelená mlha, spory, pára z přístroje, masožravka sklapne. */
         val POISON = InteriorFx(
-            brew = listOf(FxBox(22, 204, 42, 210), FxBox(140, 220, 160, 226), FxBox(80, 177, 96, 183), FxBox(44, 291, 60, 297),
-                FxBox(118, 301, 134, 307), FxBox(94, 248, 98, 251)),
+            brew = listOf(FxBox(22, 207, 38, 211), FxBox(140, 221, 156, 225), FxBox(80, 177, 96, 183), FxBox(44, 291, 60, 297),
+                FxBox(118, 301, 134, 307), FxBox(88, 246, 92, 249)),
             bubbles = listOf(FxBox(110, 114, 110, 140), FxBox(117, 116, 117, 140)),
             fog = listOf(FxBox(14, 280, 70, 300), FxBox(104, 290, 164, 310), FxBox(60, 170, 120, 186), FxBox(14, 230, 60, 250)),
             fogColor = 0x70D070,
             traps = listOf(Triple(136, 133, 8), Triple(157, 138, 7)),
-            steam = listOf(104 to 216),
-            glows = listOf(FxGlow(32, 207, 16, 8, 0x80F060, 2.4f), FxGlow(150, 223, 16, 8, 0x80F060, 2.9f),
-                FxGlow(96, 250, 6, 5, 0xA0FF80, 1.8f), FxGlow(88, 180, 15, 7, 0x80F060, 3.3f), FxGlow(52, 294, 14, 7, 0x80F060, 2.7f),
-                FxGlow(126, 304, 13, 7, 0xC890E0, 3.1f), FxGlow(36, 318, 20, 7, 0xC890E0, 2.2f), FxGlow(138, 318, 20, 7, 0xC890E0, 2.6f),
+            steam = listOf(101 to 222),
+            glows = listOf(FxGlow(30, 209, 12, 6, 0x80F060, 2.4f), FxGlow(148, 223, 12, 6, 0x80F060, 2.9f),
+                FxGlow(90, 248, 5, 4, 0xA0FF80, 1.8f), FxGlow(88, 180, 15, 7, 0x80F060, 3.3f), FxGlow(52, 294, 14, 7, 0x80F060, 2.7f),
+                FxGlow(126, 304, 13, 7, 0xC890E0, 3.1f), FxGlow(28, 324, 15, 5, 0xC890E0, 2.2f), FxGlow(144, 324, 15, 5, 0xC890E0, 2.6f),
                 FxGlow(114, 128, 7, 14, 0x80F060, 3.6f)),
             motes = listOf(FxBox(16, 110, 160, 330)),
             moteColor = 0xA8F070

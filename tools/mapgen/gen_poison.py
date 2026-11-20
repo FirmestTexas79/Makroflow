@@ -46,7 +46,7 @@ P.lab_floor(img, SIDE, WALL_H, AW - SIDE, AH)
 P.roots(img, [(12, 120, 0.2, 40), (164, 170, 3.0, 34), (12, 260, -0.1, 30), (164, 318, 3.3, 26), (70, 98, 1.4, 22),
               (110, 98, 1.7, 18)], seed=3)
 P.litter(img, 14, 104, 162, 336, n=46, seed=2)
-P.floor_pipes(img, [[(40, 238), (48, 246), (62, 246)], [(140, 252), (126, 252), (126, 246), (112, 246)]])
+P.floor_pipes(img, [[(38, 234), (46, 244), (66, 244)], [(138, 248), (122, 248), (122, 244), (114, 244)]])
 for i, (x, y, rx, ry, kind, ang) in enumerate(PUDDLES):
     P.toxic_puddle(img, x, y, rx, ry, seed=i + 11, kind=kind, ang=ang)
 
@@ -62,18 +62,15 @@ def place(spr, cx, by, z=None, collide=True, pad=2, shadow=True, foot=None):
             walkmask.silhouette(block, spr.a[:, :, 3], o["x"], o["y"], pad)
     return o
 
-bench = place(P.workbench(), 42, 158, foot=(56, 10))
+bench = place(P.workbench(), 36, 156, foot=(44, 8))
 trap = place(P.flytrap(), 146, 166, foot=(22, 8))
-place(P.lab_stool(), 70, 168, foot=(10, 5))
 tube = place(P.specimen_tube(), 114, 150, foot=(14, 6))
-vat_l = place(P.vat(1), 32, 236, foot=(34, 14))
-vat_r = place(P.vat(2), 150, 252, foot=(34, 14))
-alem = place(P.alembic(), 90, 258, foot=(62, 16))
-place(P.poison_bed(1), 38, 338, foot=(50, 14))
-place(P.poison_bed(2), 138, 338, foot=(50, 14))
-place(P.drum(1), 156, 296, foot=(16, 8))
-place(P.drum(2), 20, 282, foot=(16, 8))
-place(P.drum(3), 30, 286, foot=(16, 8))
+vat_l = place(P.vat(1), 30, 232, foot=(24, 10))
+vat_r = place(P.vat(2), 148, 246, foot=(24, 10))
+alem = place(P.alembic(), 88, 256, foot=(46, 12))
+place(P.poison_bed(1), 30, 338, foot=(38, 10))
+place(P.poison_bed(2), 146, 338, foot=(38, 10))
+place(P.drum(1), 158, 290, foot=(14, 6))
 
 # ── světlo: tma, nemocně zelená záře z kádí, louží a baňky ────────────────────
 def ring_pool(mask, cx, cy, rx, ry, k=1.0):
@@ -85,17 +82,17 @@ def ring_pool(mask, cx, cy, rx, ry, k=1.0):
                 mask[y, x] = max(mask[y, x], round(v * k, 1))
 green = np.zeros((AH, AW))
 for o in (vat_l, vat_r):
-    ring_pool(green, o["x"] + 21, o["y"] + 19, 28, 18, 0.9)
+    ring_pool(green, o["x"] + 16, o["y"] + 15, 22, 14, 0.9)
 for (x, y, rx, ry, kind, _) in PUDDLES:
     if kind != "violet":
         ring_pool(green, x, y, rx + 8, ry + 5, 0.7 if rx > 10 else 0.4)
-ring_pool(green, alem["x"] + 40, alem["y"] + 60, 18, 10, 0.8)
-ring_pool(green, alem["x"] + 20, alem["y"] + 62, 14, 8, 0.6)
+ring_pool(green, alem["x"] + 27, alem["y"] + 50, 14, 8, 0.8)
+ring_pool(green, alem["x"] + 14, alem["y"] + 48, 12, 7, 0.6)
 ring_pool(green, 88, WALL_H + 3, 22, 11, 0.4)
 ring_pool(green, 114, 134, 14, 12, 0.7)
 violet = np.zeros((AH, AW))
-for bx in (40, 136):
-    ring_pool(violet, bx, 318, 30, 14, 0.9)
+for bx in (30, 146):
+    ring_pool(violet, bx, 322, 24, 12, 0.9)
 ring_pool(violet, 126, 304, 22, 11, 0.7)
 sh = np.zeros((AH, AW))
 L.wall_base_shadow(sh, WALL_H, depth=14, k=0.8)

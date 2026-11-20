@@ -184,78 +184,77 @@ def greenhouse_wall(W, H, door=(62, 115)):
 
 
 def alembic():
-    """Destilační přístroj (hrdina patra): cihlová pícka se zelenomodrým plamínkem, na ní velký měděný kotel
-    s nýty a kopulí, z kopule labutí krk k chladicímu hadu v dřevěném sudu, z hadu kape do baňky se svítivě
-    zelenou tekutinou na stojanu; na kotli teploměr a ventil."""
-    W, H = 66, 70
+    """Destilační přístroj (hrdina patra): cihlová pícka se zelenomodrým plamínkem, na ní měděný kotel s nýty
+    a kopulí, z kopule labutí krk k chladicímu hadu v dřevěném sudu (zaoblené dno), z hadu kape do baňky se
+    svítivě zelenou tekutinou; na kotli teploměr."""
+    W, H = 50, 54
     s = Spr(W, H)
-    bx, by = 20, H - 2                                                                  # pícka
-    for y in range(H - 18, H):
-        for x in range(bx - 15, bx + 16):
-            ly = y - (H - 18); off = 3 if (ly // 3) % 2 else 0
+    bx = 14                                                                             # pícka
+    for y in range(H - 13, H):
+        for x in range(bx - 10, bx + 11):
+            ly = y - (H - 13); off = 3 if (ly // 3) % 2 else 0
             col = BRICKM[2] if (x + off) % 6 and ly % 3 != 2 else BRICKM[0]
-            if x > bx + 10:
+            if x > bx + 6:
                 col = BRICKM[1] if col is BRICKM[2] else BRICKM[0]
             s.px(x, y, col)
-    for y in range(H - 12, H - 4):                                                      # ohniště
-        for x in range(bx - 6, bx + 7):
-            d = abs(x - bx) / 6
+    for y in range(H - 9, H - 3):                                                       # ohniště
+        for x in range(bx - 4, bx + 5):
+            d = abs(x - bx) / 4
             col = c(0x0A0A0A)
-            if y > H - 10 + d * 3:
+            if y > H - 8 + d * 2:
                 col = c(0x6AF0D0) if (x + y) % 3 else c(0x2A9A8A)
             s.px(x, y, col)
-    cy0, cy1 = H - 44, H - 18                                                           # kotel
+    cy0, cy1 = H - 33, H - 13                                                           # kotel
     for y in range(cy0, cy1 + 1):
         t = (y - cy0) / (cy1 - cy0)
-        hw = 13 + 3 * math.sin(t * math.pi)
+        hw = 9 + 2 * math.sin(t * math.pi)
         for x in range(int(bx - hw), int(bx + hw) + 1):
             u = (x - bx) / hw
             band = 0 if u > 0.7 else 1 if u > 0.3 else 2 if u > -0.2 else 3 if u > -0.6 else 4
             col = COPPER[[1, 2, 3, 4, 3][band]]
             if u < -0.75:
                 col = COPPER[2]
-            if (y - cy0) % 9 == 0 and int(x) % 3 == 0:
+            if (y - cy0) % 7 == 0 and int(x) % 3 == 0:
                 col = COPPER[4]                                                         # nýty
             s.px(x, y, col)
-    sphere(s, bx, cy0, 12, 7, COPPER, amb=0.3, mask=lambda x, y: y <= cy0)              # kopule
-    cylinder(s, bx - 2, bx + 2, cy0 - 12, cy0 - 5, COPPER[1:], amb=0.3)
-    nx, ny = bx, cy0 - 12                                                               # labutí krk
-    for k in range(0, 34):
-        t = k / 33
-        X = nx + t * 30
-        Y = ny - math.sin(t * math.pi) * 6 + t * 10
-        for o in range(-1, 2):
-            s.px(X, Y + o, COPPER[4] if o < 0 else COPPER[3] if o == 0 else COPPER[1])
-    sx = 52                                                                             # sud s hadem
-    _barrel(s, sx, H - 34, H - 11, 9.5, 2.6, WOODD, hoops=(3, 17), hoop=[IRON_[1], IRON_[2], IRON_[3]], staves=6)
-    for x in range(sx - 9, sx + 10):
-        u = (x + .5 - sx) / 9.5
+    sphere(s, bx, cy0, 8.5, 5, COPPER, amb=0.3, mask=lambda x, y: y <= cy0)              # kopule
+    cylinder(s, bx - 1, bx + 1, cy0 - 9, cy0 - 4, COPPER[1:], amb=0.3)
+    nx, ny = bx, cy0 - 9                                                                # labutí krk
+    for k in range(0, 26):
+        t = k / 25
+        X = nx + t * 23
+        Y = ny - math.sin(t * math.pi) * 4 + t * 8
+        s.px(X, Y, COPPER[4]); s.px(X, Y + 1, COPPER[2])
+    sx = 38                                                                             # sud s hadem
+    _barrel(s, sx, H - 25, H - 8, 7, 2, WOODD, hoops=(2, 12), hoop=[IRON_[1], IRON_[2], IRON_[3]], staves=5)
+    for x in range(sx - 7, sx + 8):
+        u = (x + .5 - sx) / 7
         nz = math.sqrt(max(0, 1 - u * u))
-        for y in range(int(H - 34 - 2.6 * nz), int(H - 34 + 2.6 * nz) + 1):
+        for y in range(int(H - 25 - 2 * nz), int(H - 25 + 2 * nz) + 1):
             s.px(x, y, c(0x1A3A34) if abs(u) < 0.8 else COPPER[3])
-    for k in range(3):                                                                  # závity hadu nad sudem
+    for k in range(3):                                                                  # závity hadu
         for a10 in range(0, 63):
             a = a10 / 10
-            s.px(sx + math.cos(a) * 7, H - 36 - k * 3 + math.sin(a) * 2, COPPER[4] if math.sin(a) > 0 else COPPER[2])
-    for y in range(H - 10, H - 4):                                                      # výpust + kapka
-        s.px(sx - 10, y if y < H - 8 else H - 8, COPPER[3])
-    fx_, fy = sx - 13, H - 8                                                            # baňka
-    for y in range(fy - 10, fy + 1):
-        for x in range(fx_ - 5, fx_ + 6):
-            d = math.hypot(x + .5 - fx_, (y + .5 - (fy - 4)) * 1.1)
-            if d <= 5 or (abs(x - fx_) <= 1 and y < fy - 7):
-                col = GLASSG[3] if d > 4.2 else TOX[4] if y > fy - 5 else GLASSG[1]
-                if x < fx_ - 2 and y < fy - 4:
+            s.px(sx + math.cos(a) * 5, H - 27 - k * 2.5 + math.sin(a) * 1.5, COPPER[4] if math.sin(a) > 0 else COPPER[2])
+    for y in range(H - 8, H - 5):                                                       # výpust
+        s.px(sx - 8, y, COPPER[3])
+    fx_, fy = sx - 11, H - 5                                                            # baňka
+    for y in range(fy - 8, fy + 1):
+        for x in range(fx_ - 4, fx_ + 5):
+            d = math.hypot(x + .5 - fx_, (y + .5 - (fy - 3)) * 1.1)
+            if d <= 4 or (abs(x - fx_) <= 1 and y < fy - 6):
+                col = GLASSG[3] if d > 3.2 else TOX[4] if y > fy - 4 else GLASSG[1]
+                if x < fx_ - 1 and y < fy - 3:
                     col = GLASSG[4]
                 s.px(x, y, col)
-    for x in range(fx_ - 6, fx_ + 7):
+    for x in range(fx_ - 5, fx_ + 6):
         s.px(x, fy + 1, IRON_[2])
-    gx, gy = bx - 9, cy0 + 10                                                           # teploměr
-    for y in range(gy - 3, gy + 4):
-        for x in range(gx - 3, gx + 4):
-            if math.hypot(x - gx, y - gy) <= 3:
-                s.px(x, y, BRASS[2] if math.hypot(x - gx, y - gy) > 2.2 else PAPER[3])
-    s.px(gx, gy, RED[3]); s.px(gx + 1, gy - 1, RED[3])
+    gx, gy = bx - 5, cy0 + 7                                                            # teploměr
+    for y in range(gy - 2, gy + 3):
+        for x in range(gx - 2, gx + 3):
+            if math.hypot(x - gx, y - gy) <= 2.2:
+                s.px(x, y, BRASS[2] if math.hypot(x - gx, y - gy) > 1.4 else PAPER[3])
+    s.px(gx, gy, RED[3])
     return selout(s, 0.48, 0.82)
 
 
@@ -290,11 +289,11 @@ def _barrel(s, cx, top, bot, rx, ry, ramp, hoops=(), hoop=None, staves=9):
 def vat(seed=0):
     """Káď: dřevěné dužiny se zaobleným spodkem a obloukovými železnými obručemi, nahoře hladina bublající zelené
     kaše (elipsa) s pěnou a vynořeným listem, přes okraj stékají slizké pramínky, opřené míchací pádlo."""
-    W, H = 42, 48
+    W, H = 32, 38
     s = Spr(W, H)
-    cx, rx, ry = 21, 17, 5.5
-    top, bot = 19, H - 8
-    _barrel(s, cx, top, bot, rx, ry, WOODD, hoops=(6, 18), hoop=[IRON_[1], IRON_[2], IRON_[3]], staves=8)
+    cx, rx, ry = 16, 12, 4
+    top, bot = 15, H - 6
+    _barrel(s, cx, top, bot, rx, ry, WOODD, hoops=(4, 12), hoop=[IRON_[1], IRON_[2], IRON_[3]], staves=6)
     for y in range(int(top - ry) - 1, int(top + ry) + 2):                               # okraj + hladina
         for x in range(cx - rx - 1, cx + rx + 2):
             d = ((x + .5 - cx) / (rx + 0.5)) ** 2 + ((y + .5 - top) / (ry + 0.5)) ** 2
@@ -309,18 +308,18 @@ def vat(seed=0):
                     if d > 0.55 and y < top:
                         col = TOX[2]                                                    # stín pod okrajem
                 s.px(x, y, col)
-    for (fx_, fy) in ((cx - 7, top - 1), (cx + 5, top + 1), (cx + 1, top - 3), (cx - 2, top + 2)):   # pěna
+    for (fx_, fy) in ((cx - 5, top - 1), (cx + 4, top + 1), (cx + 1, top - 2)):                     # pěna
         s.px(fx_, fy, TOX[5]); s.px(fx_ + 1, fy, TOX[5]); s.px(fx_, fy + 1, TOX[4])
-    for k in range(5):                                                                  # list na hladině
-        s.px(cx + 6 + k * 0.6, top - 2 + k * 0.3, MOSSG[3] if k < 3 else MOSSG[2])
-    for (px_, ln) in ((cx + 12, 13), (cx - 13, 8)):                                     # stékající sliz
+    for k in range(4):                                                                  # list na hladině
+        s.px(cx + 4 + k * 0.6, top - 1 + k * 0.3, MOSSG[3] if k < 2 else MOSSG[2])
+    for (px_, ln) in ((cx + 9, 9), (cx - 9, 5)):                                        # stékající sliz
         nz = math.sqrt(max(0, 1 - ((px_ - cx) / rx) ** 2))
         for y in range(int(top + ry * nz), int(top + ry * nz) + ln):
             s.px(px_, y, TOX[3] if y < top + ry * nz + ln - 3 else TOX[2])
         s.px(px_, int(top + ry * nz) + ln, TOX[4])
-    s.line(cx - 10, top - 1, cx - 17, top - 15, WOODD[3], 2)                           # pádlo
-    for y in range(top - 19, top - 13):
-        s.px(cx - 19, y, WOODD[4]); s.px(cx - 18, y, WOODD[3])
+    s.line(cx - 7, top - 1, cx - 12, top - 12, WOODD[3])                               # pádlo
+    for y in range(top - 15, top - 10):
+        s.px(cx - 13, y, WOODD[4]); s.px(cx - 12, y, WOODD[3])
     return selout(s, 0.5, 0.85)
 
 
@@ -373,13 +372,13 @@ def flytrap():
     return selout(s, 0.5, 0.85)
 
 
-def poison_bed(seed=0, w=50, h=40):
+def poison_bed(seed=0, w=38, h=32):
     """Truhlík na jedovaté houby ve 3/4: trámkový rám s okovanými rohy, vidět horní plochu vlhké hlíny
     (s mechem), čelní prkna a tmavý bok. V hlíně rostou fialové svítící zvonovité houby různé velikosti
     (trsy), bledé kloboučky, rulík s černými bobulemi vzadu a zapíchnuté jmenovky jako na hrobech."""
     s = Spr(w + 5, h)
     rng = np.random.default_rng(seed)
-    soil_t, soil_b = h - 20, h - 12                                                     # horní plocha hlíny
+    soil_t, soil_b = h - 16, h - 9                                                      # horní plocha hlíny
     for y in range(soil_t, h):
         for x in range(0, w):
             if y < soil_b:
@@ -401,9 +400,9 @@ def poison_bed(seed=0, w=50, h=40):
         for x in range(w, w + 5):                                                       # bok
             if soil_t <= y and y - soil_t >= x - w and y < h:
                 s.px(x, y, WOODD[1] if y < soil_b else WOODD[0])
-    for k in range(4):                                                                  # rulík vzadu
+    for k in range(3):                                                                  # rulík vzadu
         x = 5 + k * 13 + int(rng.integers(-2, 3))
-        ht = int(rng.integers(12, 17))
+        ht = int(rng.integers(9, 13))
         s.vline(x, soil_t - ht, soil_t + 2, MOSSG[2])
         for j in range(4):
             yy = soil_t - ht + 2 + j * 3
@@ -411,7 +410,7 @@ def poison_bed(seed=0, w=50, h=40):
             s.px(x + d, yy, MOSSG[3]); s.px(x + 2 * d, yy + 1, MOSSG[3]); s.px(x + d, yy + 1, MOSSG[2])
         s.px(x + 2, soil_t - ht + 3, VIOLET[4]); s.px(x + 2, soil_t - ht + 4, VIOLET[3])
         s.px(x - 2, soil_t - ht + 7, c(0x101014)); s.px(x - 1, soil_t - ht + 8, c(0x2E2E40)); s.px(x - 2, soil_t - ht + 9, c(0x101014))
-    shrooms = [(int(rng.integers(5, w - 5)), int(rng.integers(soil_t + 2, soil_b - 1)), rng.uniform(1.6, 4.2)) for _ in range(9)]
+    shrooms = [(int(rng.integers(4, w - 4)), int(rng.integers(soil_t + 2, soil_b - 1)), rng.uniform(1.4, 3.2)) for _ in range(7)]
     shrooms.sort(key=lambda t: t[1])
     for (x, y, r) in shrooms:                                                           # zvonovité houby
         stem_h = int(r * 1.6) + 2
@@ -431,8 +430,8 @@ def poison_bed(seed=0, w=50, h=40):
                 s.px(xx, yy, col)
         if r > 2.5:
             s.px(x - 1, cy - 1, c(0xF0E0FF))
-    for k in range(3):                                                                  # jmenovky
-        x = 8 + k * 17
+    for k in range(2):                                                                  # jmenovky
+        x = 8 + k * 18
         for y in range(soil_t - 4, soil_t + 4):
             s.px(x, y, c(0xC8C0B0) if y > soil_t - 3 else c(0xE4DCCC))
             s.px(x + 1, y, c(0xA8A090) if y > soil_t - 3 else c(0xC8C0B0))
@@ -443,7 +442,7 @@ def poison_bed(seed=0, w=50, h=40):
 def workbench():
     """Pracovní stůl: tmavé dřevo, hmoždíř s fialovým práškem, stojánek s lahvičkami (zelená, fialová,
     jantarová), lékárnické váhy, otevřený zápisník, řada lahviček se štítky dávek a jedna prázdná."""
-    W, H = 58, 32
+    W, H = 46, 30
     s = Spr(W + 5, H)
     top = 12
     for y in range(top, top + 7):
@@ -472,14 +471,14 @@ def workbench():
         for y in range(top - 7, top - 1):
             s.px(x, y, col if y > top - 5 else GLASSG[3])
         s.px(x, top - 8, c(0x8A6A3A))
-    for x in range(33, 41):                                                             # váhy
+    for x in range(31, 37):                                                             # váhy
         s.px(x, top - 6, BRASS[3])
-    s.vline(37, top - 6, top - 1, BRASS[2])
-    s.px(33, top - 5, BRASS[2]); s.px(40, top - 5, BRASS[2])
+    s.vline(34, top - 6, top - 1, BRASS[2])
+    s.px(31, top - 5, BRASS[2]); s.px(36, top - 5, BRASS[2])
     for y in range(top + 1, top + 5):                                                   # zápisník
-        for x in range(42, 54):
-            s.px(x, y, PAPER[3] if x != 48 else PAPER[0])
-            if y % 2 == 0 and x % 3 and x != 48:
+        for x in range(33, 44):
+            s.px(x, y, PAPER[3] if x != 38 else PAPER[0])
+            if y % 2 == 0 and x % 3 and x != 38:
                 s.px(x, y, INK)
     for k in range(6):                                                                  # dávky
         x = 3 + k * 4

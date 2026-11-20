@@ -32,9 +32,9 @@ object TowerPoison {
         parentBiome = "TOWER_LOBBY",
         isCave = false,
         tapAreas = mapOf(
-            ELEVATOR_NODE to Triple(88, 66, 22), "jed_masky" to Triple(152, 72, 14), "jed_stul" to Triple(40, 144, 22),
-            "jed_past" to Triple(146, 144, 18), "jed_kad" to Triple(32, 212, 18), "jed_kotel" to Triple(90, 226, 30),
-            "jed_zahon" to Triple(88, 326, 40), "jed_valec" to Triple(114, 128, 12)
+            ELEVATOR_NODE to Triple(88, 66, 22), "jed_masky" to Triple(152, 72, 14), "jed_stul" to Triple(36, 140, 20),
+            "jed_past" to Triple(146, 144, 18), "jed_kad" to Triple(30, 212, 14), "jed_kotel" to Triple(88, 228, 24),
+            "jed_zahon" to Triple(88, 326, 60), "jed_valec" to Triple(114, 128, 12)
         )
     )
 
