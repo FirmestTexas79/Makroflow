@@ -172,6 +172,7 @@ class PokemonBattleView @JvmOverloads constructor(
                 // Strážce / legenda: pevný Makromon s pevným levelem
                 createPlayerMakromon(special.statsId, special.level)
                     .let { m -> special.displayName?.let { m.copy(name = it) } ?: m }
+                    .let { m -> if (special.chained) m.copy(attack = m.attack * 11 / 20, speed = m.speed / 2) else m }
             } else {
                 // Level podle lokality (docs/adr/0029) – jeskyně mají vlastní rozpětí, i když
                 // druhy Makromonů sdílí s Horami; útoky náhodně z poolu druhu podle levelu

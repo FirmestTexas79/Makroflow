@@ -25,6 +25,9 @@ class TowerStoryTest {
         assertEquals("6", q.stages[TowerStory.DORM].targetId)                          // Dormitoř chce pořádný spánek
         assertEquals(TowerStory.FRAGMENTS.size, q.stages[TowerStory.MAP].targetValue)
         assertEquals(RequirementType.HIT_TARGET, q.stages[TowerStory.READY].requirementType)
+        assertEquals(TowerStory.OBJ019_KEY, q.stages[TowerStory.OBJ019].targetId)              // Objekt 019 hned po Registru nádob
+        assertEquals(TowerStory.OBJ019_KEY, cz.uhk.macroflow.pokemon.legend.SpecialBattle.OBJEKT_019.winKey)
+        assertTrue(cz.uhk.macroflow.pokemon.legend.SpecialBattle.OBJEKT_019.chained)
         q.stages.drop(TowerStory.FIRST).forEach { assertTrue(it.title, !it.hint.isNullOrBlank()) }
         q.stages.drop(TowerStory.FIRST).forEach { assertTrue(QuestProgression.reminder(it, "0").isNotBlank()) }
     }

@@ -1400,6 +1400,16 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             moteColor = 0xC8D4FF
         )
 
+        /** Kancelář po požáru (Objekt 019): žhavé uhlíky, padající popel, kouř, hvězdy v dírách kopule. */
+        val OFFICE_BURNED = InteriorFx(
+            stars = listOf(FxBox(48, 10, 68, 30), FxBox(116, 28, 128, 40)),
+            embers = listOf(FxBox(14, 260, 80, 340), FxBox(120, 120, 160, 160), FxBox(130, 280, 166, 320)),
+            ash = listOf(FxBox(14, 100, 162, 340)),
+            glows = listOf(FxGlow(30, 300, 16, 10, 0xFF6A20, 2.4f), FxGlow(140, 140, 10, 8, 0xFF7A30, 3.1f), FxGlow(60, 330, 14, 8, 0xFF5A18, 2.8f)),
+            motes = listOf(FxBox(14, 100, 162, 300)),
+            moteColor = 0xA09890
+        )
+
         /** Patro −1, Hunfreyho skrýš: svíčky na betonu a na bedně, kapky z trubek, prach ve světle lucerny. */
         val HIDEOUT = InteriorFx(
             candles = listOf(65 to 181, 105 to 177, 55 to 291, 78 to 170, 81 to 172, 83 to 171),

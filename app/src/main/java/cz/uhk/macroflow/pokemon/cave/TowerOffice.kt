@@ -49,4 +49,20 @@ object TowerOffice {
     )
 
     val ACTION_NODES = TEXTS.keys + ELEVATOR_NODE
+
+    /** Kancelář po Objektu 019 – Drakirra ji v noci vypálila (docs/adr/0104). */
+    val BURNED_TEXTS = mapOf(
+        "kanc_dalekohled" to "🔭 Dalekohled leží převrácený, čočka se roztavila do jediné slzy skla. Z cedulky SLEDOVAT. NEPROBOUZET. zbylo jen ohořelé: …PROBUDIT.",
+        "kanc_orloj" to "🪐 Orloj se zastavil. Mosazné koule se roztekly a slily dohromady. Jen černá koule se pořád točí – opačně, a teď rychleji.",
+        "kanc_kyvadlo" to "🕰️ Lano kyvadla přehořelo. Mosazné závaží leží uprostřed znaku Řádu, přesně na rysce 213.",
+        "kanc_vahy" to "⚖️ Váhy jsou sežehlé do černa. Popel z kanceláře se smísil s popelem na misce. Modrý krystal z druhé misky zmizel.",
+        "kanc_stul" to "🖋️ Trůn je ohořelý, svíčky konečně zhasly. Registr nádob přežil, jen se mu zkroutila vazba. Poslední řádek, čerstvým inkoustem:
+SUBJEKT 213 – TEST SÍLY NÁDOBY: ÚSPĚŠNÝ.",
+        "kanc_mapa" to "🗺️ Mapa shořela. Zůstaly jen rudé nitě – visí z prázdného rámu dolů, pod svět.",
+        "kanc_globus" to "🌍 Glóbus pukl vedví. Uvnitř je dutý a začazený.",
+        "kanc_katalog" to "🗃️ Kartotéka je ohořelá, šuplíky se roztavily do sebe. Jen šuplík 213 je vytažený a nepoškozený. Jako by ho oheň obešel.",
+        "kanc_pult" to "📖 Hvězdný atlas shořel. Zbyla jediná stránka: souhvězdí Spící. Vyškrábaná hvězda je teď propálená skrz."
+    )
+
+    fun textFor(node: String, burned: Boolean): String? = (if (burned) BURNED_TEXTS[node] else null) ?: TEXTS[node]
 }

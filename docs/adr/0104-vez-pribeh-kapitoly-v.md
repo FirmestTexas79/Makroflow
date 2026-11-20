@@ -24,5 +24,10 @@ Subjekt připraven, s vyvrcholením pod světem nad obrácenou korunou Lumiry (S
   `TowerAbyss`) – lávka nad propastí, Lumira hlavou dolů, rudé nitě stanic, kopí v kmeni, klec „SESTUP ZATÍM
   NESCHVÁLEN“ (háček na Akt III).
 
+- **Objekt 019** (fáze za Registrem nádob): v Tréninkovém koutě Arény souboj se spoutanou Drakirrou
+  (`SpecialBattle.OBJEKT_019`, lv 30, řetězy: útok ×0,55, rychlost ×0,5, nejde chytit ani utéct). Po výhře v noci
+  vyhoří Kancelář Řádu – `tower_office_burned.png` (`gen_office_burned.py`, stejné rozložení), vlastní texty
+  (`TowerOffice.BURNED_TEXTS`) a živé detaily `InteriorFxView.OFFICE_BURNED`.
+
 ## Mimo rozsah (další krok)
-Objekt 019 (Drakirra v aréně, požár Kanceláře), zmizení Hunfreyho jako parťáka po Kalibraci, cutscéna sjezdu na −2.
+Cutscéna sjezdu na −2. Hunfrey v HUD je hráčův vlastní Makromon (druh 042), jeho „zmizení“ se nedělá.

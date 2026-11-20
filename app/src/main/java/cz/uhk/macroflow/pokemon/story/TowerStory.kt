@@ -27,10 +27,11 @@ object TowerStory {
     const val FAIRY = FIRST + 10          // Duhová zahrada: studna přání
     const val POISON = FIRST + 11         // Jedová laboratoř: snídaně bez zapomnění
     const val OFFICE = FIRST + 12         // Kancelář Řádu: Registr nádob
-    const val MAP = FIRST + 13            // Hunfreyho mapa: 5 útržků
-    const val HIDEOUT = FIRST + 14        // Patro −1: poslední zápis
-    const val READY = FIRST + 15          // Subjekt připraven: jeden vyvážený den
-    const val COUNT = 16
+    const val OBJ019 = FIRST + 13         // Objekt 019: spoutaná Drakirra v Aréně, v noci vypálí Kancelář
+    const val MAP = FIRST + 14            // Hunfreyho mapa: 5 útržků
+    const val HIDEOUT = FIRST + 15        // Patro −1: poslední zápis
+    const val READY = FIRST + 16          // Subjekt připraven: jeden vyvážený den
+    const val COUNT = 17
 
     /**
      * Které patro výtah pustí: patro N (1–13, −1 = 14, −2 = 15) je schválené, když hráč došel aspoň do fáze
@@ -50,11 +51,13 @@ object TowerStory {
     const val FAIRY_KEY = "vez_studna_prani"
     const val OFFICE_KEY = "vez_registr_nadob"
     const val HIDEOUT_KEY = "vez_posledni_zapis"
+    /** Hráč porazil spoutanou Drakirru (Objekt 019); v noci vyhořela Kancelář Řádu. */
+    const val OBJ019_KEY = "vez_objekt_019"
     /** Hráč poprvé stál na balkonu Sektoru Hlubiny (konec kapitoly). */
     const val ABYSS_KEY = "vez_hlubina_videna"
 
     /** Všechny příznaky kapitoly (synchronizují se jako příběh). */
-    val KEYS: Set<String> get() = setOf(MEASURE_KEY, ICE_KEY, FAIRY_KEY, OFFICE_KEY, HIDEOUT_KEY, ABYSS_KEY) + FRAGMENT_KEYS
+    val KEYS: Set<String> get() = setOf(MEASURE_KEY, ICE_KEY, FAIRY_KEY, OFFICE_KEY, OBJ019_KEY, HIDEOUT_KEY, ABYSS_KEY) + FRAGMENT_KEYS
 
     /** Útržky Hunfreyho mapy: uzel na patře → příznak. Sbírají se kdykoli po Spisu 212. */
     data class Fragment(val node: String, val key: String, val text: String)
@@ -207,10 +210,21 @@ object TowerStory {
         "„Registr nádob leží na stole. Subjekt si ho smí prohlédnout. Je to přece jeho.“"
     const val H_OFFICE = "Kancelář Řádu (patro 13): prohlédni si Registr nádob na stole s prázdným trůnem."
 
-    const val T_MAP = "Patro −1. Tlačítko, které na panelu chybí.\n\n" +
+    const val T_OBJ019 = "Brk ještě nedopsal, když se Věží rozezní siréna. Sept z reproduktoru, poprvé rychleji než obvykle:\n\n" +
+        "„Mimořádné předvedení v Aréně. Objekt 019 byl zajištěn. Subjekt 213 se dostaví k testu síly nádoby. Účast je povinná.“\n\n" +
+        "V Tréninkovém koutě Arény leží v řetězech rudá dračice. Drakirra. Ta, co tě smetla na vrcholu hor. " +
+        "Tentokrát nemůže vzlétnout – řetězy jí berou sílu i rychlost."
+    const val H_OBJ019 = "Aréna v Ozvěně: v Tréninkovém koutě (Pět Mistrů) čeká Objekt 019. Poraz ho."
+
+    const val T_MAP = "Drakirra se skoro nebránila. Celou dobu se dívala jen na tvou Spirru. Když padla, řetězy zachřestily " +
+        "a Kassar se odvrátil.\n\n" +
+        "Té noci se Věží rozlehne řev. Ráno je horní patro černé: Kancelář Řádu vyhořela – dalekohled, orloj, trůn. " +
+        "Na vývěsce v Aréně visí nový list: OBJEKT 019 – UPRCHL. TEST SÍLY NÁDOBY: ÚSPĚŠNÝ.\n" +
+        "Pomohl jsi jim ji zkrotit.\n\n" +
+        "Patro −1. Tlačítko, které na panelu chybí.\n\n" +
         "Hunfrey po sobě nechal stopy po celé Věži – útržky mapy, které schoval tam, kam se úředníci nedívají. " +
         "Až je složíš, ukáže se cesta do patra, které oficiálně neexistuje.\n\n" +
-        "Útržky: dutina stromu (4), lucerna (6), loďka (7), komora 212 (9), pod glóbem v Kanceláři (13)."
+        "Útržky: dutina stromu (4), lucerna (6), loďka (7), komora 212 (9), v popelu pod glóbem v Kanceláři (13)."
     const val H_MAP = "Najdi všech 5 útržků Hunfreyho mapy na patrech Věže."
 
     const val T_HIDEOUT = "Útržky do sebe zapadnou. Na rubu posledního je nákres panelu výtahu: pod nulou dvě zalepené díry " +

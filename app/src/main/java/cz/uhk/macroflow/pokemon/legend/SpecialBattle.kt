@@ -26,7 +26,9 @@ enum class SpecialBattle(
     /** Vlastní jméno strážce (jinak jméno Makromona [makromonId]); sprite je makromon_NN_<jméno>. */
     val displayName: String? = null,
     /** Druh, jehož statistiky a útoky strážce používá (null = [makromonId]). */
-    val statsFrom: String? = null
+    val statsFrom: String? = null,
+    /** Spoutaný (Objekt 019): řetězy berou útok a rychlost. */
+    val chained: Boolean = false
 ) {
     // vodní liška u podzemního jezírka (docs/adr/0063) – statistiky a útoky Serpfina, vlastní sprite
     BOSS_BLUE("boss_blue", "035", 12, Kind.BOSS, CrystalColor.BLUE, "makromon_35_aquavulp", displayName = "AQUAVULP", statsFrom = "021"),
@@ -35,7 +37,10 @@ enum class SpecialBattle(
     LEGEND_PEAK("legend_peak", "019", 80, Kind.LEGEND, null, "makromon_19_drakirra"),           // drak z vrcholu
     // pán Rudé hniloby v kořenech Starého dubu (docs/adr/0045)
     FOREST_ROT("forest_rot", "026", 13, Kind.BOSS, null, "makromon_26_soulord",
-        winKey = cz.uhk.macroflow.pokemon.story.ForestHeart.ROT_DEFEATED_KEY);
+        winKey = cz.uhk.macroflow.pokemon.story.ForestHeart.ROT_DEFEATED_KEY),
+    // Objekt 019 (docs/adr/0104): Řád předvede v Aréně spoutanou Drakirru; jde porazit, ne chytit
+    OBJEKT_019("objekt_019", "019", 30, Kind.BOSS, null, "makromon_19_drakirra",
+        winKey = cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY, chained = true);
 
     enum class Kind { BOSS, LEGEND }
 
@@ -48,6 +53,7 @@ enum class SpecialBattle(
     /** Úvodní hláška místo „WILD X APPEARED!“ (max. 23 znaků na řádek). */
     fun appearLines(name: String): Pair<String, String> = when {
         this == FOREST_ROT -> "$name ROSE FROM" to "THE ROTTEN ROOTS!"
+        chained -> "$name LIES" to "BOUND IN CHAINS!"
         kind == Kind.BOSS -> "GUARDIAN $name" to "BLOCKS THE WAY!"
         else -> "LEGENDARY $name" to "HAS AWAKENED!"
     }
