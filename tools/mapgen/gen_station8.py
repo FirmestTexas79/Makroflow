@@ -24,9 +24,9 @@ import order as O, lumen as LU, terrain as T, signs as SG  # noqa: E402
 
 AW, AH, WALL_H = 176, 352, 112
 NODES = {
-    "kt_klec": (88, 124), "kt_stred": (88, 168), "kt_ruina": (34, 124), "kt_radio": (28, 212), "kt_tabule": (78, 204),
-    "kt_vez": (140, 246), "kt_hlidka": (108, 262), "kt_dole": (84, 290), "kt_lanovka": (130, 300),
-    "kt_krida": (62, 312), "kt_sestup": (36, 338),
+    "kt_klec": (88, 124), "kt_stred": (88, 180), "kt_ruina": (34, 124), "kt_radio": (28, 212), "kt_tabule": (62, 150),
+    "kt_vez": (140, 246), "kt_hlidka": (104, 256), "kt_dole": (74, 290), "kt_lanovka": (130, 300),
+    "kt_krida": (80, 296), "kt_sestup": (36, 338),
 }
 EDGES = [("kt_klec", "kt_stred"), ("kt_stred", "kt_ruina"), ("kt_stred", "kt_radio"), ("kt_stred", "kt_tabule"),
          ("kt_radio", "kt_tabule"), ("kt_stred", "kt_vez"), ("kt_vez", "kt_hlidka"), ("kt_stred", "kt_hlidka"),
@@ -79,18 +79,22 @@ for a in range(0, 360, 3):
     img[y, x] = YELLOW[1]
 SG.painted(img, 72, 210, "S-8", YELLOW[2], scale=1, seed=3, drips=False)
 
+# Hunfreyho křída na skále u závory: šipka dolů a 212 (kresba na zemi – kreslí se před kořeny)
+CH = c(0xEAE6DA)
+for y in range(278, 290):
+    img[y, 72] = CH
+for k in range(4):
+    img[290 - k, 72 - k] = CH; img[290 - k, 72 + k] = CH
+SG.painted(img, 78, 280, "212", CH, seed=6, drips=False, spray=False, wear=0.2)
+
 # ── kořeny (z-buffer: co leží za nimi, je nepřekreslí) ──────────────────────
 root(sc, bez((4, WALL_H - 4), (2, 176), (30, 222)), 12, 6, lift=0.6, d=0.4)         # ze skály kolem rohu ubikace
 root(sc, bez((180, 182), (150, 196), (118, 226)), 13, 7, lift=0.8, d=0.42)          # zprava pod pozorovatelnou
-root(sc, bez((92, 348), (98, 300), (84, 276)), 10, 5, lift=0.7, d=0.45)            # z propasti zvedá beton
+root(sc, bez((100, 352), (106, 322), (96, 304)), 9, 5, lift=0.7, d=0.45)           # z propasti přes okraj římsy
 for (p0, p1, p2, w) in (((30, 222), (52, 226), (56, 244), 3), ((118, 226), (100, 232), (94, 246), 2.5),
-                        ((84, 276), (70, 270), (60, 280), 2.5), ((150, 196), (160, 220), (170, 228), 3)):
+                        ((96, 304), (88, 296), (84, 286), 2), ((150, 196), (160, 220), (170, 228), 3)):
     root(sc, bez(p0, p1, p2, 30), w, 1.2, solid=False, d=0.5)
-for x in range(70, 104):                                                  # zvednutá deska betonu nad kořenem
-    for k in range(3):
-        img[270 - k + int(abs(x - 88) * 0.08), x] = P.CONC[5 - k]
-    img[273 + int(abs(x - 88) * 0.08), x] = P.CONC[0]
-for (x, y) in ((118, 226), (84, 276)):                                    # spálené konce (hlídka)
+for (x, y) in ((118, 226), (96, 304)):                                    # spálené konce (hlídka)
     for yy in range(y - 5, y + 6):
         for xx in range(x - 6, x + 7):
             if (xx - x) ** 2 + ((yy - y) * 1.3) ** 2 < 30 and sc.depth[yy, xx]:
@@ -101,18 +105,22 @@ for (x, y) in ((118, 226), (84, 276)):                                    # spá
 # ── stavby a předměty ───────────────────────────────────────────────────────
 sc.place(O.radio_mast(44), 22, 170, foot=(10, 4))
 sc.place(O.barrack(56, 40), 44, 200, foot=(56, 22))
-sc.place(O.notice_board(), 80, 196, foot=(28, 5))
-for (x, y, sd) in ((101, 178, 1), (119, 176, 2), (110, 194, 3), (150, 150, 4), (70, 142, 5)):
+sc.place(O.notice_board(), 62, 140, foot=(28, 5))
+for (x, y, sd) in ((150, 150, 4), (158, 160, 1), (140, 158, 2)):
     sc.place(O.army_crate(sd), x, y, pad=0)
-sc.place(O.flood_mast(56), 112, 150, foot=(10, 4))
+sc.place(O.flood_mast(56), 126, 140, foot=(10, 4))
 sc.place(O.obs_tower(40, 104), 142, 238, foot=(34, 12))
-sc.place(O.sandbags(40, 2), 96, 254, pad=0)
-sc.place(O.fuel_drums(3), 126, 268, pad=0)
-sc.place(O.burnt_stump(18, 22, 1), 158, 292, pad=0)
-sc.place(O.burnt_stump(14, 16, 2), 106, 300, pad=0)
+sc.place(O.fuel_drums(3), 116, 276, pad=0)
+sc.place(O.sandbags(28, 2), 154, 262, pad=0)
+sc.place(O.burnt_stump(18, 22, 1), 38, 252, pad=0)
 sc.place(O.flood_mast(56), 22, 286, foot=(10, 4))
+sign = SG.plate("LANOVKA", c(0x141414), c(0xE2BA34), seed=5, pad=3, wear=0.0)
+post = O.Spr(sign.w, sign.h + 8)
+post.a[:sign.h] = sign.a
+for y in range(sign.h, sign.h + 8):
+    post.px(4, y, O.STEEL[2]); post.px(sign.w - 5, y, O.STEEL[2])
+sc.place(post, 146, 296, foot=(sign.w, 3))
 cab = O.cable_station(50, 36)
-pl = SG.plate("> KMEN", c(0x1A1A1A), c(0xD8B030), seed=5, pad=2)
 sc.place(cab, 146, 326, foot=(50, 22))
 sc.place(O.barrier(64), 40, 330, collide=False)
 block[314:330, 8:17] = True; block[314:330, 63:72] = True                # patky závory
@@ -123,14 +131,6 @@ for (x0, y0) in ((136, 302), (140, 300)):
         X, Y = int(x0 + (182 - x0) * t), int(y0 + (360 - y0) * t + math.sin(t * math.pi) * 5)
         if 0 <= X < AW and 0 <= Y < AH:
             img[Y, X] = STEEL[2] if t < 0.5 else STEEL[1]
-
-# Hunfreyho křída na betonu u závory: šipka dolů a 212
-CH = c(0xEAE6DA)
-for y in range(296, 308):
-    img[y, 76] = CH
-for k in range(4):
-    img[308 - k, 76 - k] = CH; img[308 - k, 76 + k] = CH
-SG.painted(img, 82, 298, "212", CH, seed=6, drips=False, spray=False, wear=0.25)
 
 # ── stíny, zadní stěna, sprity ──────────────────────────────────────────────
 floor = np.zeros((AH, AW), bool)
@@ -159,11 +159,6 @@ root(sc, bez((44, -4), (52, 40), (28, 70)), 6, 3, solid=False, d=0.32)
 root(sc, bez((176, 70), (160, 92), (178, 120)), 7, 7, solid=False, d=0.3)
 sc.zbuf[:WALL_H] = -1e9                                                   # stěna je za vším na podlaze
 
-# terminál lanovky dostane ceduli až teď (je to sprite, kreslí se se z-testem)
-for yy in range(pl.h):
-    for xx in range(pl.w):
-        if pl.a[yy, xx, 3]:
-            cab.a[1 + yy, 1 + xx] = pl.a[yy, xx]
 sc.draw_sprites()
 
 # modré houby na hranách kořenů
@@ -176,9 +171,9 @@ for _ in range(6000):
 
 # ── světlo a export ─────────────────────────────────────────────────────────
 sc.light(
-    warm=[(88, 128, 30, 20, 0.9), (112, 178, 46, 32, 1.0), (26, 302, 42, 28, 1.0), (56, 196, 22, 12, 0.7),
+    warm=[(88, 128, 30, 20, 0.9), (126, 168, 44, 30, 1.0), (26, 302, 42, 28, 1.0), (56, 196, 22, 12, 0.7), (146, 290, 26, 14, 0.8),
           (138, 44, 34, 28, 0.9), (150, 318, 30, 16, 0.6)],
-    ember=[(118, 226, 10, 7, 0.8), (84, 276, 9, 6, 0.7), (158, 284, 9, 6, 0.6)],
+    ember=[(118, 226, 10, 7, 0.8), (96, 304, 9, 6, 0.7), (38, 246, 9, 6, 0.6)],
     cold=[(33, 72, 40, 36, 1.0), (33, 96, 18, 10, 0.8)] + [(x, y, 6, 5, 0.6) for (x, y) in fungi])
 sc.export("root_camp", "gen_station8.py")
 print("FUNGI", fungi[:12])

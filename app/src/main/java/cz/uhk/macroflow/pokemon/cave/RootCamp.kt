@@ -21,10 +21,10 @@ object RootCamp {
     val MAP = CaveMap(
         artW = 176, artH = 352,
         nodes = listOf(
-            CaveNode(CAGE_NODE, 88, 124), CaveNode("kt_stred", 88, 168), CaveNode("kt_ruina", 34, 124),
-            CaveNode("kt_radio", 28, 212), CaveNode("kt_tabule", 78, 204), CaveNode("kt_vez", 140, 246),
-            CaveNode("kt_hlidka", 108, 262), CaveNode("kt_dole", 84, 290), CaveNode("kt_lanovka", 130, 300),
-            CaveNode("kt_krida", 62, 312), CaveNode(DOWN_NODE, 36, 338)
+            CaveNode(CAGE_NODE, 88, 124), CaveNode("kt_stred", 88, 180), CaveNode("kt_ruina", 34, 124),
+            CaveNode("kt_radio", 28, 212), CaveNode("kt_tabule", 62, 150), CaveNode("kt_vez", 140, 246),
+            CaveNode("kt_hlidka", 104, 256), CaveNode("kt_dole", 74, 290), CaveNode("kt_lanovka", 130, 300),
+            CaveNode("kt_krida", 80, 296), CaveNode(DOWN_NODE, 36, 338)
         ),
         edges = listOf(CAGE_NODE to "kt_stred", "kt_stred" to "kt_ruina", "kt_stred" to "kt_radio", "kt_stred" to "kt_tabule",
             "kt_radio" to "kt_tabule", "kt_stred" to "kt_vez", "kt_vez" to "kt_hlidka", "kt_stred" to "kt_hlidka",
@@ -38,9 +38,9 @@ object RootCamp {
         isCave = false,
         tapAreas = mapOf(
             CAGE_NODE to Triple(88, 88, 22), "kt_ruina" to Triple(33, 76, 22), "kt_radio" to Triple(36, 180, 22),
-            "kt_tabule" to Triple(78, 182, 12), "kt_vez" to Triple(142, 168, 18), "kt_hlidka" to Triple(124, 260, 16),
-            "kt_lanovka" to Triple(150, 312, 18), "kt_krida" to Triple(74, 306, 9), DOWN_NODE to Triple(40, 318, 16),
-            "kt_stred" to Triple(88, 214, 14)
+            "kt_tabule" to Triple(62, 128, 13), "kt_vez" to Triple(142, 168, 18), "kt_hlidka" to Triple(118, 268, 14),
+            "kt_lanovka" to Triple(146, 300, 20), "kt_krida" to Triple(82, 284, 9), DOWN_NODE to Triple(40, 318, 16),
+            "kt_stred" to Triple(88, 216, 14)
         )
     )
 
@@ -59,7 +59,7 @@ object RootCamp {
             "Rozpis služeb: PÁLIT KAŽDÝCH 6 HODIN. Poslední podpis je před 43 dny. Kořeny od té doby dorostly až k sudům.",
         "kt_lanovka" to "🚡 Spodní stanice lanovky ke kmeni. Gondola visí u rampy s rozbitým okénkem, lana mizí přes okraj do tmy.\n" +
             "Cedule: LANOVKA → KMEN · MIMO PROVOZ · DALŠÍ JÍZDA: ZATÍM NESCHVÁLENO.",
-        "kt_krida" to "✏️ Na patce závory křídou šipka dolů a číslo 212. Pod tím Hunfreyho písmo:\n" +
+        "kt_krida" to "✏️ Na skále u závory křídou šipka dolů a číslo 212. Pod tím Hunfreyho písmo:\n" +
             "„Byl jsem až tady. Dál ne – dál se zapomíná rychleji. Vrať se vždycky nahoru spát.“",
         DOWN_NODE to "🚧 Závora UZÁVĚRA. Za ní se cesta stáčí po římse dolů do mlhy – na Svah bezejmenných.\n" +
             "Na rameni visí fotka výpravy 7: devět lidí v kombinézách Řádu se usmívá. Na zadní straně tužkou: „Nepočítejte je.“\n" +
