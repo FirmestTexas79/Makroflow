@@ -17,8 +17,8 @@ object RootSlopeCamp {
         nodes = listOf(
             CaveNode(ENTRY_NODE, 22, 86), CaveNode("tv_ruina", 140, 84), CaveNode("tv_registr", 62, 124),
             CaveNode("tv_kuchyne", 122, 146), CaveNode("tv_stan1", 34, 196), CaveNode("tv_most", 88, 209),
-            CaveNode("tv_stan5", 146, 240), CaveNode("tv_stan3", 46, 262), CaveNode("tv_tabule", 58, 314),
-            CaveNode("tv_stan7", 132, 302), CaveNode("tv_navijak", 154, 330), CaveNode(DOWN_NODE, 92, 346)
+            CaveNode("tv_stan5", 148, 254), CaveNode("tv_stan3", 40, 262), CaveNode("tv_tabule", 82, 330),
+            CaveNode("tv_stan7", 136, 312), CaveNode("tv_navijak", 154, 330), CaveNode(DOWN_NODE, 92, 346)
         ),
         edges = listOf(ENTRY_NODE to "tv_registr", "tv_registr" to "tv_ruina", "tv_registr" to "tv_kuchyne", "tv_registr" to "tv_stan1",
             "tv_stan1" to "tv_most", "tv_most" to "tv_kuchyne", "tv_most" to "tv_stan5", "tv_stan1" to "tv_stan3",
@@ -34,8 +34,8 @@ object RootSlopeCamp {
         tapAreas = mapOf(
             ENTRY_NODE to Triple(18, 40, 16), "tv_ruina" to Triple(144, 54, 24), "tv_registr" to Triple(60, 96, 20),
             "tv_kuchyne" to Triple(124, 116, 22), "tv_stan1" to Triple(34, 172, 20), "tv_most" to Triple(118, 150, 40),
-            "tv_stan5" to Triple(150, 222, 20), "tv_stan3" to Triple(40, 238, 20), "tv_tabule" to Triple(56, 280, 18),
-            "tv_stan7" to Triple(138, 280, 20), "tv_navijak" to Triple(156, 312, 14), DOWN_NODE to Triple(100, 330, 14)
+            "tv_stan5" to Triple(148, 226, 20), "tv_stan3" to Triple(38, 232, 20), "tv_tabule" to Triple(54, 290, 18),
+            "tv_stan7" to Triple(136, 284, 20), "tv_navijak" to Triple(156, 312, 14), DOWN_NODE to Triple(100, 330, 14)
         )
     )
 

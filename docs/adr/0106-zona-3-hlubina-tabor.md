@@ -3,7 +3,7 @@
 Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: projekt `lore/akt3-hlubina-navrh.md`.
 
 - Zóna 3 = region pod světem, kde visí Spící. 8 lokací se stupněm pohlcení 1/8 → 8/8: 1 Stanice 8 (hub) → 2 Pozorovatelna B
-  → (3 Lanovka nad roklí | 4 Tábor na svahu) → 5 Svah bezejmenných → (6 Chrám Lumenců | 7 Les pod korunou) → 8 Kmen.
+  → (3 Signální útes – vedlejší | 4 Tábor na svahu) → 5 Svah bezejmenných → (6 Chrám Lumenců | 7 Les pod korunou) → 8 Kmen.
   Střed kořenů (finále) mimo rozsah.
 - **Sestup schválen:** klec v Sektoru Hlubiny (−2) se otevře den po prvním výhledu na Spící (Septovo „už brzy“;
   den v GamePrefs `abyss_seen_day`, starší hry bez něj se berou jako včera). Poprvé okno „Sestup schválen“,
@@ -33,3 +33,13 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   stany 2, 4, 6 a prkennou lávkou, sčítací tabule, naviják, kolíky do mlhy, žebra dlouhého domu Lumenců ve skále.
   Hunfrey sem nedošel (držíme jeho „Byl jsem až tady.“ ze Stanice 8). Setkání DUCH lv 30–34, intro SlopeCampIntro.
   Vstup z Pozorovatelny B schody dolů; dolů na Svah zatím nepřístupné.
+- **Signální útes** (`ROOT_SIGNAL`, `RootSignal.kt`, `gen_signal.py`), vedlejší lokace místo plánované „Lanovky nad
+  roklí“: ostroh na okraji propasti, přes horní půlku mapy výhled na celou Spící (kořeny po stropě, kmen s ránou a
+  zelenou mlhou, obrácená koruna, kopí a šest světel – Trpitel jen v náznaku), lana lanovky s uvízlou gondolou.
+  Signální lampa, bouda signalisty, Kniha signálů, lavička. Vedlejší úkol **Signalista** (`story/Signal.kt`,
+  `SIGNAL_QUEST`): Kesh (Lumex) nesl lucernu výpravy 7, jednou ráno promluvil a výprava byla pryč; každou noc
+  signalizuje ke kmeni a ve dne rozsvěcí světlomet na Pozorovatelně B. Fáze: dynamo (6 000 kroků za den) → spánek
+  (2 noci ≥ 6 h – kdo hlídá, zapomíná) → odpověď (u lampy: z kmene blikne šest zelených světel – nebyla to výprava 7).
+  Setkání DUCH a PSYCHO lv 30–34, intro SignalIntro. Grafika zóny: cedule s tloušťkou, leskem a špínou, sloupky
+  s hlavicí a objímkami, stany v pohledu 3/4 shora (dvě plochy střechy, štít se vchodem), nová polní kuchyně
+  a registrační stolek.

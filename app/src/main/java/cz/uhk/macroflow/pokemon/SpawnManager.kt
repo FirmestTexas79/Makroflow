@@ -121,7 +121,8 @@ object SpawnManager {
         BiomeType.TOWER_POISON to setOf("JED"),
         // Zóna 3 – Hlubina (docs/adr/0106)
         BiomeType.ROOT_WATCH to setOf("DUCH", "ZEMĚ"),
-        BiomeType.ROOT_SLOPECAMP to setOf("DUCH"))
+        BiomeType.ROOT_SLOPECAMP to setOf("DUCH"),
+        BiomeType.ROOT_SIGNAL to setOf("DUCH", "PSYCHO"))
 
     /** Typ druhu tak, jak ho ukazuje Makrodex (první slovo dexType: „ZEMĚ / KÁMEN“ → ZEMĚ). */
     private val DEX_TYPE: Map<String, String> by lazy {

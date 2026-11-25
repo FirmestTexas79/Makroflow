@@ -672,7 +672,40 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST) }
+    // ── Hlubina, Signální útes: Signalista (docs/adr/0106) ──
+    val SIGNAL_QUEST = QuestDefinition(
+        id = cz.uhk.macroflow.pokemon.story.Signal.QUEST_ID,
+        chapter = "🔦 SIGNÁLNÍ ÚTES",
+        side = true,
+        farewell = cz.uhk.macroflow.pokemon.story.Signal.FAREWELL,
+        stages = listOf(
+            QuestStage(
+                title = "Dynamo",
+                text = cz.uhk.macroflow.pokemon.story.Signal.DYNAMO,
+                speakerResId = R.drawable.makromon_11_lumex, speakerName = cz.uhk.macroflow.pokemon.story.Signal.NAME,
+                requirementType = RequirementType.WALK_STEPS, targetValue = cz.uhk.macroflow.pokemon.story.Signal.STEPS,
+                hint = cz.uhk.macroflow.pokemon.story.Signal.DYNAMO_HINT
+            ),
+            QuestStage(
+                title = "Kdo hlídá, zapomíná",
+                text = cz.uhk.macroflow.pokemon.story.Signal.SLEEP,
+                speakerResId = R.drawable.makromon_11_lumex, speakerName = cz.uhk.macroflow.pokemon.story.Signal.NAME,
+                requirementType = RequirementType.SLEEP_NIGHTS, targetValue = cz.uhk.macroflow.pokemon.story.Signal.SLEEP_NIGHTS,
+                targetId = cz.uhk.macroflow.pokemon.story.Signal.SLEEP_HOURS,
+                hint = cz.uhk.macroflow.pokemon.story.Signal.SLEEP_HINT
+            ),
+            QuestStage(
+                title = "Odpověď",
+                text = cz.uhk.macroflow.pokemon.story.Signal.READY,
+                speakerResId = R.drawable.makromon_11_lumex, speakerName = cz.uhk.macroflow.pokemon.story.Signal.NAME,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.Signal.ANSWER_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.Signal.READY_HINT
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST) }
 
     /** Pořadí kapitoly v deníku (neznámé na konec). */
     fun journalOrder(id: String): Int {

@@ -48,24 +48,38 @@ def _mix(a, b, k):
     return np.clip(np.asarray(a[:3], float) * (1 - k) + np.asarray(b[:3], float) * k, 0, 255).astype(np.uint8)
 
 
-def plate(text, fg, bg, scale=1, seed=0, pad=4, rivets=True, wear=0.08, border=None):
-    """Plechová cedule s textem. fg/bg = barvy (c()), border = barva vnitřního lemu (např. červená u UZÁVĚRY)."""
+def plate(text, fg, bg, scale=1, seed=0, pad=4, rivets=True, wear=0.08, border=None, depth=2):
+    """Plechová/smaltovaná cedule s textem jako hmotný předmět: čelo s jemným zrnem a leskem šikmo přes plech,
+    špína a rez u spodní hrany, plastický lem (světlá horní a levá hrana, tmavá spodní), pod čelem viditelná tloušťka
+    desky (depth px), nýty s rezavými stékanci, písmena se stínem a světlejší horní hranou, místy odřená.
+    border = barva vnitřního lemu (např. rudá u výstrah)."""
     m = text_mask(text, scale)
     has_acc = any(ch.upper() in ACCENTED for ch in text)
-    top_cut = 0 if has_acc else 2 * scale                                  # bez diakritiky se horní řádky ořežou
-    m = m[top_cut:]
+    m = m[0 if has_acc else 2 * scale:]
     W, H = m.shape[1] + 2 * pad + 2, m.shape[0] + 2 * pad
-    s = Spr(W, H)
+    s = Spr(W, H + depth)
     bgf = np.asarray(bg[:3], float)
     for y in range(H):
         for x in range(W):
-            k = 1.08 - 0.22 * y / H + (_vn(x, y, seed + 3, 3) - 0.5) * 0.12      # svislý přechod + zrno plechu
-            col = np.clip(bgf * k, 0, 255).astype(np.uint8)
+            k = 1.1 - 0.24 * y / H + (_vn(x, y, seed + 3, 3) - 0.5) * 0.1
+            sheen = (x - y * 1.3) % (W + 20)
+            if 6 < sheen < 12:
+                k += 0.1 * (1 - abs(sheen - 9) / 3)                         # lesk šikmo přes plech
+            col = np.clip(bgf * k, 0, 255)
+            if y > H * 0.72:                                                # špína u spodní hrany
+                d = (y - H * 0.72) / (H * 0.28) * (0.25 + 0.3 * _vn(x, y, seed + 5, 2))
+                col = col * (1 - d) + np.array([70, 52, 34]) * d
+            col = col.astype(np.uint8)
             if y == 0 or x == 0:
-                col = _mix(col, (255, 255, 255), 0.25)                         # osvětlená hrana
+                col = _mix(col, (255, 255, 255), 0.3)
+            elif y == 1 or x == 1:
+                col = _mix(col, (255, 255, 255), 0.12)
             if y == H - 1 or x == W - 1:
-                col = _mix(col, (0, 0, 0), 0.55)                               # stinná hrana
+                col = _mix(col, (0, 0, 0), 0.5)
             s.px(x, y, np.append(col, 255))
+    for d_ in range(depth):                                                 # tloušťka desky pod čelem
+        for x in range(1, W):
+            s.px(x, H + d_, np.append(_mix(bg, (0, 0, 0), 0.62 + d_ * 0.12), 255))
     if border is not None:
         for x in range(2, W - 2):
             s.px(x, 2, border); s.px(x, H - 3, border)
@@ -73,7 +87,7 @@ def plate(text, fg, bg, scale=1, seed=0, pad=4, rivets=True, wear=0.08, border=N
             s.px(2, y, border); s.px(W - 3, y, border)
     ox, oy = pad + 1, pad
     dark = _mix(bg, (0, 0, 0), 0.6)
-    for y in range(m.shape[0]):                                             # stín písmen (o 1 px vpravo dolů)
+    for y in range(m.shape[0]):
         for x in range(m.shape[1]):
             if m[y, x] and not (y + 1 < m.shape[0] and x + 1 < m.shape[1] and m[y + 1, x + 1]):
                 s.px(ox + x + 1, oy + y + 1, np.append(dark, 255))
@@ -81,15 +95,15 @@ def plate(text, fg, bg, scale=1, seed=0, pad=4, rivets=True, wear=0.08, border=N
         for x in range(m.shape[1]):
             if m[y, x]:
                 col = fg
-                if _vn(x * 2, y * 2, seed + 7, 3) < wear:                       # odřená barva
+                if _vn(x * 2, y * 2, seed + 7, 3) < wear:
                     col = np.append(_mix(fg, bg, 0.6), 255)
                 elif y == 0 or not m[y - 1, x]:
-                    col = np.append(_mix(fg, (255, 255, 255), 0.25), 255)        # horní hrana písmene světlejší
+                    col = np.append(_mix(fg, (255, 255, 255), 0.25), 255)
                 s.px(ox + x, oy + y, col)
     if rivets:
         for (x, y) in ((1, 1), (W - 3, 1), (1, H - 3), (W - 3, H - 3)):
-            s.px(x, y, c(0xD8DCE4)); s.px(x + 1, y + 1, c(0x30343C)); s.px(x + 1, y, c(0x9098A6)); s.px(x, y + 1, c(0x9098A6))
-            for k in range(1, 2 + _h(x, y, seed) % 4):                         # rezavý stékanec od nýtu
+            s.px(x, y, c(0xE2E6EE)); s.px(x + 1, y + 1, c(0x30343C)); s.px(x + 1, y, c(0x9098A6)); s.px(x, y + 1, c(0x9098A6))
+            for k in range(1, 2 + _h(x, y, seed) % 4):
                 if y + 1 + k < H - 1:
                     s.px(x + 1, y + 1 + k, np.append(_mix(s.a[y + 1 + k, x + 1], (110, 60, 30), 0.55 - k * 0.1), 255))
     return s

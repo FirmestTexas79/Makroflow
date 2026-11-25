@@ -24,8 +24,8 @@ import order as O, lumen as LU, terrain as T, signs as SG  # noqa: E402
 AW, AH, WALL_H = 176, 352, 72
 NODES = {
     "tv_vstup": (22, 86), "tv_ruina": (140, 84), "tv_registr": (62, 124), "tv_kuchyne": (122, 146), "tv_stan1": (34, 196),
-    "tv_most": (88, 209), "tv_stan5": (146, 240), "tv_stan3": (46, 262), "tv_tabule": (58, 314),
-    "tv_stan7": (132, 302), "tv_navijak": (154, 330), "tv_dolu": (92, 346),
+    "tv_most": (88, 209), "tv_stan5": (148, 254), "tv_stan3": (40, 262), "tv_tabule": (82, 330),
+    "tv_stan7": (136, 312), "tv_navijak": (154, 330), "tv_dolu": (92, 346),
 }
 EDGES = [("tv_vstup", "tv_registr"), ("tv_registr", "tv_ruina"), ("tv_registr", "tv_kuchyne"), ("tv_registr", "tv_stan1"), ("tv_stan1", "tv_most"),
          ("tv_most", "tv_kuchyne"), ("tv_most", "tv_stan5"), ("tv_stan1", "tv_stan3"), ("tv_stan3", "tv_tabule"),
@@ -97,19 +97,19 @@ for i in range(n):
 sign = SG.plate("TÁBOR VÝPRAV", c(0xE8E2CC), c(0x1E2A44), seed=3, pad=2, wear=0.0)
 sc.place(O.mount_plate(sign, posts=10), 58, 98, foot=(sign.w, 3), collide=False)
 block[95:98, 58 - sign.w // 2 + 2:58 - sign.w // 2 + 5] = True
-sc.place(O.reg_desk(), 64, 118, foot=(32, 8))
-sc.place(O.mess_canopy(58, 40), 124, 138, foot=(10, 4))
+sc.place(O.reg_desk(), 66, 118, foot=(36, 8))
+sc.place(O.mess_canopy(60, 42), 124, 140, foot=(10, 4))
 block[124:138, 98:104] = True; block[124:138, 146:152] = True             # tyče stříšky
-sc.place(O.ridge_tent(1, 0.1, seed=1), 34, 192, foot=(46, 20))
-sc.place(O.ridge_tent(3, 0.3, seed=3), 40, 258, foot=(46, 20))
-sc.place(O.ridge_tent(5, 0.35, seed=5), 150, 242, foot=(46, 20))
-sc.place(O.ridge_tent(7, 0.15, seed=7), 138, 300, foot=(46, 20))
+sc.place(O.ridge_tent(1, 0.1, seed=1), 34, 194, foot=(40, 22))
+sc.place(O.ridge_tent(3, 0.3, seed=3), 38, 254, foot=(40, 22))
+sc.place(O.ridge_tent(5, 0.35, seed=5), 148, 246, foot=(40, 22))
+sc.place(O.ridge_tent(7, 0.15, seed=7, lit=True), 136, 304, foot=(40, 22))
 for (num, x, y) in (("2", 154, 104), ("4", 118, 172), ("6", 80, 266)):     # spolknuté stany: jen tyče s praporky
     sc.place(O.pennant(num, 26), x, y, collide=False, z=y + 40)
     for k in range(10):                                                    # cáry plachty v kořenech
         X, Y = x - 8 + int(rng.integers(0, 16)), y - 2 + int(rng.integers(0, 6))
         img[Y, X] = O.CANVAS[int(rng.integers(1, 4))]
-sc.place(O.count_board("SČÍTÁNÍ"), 56, 306, foot=(10, 3))
+sc.place(O.count_board("SČÍTÁNÍ"), 54, 326, foot=(10, 3))
 sc.place(O.winch(), 156, 324, foot=(26, 8))
 for i, (x, y) in enumerate(((96, 304), (100, 318), (104, 332), (108, 346))):   # kolíky dolů do mlhy
     sc.place(O.stake(18 - i * 2), x, y, collide=False)

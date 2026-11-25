@@ -207,6 +207,25 @@ abstract class MapScene(private val map: Img, vw: Int, vh: Int, val ex: Int, val
     /** Vlnka na hladině / na zemi (elipsa). */
     protected fun ripple(x: Float, y: Float, r: Float, c: Int, a: Float) = ring(x, y, r, 0.5f, c, a, 0.55f)
 
+    /** Kužel světla z (ox, oy) k (tx, ty): pixelově odstupňovaný, slábne do dálky (světlomet, signální lampa). */
+    protected fun beam(ox: Float, oy: Float, tx: Float, ty: Float, a: Float, col: Int = hex(0xFFE0A0)) {
+        val dx = tx - ox; val dy = ty - oy
+        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+        val ux = dx / len; val uy = dy / len
+        for (y in 0 until h) for (x in 0 until w) {
+            val px = x - ox; val py = y - oy
+            val along = px * ux + py * uy
+            if (along < 0f || along > len * 1.15f) continue
+            val half = 2f + along * 0.22f
+            val across = abs(px * uy - py * ux)
+            if (across > half) continue
+            val k = (1f - across / half) * (1f - along / (len * 1.15f) * 0.5f) * a
+            val q = floor(k * 4f) / 4f
+            if (q > 0f) blend(x, y, col, q * 0.45f)
+        }
+        glow(tx, ty, 10f, col, 0.35f * a)
+    }
+
     /** Částice s počáteční rychlostí: [x, y, vx, vy, seed]. */
     protected fun spray(n: Int, vMin: Float, vMax: Float, up: Float, spread: Double = PI * 2, dir: Double = -PI / 2) = List(n) {
         val a = dir + (rnd.nextDouble() - 0.5) * spread
@@ -932,23 +951,6 @@ class WatchIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 196, 13) {
         if (s > 0f) for (b in bits) { val (x, y) = ballistic(cx, cy, b[0], b[1], 90f, s); puff(x, y, 1.6f, dust, 0.7f * (1f - s)) }
     }
 
-    private fun beam(ox: Float, oy: Float, tx: Float, ty: Float, a: Float) {
-        val dx = tx - ox; val dy = ty - oy
-        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
-        val ux = dx / len; val uy = dy / len
-        for (y in 0 until h) for (x in 0 until w) {
-            val px = x - ox; val py = y - oy
-            val along = px * ux + py * uy
-            if (along < 0f || along > len * 1.15f) continue
-            val half = 2f + along * 0.22f
-            val across = abs(px * uy - py * ux)
-            if (across > half) continue
-            val k = (1f - across / half) * (1f - along / (len * 1.15f) * 0.5f) * a
-            val q = floor(k * 4f) / 4f
-            if (q > 0f) blend(x, y, hex(0xFFE0A0), q * 0.45f)
-        }
-        glow(tx, ty, 10f, hex(0xFFE0A0), 0.35f * a)
-    }
 }
 
 
@@ -972,5 +974,27 @@ class SlopeCampIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 132, 290, 21) {
         mapEyes(cx, cy - 6, 2.2f, hex(0xE0ECFF), eyeAlpha(t))
         val s = since(t)
         if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy - 4, b[0], b[1], -15f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
+    }
+}
+
+
+/** Signální útes (zóna 3): signální lampa vyšle přes propast tři krátké záblesky, pak se kužel stočí dolů k okraji
+ *  útesu – a v mlze pod hranou se rozsvítí oči; při výpadu se zvedne zelená mlha. */
+class SignalIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 90, 238, 17) {
+    override val shade = hex(0x030806)
+    override val accent = hex(0xB8FFD8)
+    override val dimMax = 0.6f
+    private val mist = ramp(0x2E6A54, 0x5CB496, 0x9AE8C8)
+    private val wisps = spray(20, 15f, 50f, 20f)
+
+    override fun act(t: Long) {
+        val ox = sx(70f); val oy = sy(246f)
+        val flash = pulse(t, Kit.FADE + 100, 110) + pulse(t, Kit.FADE + 330, 110) + pulse(t, Kit.FADE + 560, 110)
+        if (flash > 0.05f) beam(ox, oy, sx(92f), sy(70f), flash.coerceAtMost(1f), hex(0xFFE8B0))
+        val dip = p(t, TELL2, CLIMAX)
+        if (dip > 0f) beam(ox, oy, sx(92f) + (cx - sx(92f)) * dip, sy(70f) + (cy - sy(70f)) * dip, 0.9f, hex(0xFFE8B0))
+        mapEyes(cx, cy, 2.4f, hex(0xB8FFD8), eyeAlpha(t))
+        val s = since(t)
+        if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -18f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
     }
 }

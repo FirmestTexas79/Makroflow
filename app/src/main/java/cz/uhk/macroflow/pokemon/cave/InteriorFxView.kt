@@ -1454,7 +1454,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         /** Zóna 3, Tábor na svahu: lampa na registračním stolku a lucerna ve stanu 7 blikají, popel, houby na kořeni,
          *  mlha stoupající ze Svahu. */
         val ROOT_SLOPECAMP = InteriorFx(
-            lamps = listOf(FxLamp(64, 112, 28, 18, FxBox(64, 104, 66, 105)), FxLamp(138, 292, 22, 14, null)),
+            lamps = listOf(FxLamp(66, 112, 28, 18, FxBox(71, 92, 77, 92)), FxLamp(136, 296, 22, 14, null)),
             ash = listOf(FxBox(10, 80, 166, 300)),
             fog = listOf(FxBox(0, 300, 176, 352), FxBox(0, 320, 176, 352)),
             fogColor = 0x3A4A70,
@@ -1463,6 +1463,19 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             glows = listOf(FxGlow(159, 161, 3, 3, 0x8AC8FF, 2.1f), FxGlow(62, 215, 3, 3, 0x8AC8FF, 2.7f), FxGlow(15, 169, 3, 3, 0x8AC8FF, 3.3f),
                 FxGlow(156, 127, 3, 3, 0x8AC8FF, 1.9f), FxGlow(115, 308, 3, 3, 0x8AC8FF, 3.9f), FxGlow(144, 147, 3, 3, 0x8AC8FF, 2.4f),
                 FxGlow(130, 181, 3, 3, 0x8AC8FF, 3.1f), FxGlow(82, 272, 3, 3, 0x8AC8FF, 2.6f), FxGlow(144, 54, 18, 8, 0x7EC0FF, 5f))
+        )
+
+        /** Zóna 3, Signální útes: rána v kmeni pulzuje zeleně, šest světel v kmeni slabě dýchá, mlha se valí přes
+         *  korunu, z komínku boudy kouří, okno boudy a signální lampa blikají. */
+        val ROOT_SIGNAL = InteriorFx(
+            lamps = listOf(FxLamp(140, 300, 30, 18, FxBox(145, 280, 156, 284)), FxLamp(70, 248, 22, 14, null)),
+            steam = listOf(156 to 258),
+            fog = listOf(FxBox(0, 150, 176, 200), FxBox(0, 180, 176, 232)),
+            fogColor = 0x5CB496,
+            motes = listOf(FxBox(0, 40, 176, 230)),
+            moteColor = 0x9AF0C8,
+            glows = listOf(FxGlow(87, 78, 8, 14, 0x7AF0B0, 4.5f), FxGlow(96, 64, 4, 3, 0x9AFFC8, 6.5f),
+                FxGlow(171, 267, 3, 3, 0x8AC8FF, 2.1f), FxGlow(55, 265, 3, 3, 0x8AC8FF, 2.7f), FxGlow(62, 275, 3, 3, 0x8AC8FF, 3.3f))
         )
 
         val ABYSS = InteriorFx(

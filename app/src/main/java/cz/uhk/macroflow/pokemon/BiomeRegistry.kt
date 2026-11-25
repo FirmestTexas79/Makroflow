@@ -61,7 +61,9 @@ enum class BiomeType {
     /** Zóna 3: Pozorovatelna B (pohlcení 2/8). */
     ROOT_WATCH,
     /** Zóna 3: Tábor na svahu (pohlcení 4/8). */
-    ROOT_SLOPECAMP
+    ROOT_SLOPECAMP,
+    /** Zóna 3: Signální útes – vedlejší lokace s výhledem na Spící (úkol Signalista). */
+    ROOT_SIGNAL
 }
 
 object BiomeRegistry {
@@ -195,7 +197,8 @@ object BiomeRegistry {
         BiomeDefinition(BiomeType.TOWER_POISON, R.drawable.tower_poison, graphOf(cz.uhk.macroflow.pokemon.cave.TowerPoison.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerPoison.MAP),
         BiomeDefinition(BiomeType.ROOT_CAMP, R.drawable.root_camp, graphOf(cz.uhk.macroflow.pokemon.cave.RootCamp.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootCamp.MAP),
         BiomeDefinition(BiomeType.ROOT_WATCH, R.drawable.root_watch, graphOf(cz.uhk.macroflow.pokemon.cave.RootWatch.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootWatch.MAP),
-        BiomeDefinition(BiomeType.ROOT_SLOPECAMP, R.drawable.root_slopecamp, graphOf(cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.MAP)
+        BiomeDefinition(BiomeType.ROOT_SLOPECAMP, R.drawable.root_slopecamp, graphOf(cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.MAP),
+        BiomeDefinition(BiomeType.ROOT_SIGNAL, R.drawable.root_signal, graphOf(cz.uhk.macroflow.pokemon.cave.RootSignal.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootSignal.MAP)
         ).associateBy { it.type }
     }
 

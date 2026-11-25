@@ -421,25 +421,45 @@ def cable_pylon(h=70):
 
 
 # ── Pozorovatelna B – bunkr ve skále (verze 2) ──────────────────────────────
+POST_WOOD = [c(0x1E140C), c(0x3A2818), c(0x5A4028), c(0x7A5A3A), c(0x96744C)]
+
+
 def mount_plate(pl, posts=0, post_col=None):
-    """Cedule na sloupcích (posts = výška sloupků). Bez sloupků je to cedule na zeď – vrací se i se stínem pod sebou."""
+    """Cedule připevněná ke zdi (posts=0: s vrženým stínem na zeď) nebo na dvou sloupcích (posts = výška pod cedulí).
+    Sloupky jsou 3 px široké, stínované (světlá/střední/tmavá strana), s hlavicí nad cedulí, ocelovými objímkami se
+    šrouby v místě uchycení a tmavou patkou v zemi."""
     if posts <= 0:
-        s = Spr(pl.w + 1, pl.h + 1)
-        for y in range(pl.h):                                              # vržený stín na zeď (o 1 px vpravo dolů)
+        s = Spr(pl.w + 2, pl.h + 2)
+        for y in range(pl.h):                                              # stín na zeď (o 2 px vpravo dolů, měkký)
             for x in range(pl.w):
                 if pl.a[y, x, 3]:
-                    s.px(x + 1, y + 1, c(0x08080C))
+                    s.px(x + 2, y + 2, c(0x06060A)); s.px(x + 1, y + 1, c(0x101016))
         for y in range(pl.h):
             for x in range(pl.w):
                 if pl.a[y, x, 3]:
                     s.px(x, y, pl.a[y, x])
         return s
-    s = Spr(pl.w, pl.h + posts)
-    s.a[:pl.h] = pl.a
-    col = post_col or STEEL
-    for y in range(pl.h, pl.h + posts):
-        for x0 in (3, pl.w - 5):
-            s.px(x0, y, col[3]); s.px(x0 + 1, y, col[1])
+    ramp = post_col or POST_WOOD
+    top = 3
+    s = Spr(pl.w, pl.h + posts + top)
+    for x0 in (2, pl.w - 5):                                               # sloupky
+        for y in range(0, pl.h + posts + top):
+            s.px(x0, y, ramp[3]); s.px(x0 + 1, y, ramp[2]); s.px(x0 + 2, y, ramp[1])
+            if (y * 7 + x0) % 11 == 0:
+                s.px(x0 + 1, y, ramp[1])                                   # suky a vlákna
+        s.px(x0, 0, ramp[4]); s.px(x0 + 1, 0, ramp[3]); s.px(x0 + 2, 0, ramp[2])   # hlavice
+        for y in range(pl.h + posts + top - 2, pl.h + posts + top):
+            for x in range(x0 - 1, x0 + 4):
+                s.px(x, y, c(0x14100C))                                    # patka v zemi
+    for yy in range(pl.h):
+        for xx in range(pl.w):
+            if pl.a[yy, xx, 3]:
+                s.px(xx, top + yy, pl.a[yy, xx])
+    for x0 in (2, pl.w - 5):                                               # objímky se šrouby
+        for y in (top + 1, top + pl.h - 3):
+            for x in range(x0 - 1, x0 + 4):
+                s.px(x, y, STEEL[2]); s.px(x, y + 1, STEEL[1])
+            s.px(x0 + 1, y, STEEL[4])
     return s
 
 
@@ -607,95 +627,136 @@ def pennant(num, h=26):
 WOOD_POLE = [c(0x2A1A10), c(0x4A3020), c(0x6E4A30), c(0x8C6444)]
 
 
-def ridge_tent(num, overgrowth=0.0, seed=0, w=40, h=28, dx=12, dy=10):
-    """Hřebenový stan Řádu ve 3/4 (zepředu zleva): čelní štít s vchodem, pravá plocha střechy ubíhá dozadu
-    (o dx, dy), švy plachty, kotevní lana s kolíky, praporek výpravy na tyči u hřebene. overgrowth 0–1:
-    propadlé a ztmavlé plochy plachty."""
-    W, H = w + dx + 8, h + dy + 16
+def ridge_tent(num, overgrowth=0.0, seed=0, hw=18, L=20, gh=14, lit=False):
+    """Hřebenový stan Řádu v pohledu 3/4 shora: hřeben vede od diváka dozadu, vidět jsou obě plochy střechy
+    (levá osvětlená, pravá ve stínu) a dole čelní štít s rozhrnutým vchodem (lit = uvnitř svítí lucerna).
+    Plachta s tkaním, švy, prověšením a záplatou, zablácený lem, kotevní lana s kolíky, praporek výpravy na tyči
+    u předního konce hřebene. overgrowth 0–1: plachta tmavne, propadá a lezou přes ni výhonky kořenů."""
+    W, H = 2 * hw + 12, L + gh + 22
     s = Spr(W, H)
-    ox, oy = 3, dy + 14                                                   # levý dolní roh štítu = (ox, oy + h)
-    ax, ay = ox + w / 2, oy                                               # vrchol štítu
-    rx, ry = ox + w, oy + h                                               # pravý dolní roh štítu
-    def roofv(u, v):
-        return 0.42 - v * 0.08 + (0.05 if int(u * 9) % 2 else 0)
-    for i in range(0, 101):                                               # pravá střecha: rovnoběžník (vrchol→pravý roh) + (dx, -dy)
-        u = i / 100
-        ex, ey = ax + (rx - ax) * u, ay + (ry - ay) * u
-        for j in range(0, 41):
-            v = j / 40
-            X, Y = ex + dx * v, ey - dy * v
-            val = roofv(u, v)
-            if overgrowth > 0.2 and _vn(X * 0.8, Y * 0.8, seed + 9, 5) < overgrowth * 0.45:
-                val -= 0.18
-            s.px(X, Y, _pick(CANVAS, max(0.0, min(1.0, val)), int(X), int(Y)))
-    for y in range(h + 1):                                                # čelní štít
-        t = y / h
-        hw = (w / 2) * t
-        for x in range(int(ax - hw), int(ax + hw) + 1):
-            side = (x - ax) / max(1.0, hw)
-            val = 0.68 - side * 0.12 - t * 0.06 + (_vn(x, y, seed + 2, 3) - 0.5) * 0.1
-            if abs(x - ax) < 1:
-                val -= 0.1                                                # šev uprostřed
-            if overgrowth > 0.2 and _vn(x * 0.8, y, seed + 9, 5) < overgrowth * 0.4:
-                val -= 0.2
-            if abs(x - ax) < 4.5 * t and t > 0.45:
-                val = 0.06                                                # vchod (rozhrnutý)
-            s.px(x, oy + y, _pick(CANVAS, max(0.0, min(1.0, val)), x, oy + y))
-    s.line(ax, ay, ax + dx, ay - dy, CANVAS[5])                           # hřeben
-    for (x0, y0, x1, y1) in ((ox, oy + h, ox - 3, oy + h + 3), (rx, ry, rx + 4, ry + 2),
-                             (ax + dx, ay - dy, ax + dx + 6, ay - dy + 14)):
-        s.line(x0, y0, x1, y1, CANVAS[1]); s.px(x1, y1, WOOD_POLE[1])     # kotevní lana a kolíky
-    p = pennant(str(num), 18)
+    cx, ry0 = W // 2, 18
+    ry1 = ry0 + L
+    rnd = np.random.default_rng(seed)
+    pu, pv = rnd.uniform(0.3, 0.7), rnd.uniform(0.3, 0.7)
+    def canvas(x, y, base, u, v):
+        val = base + ((x + y) % 2) * 0.03 + (_vn(x, y, seed + 2, 3) - 0.5) * 0.08
+        val -= 0.08 * math.sin(math.pi * v)                                 # prověšení mezi hřebenem a okapem
+        if int(u * 5) != int(max(0.0, u - 0.03) * 5):
+            val -= 0.09                                                     # švy napříč
+        if v > 0.85:
+            val -= 0.14                                                     # zablácený okraj
+        if abs(u - pu) < 0.12 and abs(v - pv) < 0.14:
+            val += 0.07 if (x + 2 * y) % 5 else -0.14                       # záplata se stehy
+        if overgrowth > 0.15 and _vn(x * 0.8, y * 0.8, seed + 9, 5) < overgrowth * 0.45:
+            val -= 0.2
+        return _pick(CANVAS, max(0.0, min(1.0, val)), x, y)
+    for side, base in ((-1, 0.72), (1, 0.4)):                              # dvě plochy střechy
+        for i in range(L * 3 + 1):
+            u = i / (L * 3)
+            for j in range(hw * 3 + 1):
+                v = j / (hw * 3)
+                X, Y = cx + side * hw * v, ry0 + L * u + gh * v
+                s.px(X, Y, canvas(int(X), int(Y), base, u, v))
+    for y in range(ry1, ry1 + gh + 1):                                     # čelní štít s vchodem
+        t = (y - ry1) / gh
+        half = hw * t
+        for x in range(int(cx - half), int(cx + half) + 1):
+            val = 0.58 - abs(x - cx) / max(1.0, half) * 0.05 + ((x + y) % 2) * 0.03
+            if t > 0.85:
+                val -= 0.14
+            if abs(x - cx) < 4.5 * t and t > 0.35:
+                s.px(x, y, (c(0x7A5228) if (x + y) % 3 else c(0xA87A3A)) if lit else c(0x0E0C0A)); continue
+            s.px(x, y, _pick(CANVAS, max(0.0, min(1.0, val)), x, y))
+        x0 = int(cx - 4.5 * t)
+        if t > 0.35:
+            for x in range(x0 - 3, x0):                                    # odhrnutá chlopeň
+                s.px(x, y, _pick(CANVAS, 0.88 - (x0 - x) * 0.1, x, y))
+    s.line(cx, ry0, cx, ry1, CANVAS[5])                                    # hřeben
+    for (x0, y0, x1, y1) in ((cx - hw, ry0 + gh, cx - hw - 5, ry0 + gh - 2), (cx + hw, ry0 + gh, cx + hw + 5, ry0 + gh - 2),
+                             (cx - hw, ry1 + gh, cx - hw - 5, ry1 + gh + 3), (cx + hw, ry1 + gh, cx + hw + 5, ry1 + gh + 3),
+                             (cx, ry0, cx, ry0 - 4)):
+        s.line(x0, y0, x1, y1, CANVAS[1])
+        s.px(x1, y1, WOOD_POLE[2]); s.px(x1, y1 + 1, WOOD_POLE[0])          # kotevní lana a kolíky
+    if overgrowth > 0.15:                                                  # výhonky kořenů přes pravou plochu
+        for k in range(int(overgrowth * 5)):
+            x, y = cx + hw - 2 - k * 3, ry0 + gh + k * 4
+            for i in range(12):
+                x -= 0.8; y += rnd.integers(-1, 2) * 0.6
+                s.px(x, y, _pick(BARK, 0.62, int(x), int(y)))
+    p = pennant(str(num), 20)
     for yy in range(p.h):
         for xx in range(p.w):
             if p.a[yy, xx, 3]:
-                s.px(int(ax) - 2 + xx, int(ay) - 16 + yy, p.a[yy, xx])
+                s.px(cx - 2 + xx, ry1 - 18 + yy, p.a[yy, xx])
     return selout(s, 0.5, 0.82)
 
 
-def mess_canopy(w=58, h=40):
-    """Polní kuchyně: plachtová stříška na čtyřech tyčích, pod ní stůl s kotlem a ešusy, studená plotýnka."""
+def mess_canopy(w=60, h=42):
+    """Polní kuchyně: olivová plachtová stříška s vroubkovaným lemem na čtyřech tyčích s kotevními lany, pod ní
+    stůl s kotlem a sběračkou, stoh ešusů, bedna se zásobami pod stolem a lavice."""
     s = Spr(w, h)
-    for y in range(0, 10):                                                # stříška
-        for x in range(2, w - 2):
-            v = 0.6 - y * 0.03 + (0.08 if (x // 6) % 2 else 0)
-            s.px(x, y + (1 if x in (2, w - 3) else 0), _pick(CANVAS, v, x, y))
-    for x in range(2, w - 2, 6):
-        s.px(x, 10, CANVAS[1]); s.px(x + 1, 11, CANVAS[1])                  # třásně / prověšení
-    for x0 in (4, w - 6):
-        for y in range(9, h):
-            s.px(x0, y, WOOD_POLE[2]); s.px(x0 + 1, y, WOOD_POLE[0])
-    for y in range(24, 30):                                               # stůl
+    for y in range(0, 9):                                                  # stříška (horní plocha)
+        for x in range(3, w - 3):
+            v = 0.62 - y * 0.035 + (0.06 if (x // 7) % 2 else 0) + (_vn(x, y, 61, 3) - 0.5) * 0.08
+            s.px(x, y, _pick(OLIVE, v, x, y))
+    for x in range(3, w - 3):                                              # vroubkovaný lem
+        for y in range(9, 12):
+            if (x % 6) < 6 - (y - 9) * 2:
+                s.px(x, y, OLIVE[1] if y > 9 else OLIVE[2])
+    for x0 in (5, w - 7):                                                  # tyče a lana
+        for y in range(8, h):
+            s.px(x0, y, WOOD_POLE[3]); s.px(x0 + 1, y, WOOD_POLE[1])
+    s.line(3, 2, 0, 14, CANVAS[1]); s.line(w - 4, 2, w - 1, 14, CANVAS[1])
+    for y in range(25, 30):                                                # stůl (deska a čelo)
         for x in range(10, w - 10):
-            s.px(x, y, WOOD_POLE[3] if y == 24 else WOOD_POLE[2])
+            s.px(x, y, WOOD_POLE[3] if y == 25 else WOOD_POLE[2] if y < 28 else WOOD_POLE[1])
     for x0 in (12, w - 13):
-        for y in range(30, h):
+        for y in range(30, h - 1):
             s.px(x0, y, WOOD_POLE[1])
-    cylinder(s, 16, 27, 16, 24, STEEL[1:5], amb=0.3)                       # kotel
-    for (x0,) in ((32,), (38,), (44,)):                                    # ešusy
-        cylinder(s, x0, x0 + 4, 20, 24, STEEL[1:4], amb=0.3)
+    cylinder(s, 15, 27, 15, 25, STEEL[1:5], amb=0.3)                        # kotel
+    s.hline(15, 27, 15, STEEL[4])
+    s.line(25, 13, 29, 9, STEEL[3])                                        # sběračka
+    for i, (x0,) in enumerate(((33,), (38,), (43,))):                       # ešusy
+        cylinder(s, x0, x0 + 4, 21 - (i == 1) * 2, 25, STEEL[1:4], amb=0.3)
+    for y in range(33, h - 1):                                             # bedna se zásobami pod stolem
+        for x in range(20, 34):
+            s.px(x, y, _pick(OLIVE, 0.5 - (y - 33) * 0.02 + (0.08 if y == 33 else 0), x, y))
+    tiny(s, 22, 35, "S8", c(0xCFC8B0))
+    for y in range(h - 4, h):                                              # lavice
+        for x in range(36, w - 6):
+            s.px(x, y, WOOD_POLE[3] if y == h - 4 else WOOD_POLE[1])
     return selout(s, 0.5, 0.82)
 
 
 def reg_desk():
-    """Registrační stolek: skládací stůl, otevřená kniha zápisů (jména přeškrtaná, místo nich čísla), lampa, židle."""
-    s = Spr(34, 26)
-    for y in range(8, 13):
+    """Registrační stolek: skládací stůl se zelenou plstí, otevřená kniha zápisů (jména přeškrtaná, nad nimi čísla),
+    razítko a poduška, mosazná lampa se stínítkem (svítí), skládací židle za stolem."""
+    s = Spr(40, 30)
+    for y in range(6, 18):                                                 # židle za stolem
+        s.px(34, y, WOOD_POLE[2]); s.px(38, y + 4, WOOD_POLE[1])
+    s.hline(33, 39, 14, WOOD_POLE[3])
+    for y in range(10, 15):                                                # deska se zelenou plstí
         for x in range(1, 33):
-            s.px(x, y, WOOD_POLE[3] if y == 8 else WOOD_POLE[2])
-    for (x0,) in ((3,), (29,)):
-        s.line(x0, 13, x0 + 2, 25, WOOD_POLE[1]); s.line(x0 + 2, 13, x0, 25, WOOD_POLE[0])
-    for y in range(4, 9):                                                 # kniha
-        for x in range(8, 22):
-            s.px(x, y, PAPER[3] if x != 15 else PAPER[1])
-    for yy in (5, 7):
-        for x in range(9, 15, 1):
-            s.px(x, yy, c(0x5A5040))
-        s.line(9, yy, 14, yy, RED[3])                                     # přeškrtnuté
-        for x in range(16, 21):
-            s.px(x, yy, c(0x2A2A3A) if x % 2 else PAPER[3])              # číslo
-    s.rect(25, 3, 29, 7, STEEL[2]); s.rect(26, 6, 28, 7, SODIUM)          # lampa
-    s.px(27, 0, STEEL[3]); s.px(27, 1, STEEL[3]); s.px(27, 2, STEEL[3])
+            s.px(x, y, c(0x2E5A3A) if y < 14 and 1 < x < 32 else WOOD_POLE[3])
+    for y in range(15, 17):
+        for x in range(1, 33):
+            s.px(x, y, WOOD_POLE[1])
+    for (x0,) in ((3,), (28,)):                                            # nohy do X
+        s.line(x0, 17, x0 + 3, 29, WOOD_POLE[2]); s.line(x0 + 3, 17, x0, 29, WOOD_POLE[0])
+    for y in range(6, 12):                                                 # otevřená kniha
+        for x in range(6, 22):
+            s.px(x, y, PAPER[3] if x != 14 else PAPER[0])
+    for yy in (7, 9):
+        s.hline(7, 12, yy, c(0x4A4234)); s.line(7, yy, 12, yy, RED[3])
+        s.hline(16, 20, yy, c(0x2A2A3A))
+    s.rect(23, 9, 25, 11, c(0x5A1414)); s.px(24, 8, WOOD_POLE[3])          # razítko
+    s.rect(26, 11, 29, 12, c(0x2A2030))
+    s.line(28, 9, 28, 3, BRASS[2])                                         # lampa
+    for x in range(24, 32):
+        for y in range(1, 4):
+            if abs(x - 28) <= y + 1:
+                s.px(x, y, BRASS[3] if y < 2 else BRASS[2])
+    s.hline(25, 31, 4, SODIUM)
     return selout(s, 0.5, 0.85)
 
 
@@ -744,4 +805,81 @@ def winch():
         for x in range(7, 24, 2):
             s.px(x, y, c(0x3A3428))                                        # navinuté lano
     s.line(25, 10, 29, 6, STEEL[3]); s.rect(28, 4, 29, 6, RED[3])          # klika
+    return selout(s, 0.5, 0.85)
+
+
+# ── Signální útes (vedlejší lokace) ─────────────────────────────────────────
+def signal_lamp():
+    """Signální lampa Řádu na trojnožce: velký buben s lamelovou clonou (heliograf), mosazné kování, klika
+    dynama na boku; natočená přes propast ke kmeni."""
+    s = Spr(34, 40)
+    for (x0, x1) in ((17, 4), (17, 30), (17, 17)):
+        s.line(x0, 20, x1, 39, STEEL[2]); s.line(x0 + 1, 20, x1 + 1, 39, STEEL[1])
+    cylinder(s, 6, 27, 4, 20, [c(0x1C2228), c(0x34404A), c(0x52626E), c(0x7A8C98), c(0xA8B8C2)], amb=0.25)
+    for y in range(6, 19):                                                # lamelová clona
+        for x in range(9, 25):
+            if ((x - 17) / 8) ** 2 + ((y - 12) / 7) ** 2 < 1:
+                s.px(x, y, STEEL[3] if (y - 6) % 3 == 0 else c(0xFFE8B0) if (y - 6) % 3 == 1 else c(0xC8A860))
+    for y in range(4, 21):
+        s.px(6, y, BRASS[3]); s.px(27, y, BRASS[1])
+    s.rect(28, 10, 31, 12, BRASS[2]); s.line(31, 11, 33, 6, STEEL[3])      # klika dynama
+    s.rect(13, 0, 21, 3, STEEL[2]); s.hline(13, 21, 0, STEEL[4])
+    return selout(s, 0.5, 0.85)
+
+
+def signal_hut(seed=0):
+    """Signální bouda: prkenná stěna, plechová střecha s komínkem (kouří), okno se světlem, dveře, polínka u zdi."""
+    s = Spr(48, 46)
+    TIN = [c(0x22262C), c(0x3A4048), c(0x56606A), c(0x7A8490), c(0x9EA8B4)]
+    for y in range(0, 14):                                                # plechová střecha (shora)
+        for x in range(0, 48):
+            v = 0.6 - y * 0.03 + (0.1 if x % 5 == 0 else 0) + (_vn(x, y, seed + 3, 4) - 0.5) * 0.1
+            if _h(x, y, seed) % 29 == 0:
+                v -= 0.3                                                  # rez
+            s.px(x, y, _pick(TIN, max(0.0, min(1.0, v)), x, y))
+    s.hline(0, 47, 13, TIN[0])
+    for y in range(14, 46):                                               # prkenná stěna
+        for x in range(2, 46):
+            v = 0.5 + 0.08 * ((x // 5) % 2) - (0.18 if x % 5 == 0 else 0) + (_vn(x, y, seed + 5, 3) - 0.5) * 0.12
+            s.px(x, y, _pick(POST_WOOD, max(0.0, min(1.0, v)), x, y))
+    for y in range(22, 32):                                               # okno se světlem
+        for x in range(28, 40):
+            edge = y in (22, 31) or x in (28, 39) or x == 33 or y == 26
+            s.px(x, y, POST_WOOD[4] if edge else (SODIUM if y < 27 else c(0xD8964A)))
+    for y in range(26, 46):                                               # dveře
+        for x in range(8, 18):
+            s.px(x, y, POST_WOOD[3] if x in (8, 17) or y == 26 else POST_WOOD[1])
+    s.px(15, 36, BRASS[3])
+    for y in range(0, 8):                                                 # komínek
+        for x in range(38, 41):
+            s.px(x, y - 0, STEEL[2] if x < 40 else STEEL[1])
+    for i in range(6):                                                    # polínka u zdi
+        sphere(s, 21 + (i % 3) * 3.2, 43 - (i // 3) * 2.6, 1.8, 1.4, POST_WOOD[1:], amb=0.3)
+    return selout(s, 0.5, 0.82)
+
+
+def bench():
+    """Lavička z prken na dvou kozách, otočená k propasti."""
+    s = Spr(26, 10)
+    for y in range(2, 5):
+        for x in range(0, 26):
+            s.px(x, y, POST_WOOD[3] if y == 2 else POST_WOOD[2])
+    for x0 in (3, 21):
+        s.line(x0, 5, x0 - 2, 9, POST_WOOD[1]); s.line(x0, 5, x0 + 2, 9, POST_WOOD[1])
+    return selout(s, 0.5, 0.85)
+
+
+def lectern_book():
+    """Stojan s KNIHOU SIGNÁLŮ: šikmá deska, otevřená kniha s řádky teček a čárek (morse)."""
+    s = Spr(16, 22)
+    for y in range(8, 22):
+        s.px(8, y, POST_WOOD[2]); s.px(9, y, POST_WOOD[0])
+    s.hline(4, 13, 21, POST_WOOD[1])
+    for y in range(0, 8):
+        for x in range(1, 16):
+            s.px(x, y, PAPER[3] if x != 8 else PAPER[0])
+    for r in (2, 4, 6):
+        for x in range(2, 15, 2):
+            if x != 8:
+                s.px(x, r, c(0x2A2A3A) if (x * r) % 3 else PAPER[3])
     return selout(s, 0.5, 0.85)

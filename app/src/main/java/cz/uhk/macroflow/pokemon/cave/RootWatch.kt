@@ -46,10 +46,10 @@ object RootWatch {
         "pb_telefon" to "☎️ Polní telefon. Ve sluchátku šum… a pak Sept, velmi zdaleka: „Pozorovatelno B, hlaste stav kořenů.“\nNikdo neodpovídá. Sept to zopakuje. A znovu.",
         "pb_tabule" to "📈 KONTROLA – graf vzdálenosti kořenů od bunkru. Křivka klesá den po dni až k nule. Poslední bod je zakreslený červeně a přes něj tužkou: „Zítra už neměřit.“",
         "pb_generator" to "⚙️ Bouda ZDROJ. Agregát pořád běží – nikdo ho nevypnul a nafta pořád nedošla. Kabel vede k zamčeným dveřím bunkru.",
-        "pb_svetlomet" to "🔦 Velký světlomet na točně v půlkruhu z pytlů, natočený dolů ke kmeni. Čočka je prasklá, přesto občas sám zaprská a na chvíli posvítí do tmy.\nKdo ho zapíná, se neví.",
+        "pb_svetlomet" to "🔦 Velký světlomet na točně v půlkruhu z pytlů, natočený dolů ke kmeni. Čočka je prasklá, přesto občas sám zaprská a na chvíli posvítí do tmy.\nKdo ho zapíná, se neví. Na kličce jsou drobné otisky – jako od tlapek.",
         "pb_hlidka" to "🔥 Stojan ohňové hlídky: dva plamenomety, nádrže plné. Helma leží opodál, jako by ji tu někdo upustil v půlce kroku.\nTady už nikdo nepálil. Kořeny vyhrály bez boje.",
         "pb_dalkomer" to "🔭 Dálkoměr na trojnožce míří přes zábradlí do tmy. Na stupnici ryska KMEN – 2 400 m. Pod ní tužkou 2 100 m. A ještě jedna: 1 900 m.\nKmen se nehýbe. Vzdálenost se přesto zkracuje.",
-        RAVINE_NODE to "🚡 Průchod v zábradlí na ocelovou lávku k lanovce přes rokli. Lávku zatím zavalují kořeny – ZATÍM NEPŘÍSTUPNÉ.",
+        RAVINE_NODE to "🌉 Průchod v zábradlí na ocelovou lávku podél skály – k Signálnímu útesu a horní stanici lanovky.",
         DOWN_NODE to "⬇️ Schody z terasy dolů, cedule DOLŮ: TÁBOR."
     )
     val ACTION_NODES = TEXTS.keys
