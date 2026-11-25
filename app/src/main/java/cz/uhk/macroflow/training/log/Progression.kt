@@ -20,15 +20,15 @@ data class LoggedSet(
     val order: Int = 0,
     val slowEccentric: Boolean = false,
     val template: String? = null,
-    val rir: Int = StrengthModel.DEFAULT_RIR
+    val rir: Int = StrengthModel.DEFAULT_RIR,
+    val kind: SetKind = SetKind.WORK
 )
 
 /**
  * Tréninkový deník – progrese a objem (čistý Kotlin, pokryto testy). Podklady v docs/adr/0023.
  *
  *  - odhad 1RM Epleyho vzorcem (Epley 1985): w · (1 + r / 30), spolehlivý hlavně do ~10 opakování,
- *  - návrh na příště „dvojitou progresí“: v rozsahu opakování nejdřív přidávej opakování,
- *    po dosažení horní hranice ve všech pracovních sériích přidej váhu a začni na spodní hranici,
+ *  - návrh na příště: [ProgressiveOverload] (6–8 opakování, při 10 přidat váhu),
  *  - týdenní objem: tvrdé série na partii (hlavní sval 1, pomocný 0,5); pro růst se doporučuje
  *    zhruba 10–20 sérií na partii týdně (Schoenfeld, Ogborn & Krieger 2017).
  */
@@ -46,12 +46,10 @@ object Progression {
         else -> weightKg * (1.0 + reps / 30.0)
     }
 
-    /** Rozsah opakování podle typu cviku: vícekloubové s osou níž, izolované na kladce/stroji výš. */
-    fun repRange(e: Exercise): RepRange = when (e.equipment) {
-        Equipment.BARBELL -> RepRange(6, 10)
-        Equipment.DUMBBELL -> RepRange(8, 12)
+    /** Cílový rozsah pracovních sérií ([ProgressiveOverload.Params]); s vlastní vahou 6–15. */
+    fun repRange(e: Exercise, p: ProgressiveOverload.Params = ProgressiveOverload.DEFAULT): RepRange = when (e.equipment) {
         Equipment.BAR, Equipment.BODYWEIGHT -> RepRange(6, 15)
-        Equipment.CABLE, Equipment.MACHINE, Equipment.OTHER -> RepRange(10, 15)
+        else -> RepRange(p.repsMin, p.repsMax)
     }
 
     /** Nejmenší rozumný přírůstek váhy (kg); 0 = cvik s vlastní vahou, progrese přes opakování. */
@@ -63,9 +61,9 @@ object Progression {
     }
 
     data class Session(val day: Int, val sets: List<LoggedSet>) {
-        /** Pracovní série = série s nejvyšší váhou dne (rozcvičovací lehčí série se nepočítají). */
+        /** Pracovní série ([ProgressiveOverload.workingSets]): rozehřívací a dojížděcí se nepočítají. */
         val workingSets: List<LoggedSet>
-            get() { val top = sets.maxOf { it.weightKg }; return sets.filter { it.weightKg == top } }
+            get() = ProgressiveOverload.workingSets(sets)
     }
 
     /** Poslední den s cvikem před [beforeDay] (dnešek se nepočítá – ten se právě cvičí). */
@@ -73,38 +71,6 @@ object Progression {
         val mine = sets.filter { it.exerciseId == exerciseId && it.day < beforeDay }
         val day = mine.maxOfOrNull { it.day } ?: return null
         return Session(day, mine.filter { it.day == day }.sortedBy { it.order })
-    }
-
-    enum class Kind { ADD_WEIGHT, ADD_REPS, HOLD, HARDER_VARIANT }
-
-    data class Suggestion(val weightKg: Double, val reps: Int, val kind: Kind, val reason: String)
-
-    fun suggest(e: Exercise, last: Session?): Suggestion? {
-        if (last == null || last.sets.isEmpty()) return null
-        val range = repRange(e)
-        val work = last.workingSets
-        val weight = work.first().weightKg
-        val minReps = work.minOf { it.reps }
-        val maxReps = work.maxOf { it.reps }
-        val inc = increment(e)
-        return when {
-            minReps >= range.max && inc > 0.0 -> Suggestion(
-                roundTo(weight + inc, inc), range.min, Kind.ADD_WEIGHT,
-                "Minule všechny pracovní série na ${range.max}+ opakování – přidej váhu."
-            )
-            minReps >= range.max -> Suggestion(
-                weight, range.max, Kind.HARDER_VARIANT,
-                "Zvládáš ${range.max}+ opakování – přidej zátěž (vesta, kotouč) nebo těžší variantu."
-            )
-            minReps < range.min -> Suggestion(
-                weight, range.min, Kind.HOLD,
-                "Drž váhu a dostaň všechny série aspoň na ${range.min} opakování."
-            )
-            else -> Suggestion(
-                weight, (maxReps + 1).coerceAtMost(range.max), Kind.ADD_REPS,
-                "Stejná váha, o opakování víc (cíl ${range.min}–${range.max})."
-            )
-        }
     }
 
     /** Nejlepší série podle odhadu 1RM. */
@@ -116,10 +82,10 @@ object Progression {
         return e1rm(set.weightKg, set.reps) > e1rm(before.weightKg, before.reps) + 1e-9
     }
 
-    /** Tvrdé série na partii: hlavní sval 1, pomocný 0,5. */
+    /** Tvrdé série na partii: hlavní sval 1, pomocný 0,5; rozehřívací se nepočítají. */
     fun weeklySets(sets: List<LoggedSet>, exercises: (String) -> Exercise?): Map<Muscle, Double> {
         val out = Muscle.entries.associateWith { 0.0 }.toMutableMap()
-        sets.forEach { s ->
+        sets.filter { it.kind != SetKind.WARMUP }.forEach { s ->
             val e = exercises(s.exerciseId) ?: return@forEach
             e.primary.forEach { out[it] = out.getValue(it) + 1.0 }
             e.secondary.forEach { out[it] = out.getValue(it) + 0.5 }

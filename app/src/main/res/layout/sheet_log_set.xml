@@ -35,6 +35,16 @@
         android:textColor="@color/brand_primary"
         android:textSize="13sp" />
 
+    <!-- Druh série (docs/adr/0105): pracovní / rozehřívací / dojížděcí – lehčí série se do progrese nepočítají -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipsSetKind"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        app:chipSpacingHorizontal="6dp"
+        app:selectionRequired="true"
+        app:singleSelection="true" />
+
     <!-- Automatický převod: váha se zadává v librách, ukládá a ukazuje v kg (dvě desetinná místa) -->
     <LinearLayout
         android:id="@+id/rowLogLbs"

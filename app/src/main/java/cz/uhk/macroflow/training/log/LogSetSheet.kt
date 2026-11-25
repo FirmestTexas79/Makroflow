@@ -30,7 +30,8 @@ import java.util.Locale
 
 /**
  * Panel „Zapsat sérii“ (docs/adr/0023, 0024) – z atlasu i z tréninku podle šablony.
- * Předvyplnění: poslední dnešní série → [prefillWeight]/[prefillReps] (připravenost) → spodní hranice rozsahu.
+ * Předvyplnění: poslední dnešní pracovní série → [prefillWeight]/[prefillReps] (progresivní přetížení) → spodní hranice.
+ * Druh série (docs/adr/0105): rozehřívací a dojížděcí předvyplní procento pracovní váhy ([ProgressiveOverload.Params]).
  * RIR (opakování v rezervě) se převezme z poslední dnešní série, jinak výchozí [StrengthModel.DEFAULT_RIR].
  */
 object LogSetSheet {
@@ -58,8 +59,11 @@ object LogSetSheet {
         val inc = Progression.increment(exercise)
         val bodyweight = inc == 0.0
         val lastToday = todaySets.maxByOrNull { it.createdAt }
-        val startW = lastToday?.weightKg ?: prefillWeight ?: 0.0
-        val startR = lastToday?.reps ?: prefillReps ?: range.min
+        val lastWork = todaySets.filter { it.setKind == SetKind.WORK }.maxByOrNull { it.createdAt }
+        val workW = lastWork?.weightKg ?: prefillWeight ?: 0.0
+        val workR = lastWork?.reps ?: prefillReps ?: range.min
+        val startW = workW
+        val startR = workR
 
         v.findViewById<TextView>(R.id.tvLogSetTitle).text = exercise.name
         val tvSub = v.findViewById<TextView>(R.id.tvLogSetSub)
@@ -172,6 +176,39 @@ object LogSetSheet {
         v.findViewById<View>(R.id.btnRepsPlus).setOnClickListener { etR.setText((r() + 1).toString()) }
         v.findViewById<View>(R.id.btnRirMinus).setOnClickListener { rir = (rir - 1).coerceAtLeast(0); refresh() }
         v.findViewById<View>(R.id.btnRirPlus).setOnClickListener { rir = (rir + 1).coerceAtMost(StrengthModel.MAX_RIR); refresh() }
+
+        // ── Druh série: rozehřívací a dojížděcí jedou s menším procentem pracovní váhy ──
+        var kind = SetKind.WORK
+        val chipsKind = v.findViewById<ChipGroup>(R.id.chipsSetKind)
+        val po = ProgressiveOverload.DEFAULT
+        SetKind.entries.forEach { k ->
+            chipsKind.addView(Chip(ctx).apply {
+                id = View.generateViewId(); tag = k
+                text = when (k) {
+                    SetKind.WORK -> k.label
+                    SetKind.WARMUP -> "${k.label} ~${(po.warmupPct * 100).toInt()} %"
+                    SetKind.BACKOFF -> "${k.label} ~${(po.backoffPct * 100).toInt()} %"
+                }
+                isCheckable = true; isCheckedIconVisible = false; isChecked = k == SetKind.WORK
+                chipBackgroundColor = ColorStateList(states, intArrayOf(dark, ctx.getColor(R.color.brand_primary_alpha10)))
+                setTextColor(ColorStateList(states, intArrayOf(cream, dark)))
+                chipStrokeWidth = 0f
+                textSize = 13f
+            })
+        }
+        chipsKind.setOnCheckedStateChangeListener { group, ids ->
+            val k = ids.firstOrNull()?.let { group.findViewById<View>(it)?.tag as? SetKind } ?: return@setOnCheckedStateChangeListener
+            kind = k
+            val step = if (inc > 0.0) inc else 0.0
+            val (kw, kr) = when (k) {
+                SetKind.WORK -> workW to workR
+                SetKind.WARMUP -> ProgressiveOverload.warmupLoad(workW, step) to po.warmupReps
+                SetKind.BACKOFF -> ProgressiveOverload.backoffLoad(workW, step) to po.backoffReps
+            }
+            if (!bodyweight) setWeight(plain(shown(kw)), exact = if (swLbs.isChecked) kw else null)
+            etR.setText(kr.toString())
+            v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
         refresh()
 
         v.findViewById<View>(R.id.btnLogSetSave).setOnClickListener {
@@ -180,10 +217,10 @@ object LogSetSheet {
             val entity = WorkoutSetEntity(
                 date = LocalDate.now().toString(), createdAt = System.currentTimeMillis(),
                 exerciseId = exercise.id, weightKg = weight, reps = reps,
-                slowEccentric = swSlow.isChecked, template = template, rir = rir
+                slowEccentric = swSlow.isChecked, template = template, rir = rir, kind = kind.name
             )
             val e1 = StrengthModel.setEstimate(entity.toLogged())
-            val isPr = e1 != null && prevBest != null && e1 > prevBest
+            val isPr = kind == SetKind.WORK && e1 != null && prevBest != null && e1 > prevBest
             dialog.dismiss()
             v.rootView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
             scope.launch {

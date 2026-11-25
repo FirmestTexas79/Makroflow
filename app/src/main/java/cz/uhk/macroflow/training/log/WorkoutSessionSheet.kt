@@ -225,21 +225,20 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
 
             row.findViewById<TextView>(R.id.tvSxReady).text = readyW?.let { "${LogSetSheet.kg(it)} kg × ${insight.readyReps}" }
                 ?: if (Progression.increment(e) == 0.0) "${insight.readyReps} opakování" else "${range.min}–${range.max} ×"
-            row.findViewById<TextView>(R.id.tvSxNext).text = insight.nextEstimate?.takeIf { insight.estimate != null }?.let {
-                "Příště (~${insight.nextInDays} d)\n1RM ≈ ${LogSetSheet.kg(it.e1rm)} kg"
-            } ?: insight.suggestion?.reason ?: "Začni s rezervou 2 opakování – příště poradím."
+            row.findViewById<TextView>(R.id.tvSxNext).text = insight.suggestion?.reason
+                ?: "Najdi váhu na ${range.min}–${range.max} opakování, 2–3 pracovní série – příště poradím."
 
             row.findViewById<TextView>(R.id.tvSxLast).apply {
                 val last = insight.last
                 visibility = if (last != null) View.VISIBLE else View.GONE
-                text = last?.let { s -> "Minule (${date(s.day)}): " + s.sets.joinToString(" · ") { label(it.weightKg, it.reps, it.slowEccentric, it.rir) } } ?: ""
+                text = last?.let { s -> "Minule (${date(s.day)}): " + s.sets.joinToString(" · ") { label(it.weightKg, it.reps, it.slowEccentric, it.rir, it.kind) } } ?: ""
             }
 
             val todaySets = entities.filter { it.exerciseId == e.id && it.date == today.toString() }.sortedBy { it.createdAt }
             val chips = row.findViewById<ChipGroup>(R.id.chipsSxToday)
             todaySets.forEachIndexed { n, s ->
                 chips.addView(Chip(requireContext()).apply {
-                    text = "${n + 1}.  ${label(s.weightKg, s.reps, s.slowEccentric, s.rir)}"
+                    text = "${n + 1}.  ${label(s.weightKg, s.reps, s.slowEccentric, s.rir, s.setKind)}"
                     isCloseIconVisible = true
                     closeIconContentDescription = "Smazat sérii"
                     chipBackgroundColor = ContextCompat.getColorStateList(requireContext(), R.color.brand_primary_alpha10)
@@ -328,8 +327,8 @@ class WorkoutSessionSheet : BottomSheetDialogFragment() {
         return (Math.floor(w * (1 - 0.03 * tr.rir) / inc) * inc).coerceAtLeast(inc)
     }
 
-    private fun label(w: Double, r: Int, slow: Boolean, rir: Int = StrengthModel.DEFAULT_RIR) =
-        (if (w <= 0.0) "$r ×" else "${LogSetSheet.kg(w)} kg × $r") + listOfNotNull(if (slow) "pomalu" else null, if (rir != StrengthModel.DEFAULT_RIR) "RIR $rir" else null)
+    private fun label(w: Double, r: Int, slow: Boolean, rir: Int = StrengthModel.DEFAULT_RIR, kind: SetKind = SetKind.WORK) =
+        (if (w <= 0.0) "$r ×" else "${LogSetSheet.kg(w)} kg × $r") + listOfNotNull(kind.short.takeIf { it.isNotEmpty() }, if (slow) "pomalu" else null, if (rir != StrengthModel.DEFAULT_RIR) "RIR $rir" else null)
             .takeIf { it.isNotEmpty() }?.joinToString(", ", " (", ")").orEmpty()
 
     private fun date(day: Int) = LocalDate.ofEpochDay(day.toLong()).let { "${it.dayOfMonth}. ${it.monthValue}." }

@@ -41,7 +41,7 @@ import kotlin.concurrent.thread
         cz.uhk.macroflow.wearable.WearableDayEntity::class,
         cz.uhk.macroflow.wearable.WearableActivityEntity::class
     ],
-    version = 42,
+    version = 43,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -83,6 +83,13 @@ abstract class AppDatabase : RoomDatabase() {
 
 
         /** v41: stálé ID chyceného Makromona (docs/adr/0076, stávající dostanou náhodné) a původní trenér (0077). */
+        /** v43: druh série v deníku – pracovní / rozehřívací / dojížděcí (docs/adr/0105). */
+        val MIGRATION_42_43 = object : Migration(42, 43) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `workout_sets` ADD COLUMN `kind` TEXT NOT NULL DEFAULT 'WORK'")
+            }
+        }
+
         /** v42: data z hodinek (Garmin / Health Connect) - dny a aktivity. */
         val MIGRATION_41_42 = object : Migration(41, 42) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -203,7 +210,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macroflow_database"
                 )
-                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_40, MIGRATION_40_41, MIGRATION_41_42)
+                    .addMigrations(MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_40, MIGRATION_40_41, MIGRATION_41_42, MIGRATION_42_43)
                     // Destruktivní fallback jen pro verze PŘED zavedením migrací.
                     // Od v33 se lokální data uživatelů už nikdy nesmažou potichu:
                     // chybějící migrace = pád při vývoji, ne ztráta dat v produkci.

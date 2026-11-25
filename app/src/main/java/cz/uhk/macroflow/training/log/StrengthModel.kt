@@ -57,7 +57,7 @@ object StrengthModel {
 
     /** Jedno pozorování na trénink: nejlepší série dne. */
     fun observations(sets: List<LoggedSet>): List<Observation> =
-        sets.groupBy { it.day }.mapNotNull { (day, daySets) ->
+        sets.filter { it.kind != SetKind.WARMUP }.groupBy { it.day }.mapNotNull { (day, daySets) ->
             daySets.mapNotNull { s -> setEstimate(s)?.let { it to effectiveReps(s.reps, s.slowEccentric, s.rir) } }
                 .maxByOrNull { it.first }
                 ?.let { (e, r) -> Observation(day, e, obsSd(r)) }

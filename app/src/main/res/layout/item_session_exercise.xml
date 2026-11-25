@@ -78,7 +78,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:letterSpacing="0.1"
-                    android:text="DNES PŘIPRAVEN"
+                    android:text="DNES PRACOVNÍ"
                     android:textColor="@color/brand_accent_deep"
                     android:textSize="9sp"
                     android:textStyle="bold" />

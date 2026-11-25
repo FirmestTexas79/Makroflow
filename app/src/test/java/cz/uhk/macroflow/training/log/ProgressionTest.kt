@@ -10,9 +10,9 @@ import org.junit.Test
 
 class ProgressionTest {
 
-    private val bench = ExerciseLibrary.byId("bench_press")!!      // osa, 6–10
+    private val bench = ExerciseLibrary.byId("bench_press")!!      // osa
     private val pullUp = ExerciseLibrary.byId("pull_up")!!         // hrazda, 6–15
-    private val fly = ExerciseLibrary.byId("cable_fly")!!          // kladka, 10–15
+    private val fly = ExerciseLibrary.byId("cable_fly")!!          // kladka
 
     private fun set(day: Int, w: Double, r: Int, ex: String = "bench_press", order: Int = 0, id: Long = 0) =
         LoggedSet(id, day, ex, w, r, order)
@@ -40,36 +40,17 @@ class ProgressionTest {
     }
 
     @Test
-    fun doubleProgression() {
-        // Všechny pracovní série na 10 → +2,5 kg a zpět na 6
-        val top = Progression.suggest(bench, Progression.Session(1, listOf(set(1, 60.0, 10), set(1, 60.0, 10))))!!
-        assertEquals(Progression.Kind.ADD_WEIGHT, top.kind)
-        assertEquals(62.5, top.weightKg, 1e-9)
-        assertEquals(6, top.reps)
-        // V rozsahu → stejná váha, o opakování víc
-        val mid = Progression.suggest(bench, Progression.Session(1, listOf(set(1, 60.0, 8), set(1, 60.0, 7))))!!
-        assertEquals(Progression.Kind.ADD_REPS, mid.kind)
-        assertEquals(60.0, mid.weightKg, 1e-9)
-        assertEquals(9, mid.reps)
-        // Pod rozsahem → drž váhu
-        val low = Progression.suggest(bench, Progression.Session(1, listOf(set(1, 60.0, 8), set(1, 60.0, 4))))!!
-        assertEquals(Progression.Kind.HOLD, low.kind)
-        assertEquals(6, low.reps)
+    fun repRangeFollowsOverloadParams() {
+        assertEquals(Progression.RepRange(6, 8), Progression.repRange(bench))
+        assertEquals(Progression.RepRange(6, 8), Progression.repRange(fly))
+        assertEquals(Progression.RepRange(6, 15), Progression.repRange(pullUp))
     }
 
     @Test
-    fun bodyweightProgressesByRepsThenVariant() {
-        val mid = Progression.suggest(pullUp, Progression.Session(1, listOf(set(1, 0.0, 9, "pull_up"))))!!
-        assertEquals(Progression.Kind.ADD_REPS, mid.kind)
-        assertEquals(10, mid.reps)
-        val done = Progression.suggest(pullUp, Progression.Session(1, listOf(set(1, 0.0, 15, "pull_up"))))!!
-        assertEquals(Progression.Kind.HARDER_VARIANT, done.kind)
-    }
-
-    @Test
-    fun cableUsesHigherRange() {
-        assertEquals(Progression.RepRange(10, 15), Progression.repRange(fly))
-        assertNull(Progression.suggest(fly, null))
+    fun warmupsDoNotCountAsHardSets() {
+        val sets = listOf(set(1, 40.0, 10).copy(kind = SetKind.WARMUP), set(1, 60.0, 8), set(1, 50.0, 10).copy(kind = SetKind.BACKOFF))
+        val m = Progression.weeklySets(sets) { ExerciseLibrary.byId(it) }
+        assertEquals(2.0, m.getValue(bench.primary.first()), 1e-9)
     }
 
     @Test
