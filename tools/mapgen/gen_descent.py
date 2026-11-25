@@ -220,27 +220,22 @@ for y in range(SHAFT_END, AH):
         img[y, x, :3] = np.clip(col, 0, 255).astype(np.uint8)
 
 TX, TY0, TY1 = 88, 560, 624                                         # kmen Spící
-tips = []
+sys.path.insert(0, os.path.join(HERE, "hlubina"))
+from tree import TreePainter  # noqa: E402
 
 
-def branch(x, y, ang, ln, w, d, lvl):
-    if lvl > 4 or ln < 5 or y > AH + 10:
-        return
-    pts = []
-    a = ang
-    for _ in range(10):
-        pts.append((x, y))
-        a += rng.uniform(-0.12, 0.12)
-        x += math.cos(a) * ln / 9; y += math.sin(a) * ln / 9
-    limb(pts, w, max(1.0, w * 0.55), d, min(0.95, d + 0.1))
-    tips.append((x, y, d))
-    for s_ in (-1, 1):
-        if rng.random() < 0.92:
-            branch(x, y, ang + s_ * rng.uniform(0.3, 0.6), ln * rng.uniform(0.62, 0.78), max(1.0, w * 0.6), min(0.95, d + 0.1), lvl + 1)
+def void_at(x, y):
+    k = (y - SHAFT_END) / (AH - SHAFT_END)
+    return VOID_TOP * (1 - k) + VOID_BOT * k
 
 
-for ang in (math.pi / 2 - 1.2, math.pi / 2 - 0.6, math.pi / 2, math.pi / 2 + 0.6, math.pi / 2 + 1.2):
-    branch(TX + math.cos(ang) * 6, TY1, ang, 62, 10, 0.45, 0)
+# obrácená koruna: souvislé větve s plynulým ohybem (pravidlo trubek), do hloubky tmavnou a modrají
+tp = TreePainter(img, lambda x, y: (void_at(x, y) + np.array([8, 12, 24]), min(0.85, 0.12 + max(0.0, (y - TY1) / (AH - TY1)) * 0.7)), seed=213)
+tp.split3 = 0.4
+for ang, r in ((math.pi / 2 - 1.15, 4.6), (math.pi / 2 - 0.55, 5.2), (math.pi / 2, 5.6), (math.pi / 2 + 0.55, 5.2), (math.pi / 2 + 1.15, 4.6)):
+    tp.branch(TX + math.cos(ang) * 5, TY1 - 2, ang, r, 58, 0, math.pi / 2, spread=(0.38, 0.7), bend=0.05, maxdepth=7, pull=0.02)
+tp.composite(dark=(84, 80, 72), light=(206, 200, 188))
+tips = [(x, y, 0.5 + (y - TY1) / (AH - TY1) * 0.4) for (x, y) in tp.tips]
 limb([(TX, TY0 + i * (TY1 - TY0) / 14) for i in range(15)], 26, 18, 0.3, 0.42)
 
 # kořeny ze stropu jeskyně: nepravidelné, vlnité, vzdálenější tmavší a modřejší; některé visí naprázdno

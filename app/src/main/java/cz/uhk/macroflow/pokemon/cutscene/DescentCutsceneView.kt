@@ -198,7 +198,7 @@ class DescentCutsceneView(context: Context) : CutsceneView(context) {
         private const val CAB_H = 52f
         private const val STOP_Y = 420f
         /** Světla na konečcích větví a kopí v kmeni – vypisuje tools/mapgen/gen_descent.py. */
-        private val TIPS = floatArrayOf(159f, 645f, 20f, 654f, 73f, 691f, 159f, 703f, 44f, 727f, 85f, 735f, 71f, 749f, 41f, 753f, 153f, 759f)
+        private val TIPS = floatArrayOf(56f, 705f, 57f, 723f, 19f, 729f, 147f, 733f, 131f, 739f, 154f, 743f, 140f, 746f, 8f, 750f, 34f, 751f, 105f, 755f, 127f, 758f, 14f, 759f)
         private const val SPEAR_X = 80f
         private const val SPEAR_Y = 598f
     }

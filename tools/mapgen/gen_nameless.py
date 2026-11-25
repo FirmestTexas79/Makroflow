@@ -280,8 +280,38 @@ for y in range(288, 314):
             if abs(_vn(x * 0.8, y * 0.8, 70, 7) - 0.5) < 0.025:
                 v -= 0.3
             img[y, x] = _pick(SCREE, max(0.0, min(1.0, v)), x, y)
-SG.painted(img, 40, 291, "NEPOČÍTEJTE", c(0x9A2620), seed=12, wear=0.1, drips=False)
-SG.painted(img, 62, 302, "JE.", c(0x9A2620), seed=13, wear=0.1, drips=False)
+BLOOD = [np.array(v, float) for v in ((70, 10, 8), (110, 18, 12), (140, 28, 18), (168, 42, 26))]
+
+
+def blood(x0, y0, text, seed):
+    """Napsáno prstem krví: čitelná písmena, tah nestejně sytý, ke konci slábne a písmena poskočí, z dolních
+    hran stékají kapky, na začátku rozmazaný otisk dlaně."""
+    r = np.random.default_rng(seed)
+    m = SG.text_mask(text)
+    H_, W_ = m.shape
+    ys, xs = np.nonzero(m.any(1))[0], None
+    for xx in range(W_):
+        fade = xx / W_
+        dy = 1 if fade > 0.75 and (xx // 6) % 2 else 0
+        for yy in range(H_):
+            if not m[yy, xx]:
+                continue
+            X, Y = x0 + xx, y0 + yy + dy
+            if r.random() < fade * 0.08:
+                continue
+            col = BLOOD[2] if r.random() < 0.6 else BLOOD[3] if r.random() < 0.5 else BLOOD[1]
+            img[Y, X, :3] = col
+            if yy + 1 < H_ and not m[yy + 1, xx] and r.random() < 0.3 - fade * 0.15:
+                n = int(r.integers(2, 7))
+                for k in range(1, n):
+                    img[Y + k, X, :3] = BLOOD[1] if k < n - 1 else BLOOD[0]
+    for k in range(12):
+        X, Y = x0 - 7 + int(r.integers(0, 6)), y0 + 1 + int(r.integers(0, 7))
+        img[Y, X, :3] = np.clip(img[Y, X, :3] * 0.4 + BLOOD[1] * 0.6, 0, 255)
+
+
+blood(40, 290, "NEPOČÍTEJTE", 12)
+blood(60, 302, "JE.", 13)
 
 # ── trosky Řádu ─────────────────────────────────────────────────────────────
 sc.place(O.theodolite(), 128, 132, foot=(18, 6))

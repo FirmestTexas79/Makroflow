@@ -159,6 +159,7 @@ class MakromonMapActivity : AppCompatActivity() {
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
         private const val DEBUG_LIFT_KEY = "DEBUG_FREE_ELEVATOR"
+        private const val DEBUG_KEYCARD_KEY = "DEBUG_KEYCARD"
         // Mydrus zapomíná (docs/adr/0057)
         private const val MYDRUS_REMEMBERED = "mydrus_remembered_day"
         private const val MYDRUS_TIMES = "mydrus_forgot_times"
@@ -1834,7 +1835,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val R3 = cz.uhk.macroflow.pokemon.cave.RootCamp
         val seen = StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.TowerStory.ABYSS_KEY)
         val today = java.time.LocalDate.now().toEpochDay().toInt()
-        val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
+        val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false) || devKeycard()
         val open = free || (seen && today > gamePrefs.getInt(R3.ABYSS_DAY_KEY, Int.MIN_VALUE))
         val locked = cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.getValue(cz.uhk.macroflow.pokemon.cave.TowerAbyss.CAGE_NODE)
         when {
@@ -1857,7 +1858,7 @@ class MakromonMapActivity : AppCompatActivity() {
      * (fáze „Výprava 8“), pouští jen debug volný výtah – pak sem přijde podmínka fáze.
      */
     private fun onStationBarrier() {
-        val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
+        val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false) || devKeycard()
         if (!free) { showMapToast(cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.getValue(cz.uhk.macroflow.pokemon.cave.RootCamp.DOWN_NODE)); return }
         StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootWatch.VISITED_KEY)
         walkInto(BiomeType.ROOT_WATCH, cz.uhk.macroflow.pokemon.cave.RootWatch.ENTRY_NODE)
@@ -1892,7 +1893,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     /** Gondola na Signálním útesu: jede ke Kořenovému mostu až poté, co kmen odpověděl (úkol Signalista). */
     private fun onSignalCable() {
-        if (!StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Signal.ANSWER_KEY)) {
+        if (!StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Signal.ANSWER_KEY) && !devKeycard()) {
             showMapToast(cz.uhk.macroflow.pokemon.cave.RootSignal.TEXTS.getValue("su_lanovka")); return
         }
         if (!StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.cave.RootBridge.VISITED_KEY)) showMapToast(cz.uhk.macroflow.pokemon.cave.RootSignal.CABLE_OPEN_TEXT)
@@ -2927,6 +2928,9 @@ class MakromonMapActivity : AppCompatActivity() {
 
     // ── Ladění příběhu (jen debug build) ──
 
+    /** Dev keycard (jen debug build): otevře zámky zóny 3, které jinak hlídá příběh. */
+    private fun devKeycard() = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_KEYCARD_KEY, false)
+
     private fun showDebugMenu() {
         val boots = gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false)
         val lift = gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
@@ -2950,7 +2954,8 @@ class MakromonMapActivity : AppCompatActivity() {
             "💪 +5× Preworkout (+1 level)",
             "🥫 +5× Bílý Monster (+3 levely)",
             "🎟️ Zlatý kupón (vstup do Věže)",
-            if (lift) "🛗 Výtah volně: ZAPNUTO (vypnout)" else "🛗 Výtah volně (všechna patra)"
+            if (lift) "🛗 Výtah volně: ZAPNUTO (vypnout)" else "🛗 Výtah volně (všechna patra)",
+            if (devKeycard()) "🪪 Dev keycard: ZAPNUTO (vypnout)" else "🪪 Dev keycard (otevře závory a gondolu v Hlubině)"
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("Debug – Makrosvět")
@@ -3021,6 +3026,12 @@ class MakromonMapActivity : AppCompatActivity() {
                     19 -> {
                         gamePrefs.edit().putBoolean(DEBUG_LIFT_KEY, !lift).apply()
                         showMapToast(if (lift) "🛗 Výtah zase jen po kalibraci." else "🛗 Výtah jezdí volně do všech hotových pater.")
+                    }
+                    20 -> {
+                        val on = devKeycard()
+                        gamePrefs.edit().putBoolean(DEBUG_KEYCARD_KEY, !on).apply()
+                        showMapToast(if (on) "🪪 Keycard odevzdána – Hlubina zase podle příběhu."
+                            else "🪪 Keycard Řádu: klec na −2, závora UZÁVĚRA i gondola ke Kořenovému mostu se otevřou.")
                     }
                 }
             }

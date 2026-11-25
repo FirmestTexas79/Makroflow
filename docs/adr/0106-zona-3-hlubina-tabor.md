@@ -73,3 +73,12 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   doslovné „\n“; uzly Kořenového mostu chyběly v seznamu akčních uzlů mapy.
 - **Zbývá** (schváleno 2026-11-25): Chrám Lumenců (6/8), Les pod korunou (7/8 – lokace před finálním bohem, souboj
   s Drakirrou), Kmen (8/8 – Trpitel ve Stromu s kopím, volba konce) a nová finální zenová lokace Střed kořenů.
+- **Mapa Zóna 3 v deníku** (`gen_zone3.py` → `assets/zone3`, `ZoneOne.ZONE3`): šest lokací sestupuje shora dolů
+  v propasti (tma se zelenou září), spoje Stanice 8 → Pozorovatelna B → (Signální útes → gondola → Kořenový most |
+  Tábor na svahu → Svah bezejmenných). Teleport a objevování jako v zónách 1 a 2 (příznaky návštěvy zóny 3), test
+  `ZoneThreeTest`. Lokace zóny 3 už nespadají pod interiéry zóny 2.
+- Strom ve sjezdové cutscéně a na patře −2 kreslí `hlubina/tree.py` (souvislé větve místo rozkouskovaných), mosazná
+  deska na pultu je skutečná šikmá deska na sloupku s rytým nápisem, cedule HLUBINA ve skále smaltovaná.
+  NEPOČÍTEJTE JE na Svahu je napsané prstem krví (nestejný tah, stékající kapky, otisk dlaně).
+- Debug: **Dev keycard** v ladicím menu mapy otevře klec na −2, závoru UZÁVĚRA a gondolu ke Kořenovému mostu bez
+  příběhových podmínek.

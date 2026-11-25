@@ -1,0 +1,247 @@
+{
+ "w": 1000,
+ "h": 1680,
+ "labelSize": 40,
+ "title": [
+  220,
+  1520
+ ],
+ "locations": {
+  "ROOT_CAMP": {
+   "rect": [
+    110,
+    80,
+    278.0,
+    388.0
+   ],
+   "map": [
+    114.0,
+    270.0,
+    -75.35,
+    539.35
+   ],
+   "label": [
+    380,
+    160
+   ]
+  },
+  "ROOT_WATCH": {
+   "rect": [
+    130,
+    560,
+    270.0,
+    388.0
+   ],
+   "map": [
+    134.0,
+    262.0,
+    421.5,
+    522.5
+   ],
+   "label": [
+    380,
+    640
+   ]
+  },
+  "ROOT_SIGNAL": {
+   "rect": [
+    470,
+    340,
+    126.0,
+    608.0
+   ],
+   "map": [
+    368.83,
+    225.74,
+    226.05,
+    717.95
+   ],
+   "label": [
+    570,
+    320
+   ]
+  },
+  "ROOT_BRIDGE": {
+   "rect": [
+    730,
+    100,
+    254.0,
+    648.0
+   ],
+   "map": [
+    722.29,
+    257.71,
+    -74.26,
+    818.26
+   ],
+   "label": [
+    850,
+    86
+   ]
+  },
+  "ROOT_SLOPECAMP": {
+   "rect": [
+    140,
+    1040,
+    230.0,
+    388.0
+   ],
+   "map": [
+    144.0,
+    222.0,
+    978.13,
+    445.87
+   ],
+   "label": [
+    300,
+    1030
+   ]
+  },
+  "ROOT_NAMELESS": {
+   "rect": [
+    470,
+    1000,
+    178.0,
+    648.0
+   ],
+   "map": [
+    464.81,
+    202.16,
+    1004.0,
+    640.0
+   ],
+   "label": [
+    690,
+    1140
+   ]
+  }
+ },
+ "links": [
+  {
+   "a": "ROOT_CAMP",
+   "aNode": "kt_sestup",
+   "aDir": "s",
+   "aPos": [
+    169.2,
+    442.5
+   ],
+   "aFrac": [
+    0.2045,
+    0.9602
+   ],
+   "b": "ROOT_WATCH",
+   "bNode": "pb_vstup",
+   "bDir": "n",
+   "bPos": [
+    178.7,
+    611.5
+   ],
+   "bFrac": [
+    0.1705,
+    0.3636
+   ],
+   "secret": false
+  },
+  {
+   "a": "ROOT_WATCH",
+   "aNode": "pb_k_rokli",
+   "aDir": "e",
+   "aPos": [
+    384.1,
+    866.8
+   ],
+   "aFrac": [
+    0.9545,
+    0.8523
+   ],
+   "b": "ROOT_SIGNAL",
+   "bNode": "su_vstup",
+   "bDir": "s",
+   "bPos": [
+    561.2,
+    928.6
+   ],
+   "bFrac": [
+    0.8523,
+    0.9786
+   ],
+   "secret": false
+  },
+  {
+   "a": "ROOT_SIGNAL",
+   "aNode": "su_lanovka",
+   "aDir": "e",
+   "aPos": [
+    545.8,
+    549.1
+   ],
+   "aFrac": [
+    0.7841,
+    0.45
+   ],
+   "b": "ROOT_BRIDGE",
+   "bNode": "km_vstup",
+   "bDir": "s",
+   "bPos": [
+    874.6,
+    723.5
+   ],
+   "bFrac": [
+    0.5909,
+    0.975
+   ],
+   "secret": false
+  },
+  {
+   "a": "ROOT_WATCH",
+   "aNode": "pb_dolu",
+   "aDir": "s",
+   "aPos": [
+    169.7,
+    926.2
+   ],
+   "aFrac": [
+    0.1364,
+    0.9659
+   ],
+   "b": "ROOT_SLOPECAMP",
+   "bNode": "tv_vstup",
+   "bDir": "n",
+   "bPos": [
+    171.8,
+    1087.1
+   ],
+   "bFrac": [
+    0.125,
+    0.2443
+   ],
+   "secret": false
+  },
+  {
+   "a": "ROOT_SLOPECAMP",
+   "aNode": "tv_dolu",
+   "aDir": "s",
+   "aPos": [
+    260.0,
+    1416.4
+   ],
+   "aFrac": [
+    0.5227,
+    0.983
+   ],
+   "b": "ROOT_NAMELESS",
+   "bNode": "sb_vstup",
+   "bDir": "n",
+   "bPos": [
+    536.0,
+    1031.4
+   ],
+   "bFrac": [
+    0.3523,
+    0.0429
+   ],
+   "secret": false
+  }
+ ],
+ "npcs": {}
+}

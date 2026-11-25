@@ -99,6 +99,20 @@ def bezier(p0, p1, p2, n=40):
 
 TX, TY0, TY1 = 88, 214, 262                                    # kmen
 
+# obrácená koruna: souvislé větve s plynulým ohybem (pravidlo trubek), do hloubky tmavnou a modrají
+sys.path.insert(0, os.path.join(HERE, "hlubina"))
+from tree import TreePainter  # noqa: E402
+rng = np.random.default_rng(9)
+tp = TreePainter(img, lambda x, y: (VOID_TOP * (1 - y / AH) + VOID_BOT * (y / AH) + np.array([8, 12, 24]),
+                                    min(0.85, 0.2 + max(0.0, (y - TY1) / (AH - TY1)) * 0.65)), seed=9)
+tp.split3 = 0.4
+for ang, r in ((math.pi / 2 - 1.1, 3.2), (math.pi / 2 - 0.5, 3.6), (math.pi / 2, 3.9), (math.pi / 2 + 0.5, 3.6), (math.pi / 2 + 1.1, 3.2)):
+    tp.branch(TX + math.cos(ang) * 3, TY1 - 2, ang, r, 42, 0, math.pi / 2, spread=(0.38, 0.7), bend=0.05, maxdepth=7, pull=0.02)
+tp.composite(dark=(84, 80, 72), light=(206, 200, 188))
+tips = [(x, y, 0.55 + (y - TY1) / (AH - TY1) * 0.4) for (x, y) in tp.tips]
+
+# kmen
+
 # obrácená koruna: větve rostou z dolního konce kmene dolů a do stran (vzdálenější, kreslí se první)
 rng = np.random.default_rng(9)
 def branch(x, y, ang, ln, w, d, lvl):
@@ -200,12 +214,12 @@ for yy in range(dial.h):
     for xx in range(dial.w):
         if dial.a[yy, xx, 3]:
             img[2 + yy, 76 + xx] = dial.a[yy, xx]
-for yy in range(8, 18):                                                       # cedule SEKTOR HLUBINY
-    for xx in range(122, 166):
-        img[yy, xx] = c(0xC8B060) if yy in (8, 17) or xx in (122, 165) else c(0x2A2418)
-for xx in range(126, 162, 2):
-    if _h(xx, 1) % 4:
-        img[12, xx] = c(0xD8C880); img[13, xx] = c(0xB8A860)
+import signs as SG, order as O  # noqa: E402
+sign = O.mount_plate(SG.plate("HLUBINA", c(0xE8E2CC), c(0x1E2A44), seed=17, pad=2, wear=0.0))
+for yy in range(sign.h):                                                      # cedule přišroubovaná do čediče
+    for xx in range(sign.w):
+        if sign.a[yy, xx, 3]:
+            img[8 + yy, 144 - sign.w // 2 + xx] = sign.a[yy, xx]
 
 # ── lávka a balkon ───────────────────────────────────────────────────────────
 GR = [c(0x22242A), c(0x34363E), c(0x4A4C56), c(0x666874)]
@@ -264,11 +278,41 @@ for a in range(0, 181, 15):                                                   # 
     t = math.radians(a)
     x, y = int(88 + math.cos(t) * 40), int(186 + math.sin(t) * 30)
     img[y - 2:y + 1, x] = STEEL[5]
-# pult s cedulí na balkoně
-for yy in range(170, 180):
-    for xx in range(60, 72):
-        img[yy, xx] = c(0x3A2A1C) if yy > 172 else c(0xC8B060)
-block[170:180, 60:72] = True
+# pult s mosaznou deskou na balkoně: ocelový sloupek, šikmá deska s rytým písmem, nýty, odlesk
+BR = [c(0x3A2410), c(0x5E3C1A), c(0x8A5E2A), c(0xB4843E), c(0xD8AC5C), c(0xF2D38A)]
+lect = np.zeros((22, 30, 4), np.uint8)
+def lp(x, y, col):
+    if 0 <= x < 30 and 0 <= y < 22:
+        lect[y, x, :3] = col[:3]; lect[y, x, 3] = 255
+for y in range(12, 22):                                                       # sloupek a patka
+    lp(14, y, STEEL[3]); lp(15, y, STEEL[1])
+for x in range(10, 20):
+    lp(x, 21, STEEL[2]); lp(x, 20, STEEL[3] if x < 15 else STEEL[1])
+for y in range(0, 12):                                                        # deska (šikmá – horní hrana dál)
+    for x in range(1 + (11 - y) // 4, 29 - (11 - y) // 4):
+        v = 2 + (1 if y < 3 else 0) + (1 if (x + y) % 9 == 0 else 0)
+        if y in (0, 11) or x in (1 + (11 - y) // 4, 28 - (11 - y) // 4):
+            v = 1
+        lp(x, y, BR[min(5, v)])
+for y in range(10, 12):
+    for x in range(3, 27):
+        lp(x, y + 1, BR[0])                                                   # tloušťka desky
+for (x, y) in ((4, 2), (25, 2), (3, 9), (26, 9)):
+    lp(x, y, BR[5])                                                           # nýty
+_t = O.Spr(28, 6); SG.tiny(_t, 0, 0, "SEKTOR", BR[0])
+for yy in range(5):
+    for xx in range(24):
+        if _t.a[yy, xx, 3]:
+            lp(4 + xx, 3 + yy, BR[1])                                         # rytý nápis
+for x in range(6, 24, 2):
+    lp(x, 9, BR[2])                                                           # drobné řádky pod tím
+for x in range(5, 12):
+    lp(x, 1, BR[5])                                                           # odlesk
+for yy in range(22):
+    for xx in range(30):
+        if lect[yy, xx, 3]:
+            img[160 + yy, 52 + xx] = lect[yy, xx]
+block[172:182, 60:72] = True
 # klec na řetězech vpravo od balkonu
 for yy in range(150, 200):
     img[yy, 128 if yy % 2 else 129] = STEEL[3]

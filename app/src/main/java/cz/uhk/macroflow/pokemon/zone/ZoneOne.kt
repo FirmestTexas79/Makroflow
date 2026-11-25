@@ -13,20 +13,26 @@ object ZoneOne {
     const val TITLE = "Zóna 1"
 
     /** Zóny na stránce Mapa: číslo → název (záložky). Zóna 2 = Akt II za Branou světů. */
-    val ZONES = listOf(1 to TITLE, 2 to "Zóna 2")
+    val ZONES = listOf(1 to TITLE, 2 to "Zóna 2", 3 to "Zóna 3")
 
     /** Lokace aktu II (Zóna 2) – mapa v assets/zone2 (tools/mapgen/gen_zone2.py). */
     val ZONE2 = setOf("ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA")
 
-    /** Interiéry zóny 2 (na mapě nejsou, ale patří do ní). ROOT_CAMP je už zóna 3 (Hlubina, ADR 0106).
-     *  ponytail: dokud zóna 3 nemá druhou lokaci a vlastní stránku mapy, počítá se pod zónu 2. */
-    val ZONE2_INTERIORS = setOf("ARENA_HALL", "TOWER_LOBBY", "TOWER_HIDEOUT", "TOWER_ABYSS", "ROOT_CAMP", "ROOT_WATCH", "ROOT_SLOPECAMP", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_NAMELESS", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_ROCK", "TOWER_CAVE", "TOWER_WATER", "TOWER_DORM", "TOWER_ICE", "TOWER_FIRE", "TOWER_OFFICE", "TOWER_FAIRY", "TOWER_POISON")
+    /** Lokace aktu III (Zóna 3, Hlubina, docs/adr/0106) – mapa v assets/zone3 (tools/mapgen/gen_zone3.py). */
+    val ZONE3 = setOf("ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS")
 
-    fun zoneOf(biome: String): Int = if (biome in ZONE2 || biome in ZONE2_INTERIORS) 2 else 1
+    /** Interiéry zóny 2 (na mapě nejsou, ale patří do ní). */
+    val ZONE2_INTERIORS = setOf("ARENA_HALL", "TOWER_LOBBY", "TOWER_HIDEOUT", "TOWER_ABYSS", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_ROCK", "TOWER_CAVE", "TOWER_WATER", "TOWER_DORM", "TOWER_ICE", "TOWER_FIRE", "TOWER_OFFICE", "TOWER_FAIRY", "TOWER_POISON")
+
+    fun zoneOf(biome: String): Int = when (biome) {
+        in ZONE3 -> 3
+        in ZONE2, in ZONE2_INTERIORS -> 2
+        else -> 1
+    }
 
     /** Soubor s rozvržením a složka obrázků zóny. */
-    fun assetDir(zone: Int) = if (zone == 2) "zone2" else "zone"
-    fun jsonPath(zone: Int) = if (zone == 2) "zone2/zone2.json" else "zone/zone1.json"
+    fun assetDir(zone: Int) = when (zone) { 2 -> "zone2"; 3 -> "zone3"; else -> "zone" }
+    fun jsonPath(zone: Int) = when (zone) { 2 -> "zone2/zone2.json"; 3 -> "zone3/zone3.json"; else -> "zone/zone1.json" }
     fun title(zone: Int) = ZONES.firstOrNull { it.first == zone }?.second ?: TITLE
 
     /** Příznak objevené lokace (synchronizuje se se StoryFlags). */
@@ -35,7 +41,8 @@ object ZoneOne {
 
     /** Lokace zóny v pořadí kreslení. */
     val LOCATIONS = listOf("TOWN", "MEADOW", "FOREST", "HIDDEN_GROVE", "MOUNTAINS", "CAVE_MAZE", "MINES", "CAVE_OPEN", "SKY_PASS",
-        "ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA")
+        "ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA",
+        "ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS")
 
     /** Tajné lokace – na mapě jen, když v nich hráč stojí. */
     val SECRET = setOf("HIDDEN_GROVE")
@@ -45,11 +52,13 @@ object ZoneOne {
         "MOUNTAINS" to "Hory", "CAVE_MAZE" to "Starý důl", "MINES" to "Doly", "CAVE_OPEN" to "Mechová jeskyně",
         "SKY_PASS" to "Nebeský průsmyk",
         "ASH_PLAIN" to "Popelavá pláň", "QUIET_ORCHARD" to "Ztichlý sad", "ECHO_CANYON" to "Ozvěnový kaňon",
-        "OZVENA" to "Ozvěna"
+        "OZVENA" to "Ozvěna",
+        "ROOT_CAMP" to "Stanice 8", "ROOT_WATCH" to "Pozorovatelna B", "ROOT_SIGNAL" to "Signální útes",
+        "ROOT_BRIDGE" to "Kořenový most", "ROOT_SLOPECAMP" to "Tábor na svahu", "ROOT_NAMELESS" to "Svah bezejmenných"
     )
 
     /** Lokace, kam se chodí přes hory – teleport je hlídá stejný krokový zámek jako vstup do hor. */
-    val BEHIND_MOUNTAINS = setOf("MOUNTAINS", "CAVE_MAZE", "MINES", "CAVE_OPEN", "SKY_PASS") + ZONE2
+    val BEHIND_MOUNTAINS = setOf("MOUNTAINS", "CAVE_MAZE", "MINES", "CAVE_OPEN", "SKY_PASS") + ZONE2 + ZONE3
 
     /** Uzel, kam teleport postaví hráče (u lokací z CaveMap jejich východ). */
     val ARRIVAL = mapOf(
@@ -59,7 +68,13 @@ object ZoneOne {
         "ASH_PLAIN" to cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE,
         "QUIET_ORCHARD" to cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE,
         "ECHO_CANYON" to cz.uhk.macroflow.pokemon.cave.EchoCanyon.ENTRY_NODE,
-        "OZVENA" to cz.uhk.macroflow.pokemon.cave.OzvenaCity.ENTRY_NODE
+        "OZVENA" to cz.uhk.macroflow.pokemon.cave.OzvenaCity.ENTRY_NODE,
+        "ROOT_CAMP" to cz.uhk.macroflow.pokemon.cave.RootCamp.CAGE_NODE,
+        "ROOT_WATCH" to cz.uhk.macroflow.pokemon.cave.RootWatch.ENTRY_NODE,
+        "ROOT_SIGNAL" to cz.uhk.macroflow.pokemon.cave.RootSignal.ENTRY_NODE,
+        "ROOT_BRIDGE" to cz.uhk.macroflow.pokemon.cave.RootBridge.ENTRY_NODE,
+        "ROOT_SLOPECAMP" to cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ENTRY_NODE,
+        "ROOT_NAMELESS" to cz.uhk.macroflow.pokemon.cave.RootNameless.ENTRY_NODE
     )
 
     enum class Shown {
@@ -109,7 +124,10 @@ object ZoneOne {
         "TOWN" to "MEADOW", "MEADOW" to "FOREST", "MEADOW" to "MOUNTAINS", "MOUNTAINS" to "SKY_PASS",
         "MOUNTAINS" to "CAVE_OPEN", "MOUNTAINS" to "CAVE_MAZE", "CAVE_MAZE" to "MINES", "FOREST" to "HIDDEN_GROVE",
         // Zóna 2 (zone2.json má jen spoje uvnitř zóny; průchod Branou světů je přechod mezi zónami)
-        "SKY_PASS" to "ASH_PLAIN", "ASH_PLAIN" to "QUIET_ORCHARD", "ASH_PLAIN" to "ECHO_CANYON", "ASH_PLAIN" to "OZVENA"
+        "SKY_PASS" to "ASH_PLAIN", "ASH_PLAIN" to "QUIET_ORCHARD", "ASH_PLAIN" to "ECHO_CANYON", "ASH_PLAIN" to "OZVENA",
+        // Zóna 3 (Hlubina): sjezd výtahem z Věže je přechod mezi zónami, spoje jen uvnitř zóny
+        "ROOT_CAMP" to "ROOT_WATCH", "ROOT_WATCH" to "ROOT_SIGNAL", "ROOT_SIGNAL" to "ROOT_BRIDGE",
+        "ROOT_WATCH" to "ROOT_SLOPECAMP", "ROOT_SLOPECAMP" to "ROOT_NAMELESS"
     )
 
     /** Počet přechodů po nejkratší cestě (BFS); null = nespojeno. */
@@ -172,6 +190,11 @@ object ZoneOne {
         if (any("echo_canyon_visited")) s += "ECHO_CANYON"
         if (any("ozvena_visited")) { s += "OZVENA"; s += "ASH_PLAIN" }
         if ("ASH_PLAIN" in s) s += "SKY_PASS"
+        // zóna 3: příznaky návštěvy lokací Hlubiny
+        mapOf(cz.uhk.macroflow.pokemon.cave.RootCamp.VISITED_KEY to "ROOT_CAMP", cz.uhk.macroflow.pokemon.cave.RootWatch.VISITED_KEY to "ROOT_WATCH",
+            cz.uhk.macroflow.pokemon.cave.RootSignal.VISITED_KEY to "ROOT_SIGNAL", cz.uhk.macroflow.pokemon.cave.RootBridge.VISITED_KEY to "ROOT_BRIDGE",
+            cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.VISITED_KEY to "ROOT_SLOPECAMP", cz.uhk.macroflow.pokemon.cave.RootNameless.VISITED_KEY to "ROOT_NAMELESS")
+            .forEach { (k, b) -> if (k in flags) s += b }
         // kdo byl za horami, prošel horami i loukou; kdo byl v Hvozdu, prošel loukou
         if (s.any { it in BEHIND_MOUNTAINS }) s += "MOUNTAINS"
         if ("MOUNTAINS" in s || "FOREST" in s) s += "MEADOW"

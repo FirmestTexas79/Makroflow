@@ -58,7 +58,7 @@ object RootNameless {
         "sb_pukl3" to "🕳️ Další ústí. Někdo do něj zatloukl kolík Řádu a uvázal lano, aby se ostatní měli čeho držet. " +
             "Lano mizí ve tmě a je napnuté. Nikdo za něj netáhne.\nVedle zase VEN.",
         "sb_tabule" to "📋 Sčítací tabule Řádu na dvou sloupcích. Čárky po pěti – stovky. Pak se počítat přestalo: poslední řádky jsou přeškrtané.",
-        "sb_cesta" to "Přes celou skalní desku na stezce rudou barvou Řádu, kterou se značí bedny: NEPOČÍTEJTE JE.\nStojíš přímo na nápisu.",
+        "sb_cesta" to "Přes skalní desku na stezce, napsáno prstem, krví: NEPOČÍTEJTE JE.\nKe konci se písmena třesou a stékají. Vedle rozmazaný otisk dlaně. Stojíš přímo na nápisu.",
         "sb_v7" to "Devět vedle sebe, ruce natažené k sobě, jako by se drželi. Na štítcích V7.\n" +
             "Jeden má na bradě jizvu. Další má pod kapucí pramen zrzavých vlasů. Mezi pátým a šestým je volné místo – tam, kde šel ten s lucernou.\n" +
             "Nahoře na útesu pořád někdo svítí.",

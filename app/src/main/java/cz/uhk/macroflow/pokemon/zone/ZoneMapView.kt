@@ -61,7 +61,7 @@ class ZoneMapView(context: Context, val zone: Int = 1) : View(context) {
         style = Paint.Style.STROKE; strokeWidth = 4f; color = 0xFFF6E8C4.toInt(); strokeCap = Paint.Cap.ROUND
         pathEffect = DashPathEffect(floatArrayOf(12f, 10f), 0f)
     }
-    private val seaColor = if (zone == 2) 0xFF3A363C.toInt() else 0xFF3D7DB5.toInt()   // zóna 2: popelavá pustina
+    private val seaColor = when (zone) { 2 -> 0xFF3A363C.toInt(); 3 -> 0xFF0C1016.toInt(); else -> 0xFF3D7DB5.toInt() }   // 2: popelavá pustina, 3: propast
     /** Souvislý terén celé zóny (gen_zone.py → zone/bg.png). */
     private val dir = ZoneOne.assetDir(zone)
     private val bg: Bitmap? = bitmap("$dir/bg.png")
