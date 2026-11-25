@@ -124,7 +124,8 @@ object SpawnManager {
         BiomeType.ROOT_SLOPECAMP to setOf("DUCH"),
         BiomeType.ROOT_SIGNAL to setOf("DUCH", "PSYCHO"),
         BiomeType.ROOT_BRIDGE to setOf("PŘÍRODA", "PSYCHO"),
-        BiomeType.ROOT_NAMELESS to setOf("DUCH", "ZEMĚ"))
+        BiomeType.ROOT_NAMELESS to setOf("DUCH", "ZEMĚ"),
+        BiomeType.ROOT_TEMPLE to setOf("PSYCHO", "VÍLA"))
 
     /** Typ druhu tak, jak ho ukazuje Makrodex (první slovo dexType: „ZEMĚ / KÁMEN“ → ZEMĚ). */
     private val DEX_TYPE: Map<String, String> by lazy {

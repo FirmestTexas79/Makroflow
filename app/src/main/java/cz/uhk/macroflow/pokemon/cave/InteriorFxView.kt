@@ -1543,6 +1543,19 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
                 FxGlow(14, 100, 8, 10, 0x8AC8FF, 5.2f), FxGlow(14, 238, 8, 12, 0x8AC8FF, 6.1f), FxGlow(14, 386, 8, 12, 0x8AC8FF, 4.7f))
         )
 
+        /** Zóna 3, Chrám Lumenců: jiskry nad oltářem přání stoupají, sloup světla na soše jelena dýchá, znaky na vlysu,
+         *  sloupech a dlažbě pulzují, z kořenů ve stropě se drolí a padá prach, vzduchem plují modré světlušky. */
+        val ROOT_TEMPLE = InteriorFx(
+            sparkles = listOf(FxBox(70, 132, 106, 150)),
+            crumbles = listOf(FxBox(10, 100, 30, 140), FxBox(150, 100, 166, 140), FxBox(120, 96, 140, 110)),
+            drips = listOf(30 to 100, 160 to 104, 132 to 100),
+            motes = listOf(FxBox(10, 20, 166, 340)),
+            moteColor = 0xC8E4FF,
+            glowworms = FxBox(12, 110, 164, 330),
+            glows = listOf(FxGlow(88, 140, 16, 8, 0xBFE6FF, 3.4f), FxGlow(58, 232, 14, 20, 0xD8F0E8, 5.2f), FxGlow(88, 12, 80, 2, 0x7EC0FF, 6f),
+                FxGlow(27, 54, 16, 26, 0xB8C8E8, 7.3f), FxGlow(151, 54, 16, 26, 0xB8C8E8, 6.6f))
+        )
+
         val ABYSS = InteriorFx(
             sparkles = listOf(FxBox(10, 230, 166, 345)),
             fog = listOf(FxBox(0, 250, 176, 290), FxBox(0, 300, 176, 340)),

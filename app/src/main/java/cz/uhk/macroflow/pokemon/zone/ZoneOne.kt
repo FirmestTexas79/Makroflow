@@ -19,7 +19,7 @@ object ZoneOne {
     val ZONE2 = setOf("ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA")
 
     /** Lokace aktu III (Zóna 3, Hlubina, docs/adr/0106) – mapa v assets/zone3 (tools/mapgen/gen_zone3.py). */
-    val ZONE3 = setOf("ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS")
+    val ZONE3 = setOf("ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS", "ROOT_TEMPLE")
 
     /** Interiéry zóny 2 (na mapě nejsou, ale patří do ní). */
     val ZONE2_INTERIORS = setOf("ARENA_HALL", "TOWER_LOBBY", "TOWER_HIDEOUT", "TOWER_ABYSS", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_ROCK", "TOWER_CAVE", "TOWER_WATER", "TOWER_DORM", "TOWER_ICE", "TOWER_FIRE", "TOWER_OFFICE", "TOWER_FAIRY", "TOWER_POISON")
@@ -42,7 +42,7 @@ object ZoneOne {
     /** Lokace zóny v pořadí kreslení. */
     val LOCATIONS = listOf("TOWN", "MEADOW", "FOREST", "HIDDEN_GROVE", "MOUNTAINS", "CAVE_MAZE", "MINES", "CAVE_OPEN", "SKY_PASS",
         "ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA",
-        "ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS")
+        "ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS", "ROOT_TEMPLE")
 
     /** Tajné lokace – na mapě jen, když v nich hráč stojí. */
     val SECRET = setOf("HIDDEN_GROVE")
@@ -54,7 +54,8 @@ object ZoneOne {
         "ASH_PLAIN" to "Popelavá pláň", "QUIET_ORCHARD" to "Ztichlý sad", "ECHO_CANYON" to "Ozvěnový kaňon",
         "OZVENA" to "Ozvěna",
         "ROOT_CAMP" to "Stanice 8", "ROOT_WATCH" to "Pozorovatelna B", "ROOT_SIGNAL" to "Signální útes",
-        "ROOT_BRIDGE" to "Kořenový most", "ROOT_SLOPECAMP" to "Tábor na svahu", "ROOT_NAMELESS" to "Svah bezejmenných"
+        "ROOT_BRIDGE" to "Kořenový most", "ROOT_SLOPECAMP" to "Tábor na svahu", "ROOT_NAMELESS" to "Svah bezejmenných",
+        "ROOT_TEMPLE" to "Chrám Lumenců"
     )
 
     /** Lokace, kam se chodí přes hory – teleport je hlídá stejný krokový zámek jako vstup do hor. */
@@ -74,7 +75,8 @@ object ZoneOne {
         "ROOT_SIGNAL" to cz.uhk.macroflow.pokemon.cave.RootSignal.ENTRY_NODE,
         "ROOT_BRIDGE" to cz.uhk.macroflow.pokemon.cave.RootBridge.ENTRY_NODE,
         "ROOT_SLOPECAMP" to cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ENTRY_NODE,
-        "ROOT_NAMELESS" to cz.uhk.macroflow.pokemon.cave.RootNameless.ENTRY_NODE
+        "ROOT_NAMELESS" to cz.uhk.macroflow.pokemon.cave.RootNameless.ENTRY_NODE,
+        "ROOT_TEMPLE" to cz.uhk.macroflow.pokemon.cave.RootTemple.ENTRY_NODE
     )
 
     enum class Shown {
@@ -127,7 +129,7 @@ object ZoneOne {
         "SKY_PASS" to "ASH_PLAIN", "ASH_PLAIN" to "QUIET_ORCHARD", "ASH_PLAIN" to "ECHO_CANYON", "ASH_PLAIN" to "OZVENA",
         // Zóna 3 (Hlubina): sjezd výtahem z Věže je přechod mezi zónami, spoje jen uvnitř zóny
         "ROOT_CAMP" to "ROOT_WATCH", "ROOT_WATCH" to "ROOT_SIGNAL", "ROOT_SIGNAL" to "ROOT_BRIDGE",
-        "ROOT_WATCH" to "ROOT_SLOPECAMP", "ROOT_SLOPECAMP" to "ROOT_NAMELESS"
+        "ROOT_WATCH" to "ROOT_SLOPECAMP", "ROOT_SLOPECAMP" to "ROOT_NAMELESS", "ROOT_NAMELESS" to "ROOT_TEMPLE"
     )
 
     /** Počet přechodů po nejkratší cestě (BFS); null = nespojeno. */
@@ -193,7 +195,8 @@ object ZoneOne {
         // zóna 3: příznaky návštěvy lokací Hlubiny
         mapOf(cz.uhk.macroflow.pokemon.cave.RootCamp.VISITED_KEY to "ROOT_CAMP", cz.uhk.macroflow.pokemon.cave.RootWatch.VISITED_KEY to "ROOT_WATCH",
             cz.uhk.macroflow.pokemon.cave.RootSignal.VISITED_KEY to "ROOT_SIGNAL", cz.uhk.macroflow.pokemon.cave.RootBridge.VISITED_KEY to "ROOT_BRIDGE",
-            cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.VISITED_KEY to "ROOT_SLOPECAMP", cz.uhk.macroflow.pokemon.cave.RootNameless.VISITED_KEY to "ROOT_NAMELESS")
+            cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.VISITED_KEY to "ROOT_SLOPECAMP", cz.uhk.macroflow.pokemon.cave.RootNameless.VISITED_KEY to "ROOT_NAMELESS",
+            cz.uhk.macroflow.pokemon.cave.RootTemple.VISITED_KEY to "ROOT_TEMPLE")
             .forEach { (k, b) -> if (k in flags) s += b }
         // kdo byl za horami, prošel horami i loukou; kdo byl v Hvozdu, prošel loukou
         if (s.any { it in BEHIND_MOUNTAINS }) s += "MOUNTAINS"

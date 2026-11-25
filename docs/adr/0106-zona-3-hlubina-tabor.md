@@ -82,3 +82,12 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   NEPOČÍTEJTE JE na Svahu je napsané prstem krví (nestejný tah, stékající kapky, otisk dlaně).
 - Debug: **Dev keycard** v ladicím menu mapy otevře klec na −2, závoru UZÁVĚRA a gondolu ke Kořenovému mostu bez
   příběhových podmínek.
+- **Chrám Lumenců** (`ROOT_TEMPLE`, `RootTemple.kt`, `gen_temple.py`), lokace 6, pohlcení 6/8. Ze Svahu bezejmenných
+  po schodech Lumenců (uzel `sb_chram`) do lodi chrámu skoro celého v kořenech: kořeny stropem a zdmi, kolem sloupů,
+  zvedají dlažbu, dva sloupy ulomené, kusy dříků na zemi. Na zadní stěně čtyři malby (strom s hvězdou a lidé se světlem
+  → král bez obličeje šplhá pro hvězdu → král ji sní a strom se obrací → žena ve stromě pod světem, lidé odcházejí do
+  tmy; pod ní „AŤ NÁS NIKDO NENAJDE“, odkaz na studnu Věže). Oltář přání (mísa drobností, jiskry, které na chvíli
+  něco připomenou), bezhlavá socha jelena ve sloupu světla z prasklé klenby (kořeny se před ní zastaví), jediný kolík
+  Řádu NEINVENTARIZOVAT s razítkem S-0. Bez prozrazení, že Makromoni byli lidé. Setkání PSYCHO a VÍLA lv 34–38,
+  intro TempleIntro, živé detaily `InteriorFxView.ROOT_TEMPLE`, díly `lumen.column/column_drum/deer_statue/wish_altar`.
+  Na mapě zóny 3 vpravo dole.

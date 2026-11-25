@@ -19,6 +19,7 @@ Z.LOC = {
     "ROOT_BRIDGE":    dict(img="root_bridge",    outdoor=False, x=680, y=60,   h=640),
     "ROOT_SLOPECAMP": dict(img="root_slopecamp", outdoor=False, x=90,  y=1000, h=380),
     "ROOT_NAMELESS":  dict(img="root_nameless",  outdoor=False, x=420, y=960,  h=640),
+    "ROOT_TEMPLE":    dict(img="root_temple",    outdoor=False, x=660, y=1180, h=380),
 }
 Z.NODES = {
     ("ROOT_CAMP", "kt_sestup"): (36, 338), ("ROOT_WATCH", "pb_vstup"): (30, 128),
@@ -26,6 +27,7 @@ Z.NODES = {
     ("ROOT_SIGNAL", "su_lanovka"): (138, 252), ("ROOT_BRIDGE", "km_vstup"): (104, 546),
     ("ROOT_WATCH", "pb_dolu"): (24, 340), ("ROOT_SLOPECAMP", "tv_vstup"): (22, 86),
     ("ROOT_SLOPECAMP", "tv_dolu"): (92, 346), ("ROOT_NAMELESS", "sb_vstup"): (62, 24),
+    ("ROOT_NAMELESS", "sb_chram"): (44, 546), ("ROOT_TEMPLE", "ch_vstup"): (88, 338),
 }
 Z.LINKS = [
     (("ROOT_CAMP", "kt_sestup", "s"), ("ROOT_WATCH", "pb_vstup", "n"), False),
@@ -33,19 +35,22 @@ Z.LINKS = [
     (("ROOT_SIGNAL", "su_lanovka", "e"), ("ROOT_BRIDGE", "km_vstup", "s"), False),
     (("ROOT_WATCH", "pb_dolu", "s"), ("ROOT_SLOPECAMP", "tv_vstup", "n"), False),
     (("ROOT_SLOPECAMP", "tv_dolu", "s"), ("ROOT_NAMELESS", "sb_vstup", "n"), False),
+    (("ROOT_NAMELESS", "sb_chram", "e"), ("ROOT_TEMPLE", "ch_vstup", "w"), False),
 ]
 Z.LABEL = {"ROOT_CAMP": (330, 120), "ROOT_WATCH": (330, 600), "ROOT_SIGNAL": (520, 280), "ROOT_BRIDGE": (800, 46),
-           "ROOT_SLOPECAMP": (250, 990), "ROOT_NAMELESS": (640, 1100)}
+           "ROOT_SLOPECAMP": (250, 990), "ROOT_NAMELESS": (640, 1060), "ROOT_TEMPLE": (790, 1160)}
 Z.LABEL_SIZE = 40
 Z.TITLE = (170, 1480)
 Z.TEX = {"ROOT_CAMP": (60, 0, 30, 24), "ROOT_WATCH": (60, 0, 30, 24), "ROOT_SLOPECAMP": (60, 0, 30, 24),   # skála stěny
-         "ROOT_SIGNAL": (162, 300, 14, 200), "ROOT_BRIDGE": (0, 0, 60, 110), "ROOT_NAMELESS": (0, 120, 20, 90)}
+         "ROOT_SIGNAL": (162, 300, 14, 200), "ROOT_BRIDGE": (0, 0, 60, 110), "ROOT_NAMELESS": (0, 120, 20, 90),
+         "ROOT_TEMPLE": (0, 120, 10, 200)}
 Z.TEX_GAIN = {b: (1.6, 10) for b in Z.LOC}                                  # tmavé lokace by v propasti zmizely
 Z.NPC = {}
 Z.HEADS = {}
 Z.SECRET_BG = set()
 Z.NAMES = {"ROOT_CAMP": "Stanice 8", "ROOT_WATCH": "Pozorovatelna B", "ROOT_SIGNAL": "Signální útes",
-           "ROOT_BRIDGE": "Kořenový most", "ROOT_SLOPECAMP": "Tábor na svahu", "ROOT_NAMELESS": "Svah bezejmenných"}
+           "ROOT_BRIDGE": "Kořenový most", "ROOT_SLOPECAMP": "Tábor na svahu", "ROOT_NAMELESS": "Svah bezejmenných",
+           "ROOT_TEMPLE": "Chrám Lumenců"}
 # propast místo moře: tma, zelená záře z hloubky, hrany skal
 Z.SEA = (12, 16, 22); Z.SEA_LIGHT = (26, 46, 44); Z.FOAM = (70, 130, 108)
 Z.SAND = (92, 88, 96); Z.SAND_DARK = (60, 58, 66)

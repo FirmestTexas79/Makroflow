@@ -1046,3 +1046,25 @@ class NamelessIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 72, 300, 23) {
         if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -18f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
     }
 }
+
+
+/** Chrám Lumenců (zóna 3): jiskry nad oltářem přání se rozzáří a zhasnou, sloup světla na soše jelena pohasne –
+ *  a mezi sloupy se otevřou oči; při výpadu se zvednou modré jiskry. */
+class TempleIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 216, 29) {
+    override val shade = hex(0x04060C)
+    override val accent = hex(0xC8E4FF)
+    override val dimMax = 0.62f
+    private val sparks = ramp(0x2A4A7A, 0x6AA0E0, 0xC8E4FF)
+    private val wisps = spray(22, 15f, 50f, 20f)
+
+    override fun before(t: Long) {
+        val glow = (0.7f + 0.3f * sinf(t * 0.02f)) * (1f - p(t, TELL2 - 150, TELL2)) + pulse(t, TELL1, 220)
+        if (glow > 0f) tintWhere(sx(66f), sy(130f), sx(110f), sy(162f), hex(0xBFE6FF), glow.coerceAtMost(1f) * 0.45f) { bright(it, 110) }
+    }
+
+    override fun act(t: Long) {
+        mapEyes(cx, cy, 2.3f, hex(0xC8E4FF), eyeAlpha(t))
+        val s = since(t)
+        if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -18f, s); puff(x, y, 1.8f, sparks, 0.7f * (1f - s)) }
+    }
+}
