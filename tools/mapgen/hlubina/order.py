@@ -1013,58 +1013,135 @@ COVERALL = [c(0x1A1E16), c(0x2A3022), c(0x3C4430), c(0x525C42), c(0x6A7656)]
 ASH = [c(0x3A3630), c(0x5A554C), c(0x7E786C), c(0x9C9688)]
 
 
-def fallen(seed=0, reach=False, overgrown=0.0, tag="V3"):
-    """Člen výpravy ležící na svahu tváří dolů, hlavou vzhůru (lezl nahoru, pryč od něčeho dole). Pohled 3/4
-    shora, leží: kapuce, ramena širší než pas, kombinéza na vyhublém těle, dvě nohy v botách. reach=False:
-    obě ruce vpředu nad hlavou jako při plazení; reach=True: jedna natažená, druhá podél těla. U kotníku
-    papírový štítek. overgrown = kolik ho už přerostly tenké kořínky."""
+WOOL = [c(0x1E1E22), c(0x34343A), c(0x4C4C54), c(0x68686F), c(0x86868C), c(0xA2A2A6)]
+JACKET = [c(0x22160E), c(0x3A281A), c(0x563C26), c(0x745234), c(0x926C44)]
+TECH = [c(0x12161F), c(0x1E2534), c(0x2E384C), c(0x425066), c(0x5C6C84)]
+OUTFITS = {"olive": COVERALL + [c(0x84906C)], "wool": WOOL, "jacket": JACKET + [c(0xAE8A5C)], "tech": TECH + [c(0x7888A0)]}
+CANVAS_PACK = [c(0x2A2216), c(0x463A24), c(0x625234), c(0x7E6C48)]
+
+
+def victim(seed=0, pose="crawl", outfit="olive", pack=False, helmet=False, overgrown=0.0):
+    """Člen výpravy na svahu, vždy hlavou vzhůru (lezl nahoru, pryč od něčeho dole); pohled 3/4 shora.
+    pose: crawl (plazí se, obě ruce nad hlavou), reach (jedna ruka natažená), back (na zádech, obličej vzhůru),
+    curl (na boku, kolena u hrudi), blanket (zabalený do deky, jen ruka), sit (sedí schoulený – jediný stojí,
+    ostatní leží a scéna je zkrátí). outfit: olive / wool / jacket / tech. pack = batoh, helmet = přilba.
+    Vyhublí: kombinéza na nich visí. U kotníku papírový štítek (ne u deky)."""
     rng = np.random.default_rng(seed)
-    s = Spr(15, 26)
-    cx = 7
+    P = OUTFITS[outfit]
+    s = Spr(17, 28)
+    cx = 8
     tilt = rng.uniform(-0.08, 0.08)
 
     def X(x, y):
         return x + int(round((y - 12) * tilt))
-    for y in range(6, 12):                                                # hlava v kapuci (temeno světlejší)
-        for x in range(cx - 2, cx + 3):
-            if ((x - cx) / 2.5) ** 2 + ((y - 8.6) / 2.9) ** 2 < 1:
-                s.px(X(x, y), y, _pick(COVERALL, 0.42 - (x - cx) * 0.08 - (y - 7) * 0.04, x, y))
-    for y in range(12, 20):                                               # trup: ramena → pas
-        half = 3.4 - (y - 12) * 0.22
-        for x in range(int(round(cx - half)), int(round(cx + half)) + 1):
-            u = (x - cx) / half
-            v = 0.6 - u * 0.18 + (0.1 if y == 12 else 0) - (0.15 if abs(u) > 0.8 else 0)
-            if x == cx and y > 13:
-                v -= 0.18                                                 # páteř / šev, látka visí
-            s.px(X(x, y), y, _pick(COVERALL, v, x, y))
-    for y in range(20, 25):                                               # nohy (mezera mezi nimi) a boty
-        for (lx, sh) in ((cx - 2, 0.5), (cx + 1, 0.36)):
-            for x in (lx, lx + 1):
-                s.px(X(x, y), y, COVERALL[3] if y < 23 and x == lx else COVERALL[2] if y < 23 else c(0x141210))
-    arms = [(-1, 0), (1, 0)]
-    for side, _ in arms:                                                  # ruce
-        sx = cx + side * 4
-        if reach and side == 1:
-            pts = [(sx, 13), (sx, 9), (sx, 5), (sx + 0, 2)]
-        elif reach:
-            pts = [(sx, 13), (sx, 16), (sx, 19)]
-        else:
-            pts = [(sx, 13), (sx + side, 10), (sx, 7), (sx - side, 4)]   # plazení: loket ven, dlaň nad hlavou
+
+    def head(cy=8.6, face=False):
+        for y in range(int(cy - 3), int(cy + 3)):
+            for x in range(cx - 2, cx + 3):
+                if ((x - cx) / 2.5) ** 2 + ((y - cy) / 2.9) ** 2 < 1:
+                    if helmet:
+                        col = _pick(STEEL, 0.75 - (x - cx) * 0.12 - (y - cy + 3) * 0.06, x, y)
+                    else:
+                        col = _pick(P, 0.42 - (x - cx) * 0.08 - (y - cy + 2) * 0.04, x, y)
+                    if face and abs(x - cx) <= 1 and cy - 1 <= y <= cy + 1:
+                        col = ASH[2] if x != cx or y != cy else ASH[1]
+                    s.px(X(x, y), y, col)
+
+    def torso(y0=12, y1=20, w0=3.4):
+        for y in range(y0, y1):
+            half = w0 - (y - y0) * 0.22
+            for x in range(int(round(cx - half)), int(round(cx + half)) + 1):
+                u = (x - cx) / max(0.5, half)
+                v = 0.62 - u * 0.18 + (0.1 if y == y0 else 0) - (0.15 if abs(u) > 0.8 else 0)
+                if x == cx and y > y0 + 1:
+                    v -= 0.16
+                s.px(X(x, y), y, _pick(P, v, x, y))
+
+    def legs(y0=20, y1=25):
+        for y in range(y0, y1):
+            for lx in (cx - 2, cx + 1):
+                for x in (lx, lx + 1):
+                    s.px(X(x, y), y, (P[3] if x == lx else P[2]) if y < y1 - 2 else c(0x141210))
+
+    def arm(pts):
         for (ax, ay), (bx, by) in zip(pts, pts[1:]):
-            s.line(X(ax, ay), ay, X(bx, by), by, COVERALL[3])
+            s.line(X(ax, ay), ay, X(bx, by), by, P[3])
         hx, hy = pts[-1]
         s.px(X(hx, hy), hy, ASH[3]); s.px(X(hx, hy), hy - 1, ASH[2])
-    s.px(X(cx + 3, 23), 23, PAPER[3]); s.px(X(cx + 4, 23), 23, PAPER[2]); s.px(X(cx + 4, 24), 24, PAPER[1])   # štítek
+
+    if pose in ("crawl", "reach", "back"):
+        head(face=pose == "back")
+        torso(); legs()
+        if pose == "crawl":
+            arm([(cx - 4, 13), (cx - 5, 10), (cx - 4, 7), (cx - 3, 4)]); arm([(cx + 4, 13), (cx + 5, 10), (cx + 4, 7), (cx + 3, 4)])
+        elif pose == "reach":
+            arm([(cx + 4, 13), (cx + 4, 9), (cx + 4, 5), (cx + 4, 1)]); arm([(cx - 4, 13), (cx - 4, 16), (cx - 4, 19)])
+        else:
+            arm([(cx - 4, 13), (cx - 5, 17), (cx - 5, 20)]); arm([(cx + 4, 13), (cx + 6, 16), (cx + 7, 18)])
+        if pack and pose != "back":
+            for y in range(12, 18):
+                for x in range(cx - 3, cx + 3):
+                    s.px(X(x, y), y, _pick(CANVAS_PACK, 0.6 - (x - cx) * 0.08 - (0.2 if y == 17 else 0), x, y))
+            s.px(X(cx - 3, 12), 12, CANVAS_PACK[0]); s.px(X(cx + 2, 12), 12, CANVAS_PACK[0])
+    elif pose == "curl":                                                  # na boku, kolena u hrudi
+        head(cy=7.6)
+        for y in range(11, 20):
+            for x in range(cx - 3, cx + 6):
+                d = ((x - cx - 1) / 4.6) ** 2 + ((y - 15) / 4.6) ** 2
+                if d < 1:
+                    s.px(X(x, y), y, _pick(P, 0.62 - (x - cx) * 0.06 - (y - 11) * 0.03, x, y))
+        for y in range(15, 19):                                           # kolena
+            for x in range(cx + 4, cx + 8):
+                if ((x - cx - 6) / 2.2) ** 2 + ((y - 17) / 2) ** 2 < 1:
+                    s.px(X(x, y), y, _pick(P, 0.5, x, y))
+        for (x, y) in ((cx - 1, 20), (cx, 21), (cx + 1, 21)):
+            s.px(X(x, y), y, c(0x141210))
+        s.px(X(cx + 2, 12), 12, ASH[3]); s.px(X(cx + 3, 12), 12, ASH[2])  # ruce u obličeje
+    elif pose == "blanket":                                               # zabalený do šedé deky
+        head(cy=7.6)
+        for y in range(10, 25):
+            half = 4.4 - abs(y - 16) * 0.12 - (max(0, y - 21) * 0.6)
+            for x in range(int(cx - half), int(cx + half) + 1):
+                u = (x - cx) / max(0.5, half)
+                v = 0.66 - u * 0.2 + (0.12 if (y + int(x * 0.7)) % 6 == 0 else 0)
+                if abs(u) > 0.85:
+                    v -= 0.2
+                s.px(X(x, y), y, _pick(WOOL, v, x, y))
+        for x in range(cx - 3, cx + 4, 2):
+            s.px(X(x, 24), 25, WOOL[2])                                   # třásně
+        s.px(X(cx + 4, 13), 13, ASH[3]); s.px(X(cx + 4, 14), 14, ASH[2])  # ruka svírá okraj
+    elif pose == "sit":                                                   # sedí schoulený, hlava na kolenou
+        for y in range(10, 22):                                           # záda a ramena (od nás)
+            half = 4.6 - abs(y - 14) * 0.22
+            for x in range(int(cx - half), int(cx + half) + 1):
+                u = (x - cx) / max(0.5, half)
+                s.px(x, y, _pick(P, 0.62 - u * 0.2 - (y - 10) * 0.02, x, y))
+        if pack:
+            for y in range(11, 19):
+                for x in range(cx - 3, cx + 3):
+                    s.px(x, y, _pick(CANVAS_PACK, 0.6 - (x - cx) * 0.08, x, y))
+        head(cy=7.0)
+        for (x, y) in ((cx - 5, 20), (cx - 5, 21), (cx + 5, 20), (cx + 5, 21)):
+            s.px(x, y, ASH[2])                                            # ruce kolem kolen
+        for y in range(22, 26):
+            for lx in (cx - 3, cx + 2):
+                s.px(lx, y, P[2]); s.px(lx + 1, y, P[1] if y < 25 else c(0x141210))
+    if pose not in ("blanket",):
+        s.px(X(cx + 3, 23), 23, PAPER[3]); s.px(X(cx + 4, 23), 23, PAPER[2]); s.px(X(cx + 4, 24), 24, PAPER[1])
     if overgrown > 0:                                                     # kořínky přes tělo
         for k in range(int(overgrown * 4)):
             y0 = int(rng.integers(8, 22)); dx = 1 if rng.random() < 0.5 else -1
-            x = 0 if dx > 0 else 14
-            for i in range(15):
+            x = 0 if dx > 0 else 16
+            for i in range(17):
                 yy = y0 + int(math.sin(i * 0.6 + k) * 1.3)
-                if 0 <= x < 15 and s.a[yy, x, 3]:
+                if 0 <= x < 17 and s.a[yy, x, 3]:
                     s.px(x, yy, BARK[2] if i % 3 else BARK[1])
                 x += dx
     return selout(s, 0.4, 0.75)
+
+
+def fallen(seed=0, reach=False, overgrown=0.0, tag="V3"):
+    return victim(seed, "reach" if reach else "crawl", "olive", overgrown=overgrown)
 
 
 def theodolite():

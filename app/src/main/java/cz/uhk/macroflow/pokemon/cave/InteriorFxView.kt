@@ -1527,19 +1527,18 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
                 FxGlow(33, 75, 3, 10, 0x7AF0B0, 4.7f), FxGlow(36, 100, 3, 10, 0x7AF0B0, 6.1f), FxGlow(56, 114, 8, 16, 0x9AE8C8, 7f))
         )
 
-        /** Zóna 3, Svah bezejmenných: ze stěny kape voda, pramínky se třpytí, z hran teras se drolí suť, baterka v suti
-         *  bliká, znaky na fasádě Lumenců dýchají, tůňka se vlní a zespodu se valí zelená mlha. Žádné lampy Řádu. */
+        /** Zóna 3, Svah bezejmenných: sodíková lampa na protějším vrcholu dýchá světlem, údolím se valí zelená mlha, pramínky
+         *  se třpytí, z hrany srázu se drolí suť, baterka v suti bliká, tůňka se vlní, v teplém světle poletuje prach. */
         val ROOT_NAMELESS = InteriorFx(
-            blinks = listOf(FxBlink(FxBox(98, 146, 99, 149), 0xFFFFE8B0.toInt())),
-            crumbles = listOf(FxBox(40, 140, 60, 150), FxBox(100, 196, 130, 206), FxBox(20, 288, 50, 296)),
-            drips = listOf(26 to 54, 118 to 54, 160 to 54),
-            sparkles = listOf(FxBox(20, 60, 34, 300), FxBox(112, 60, 126, 240), FxBox(154, 60, 168, 150)),
-            ripples = listOf(FxBox(116, 238, 146, 250)),
-            fog = listOf(FxBox(0, 280, 176, 320), FxBox(0, 310, 176, 352)),
+            blinks = listOf(FxBlink(FxBox(45, 159, 46, 162), 0xFFFFE8B0.toInt())),
+            crumbles = listOf(FxBox(40, 196, 50, 230), FxBox(56, 330, 66, 360), FxBox(70, 470, 80, 500)),
+            sparkles = listOf(FxBox(4, 10, 18, 230), FxBox(28, 300, 42, 520)),
+            ripples = listOf(FxBox(38, 366, 74, 378)),
+            fog = listOf(FxBox(60, 300, 176, 380), FxBox(50, 400, 176, 480), FxBox(40, 480, 176, 560)),
             fogColor = 0x58A088,
-            motes = listOf(FxBox(0, 60, 176, 340)),
-            moteColor = 0xB8E0D0,
-            glows = listOf(FxGlow(136, 26, 20, 10, 0x7EC0FF, 5f), FxGlow(98, 148, 4, 3, 0xFFE8B0, 2.3f), FxGlow(24, 330, 14, 10, 0x8AC8FF, 4.4f))
+            motes = listOf(FxBox(0, 20, 176, 540)),
+            moteColor = 0xE8D0A0,
+            glows = listOf(FxGlow(128, 107, 20, 16, 0xFFD08C, 3.6f), FxGlow(46, 160, 4, 3, 0xFFE8B0, 2.3f), FxGlow(16, 540, 14, 10, 0x8AC8FF, 4.4f))
         )
 
         val ABYSS = InteriorFx(
