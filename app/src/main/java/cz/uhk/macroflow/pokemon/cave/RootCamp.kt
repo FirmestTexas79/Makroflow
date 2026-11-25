@@ -1,9 +1,11 @@
 package cz.uhk.macroflow.pokemon.cave
 
 /**
- * Zóna 3 (Akt III – Hlubina), lokace 1: Tábor výprav (docs/adr/0106). Klec ze Sektoru Hlubiny (−2) přistane na kořeni
- * Spící; opuštěný tábor Řádu – stany výprav, vysílačka se Septem, nástěnka, Hunfreyho křída. Bez setkání.
- * Uzly kopírují tools/mapgen/gen_rootcamp.py – ZDROJ PRAVDY je v obou místech. Živé detaily: InteriorFxView.ROOT_CAMP.
+ * Zóna 3 (Akt III – Hlubina), lokace 1: STANICE 8 – předsunutá základna Řádu (docs/adr/0106). Skalní římsa pod
+ * stropem dutiny: šachta s klecí ze Sektoru Hlubiny, beton se značením, ubikace s vysílačkou, nástěnka výprav,
+ * pozorovatelna A, ohňová hlídka, terminál lanovky ke kmeni, závora na cestě ke Svahu. Ve skále ruina Lumenců.
+ * Kořeny Spící tu teprve začínají – prolamují roh ubikace, zvedají beton, obtáčejí pozorovatelnu. Bez setkání.
+ * Uzly kopírují tools/mapgen/gen_station8.py – ZDROJ PRAVDY je v obou místech. Živé detaily: InteriorFxView.ROOT_CAMP.
  */
 object RootCamp {
     const val CAGE_NODE = "kt_klec"
@@ -19,14 +21,14 @@ object RootCamp {
     val MAP = CaveMap(
         artW = 176, artH = 352,
         nodes = listOf(
-            CaveNode(CAGE_NODE, 88, 66), CaveNode("kt_radio", 64, 104), CaveNode("kt_stred", 88, 140),
-            CaveNode("kt_stan1", 44, 168), CaveNode("kt_stan2", 132, 168), CaveNode("kt_ohniste", 88, 204),
-            CaveNode("kt_stan3", 46, 246), CaveNode("kt_tabule", 126, 240), CaveNode("kt_dole", 88, 284),
-            CaveNode("kt_krida", 100, 306), CaveNode(DOWN_NODE, 88, 340)
+            CaveNode(CAGE_NODE, 88, 124), CaveNode("kt_stred", 88, 168), CaveNode("kt_ruina", 34, 124),
+            CaveNode("kt_radio", 28, 210), CaveNode("kt_tabule", 78, 204), CaveNode("kt_vez", 140, 246),
+            CaveNode("kt_hlidka", 108, 262), CaveNode("kt_dole", 84, 290), CaveNode("kt_lanovka", 130, 300),
+            CaveNode("kt_krida", 62, 312), CaveNode(DOWN_NODE, 36, 338)
         ),
-        edges = listOf(CAGE_NODE to "kt_stred", "kt_radio" to "kt_stred", "kt_stred" to "kt_stan1", "kt_stred" to "kt_stan2",
-            "kt_stred" to "kt_ohniste", "kt_ohniste" to "kt_stan3", "kt_ohniste" to "kt_tabule", "kt_ohniste" to "kt_dole",
-            "kt_dole" to "kt_krida", "kt_dole" to DOWN_NODE),
+        edges = listOf(CAGE_NODE to "kt_stred", "kt_stred" to "kt_ruina", "kt_stred" to "kt_radio", "kt_stred" to "kt_tabule",
+            "kt_radio" to "kt_tabule", "kt_stred" to "kt_vez", "kt_vez" to "kt_hlidka", "kt_stred" to "kt_hlidka",
+            "kt_hlidka" to "kt_dole", "kt_dole" to "kt_lanovka", "kt_dole" to "kt_krida", "kt_krida" to DOWN_NODE),
         exitNode = CAGE_NODE,
         mountainNode = TowerAbyss.CAGE_NODE,
         crystalNode = null,
@@ -35,23 +37,34 @@ object RootCamp {
         parentBiome = "TOWER_ABYSS",
         isCave = false,
         tapAreas = mapOf(
-            CAGE_NODE to Triple(88, 38, 20), "kt_radio" to Triple(56, 96, 12), "kt_stan1" to Triple(44, 146, 18),
-            "kt_stan2" to Triple(130, 146, 18), "kt_ohniste" to Triple(88, 198, 10), "kt_stan3" to Triple(46, 224, 18),
-            "kt_tabule" to Triple(126, 226, 16), "kt_krida" to Triple(114, 298, 12), DOWN_NODE to Triple(88, 344, 16)
+            CAGE_NODE to Triple(88, 88, 22), "kt_ruina" to Triple(33, 76, 22), "kt_radio" to Triple(36, 180, 22),
+            "kt_tabule" to Triple(78, 182, 12), "kt_vez" to Triple(142, 168, 18), "kt_hlidka" to Triple(124, 260, 16),
+            "kt_lanovka" to Triple(150, 312, 18), "kt_krida" to Triple(74, 306, 9), DOWN_NODE to Triple(40, 318, 16),
+            "kt_stred" to Triple(88, 214, 14)
         )
     )
 
     val TEXTS = mapOf(
-        CAGE_NODE to "⛓️ Klec stojí na kořeni, řetězy mizí nahoru do tmy. Zámek je odemčený.\nNahoru pojede, kdykoli zatáhneš za páku. Dolů to bylo schválené jen jednou.",
-        "kt_radio" to "📻 Polní vysílačka Řádu. Šumí. Mezi šumem Septův hlas, klidný jako vždy:\n„Subjekte 213, slyšíme vás. Výprava 8 je na místě. Zapisujte, co vidíte. Hlavně zapisujte.“",
-        "kt_stan1" to "📓 Stan výpravy 3. Na lehátku deník, den 4:\n„Kořeny jsou teplé. Kdo na ně položí dlaň, slyší tep. Jednou za hodinu. Kartograf tvrdí, že je to jen voda.“\nDalší stránky chybí.",
-        "kt_stan2" to "⛺ Stan výpravy 5. Pět lehátek, všechna ustlaná, deky ostře složené. Jen na jednom polštáři je důlek.\nNa štítku: OKRUH 161 – SPAL.",
-        "kt_ohniste" to "🔥 Ohniště. Nikdo tu nepálil dřevo – žádné tu není, jen kořeny, a ty nehoří.\nPopel sem padá shora, pořád, jako sníh. Je teplý.",
-        "kt_stan3" to "📓 Stan výpravy 7, poslední zápis v deníku:\n„Svah dolů je posetý skořápkami. Prázdné, lehké, každá má na zádech číslo. Nepočítejte je. Nepočítejte je. Nepočítejte je.“",
-        "kt_tabule" to "📋 Nástěnka tábora:\nVÝPRAVA 1 – NEVRÁCENA · VÝPRAVA 2 – NEVRÁCENA · VÝPRAVA 3 – NEVRÁCENA · … · VÝPRAVA 7 – NEVRÁCENA.\nPoslední řádek je čerstvým inkoustem: VÝPRAVA 8 – SUBJEKT 213 – PROBÍHÁ.",
-        "kt_krida" to "✏️ Na kůře křídou šipka dolů a číslo 212. Pod tím Hunfreyho písmo:\n„Byl jsem až tady. Dál ne – dál se zapomíná rychleji. Vrať se vždycky nahoru spát.“",
-        DOWN_NODE to "⬇️ Kořen se stáčí dolů do mlhy. Svah bezejmenných.\nCedule Řádu: SESTUP NA SVAH – ZATÍM NESCHVÁLEN.",
-        "kt_stred" to "🍄 Modré houby po okrajích kořene – stejné jako v Hvozdu u Mydra. Tady jich je tolik, že by se při nich dalo číst."
+        CAGE_NODE to "⛓️ Klec stojí v ocelové šachtě, která sjíždí ze stropu dutiny. Řetězy mizí nahoru do tmy, zámek visí odemčený.\nNahoru pojede, kdykoli zatáhneš za páku. Dolů to bylo schválené jen jednou.",
+        "kt_ruina" to "🏛️ Ve skále je vytesaná fasáda – starší než Řád, starší než Ozvěna. Lomený oblouk, štíhlé sloupy, nad vchodem obrácená koruna. Drobné znaky na římse pořád slabě svítí modře.\n" +
+            "Kořeny ji objímají a pomalu stahují do skály. Přes sloup je nastříkáno: OBJEKT NEPŘÍSTUPNÝ – NEINVENTARIZOVAT.",
+        "kt_radio" to "📻 Ubikace S-8. V okně svítí lampa, kterou nikdo nezhasl. Šest lůžek, deky ostře složené.\n" +
+            "Na stole šumí vysílačka a v šumu Sept: „Subjekte 213, Stanice 8 vás vítá. Výprava 8 je na místě. Zapisujte, co vidíte. Hlavně zapisujte.“\n" +
+            "Roh ubikace prolomil kořen. Plech je ohnutý zevnitř ven.",
+        "kt_tabule" to "📋 OBSAZENÍ HLUBINY\nFÁZE 1: STANICE 8 – DOKONČENO · FÁZE 2: POZOROVATELNA B – DOKONČENO · FÁZE 3: TÁBOR NA SVAHU – OPUŠTĚNO · FÁZE 4: KMEN – ███\n" +
+            "VÝPRAVY 1–7: NEVRÁCENY.\nPoslední řádek čerstvým inkoustem: VÝPRAVA 8 – SUBJEKT 213 – PROBÍHÁ.",
+        "kt_vez" to "🗼 Pozorovatelna A. Reflektor svítí dolů do tmy, tam, kde by měl být kmen. Kolem nohy věže se ovíjí kořen.\n" +
+            "Štítek u žebříku: KONTROLA 1: KOŘENY 0 m. KONTROLA 2: KOŘENY 4 m. KONTROLA 3: KOŘENY U VĚŽE. KONTROLA 4: ███",
+        "kt_hlidka" to "🔥 Ohňová hlídka: sudy s palivem, pytle s pískem a spálené pahýly kořenů, které ještě doutnají.\n" +
+            "Rozpis služeb: PÁLIT KAŽDÝCH 6 HODIN. Poslední podpis je před 43 dny. Kořeny od té doby dorostly až k sudům.",
+        "kt_lanovka" to "🚡 Spodní stanice lanovky ke kmeni. Gondola visí u rampy s rozbitým okénkem, lana mizí přes okraj do tmy.\n" +
+            "Cedule: LANOVKA → KMEN · MIMO PROVOZ · DALŠÍ JÍZDA: ZATÍM NESCHVÁLENO.",
+        "kt_krida" to "✏️ Na patce závory křídou šipka dolů a číslo 212. Pod tím Hunfreyho písmo:\n" +
+            "„Byl jsem až tady. Dál ne – dál se zapomíná rychleji. Vrať se vždycky nahoru spát.“",
+        DOWN_NODE to "🚧 Závora UZÁVĚRA. Za ní se cesta stáčí po římse dolů do mlhy – na Svah bezejmenných.\n" +
+            "Na rameni visí fotka výpravy 7: devět lidí v kombinézách Řádu se usmívá. Na zadní straně tužkou: „Nepočítejte je.“\n" +
+            "Cedule: SESTUP NA SVAH – ZATÍM NESCHVÁLEN.",
+        "kt_stred" to "🟡 Přistávací kruh S-8. Žluté čáry vedou od klece ke všemu, co tu Řád postavil – a končí tam, kde začínají kořeny."
     )
     val ACTION_NODES = TEXTS.keys
 }

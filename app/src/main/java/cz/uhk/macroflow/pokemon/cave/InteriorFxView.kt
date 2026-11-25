@@ -1420,16 +1420,22 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         )
 
         /** Patro −2, Sektor Hlubiny: modrá světla na větvích, mlha v hlubině, prach nad propastí. */
-        /** Zóna 3, Tábor výprav: shora padá teplý popel, modré houby dýchají, mlha a světlušky nad propastí. */
+        /** Zóna 3, Stanice 8: sodíkové reflektory blikají, na stožáru bliká rudá lampička, shora padá teplý popel,
+         *  spálené kořeny doutnají, modré houby a znaky ruiny dýchají, z propasti stoupá mlha. */
         val ROOT_CAMP = InteriorFx(
-            ash = listOf(FxBox(20, 40, 156, 340)),
-            fog = listOf(FxBox(0, 280, 176, 330), FxBox(0, 0, 176, 40)),
+            lamps = listOf(FxLamp(112, 178, 40, 26, FxBox(103, 100, 120, 101)), FxLamp(22, 302, 36, 22, FxBox(13, 236, 30, 237)),
+                FxLamp(88, 128, 24, 14, FxBox(85, 65, 90, 66))),
+            blinks = listOf(FxBlink(FxBox(21, 126, 23, 127), 0xFFFF4A3A.toInt())),
+            ash = listOf(FxBox(10, 100, 166, 330)),
+            embers = listOf(FxBox(112, 220, 124, 232), FxBox(78, 270, 90, 282), FxBox(150, 274, 166, 292)),
+            fog = listOf(FxBox(0, 326, 176, 352), FxBox(0, 0, 176, 30)),
             fogColor = 0x3A4A70,
-            motes = listOf(FxBox(0, 60, 176, 340)),
+            motes = listOf(FxBox(0, 20, 176, 340)),
             moteColor = 0x9AC8FF,
-            glows = listOf(FxGlow(51, 85, 4, 4, 0x8AC8FF, 1.5f), FxGlow(44, 293, 4, 4, 0x8AC8FF, 2.1f), FxGlow(128, 73, 4, 4, 0x8AC8FF, 3.3f),
-                FxGlow(23, 129, 4, 4, 0x8AC8FF, 3.9f), FxGlow(143, 98, 4, 4, 0x8AC8FF, 1.5f), FxGlow(28, 243, 4, 4, 0x8AC8FF, 3.9f),
-                FxGlow(153, 210, 4, 4, 0x8AC8FF, 2.1f), FxGlow(53, 95, 2, 2, 0xFFE070, 1.2f), FxGlow(88, 70, 30, 22, 0xFFD8A0, 5f))
+            glows = listOf(FxGlow(33, 46, 22, 6, 0x7EC0FF, 4.5f), FxGlow(33, 78, 12, 14, 0x4A80C0, 6f),
+                FxGlow(79, 273, 3, 3, 0x8AC8FF, 2.1f), FxGlow(51, 232, 3, 3, 0x8AC8FF, 2.7f), FxGlow(28, 180, 3, 3, 0x8AC8FF, 3.3f),
+                FxGlow(159, 214, 3, 3, 0x8AC8FF, 1.9f), FxGlow(14, 140, 3, 3, 0x8AC8FF, 3.9f), FxGlow(136, 215, 3, 3, 0x8AC8FF, 2.4f),
+                FxGlow(97, 303, 3, 3, 0x8AC8FF, 3.1f), FxGlow(54, 196, 10, 6, 0xFFC870, 5f))
         )
 
         val ABYSS = InteriorFx(
