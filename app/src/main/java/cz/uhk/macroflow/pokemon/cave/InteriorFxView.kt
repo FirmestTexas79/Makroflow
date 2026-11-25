@@ -1527,6 +1527,21 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
                 FxGlow(33, 75, 3, 10, 0x7AF0B0, 4.7f), FxGlow(36, 100, 3, 10, 0x7AF0B0, 6.1f), FxGlow(56, 114, 8, 16, 0x9AE8C8, 7f))
         )
 
+        /** Zóna 3, Svah bezejmenných: ze stěny kape voda, pramínky se třpytí, z hran teras se drolí suť, baterka v suti
+         *  bliká, znaky na fasádě Lumenců dýchají, tůňka se vlní a zespodu se valí zelená mlha. Žádné lampy Řádu. */
+        val ROOT_NAMELESS = InteriorFx(
+            blinks = listOf(FxBlink(FxBox(98, 146, 99, 149), 0xFFFFE8B0.toInt())),
+            crumbles = listOf(FxBox(40, 140, 60, 150), FxBox(100, 196, 130, 206), FxBox(20, 288, 50, 296)),
+            drips = listOf(26 to 54, 118 to 54, 160 to 54),
+            sparkles = listOf(FxBox(20, 60, 34, 300), FxBox(112, 60, 126, 240), FxBox(154, 60, 168, 150)),
+            ripples = listOf(FxBox(116, 238, 146, 250)),
+            fog = listOf(FxBox(0, 280, 176, 320), FxBox(0, 310, 176, 352)),
+            fogColor = 0x58A088,
+            motes = listOf(FxBox(0, 60, 176, 340)),
+            moteColor = 0xB8E0D0,
+            glows = listOf(FxGlow(136, 26, 20, 10, 0x7EC0FF, 5f), FxGlow(98, 148, 4, 3, 0xFFE8B0, 2.3f), FxGlow(24, 330, 14, 10, 0x8AC8FF, 4.4f))
+        )
+
         val ABYSS = InteriorFx(
             sparkles = listOf(FxBox(10, 230, 166, 345)),
             fog = listOf(FxBox(0, 250, 176, 290), FxBox(0, 300, 176, 340)),

@@ -1020,3 +1020,29 @@ class BridgeIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 70, 352, 19) {
         if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -18f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
     }
 }
+
+
+/** Svah bezejmenných (zóna 3): baterka v suti zabliká a zhasne, svahem se zvedne prach (jako by se něco pohnulo
+ *  mezi ležícími) – a mezi nimi se otevřou oči; při výpadu stoupá zelená mlha zespodu. */
+class NamelessIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 96, 222, 23) {
+    override val shade = hex(0x05070A)
+    override val accent = hex(0xD8E8E0)
+    override val dimMax = 0.66f
+    private val mist = ramp(0x2E5A4C, 0x58A088, 0x98DCC4)
+    private val dust = ramp(0x2F2A23, 0x4E463A, 0x625849)
+    private val wisps = spray(20, 15f, 50f, 20f)
+    private val puffs = spray(12, 10f, 30f, 10f)
+
+    override fun before(t: Long) {
+        val lamp = (1f - p(t, TELL1, TELL1 + 300)) * (0.8f + 0.2f * sinf(t * 0.07f))
+        if (lamp > 0f) tintWhere(sx(90f), sy(142f), sx(108f), sy(156f), hex(0xFFE8B0), lamp * 0.4f) { bright(it, 90) }
+    }
+
+    override fun act(t: Long) {
+        val stir = p(t, TELL1, TELL2)
+        if (stir > 0f) for (b in puffs) { val (x, y) = ballistic(cx, cy + 6, b[0], b[1], 6f, stir); puff(x, y, 1.8f, dust, 0.5f * (1f - stir)) }
+        mapEyes(cx, cy, 2.2f, hex(0xD8E8E0), eyeAlpha(t))
+        val s = since(t)
+        if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -18f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
+    }
+}

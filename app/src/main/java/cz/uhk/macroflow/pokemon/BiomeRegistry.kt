@@ -64,7 +64,8 @@ enum class BiomeType {
     ROOT_SLOPECAMP,
     /** Zóna 3: Signální útes – vedlejší lokace s výhledem na Spící (úkol Signalista). */
     ROOT_SIGNAL,
-    ROOT_BRIDGE
+    ROOT_BRIDGE,
+    ROOT_NAMELESS
 }
 
 object BiomeRegistry {
@@ -200,7 +201,8 @@ object BiomeRegistry {
         BiomeDefinition(BiomeType.ROOT_WATCH, R.drawable.root_watch, graphOf(cz.uhk.macroflow.pokemon.cave.RootWatch.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootWatch.MAP),
         BiomeDefinition(BiomeType.ROOT_SLOPECAMP, R.drawable.root_slopecamp, graphOf(cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.MAP),
         BiomeDefinition(BiomeType.ROOT_SIGNAL, R.drawable.root_signal, graphOf(cz.uhk.macroflow.pokemon.cave.RootSignal.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootSignal.MAP),
-        BiomeDefinition(BiomeType.ROOT_BRIDGE, R.drawable.root_bridge, graphOf(cz.uhk.macroflow.pokemon.cave.RootBridge.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootBridge.MAP)
+        BiomeDefinition(BiomeType.ROOT_BRIDGE, R.drawable.root_bridge, graphOf(cz.uhk.macroflow.pokemon.cave.RootBridge.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootBridge.MAP),
+        BiomeDefinition(BiomeType.ROOT_NAMELESS, R.drawable.root_nameless, graphOf(cz.uhk.macroflow.pokemon.cave.RootNameless.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootNameless.MAP)
         ).associateBy { it.type }
     }
 

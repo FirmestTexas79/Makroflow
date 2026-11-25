@@ -1006,3 +1006,99 @@ def scaffold(w=60, h=40):
         for x in range(0, w):
             s.px(x, y, _pick(WOOD_POLE, 0.6 - y * 0.06 + (0.1 if x % 7 == 0 else 0), x, y))
     return selout(s, 0.5, 0.85)
+
+
+# ── Svah bezejmenných (pohlcení 5/8) ────────────────────────────────────────
+COVERALL = [c(0x1A1E16), c(0x2A3022), c(0x3C4430), c(0x525C42), c(0x6A7656)]
+ASH = [c(0x3A3630), c(0x5A554C), c(0x7E786C), c(0x9C9688)]
+
+
+def fallen(seed=0, reach=False, overgrown=0.0, tag="V3"):
+    """Člen výpravy ležící na svahu tváří dolů, hlavou vzhůru (lezl nahoru, pryč od něčeho dole). Pohled 3/4
+    shora, leží: kapuce, ramena širší než pas, kombinéza na vyhublém těle, dvě nohy v botách. reach=False:
+    obě ruce vpředu nad hlavou jako při plazení; reach=True: jedna natažená, druhá podél těla. U kotníku
+    papírový štítek. overgrown = kolik ho už přerostly tenké kořínky."""
+    rng = np.random.default_rng(seed)
+    s = Spr(15, 26)
+    cx = 7
+    tilt = rng.uniform(-0.08, 0.08)
+
+    def X(x, y):
+        return x + int(round((y - 12) * tilt))
+    for y in range(6, 12):                                                # hlava v kapuci (temeno světlejší)
+        for x in range(cx - 2, cx + 3):
+            if ((x - cx) / 2.5) ** 2 + ((y - 8.6) / 2.9) ** 2 < 1:
+                s.px(X(x, y), y, _pick(COVERALL, 0.42 - (x - cx) * 0.08 - (y - 7) * 0.04, x, y))
+    for y in range(12, 20):                                               # trup: ramena → pas
+        half = 3.4 - (y - 12) * 0.22
+        for x in range(int(round(cx - half)), int(round(cx + half)) + 1):
+            u = (x - cx) / half
+            v = 0.6 - u * 0.18 + (0.1 if y == 12 else 0) - (0.15 if abs(u) > 0.8 else 0)
+            if x == cx and y > 13:
+                v -= 0.18                                                 # páteř / šev, látka visí
+            s.px(X(x, y), y, _pick(COVERALL, v, x, y))
+    for y in range(20, 25):                                               # nohy (mezera mezi nimi) a boty
+        for (lx, sh) in ((cx - 2, 0.5), (cx + 1, 0.36)):
+            for x in (lx, lx + 1):
+                s.px(X(x, y), y, COVERALL[3] if y < 23 and x == lx else COVERALL[2] if y < 23 else c(0x141210))
+    arms = [(-1, 0), (1, 0)]
+    for side, _ in arms:                                                  # ruce
+        sx = cx + side * 4
+        if reach and side == 1:
+            pts = [(sx, 13), (sx, 9), (sx, 5), (sx + 0, 2)]
+        elif reach:
+            pts = [(sx, 13), (sx, 16), (sx, 19)]
+        else:
+            pts = [(sx, 13), (sx + side, 10), (sx, 7), (sx - side, 4)]   # plazení: loket ven, dlaň nad hlavou
+        for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+            s.line(X(ax, ay), ay, X(bx, by), by, COVERALL[3])
+        hx, hy = pts[-1]
+        s.px(X(hx, hy), hy, ASH[3]); s.px(X(hx, hy), hy - 1, ASH[2])
+    s.px(X(cx + 3, 23), 23, PAPER[3]); s.px(X(cx + 4, 23), 23, PAPER[2]); s.px(X(cx + 4, 24), 24, PAPER[1])   # štítek
+    if overgrown > 0:                                                     # kořínky přes tělo
+        for k in range(int(overgrown * 4)):
+            y0 = int(rng.integers(8, 22)); dx = 1 if rng.random() < 0.5 else -1
+            x = 0 if dx > 0 else 14
+            for i in range(15):
+                yy = y0 + int(math.sin(i * 0.6 + k) * 1.3)
+                if 0 <= x < 15 and s.a[yy, x, 3]:
+                    s.px(x, yy, BARK[2] if i % 3 else BARK[1])
+                x += dx
+    return selout(s, 0.4, 0.75)
+
+
+def theodolite():
+    """Zlámaný stativ měřiče: dvě nohy stojí, třetí je zlomená v půli, přístroj (olivová krabička s okulárem)
+    leží převrácený vedle a z rozbitého okuláru se sype sklo."""
+    s = Spr(24, 26)
+    s.line(12, 6, 4, 24, WOOD_POLE[2]); s.line(12, 6, 5, 24, WOOD_POLE[0])
+    s.line(12, 6, 19, 24, WOOD_POLE[3]); s.line(13, 6, 20, 24, WOOD_POLE[1])
+    s.line(12, 6, 13, 15, WOOD_POLE[2]); s.line(13, 15, 17, 18, WOOD_POLE[1])   # zlomená noha
+    s.rect(9, 4, 15, 6, BRASS[2]); s.hline(9, 15, 4, BRASS[3])
+    for y in range(17, 23):                                               # přístroj na zemi
+        for x in range(2, 10):
+            s.px(x, y, _pick(OLIVE, 0.55 - (y - 17) * 0.05, x, y))
+    s.rect(9, 19, 11, 20, c(0x1A1A1E)); s.px(11, 19, c(0x9AD0FF))
+    for (x, y) in ((13, 22), (15, 21), (14, 24)):
+        s.px(x, y, c(0xC8E4F0))
+    return selout(s, 0.5, 0.85)
+
+
+def water_gauge(h=34):
+    """Vodočetná lať Řádu na kůlu v tůňce: bílá s rudými dílky po 5 a čísly, nahoře připevněná cedulka VODA."""
+    pl = plate("VODA", c(0xE8E2CC), c(0x1E2A44), seed=61, pad=2, wear=0.0)
+    W = max(pl.w, 12)
+    s = Spr(W, h + pl.h)
+    for yy in range(pl.h):
+        for xx in range(pl.w):
+            s.px((W - pl.w) // 2 + xx, yy, pl.a[yy, xx])
+    x0 = W // 2 - 2
+    for y in range(pl.h, pl.h + h):
+        k = y - pl.h
+        for x in range(x0, x0 + 5):
+            col = c(0xE6E2D6) if x < x0 + 4 else c(0xA8A498)
+            if k % 5 == 0 and x < x0 + 3:
+                col = c(0xB02A22)
+            s.px(x, y, col)
+        s.px(x0 - 1, y, WOOD_POLE[2])
+    return selout(s, 0.5, 0.85)

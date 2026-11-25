@@ -154,7 +154,7 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootBridge.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootNameless.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
@@ -977,6 +977,12 @@ class MakromonMapActivity : AppCompatActivity() {
                     walkInto(BiomeType.ROOT_SLOPECAMP, cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ENTRY_NODE)
                 }
                 cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ENTRY_NODE -> walkInto(BiomeType.ROOT_WATCH, cz.uhk.macroflow.pokemon.cave.RootWatch.DOWN_NODE)
+                cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.DOWN_NODE -> {
+                    StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootNameless.VISITED_KEY)
+                    walkInto(BiomeType.ROOT_NAMELESS, cz.uhk.macroflow.pokemon.cave.RootNameless.ENTRY_NODE)
+                }
+                cz.uhk.macroflow.pokemon.cave.RootNameless.ENTRY_NODE -> walkInto(BiomeType.ROOT_SLOPECAMP, cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.DOWN_NODE)
+                in cz.uhk.macroflow.pokemon.cave.RootNameless.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootNameless.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.RootWatch.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootWatch.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.getValue(nodeName))
@@ -1520,6 +1526,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     placeMakromonNpc(R.drawable.makromon_11_lumex, cz.uhk.macroflow.pokemon.story.Signal.X, cz.uhk.macroflow.pokemon.story.Signal.Y, cz.uhk.macroflow.pokemon.story.Signal.NAME)
                 }
                 currentBiome == BiomeType.ROOT_BRIDGE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_BRIDGE)
+                currentBiome == BiomeType.ROOT_NAMELESS -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_NAMELESS)
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)

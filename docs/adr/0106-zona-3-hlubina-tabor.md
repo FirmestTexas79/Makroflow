@@ -59,3 +59,15 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   (2 dny s tréninkem) → hlášení 41: šestioký Orrinovi ve snu řekl, ať pásku nechá pro Okruh 213, „ať se vyspí, než
   sejde až dolů“. Obrys v kůře je Orrin. Setkání PŘÍRODA a PSYCHO lv 32–36, intro BridgeIntro (bytost na trnu
   zhasne, v propasti oči), živé detaily `InteriorFxView.ROOT_BRIDGE`. Portrét magnetofonu `npc_paska.png`.
+- **Svah bezejmenných** (`ROOT_NAMELESS`, `RootNameless.kt`, `gen_nameless.py`), lokace 5, pohlcení 5/8. Vstup z Tábora
+  na svahu (kolíky dolů). Suťový svah s terasami a vyšlapanou stezkou; z Řádu jen trosky – zlámaný stativ měřiče,
+  spadlá baterka (pořád svítí), kolíky s přetrženým lanem, nakloněná sčítací tabule, vodočetná lať VODA v skoro vypité
+  tůňce, na skále nástřik NEPOČÍTEJTE JE. Po svahu leží členové výprav (`order.fallen`, ve scéně zkrácení „leží“):
+  vyhublí, tváří dolů, všichni hlavou vzhůru; devět vedle sebe se štítky V7 (Keshova výprava, mezera po nosiči
+  lucerny). Hrůza je v tom, že zapomněli jíst (příděly v kapsách) – hra hladovění neodměňuje. Kořeny pijí vodu ze
+  skály (pramínky končí v kořenech, „Hladina klesá. Kořeny rostou.“). Fasáda Lumenců stahovaná do skály, žebra
+  dlouhého domu. Východy dolů (schody Lumenců k Chrámu, kolíky do mlhy k Lesu) zatím nepřístupné. Setkání DUCH a ZEMĚ
+  lv 32–36, intro NamelessIntro, živé detaily `InteriorFxView.ROOT_NAMELESS`. Opraveno: texty Tábora zobrazovaly
+  doslovné „\n“; uzly Kořenového mostu chyběly v seznamu akčních uzlů mapy.
+- **Zbývá** (schváleno 2026-11-25): Chrám Lumenců (6/8), Les pod korunou (7/8 – lokace před finálním bohem, souboj
+  s Drakirrou), Kmen (8/8 – Trpitel ve Stromu s kopím, volba konce) a nová finální zenová lokace Střed kořenů.
