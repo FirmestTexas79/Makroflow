@@ -1022,9 +1022,9 @@ class BridgeIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 70, 352, 19) {
 }
 
 
-/** Svah bezejmenných (zóna 3): teplé světlo lampy z protějšího vrcholu na svahu s těly zabliká a zhasne, svahem se zvedne
+/** Svah bezejmenných (zóna 3): zelená záře ze Spící za srázem zabliká a zhasne, svahem se zvedne
  *  prach (jako by se něco pohnulo mezi ležícími) – a mezi nimi se otevřou oči; při výpadu stoupá zelená mlha zespodu. */
-class NamelessIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 40, 304, 23) {
+class NamelessIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 72, 300, 23) {
     override val shade = hex(0x05070A)
     override val accent = hex(0xD8E8E0)
     override val dimMax = 0.66f
@@ -1035,7 +1035,7 @@ class NamelessIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 40, 304, 23) {
 
     override fun before(t: Long) {
         val lamp = (1f - p(t, TELL1, TELL1 + 300)) * (0.8f + 0.2f * sinf(t * 0.07f))
-        if (lamp > 0f) tintWhere(sx(76f), sy(250f), sx(176f), sy(350f), hex(0xFFD08C), lamp * 0.22f) { bright(it, 60) }
+        if (lamp > 0f) tintWhere(sx(140f), sy(220f), sx(176f), sy(380f), hex(0x7AF0B0), lamp * 0.3f) { bright(it, 70) }
     }
 
     override fun act(t: Long) {

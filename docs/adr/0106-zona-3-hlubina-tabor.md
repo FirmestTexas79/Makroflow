@@ -59,17 +59,17 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   (2 dny s tréninkem) → hlášení 41: šestioký Orrinovi ve snu řekl, ať pásku nechá pro Okruh 213, „ať se vyspí, než
   sejde až dolů“. Obrys v kůře je Orrin. Setkání PŘÍRODA a PSYCHO lv 32–36, intro BridgeIntro (bytost na trnu
   zhasne, v propasti oči), živé detaily `InteriorFxView.ROOT_BRIDGE`. Portrét magnetofonu `npc_paska.png`.
-- **Svah bezejmenných** (`ROOT_NAMELESS`, `RootNameless.kt`, `gen_nameless.py`), lokace 5, pohlcení 5/8 – přepracováno na
-  dvě perspektivy jako Signální útes: vysoká mapa 176 × 560, hráč sestupuje po levém okraji svahu (zhruba pětina šířky,
-  3/4 shora), zbytek je výhled přes údolí s mlhou na protější kopec z boku – po něm se ve stopách plahočí stovky těl
-  k sodíkové lampě Řádu na vrcholu (čím výš, tím menší a mlhavější, u lampy jen siluety proti světlu; nikdo nedošel).
-  Na našem svahu těla zblízka a různá (`order.victim`: plazí se, natažená ruka, na zádech, schoulený na boku, v dece,
-  sedící; kombinéza Řádu, vlněný kabát, bunda, modrá technická; batohy, přilby), všichni hlavou vzhůru; devět V7
-  (Keshova výprava, mezera po nosiči lucerny). Trosky Řádu: kolíky s přetrženým lanem, zlámaný stativ, baterka, která
-  pořád svítí, sčítací tabule rovně na sloupcích, nástřik NEPOČÍTEJTE JE přes skalní desku na stezce, vodočetná lať VODA
-  ve vypité tůňce. Hrůza je v tom, že zapomněli jíst (příděly v kapsách) – hra hladovění neodměňuje. Kořeny pijí
-  pramínky vody. Dole schody Lumenců a žebra dlouhého domu (Chrám), kolíky do mlhy (Les) – zatím nepřístupné.
-  Setkání DUCH a ZEMĚ lv 32–36, intro NamelessIntro, živé detaily `InteriorFxView.ROOT_NAMELESS`. Opraveno: texty
-  Tábora zobrazovaly doslovné „\n“; uzly Kořenového mostu chyběly v seznamu akčních uzlů mapy.
+- **Svah bezejmenných** (`ROOT_NAMELESS`, `RootNameless.kt`, `gen_nameless.py`), lokace 5, pohlcení 5/8 – dvě perspektivy:
+  vysoká mapa 176 × 560, hráč sestupuje po širokém svahu (80 %, 3/4 shora), vpravo za srázem úzký výhled (20 %) na Spící
+  blízko (kmen, rána, kopí a šest světel jen náznakem) a pod korunou v mlze druhý svah, ze kterého se těla rozbíhají
+  od stromu na všechny strany. Výtah nebyl jediná cesta ven: vlevo stěna dutiny s puklinami a jeskyněmi (u ústí hromady
+  těl hlavou dovnitř, vyškrábané VEN, kořeny ústí zarostly). Těla různá (`order.victim`: plazí se, natažená ruka, na
+  zádech, na boku, v dece, sedící; kombinéza Řádu, kabát, bunda, technická; batohy, přilby), všechna míří pryč od stromu;
+  devět V7 (Keshova výprava, mezera po nosiči lucerny). Trosky Řádu: kolíky s přetrženým lanem, zlámaný stativ,
+  baterka, která pořád svítí, sčítací tabule rovně na sloupcích, NEPOČÍTEJTE JE přes skalní desku na stezce, vodočetná
+  lať VODA ve vypité tůňce. Hrůza je v tom, že zapomněli jíst – hra hladovění neodměňuje. Kořeny pijí pramínky.
+  Dole schody Lumenců a žebra dlouhého domu (Chrám), kolíky do mlhy (Les) – zatím nepřístupné. Setkání DUCH a ZEMĚ
+  lv 32–36, intro NamelessIntro, živé detaily `InteriorFxView.ROOT_NAMELESS`. Opraveno: texty Tábora zobrazovaly
+  doslovné „\n“; uzly Kořenového mostu chyběly v seznamu akčních uzlů mapy.
 - **Zbývá** (schváleno 2026-11-25): Chrám Lumenců (6/8), Les pod korunou (7/8 – lokace před finálním bohem, souboj
   s Drakirrou), Kmen (8/8 – Trpitel ve Stromu s kopím, volba konce) a nová finální zenová lokace Střed kořenů.
