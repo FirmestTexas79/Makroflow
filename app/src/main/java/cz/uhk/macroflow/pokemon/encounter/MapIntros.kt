@@ -998,3 +998,25 @@ class SignalIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 96, 196, 17) {
         if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -18f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
     }
 }
+
+
+/** Kořenový most (zóna 3): drobná bytost na trnu ve svatyňce Lumenců zesílí, zabliká a zhasne – a za hranou kořene
+ *  se v propasti rozsvítí oči; při výpadu se zvedne zelená mlha z hlubiny. */
+class BridgeIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 70, 352, 19) {
+    override val shade = hex(0x030806)
+    override val accent = hex(0xC8E8FF)
+    override val dimMax = 0.64f
+    private val mist = ramp(0x2E6A54, 0x5CB496, 0x9AE8C8)
+    private val wisps = spray(20, 15f, 50f, 20f)
+
+    override fun before(t: Long) {
+        val glow = (0.7f + 0.3f * sinf(t * 0.03f)) * (1f - p(t, TELL2 - 150, TELL2)) + pulse(t, TELL1, 200)
+        if (glow > 0f) tintWhere(sx(46f), sy(292f), sx(62f), sy(308f), hex(0xBFE6FF), glow.coerceAtMost(1f) * 0.5f) { bright(it, 110) }
+    }
+
+    override fun act(t: Long) {
+        mapEyes(cx, cy, 2.3f, hex(0xC8E8FF), eyeAlpha(t))
+        val s = since(t)
+        if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -18f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
+    }
+}

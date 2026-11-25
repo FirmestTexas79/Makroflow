@@ -26,6 +26,7 @@ object WildLevels {
         // Zóna 3 – Hlubina (docs/adr/0106)
         BiomeType.ROOT_WATCH -> (28..32).associateWith { 1 }
         BiomeType.ROOT_SLOPECAMP, BiomeType.ROOT_SIGNAL -> (30..34).associateWith { 1 }
+        BiomeType.ROOT_BRIDGE -> (32..36).associateWith { 1 }
         BiomeType.TOWER_PLAIN, BiomeType.TOWER_FOREST, BiomeType.TOWER_ROCK, BiomeType.TOWER_CAVE, BiomeType.TOWER_WATER, BiomeType.TOWER_DORM, BiomeType.TOWER_ICE, BiomeType.TOWER_FIRE, BiomeType.TOWER_FAIRY, BiomeType.TOWER_POISON -> (14..20).associateWith { 1 }               // Věž: patra s divokými Makromony
         BiomeType.OZVENA, BiomeType.ARENA_HALL, BiomeType.TOWER_LOBBY, BiomeType.TOWER_ARCHIVE, BiomeType.TOWER_MEASURE, BiomeType.TOWER_OFFICE, BiomeType.TOWER_HIDEOUT, BiomeType.TOWER_ABYSS, BiomeType.ROOT_CAMP -> (12..18).associateWith { 1 }   // ve městě divocí nejsou
     }

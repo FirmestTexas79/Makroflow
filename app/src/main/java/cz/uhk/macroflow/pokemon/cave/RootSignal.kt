@@ -45,5 +45,7 @@ object RootSignal {
         "su_okraj" to "🌳 Spící. Celá, odsud poprvé: kořeny rozlezlé po stropě dutiny, kmen visící do prázdna a obrácená koruna, která se ztrácí v mlze.\n" +
             "Z rány v kmeni teče zelená mlha. Kousek nad ní se něco blýská – kov. A vedle toho, když se díváš dost dlouho, šest drobných světel."
     )
+    const val CABLE_OPEN_TEXT = "🚡 Rudá plomba je přestřižená. Na kole visí lístek Keshovým písmem: „Někdo tam dole odpověděl. Jestli chcete vědět kdo, " +
+        "gondola dojede až ke kořeni u kmene. Pak se vraťte nahoru a vyspěte se.“\nKolo se se skřípěním roztočí."
     val ACTION_NODES = TEXTS.keys + cz.uhk.macroflow.pokemon.story.Signal.NODE + cz.uhk.macroflow.pokemon.story.Signal.LAMP_NODE
 }

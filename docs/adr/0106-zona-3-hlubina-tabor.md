@@ -47,3 +47,15 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   a registrační stolek.
 - Živé detaily: nový efekt `falls` (kůra odpadlá od vzdáleného stromu pomalu padá do mlhy) vedle létavců, drolení
   hrany, mlhy, pulzující rány a blikající clony signální lampy.
+- **Kořenový most** (`ROOT_BRIDGE`, `RootBridge.kt`, `gen_root_bridge.py`), vedlejší lokace blíž ke kmeni, pohlcení
+  6/8. Gondola ze Signálního útesu jede až po odpovědi šesti světel (Kesh přestřihne plombu). Vysoká mapa 176 × 560:
+  plošina konečné stanice na kořeni, který se klene přes propast; nahoře celou šířku kmen (kůra jako kost, svislé
+  rýhy, zelené světlo v nich, ocelové kotvy s utrženými řetězy). Sklad Operace Pečeť napůl v kůře: nádrže s pěnou,
+  potrubí přes hranu dolů k ráně, ventil, lešení přišroubované do kmene. Svatyňka Lumenců: trn s nabodnutou drobnou
+  světélkující bytostí, „AŤ NIKDO NENÍ SÁM“. U paty kmene obrys člověka vrostlý do kůry. Inspirace SCP-6666
+  (víla na stromě, stavby vrostlé do koruny, sdílené noční můry, spáči dýchající naráz) – nic se nekopíruje.
+  Vedlejší úkol **Noční směna** (`story/NightShift.kt`, `NIGHT_SHIFT_QUEST`): technik Orrin z výpravy 8 namlouval
+  povinná hlášení o snech a schoval je před Řádem. Fáze: dvě schované pásky (svatyňka, lešení) → utažený ventil
+  (2 dny s tréninkem) → hlášení 41: šestioký Orrinovi ve snu řekl, ať pásku nechá pro Okruh 213, „ať se vyspí, než
+  sejde až dolů“. Obrys v kůře je Orrin. Setkání PŘÍRODA a PSYCHO lv 32–36, intro BridgeIntro (bytost na trnu
+  zhasne, v propasti oči), živé detaily `InteriorFxView.ROOT_BRIDGE`. Portrét magnetofonu `npc_paska.png`.

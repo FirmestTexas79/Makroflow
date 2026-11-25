@@ -207,6 +207,7 @@ object LocationIntros {
         "ROOT_WATCH" -> LocationIntro("root_watch", argb(255, 232, 180)) { m, w, h -> WatchIntro(m, w, h) }
         "ROOT_SLOPECAMP" -> LocationIntro("root_slopecamp", argb(220, 236, 255)) { m, w, h -> SlopeCampIntro(m, w, h) }
         "ROOT_SIGNAL" -> LocationIntro("root_signal", argb(200, 255, 225)) { m, w, h -> SignalIntro(m, w, h) }
+        "ROOT_BRIDGE" -> LocationIntro("root_bridge", argb(210, 236, 255)) { m, w, h -> BridgeIntro(m, w, h) }
         else -> null
     }
 }

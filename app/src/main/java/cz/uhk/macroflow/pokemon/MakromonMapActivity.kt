@@ -962,6 +962,14 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 cz.uhk.macroflow.pokemon.cave.RootSignal.ENTRY_NODE -> walkInto(BiomeType.ROOT_WATCH, cz.uhk.macroflow.pokemon.cave.RootWatch.RAVINE_NODE)
                 cz.uhk.macroflow.pokemon.story.Signal.NODE -> onKesh()
+                "su_lanovka" -> onSignalCable()
+                // Kořenový most (vedlejší, docs/adr/0106): gondola zpět, Orrinovy pásky, ventil
+                cz.uhk.macroflow.pokemon.cave.RootBridge.ENTRY_NODE -> walkInto(BiomeType.ROOT_SIGNAL, "su_lanovka")
+                cz.uhk.macroflow.pokemon.story.NightShift.TAPE_NODE -> onTapeRecorder()
+                cz.uhk.macroflow.pokemon.story.NightShift.VALVE_NODE -> onFoamValve()
+                cz.uhk.macroflow.pokemon.story.NightShift.SHRINE_NODE -> onHiddenReel(nodeName, cz.uhk.macroflow.pokemon.story.NightShift.REEL_SHRINE_KEY, cz.uhk.macroflow.pokemon.story.NightShift.REEL_SHRINE)
+                cz.uhk.macroflow.pokemon.story.NightShift.SCAFFOLD_NODE -> onHiddenReel(nodeName, cz.uhk.macroflow.pokemon.story.NightShift.REEL_SCAFFOLD_KEY, cz.uhk.macroflow.pokemon.story.NightShift.REEL_SCAFFOLD)
+                in cz.uhk.macroflow.pokemon.cave.RootBridge.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootBridge.TEXTS.getValue(nodeName))
                 cz.uhk.macroflow.pokemon.story.Signal.LAMP_NODE -> onSignalLamp()
                 in cz.uhk.macroflow.pokemon.cave.RootSignal.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootSignal.TEXTS.getValue(nodeName))
                 cz.uhk.macroflow.pokemon.cave.RootWatch.DOWN_NODE -> {
@@ -1511,6 +1519,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_SIGNAL)
                     placeMakromonNpc(R.drawable.makromon_11_lumex, cz.uhk.macroflow.pokemon.story.Signal.X, cz.uhk.macroflow.pokemon.story.Signal.Y, cz.uhk.macroflow.pokemon.story.Signal.NAME)
                 }
+                currentBiome == BiomeType.ROOT_BRIDGE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_BRIDGE)
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)
@@ -1871,6 +1880,68 @@ class MakromonMapActivity : AppCompatActivity() {
                 StoryFlags.set(this, S.ANSWER_KEY)
                 questManager.recheck()
             } else showMapToast(S.lampText(stage, done))
+        }, 200)
+    }
+
+    /** Gondola na Signálním útesu: jede ke Kořenovému mostu až poté, co kmen odpověděl (úkol Signalista). */
+    private fun onSignalCable() {
+        if (!StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Signal.ANSWER_KEY)) {
+            showMapToast(cz.uhk.macroflow.pokemon.cave.RootSignal.TEXTS.getValue("su_lanovka")); return
+        }
+        if (!StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.cave.RootBridge.VISITED_KEY)) showMapToast(cz.uhk.macroflow.pokemon.cave.RootSignal.CABLE_OPEN_TEXT)
+        StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootBridge.VISITED_KEY)
+        walkInto(BiomeType.ROOT_BRIDGE, cz.uhk.macroflow.pokemon.cave.RootBridge.ENTRY_NODE)
+    }
+
+    /** Fáze úkolu Noční směna (index, hotovo) – null, dokud nezačal. */
+    private fun nightShiftStage(): Pair<Int, Boolean>? {
+        val N = cz.uhk.macroflow.pokemon.story.NightShift
+        if (!StoryFlags.isSet(this, N.STARTED_KEY)) return null
+        val p = questManager.getCurrentProgress()?.takeIf { questManager.getActiveQuestId() == N.QUEST_ID } ?: return null
+        return p.currentStageIndex to p.isCompleted
+    }
+
+    /** Magnetofon Orrina: první přiblížení spustí úkol; s páskou z ventilu přehraje poslední hlášení. */
+    private fun onTapeRecorder() {
+        val N = cz.uhk.macroflow.pokemon.story.NightShift
+        StoryFlags.set(this, N.STARTED_KEY)
+        questManager.loadQuest(N.QUEST_ID)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            val (stage, done) = nightShiftStage() ?: (0 to false)
+            if (!done && stage == N.FINAL_STAGE && StoryFlags.isSet(this, N.VALVE_KEY) && !StoryFlags.isSet(this, N.FINAL_KEY)) {
+                cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Hlášení 41", N.NAME) { ui, body, _ ->
+                    body.addView(ui.text(N.FINAL, 15f))
+                }
+                StoryFlags.set(this, N.FINAL_KEY)
+                questManager.recheck()
+            } else if (done) showMapToast(N.TAPE_IDLE)
+            else questManager.checkNpcInteraction()
+        }, 200)
+    }
+
+    /** Schované pásky (svatyňka, lešení): dokud úkol běží, najde hráč cívku; jinak jen text místa. */
+    private fun onHiddenReel(node: String, key: String, foundText: String) {
+        val N = cz.uhk.macroflow.pokemon.story.NightShift
+        if (StoryFlags.isSet(this, N.STARTED_KEY) && !StoryFlags.isSet(this, key)) {
+            StoryFlags.set(this, key)
+            showMapToast(foundText)
+            questManager.loadQuest(N.QUEST_ID)
+            mapWorld.postDelayed({ if (!isFinishing) questManager.recheck() }, 200)
+        } else showMapToast(cz.uhk.macroflow.pokemon.cave.RootBridge.TEXTS.getValue(node))
+    }
+
+    /** Ventil na potrubí s pěnou: povolí až ve fázi Hlášení 41 (po dvou dnech s tréninkem). */
+    private fun onFoamValve() {
+        val N = cz.uhk.macroflow.pokemon.story.NightShift
+        if (StoryFlags.isSet(this, N.VALVE_KEY)) { showMapToast(N.VALVE_DONE); return }
+        if (!StoryFlags.isSet(this, N.STARTED_KEY)) { showMapToast(N.VALVE_SHUT); return }
+        questManager.loadQuest(N.QUEST_ID)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            val (stage, done) = nightShiftStage() ?: (0 to false)
+            if (done || stage >= N.FINAL_STAGE) { StoryFlags.set(this, N.VALVE_KEY); showMapToast(N.VALVE_OPEN) }
+            else showMapToast(N.VALVE_SHUT)
         }, 200)
     }
 

@@ -1507,6 +1507,26 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             glows = listOf(FxGlow(40, 113, 8, 14, 0x7AF0B0, 4.5f), FxGlow(49, 98, 4, 3, 0x9AFFC8, 6.5f), FxGlow(108, 166, 10, 6, 0xFFE8B0, 3f))
         )
 
+        /** Zóna 3, Kořenový most: z kmene odpadá kůra a dlouho padá do propasti, rýhy v kůře zeleně pulzují, bytost na trnu
+         *  ve svatyňce dýchá světlem, magnetofon bliká rudou kontrolkou, z ventilu syčí zbytek pěny, z lešení kape míza,
+         *  pracovní lampy na tyčích blikají a zespodu se valí zelená mlha. */
+        val ROOT_BRIDGE = InteriorFx(
+            lamps = listOf(FxLamp(122, 484, 26, 16, FxBox(120, 442, 123, 444)), FxLamp(100, 292, 26, 16, FxBox(98, 250, 101, 252)),
+                FxLamp(104, 172, 26, 16, FxBox(102, 130, 105, 132))),
+            blinks = listOf(FxBlink(FxBox(71, 416, 72, 417), 0xFFFF4040.toInt())),
+            steam = listOf(152 to 204),
+            falls = listOf(FxBox(0, 140, 40, 540), FxBox(150, 150, 176, 540), FxBox(0, 140, 30, 400)),
+            fallColor = 0x3A372F,
+            crumbles = listOf(FxBox(36, 380, 44, 420), FxBox(146, 300, 154, 330)),
+            drips = listOf(112 to 120, 150 to 126),
+            fog = listOf(FxBox(0, 220, 40, 330), FxBox(140, 330, 176, 460), FxBox(0, 440, 50, 560)),
+            fogColor = 0x5CB496,
+            motes = listOf(FxBox(0, 120, 176, 540)),
+            moteColor = 0x9AF0C8,
+            glows = listOf(FxGlow(54, 300, 5, 5, 0xBFE6FF, 3.2f), FxGlow(59, 23, 3, 10, 0x7AF0B0, 4.1f), FxGlow(146, 52, 3, 10, 0x7AF0B0, 5.3f),
+                FxGlow(33, 75, 3, 10, 0x7AF0B0, 4.7f), FxGlow(36, 100, 3, 10, 0x7AF0B0, 6.1f), FxGlow(56, 114, 8, 16, 0x9AE8C8, 7f))
+        )
+
         val ABYSS = InteriorFx(
             sparkles = listOf(FxBox(10, 230, 166, 345)),
             fog = listOf(FxBox(0, 250, 176, 290), FxBox(0, 300, 176, 340)),

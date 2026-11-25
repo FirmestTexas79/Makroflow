@@ -883,3 +883,126 @@ def lectern_book():
             if x != 8:
                 s.px(x, r, c(0x2A2A3A) if (x * r) % 3 else PAPER[3])
     return selout(s, 0.5, 0.85)
+
+
+# ── Kořenový most (vedlejší, pohlcení 6/8) ──────────────────────────────────
+def tape_station():
+    """Magnetofon Řádu (cívkový) na bedně pod prověšenou plachtou na dvou tyčích: horní deska se dvěma cívkami
+    a páskou mezi nimi, čelo s jantarovým ručkovým měřidlem a klávesami, baterie na zemi, šablona S8 na bedně."""
+    s = Spr(36, 34)
+    for x0 in (1, 33):                                                    # tyče
+        for y in range(1, 34):
+            s.px(x0, y, WOOD_POLE[3]); s.px(x0 + 1, y, WOOD_POLE[1])
+    for x in range(1, 35):                                                # plachta (prověšená, s okrajem)
+        sag = int(round(math.sin((x - 1) / 33 * math.pi) * 3))
+        for y in range(0, 4 + sag):
+            s.px(x, y, _pick(OLIVE, 0.62 - y * 0.06 + (_vn(x, y, 5, 3) - 0.5) * 0.15, x, y))
+        s.px(x, 4 + sag, OLIVE[1])
+    for y in range(20, 34):                                               # bedna – čelo
+        for x in range(5, 31):
+            s.px(x, y, _pick(OLIVE, 0.38 - (y - 20) * 0.012 + (0.06 if x in (5, 30) else 0), x, y))
+    for y in range(17, 20):                                               # bedna – víko
+        for x in range(5, 31):
+            s.px(x, y, _pick(OLIVE, 0.6, x, y))
+    for y in range(9, 17):                                                # magnetofon – horní deska
+        for x in range(7, 29):
+            s.px(x, y, c(0x5A5E66) if y > 9 else c(0x7A7E88))
+    for y in range(17, 22):                                               # čelo magnetofonu
+        for x in range(7, 29):
+            s.px(x, y, c(0x24262C))
+    for cx in (12, 23):                                                   # cívky shora (elipsy) s okénky
+        for y in range(9, 17):
+            for x in range(cx - 5, cx + 6):
+                d = ((x - cx) / 4.6) ** 2 + ((y - 12.8) / 2.9) ** 2
+                if d < 1:
+                    s.px(x, y, c(0x3A2A1E) if d > 0.35 else c(0xB8BCC4))
+        for (dx, dy) in ((-2, 0), (2, 0), (0, -1)):
+            s.px(cx + dx, 13 + dy, c(0x24262C))
+        s.px(cx, 13, c(0x14161A))
+    s.hline(12, 23, 15, c(0x5A3A22))                                       # páska mezi cívkami
+    s.rect(9, 18, 13, 20, c(0xE0A040)); s.px(11, 19, c(0x24262C))           # ručkové měřidlo
+    for x in range(16, 27, 2):
+        s.px(x, 19, c(0xC8C8D0)); s.px(x, 20, c(0x8A8A94))
+    s.px(27, 18, RED[3])                                                  # kontrolka nahrávání
+    tiny(s, 13, 25, "S8", c(0xCFC8B0))
+    s.rect(31, 27, 35, 33, c(0x1A1A1A)); s.px(33, 26, RED[3])              # baterie
+    s.line(29, 20, 31, 28, c(0x141414))
+    return selout(s, 0.5, 0.85)
+
+
+def foam_tanks():
+    """Tlakové nádrže s pěnou (Operace Pečeť): tři šedé lahve na rámu, žluté pruhy, hadice."""
+    s = Spr(36, 30)
+    for i, x0 in enumerate((2, 13, 24)):
+        cylinder(s, x0, x0 + 9, 4, 28, [c(0x2A2E34), c(0x4E545C), c(0x7A828C), c(0xA8B0B8), c(0xD0D6DC)], amb=0.25)
+        sphere(s, x0 + 4.5, 4, 4.6, 2.2, [c(0x4E545C), c(0x7A828C), c(0xA8B0B8)], amb=0.4)
+        for x in range(x0, x0 + 10):
+            s.px(x, 14, YELLOW[2]); s.px(x, 15, YELLOW[1])
+    s.line(6, 2, 30, 0, c(0x1A1A1A))
+    return selout(s, 0.5, 0.85)
+
+
+def valve_wheel():
+    """Ruční ventil na trubce: rezavé kolo se čtyřmi paprsky, rudá cedulka s plombou."""
+    s = Spr(20, 22)
+    for y in range(10, 22):
+        s.px(9, y, STEEL[2]); s.px(10, y, STEEL[1])
+    for a in range(0, 360, 6):
+        x = 9.5 + math.cos(math.radians(a)) * 7; y = 9 + math.sin(math.radians(a)) * 4
+        s.px(x, y, RUST[3] if a < 180 else RUST[1])
+    for a in (0, 90, 180, 270):
+        s.line(9.5, 9, 9.5 + math.cos(math.radians(a)) * 7, 9 + math.sin(math.radians(a)) * 4, RUST[2])
+    s.rect(14, 12, 17, 15, RED[3])
+    return selout(s, 0.5, 0.85)
+
+
+def lumen_thorn():
+    """Svatyňka Lumenců vrostlá do kořene: kruh kamenů se svítícími znaky, uprostřed vysoký trn z kořene a na něm
+    nabodnutá drobná světélkující bytost s průsvitnými křidélky; pod ní malý kožený váček (něčí obětina)."""
+    STONE = [c(0x1A1C24), c(0x2E3240), c(0x444A5A), c(0x5E6676), c(0x7E8696)]
+    s = Spr(40, 50)
+    for a in range(200, 560, 24):                                         # kruh kamenů (zadní půlka dřív)
+        aa = math.radians(a % 360)
+        x = 20 + math.cos(aa) * 16; y = 43 + math.sin(aa) * 5
+        sphere(s, x, y, 2.6, 2.0, STONE[1:], amb=0.3)
+        if (a // 24) % 2 == 0:
+            s.px(x, y - 1, GLYPH); s.px(x + 1, y - 1, c(0x4E86C0))
+    for y in range(4, 44):                                                # trn z kořene, dole rozšířený
+        w = ((44 - y) / 40) ** 1.4 * 4.5 + 0.4
+        for x in range(int(20 - w), int(20 + w) + 1):
+            u = (x - 20) / max(0.8, w)
+            s.px(x, y, _pick(BARK, 0.42 - u * 0.22 - (0.2 if abs(u) > 0.8 else 0), x, y))
+    for (x, y) in ((20, 13), (19, 14), (20, 14), (21, 14), (19, 15), (20, 15), (21, 15), (20, 16), (19, 17), (21, 17), (20, 12)):
+        s.px(x, y, c(0xF4FBFF))                                           # drobné tělíčko
+    for (x, y) in ((20, 11),):
+        s.px(x, y, c(0xFFFFFF))
+    for (x, y) in ((16, 12), (15, 11), (17, 13), (16, 14), (24, 12), (25, 11), (23, 13), (24, 14), (14, 11), (26, 11)):
+        s.px(x, y, c(0x8CC8FF))                                           # křidélka
+    s.rect(25, 37, 29, 41, c(0x6A4A2A)); s.px(26, 36, c(0x8A6A3A)); s.px(27, 36, c(0x8A6A3A))   # váček
+    return selout(s, 0.55, 0.9)
+
+
+def cable_anchor():
+    """Ocelová kotva lanovky zatlučená do kořene s utrženým lanem, které visí přes okraj."""
+    s = Spr(24, 16)
+    s.rect(4, 6, 12, 14, STEEL[2]); s.hline(4, 12, 6, STEEL[4])
+    for (x, y) in ((5, 8), (11, 8), (5, 12), (11, 12)):
+        s.px(x, y, STEEL[5])
+    s.line(12, 9, 23, 13, c(0x3A3A3E)); s.line(12, 10, 23, 15, c(0x2A2A2E))
+    return selout(s, 0.5, 0.85)
+
+
+def scaffold(w=60, h=40):
+    """Lešení Řádu přišroubované ke kmeni: ocelové trubky, příčky, prkenná podlaha nahoře."""
+    s = Spr(w, h)
+    for x0 in range(2, w, 14):
+        for y in range(0, h):
+            s.px(x0, y, STEEL[3]); s.px(x0 + 1, y, STEEL[1])
+    for y0 in (8, 22, 36):
+        s.hline(0, w - 1, y0, STEEL[2])
+    for i in range(0, w - 14, 14):
+        s.line(2 + i, 8, 16 + i, 22, STEEL[1])
+    for y in range(0, 6):
+        for x in range(0, w):
+            s.px(x, y, _pick(WOOD_POLE, 0.6 - y * 0.06 + (0.1 if x % 7 == 0 else 0), x, y))
+    return selout(s, 0.5, 0.85)

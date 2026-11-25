@@ -705,7 +705,39 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST) }
+    val NIGHT_SHIFT_QUEST = QuestDefinition(
+        id = cz.uhk.macroflow.pokemon.story.NightShift.QUEST_ID,
+        chapter = "📼 KOŘENOVÝ MOST",
+        side = true,
+        farewell = cz.uhk.macroflow.pokemon.story.NightShift.FAREWELL,
+        stages = listOf(
+            QuestStage(
+                title = "Hlášení o snech",
+                text = cz.uhk.macroflow.pokemon.story.NightShift.TAPE1,
+                speakerResId = R.drawable.npc_paska, speakerName = cz.uhk.macroflow.pokemon.story.NightShift.NAME,
+                requirementType = RequirementType.FLAGS_COUNT, targetValue = 2,
+                targetId = cz.uhk.macroflow.pokemon.story.NightShift.REEL_KEYS,
+                hint = cz.uhk.macroflow.pokemon.story.NightShift.TAPE1_HINT
+            ),
+            QuestStage(
+                title = "Utažený ventil",
+                text = cz.uhk.macroflow.pokemon.story.NightShift.TAPE2,
+                speakerResId = R.drawable.npc_paska, speakerName = cz.uhk.macroflow.pokemon.story.NightShift.NAME,
+                requirementType = RequirementType.TRAINING_DAYS, targetValue = cz.uhk.macroflow.pokemon.story.NightShift.TRAINING_DAYS,
+                hint = cz.uhk.macroflow.pokemon.story.NightShift.TAPE2_HINT
+            ),
+            QuestStage(
+                title = "Hlášení 41",
+                text = cz.uhk.macroflow.pokemon.story.NightShift.VALVE_READY,
+                speakerResId = R.drawable.npc_paska, speakerName = cz.uhk.macroflow.pokemon.story.NightShift.NAME,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.NightShift.FINAL_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.NightShift.VALVE_READY_HINT
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST, NIGHT_SHIFT_QUEST) }
 
     /** Pořadí kapitoly v deníku (neznámé na konec). */
     fun journalOrder(id: String): Int {
