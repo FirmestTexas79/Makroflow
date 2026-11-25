@@ -20,3 +20,8 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   (písmo 5×7 s diakritikou; `plate()` smaltované cedule s nýty a stínem písmen, `painted()` šablona s přestřikem,
   oděrem a stékanci), `scene` (z-buffer po pixelech – kořen nebo předmět blíž se tím za ním nepřekreslí; stíny,
   světlo, export, BFS). Lokace = krátký skript `gen_<lokace>.py`.
+- **Pozorovatelna B** (`ROOT_WATCH`, `RootWatch.kt`, `gen_watch_b.py`), pohlcení 2/8: terasa pod Stanicí 8, sestup
+  po schodech Lumenců; nakloněná věž B s kořeny v oknech, plot zmáčknutý kořenem, bouda ZDROJ s běžícím agregátem,
+  opuštěný stojan plamenometů, sloupek KONTROLA. Setkání DUCH a ZEMĚ lv 28–32, intro WatchIntro (reflektor přejede
+  terasu a zastaví se na očích). Závora ze Stanice 8 zatím pouští jen debug volný výtah – podmínka přijde s fází
+  „Výprava 8“ kapitoly VI. Východy k Lanovce nad roklí a k Táboru na svahu zatím nepřístupné.

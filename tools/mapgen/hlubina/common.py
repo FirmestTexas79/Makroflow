@@ -13,6 +13,7 @@ from figures import sphere, cylinder, selout, _pick, BRASS, STEEL, RED, BAYER  #
 from hideout_parts import _h, _vn  # noqa: E402,F401
 
 ROCK = [c(0x0E0E12), c(0x17171D), c(0x212129), c(0x2C2C36), c(0x3A3A46), c(0x4C4C5A)]
+SCREE = [c(0x16130F), c(0x221E19), c(0x2F2A23), c(0x3E372E), c(0x4E463A), c(0x625849)]   # suť a štěrk terasy
 CONC = [c(0x1C1E20), c(0x282B2E), c(0x34383C), c(0x42474C), c(0x52585E), c(0x666D74)]
 OLIVE = [c(0x161A12), c(0x232A1C), c(0x323C28), c(0x445236), c(0x5A6A48), c(0x748660)]
 RUST = [c(0x24140C), c(0x42261A), c(0x623A24), c(0x86522E)]

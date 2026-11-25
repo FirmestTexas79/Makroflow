@@ -154,7 +154,7 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
@@ -954,6 +954,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.TowerAbyss.CAGE_NODE -> onAbyssCage()
                 // Zóna 3 – Tábor výprav (docs/adr/0106): klec zpět nahoru, jinak texty míst
                 cz.uhk.macroflow.pokemon.cave.RootCamp.CAGE_NODE -> walkInto(BiomeType.TOWER_ABYSS, cz.uhk.macroflow.pokemon.cave.TowerAbyss.CAGE_NODE)
+                cz.uhk.macroflow.pokemon.cave.RootCamp.DOWN_NODE -> onStationBarrier()
+                cz.uhk.macroflow.pokemon.cave.RootWatch.ENTRY_NODE -> walkInto(BiomeType.ROOT_CAMP, cz.uhk.macroflow.pokemon.cave.RootCamp.DOWN_NODE)
+                in cz.uhk.macroflow.pokemon.cave.RootWatch.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootWatch.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.getValue(nodeName))
@@ -1488,6 +1491,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.TOWER_HIDEOUT -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.HIDEOUT)
                 currentBiome == BiomeType.TOWER_ABYSS -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ABYSS)
                 currentBiome == BiomeType.ROOT_CAMP -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_CAMP)
+                currentBiome == BiomeType.ROOT_WATCH -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_WATCH)
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)
@@ -1811,6 +1815,17 @@ class MakromonMapActivity : AppCompatActivity() {
                 })
             }
         }
+    }
+
+    /**
+     * Závora UZÁVĚRA ve Stanici 8 (docs/adr/0106): sestup do Pozorovatelny B. ponytail: dokud nestojí kapitola VI
+     * (fáze „Výprava 8“), pouští jen debug volný výtah – pak sem přijde podmínka fáze.
+     */
+    private fun onStationBarrier() {
+        val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
+        if (!free) { showMapToast(cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.getValue(cz.uhk.macroflow.pokemon.cave.RootCamp.DOWN_NODE)); return }
+        StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootWatch.VISITED_KEY)
+        walkInto(BiomeType.ROOT_WATCH, cz.uhk.macroflow.pokemon.cave.RootWatch.ENTRY_NODE)
     }
 
     /** Spis 212: stránky odkrývají noci spánku; po fázi Spis 212 je odkrytý celý. */

@@ -267,3 +267,148 @@ def army_crate(seed=0, w=18, h=16):
     tiny(s, 5, top + 4, "S8", c(0xCFC8B0))
     return selout(s, 0.5, 0.8)
 
+
+
+# ── Pozorovatelna B (pohlcení 2/8) ──────────────────────────────────────────
+def lean(s, tilt):
+    """Nakloní sprite: každý řádek posune o tilt·(výška − y) px (pata stojí, vrchol uhýbá)."""
+    out = Spr(s.w + int(abs(tilt) * s.h) + 2, s.h)
+    for y in range(s.h):
+        dx = int(round(tilt * (s.h - 1 - y))) + (int(abs(tilt) * s.h) + 1 if tilt < 0 else 0)
+        for x in range(s.w):
+            if s.a[y, x, 3]:
+                out.a[y, x + dx] = s.a[y, x]
+    return out
+
+
+def leaning_tower(w=40, h=112):
+    """Pozorovatelna B: stejná věž jako A, ale nakloněná, reflektor rozbitý, okny kabiny prorůstají kořeny
+    a po nohách šplhají; žlutý štítek B."""
+    s = obs_tower(w, h)
+    for y in range(9, 16):                                                # rozbitý průzor + kořeny ven
+        for x in range(6, w - 6):
+            if (x * 7 + y * 3) % 11 < 3:
+                s.px(x, y, c(0x1A1C22))
+    for (x0, dirx) in ((8, -1), (w - 10, 1)):
+        for k in range(14):
+            for t in range(3):
+                _shade(s, x0 + dirx * k // 2 + t, 12 + k, 0.7 - t * 0.15, BARK)
+    for y in range(30, h):                                                # popínavé kořeny po obou nohách
+        for (cx, ph) in ((10 - (y - 30) * 6 // (h - 30), 0), (w - 11 + (y - 30) * 6 // (h - 30), 2)):
+            k = int(2.5 * math.sin(y / 5 + ph))
+            for t in range(-1, 2):
+                _shade(s, cx + k + t, y, 0.72 - abs(t) * 0.2, BARK)
+    pl = plate("B", c(0x1A1A1A), c(0xD8B030), seed=11, pad=2, rivets=False)
+    for yy in range(pl.h):
+        for xx in range(pl.w):
+            s.px(w // 2 - pl.w // 2 + xx, 16 + yy, pl.a[yy, xx])
+    s.rect(w - 4, 8, w - 1, 12, STEEL[1]); s.px(w - 2, 13, c(0x2A2A2A))        # rozbitý reflektor
+    return lean(selout(s, 0.5, 0.82), 0.09)
+
+
+def fence(w, h=22, seed=0, gap=None):
+    """Plot z drátěného pletiva na sloupcích (pletivo průsvitné – kosočtverce), nahoře ostnatý drát.
+    gap = (x0, x1) úsek, který kořen zmáčkl k zemi."""
+    s = Spr(w, h)
+    for x in range(0, w, 14):
+        for y in range(2, h):
+            s.px(x, y, STEEL[3]); s.px(x + 1, y, STEEL[1])
+    for y in range(4, h - 1):
+        for x in range(w):
+            if gap and gap[0] <= x <= gap[1]:
+                continue
+            if (x + y) % 6 == 0 or (x - y) % 6 == 0:
+                s.px(x, y, STEEL[2] if (x + y) % 12 else STEEL[3])
+    for x in range(w):
+        if not (gap and gap[0] <= x <= gap[1]):
+            s.px(x, 2, STEEL[2]); s.px(x, 3 + (x % 3 == 0), STEEL[1])
+    if gap:                                                                # zmáčknuté pletivo u země
+        for x in range(gap[0], gap[1]):
+            for y in range(h - 5, h):
+                if (x + y) % 4 == 0:
+                    s.px(x, y, STEEL[1])
+    return s
+
+
+def gen_shed(seed=0):
+    """Bouda s generátorem: malý plechový kontejner, vedle naftový agregát s výfukem a kabely, střechou
+    prorůstá kořen."""
+    s = Spr(52, 34)
+    for y in range(8):
+        for x in range(1, 33):
+            _shade(s, x, y, 0.6 - y * 0.02, OLIVE)
+    for y in range(8, 34):
+        for x in range(1, 33):
+            _shade(s, x, y, 0.4 + 0.12 * math.cos(x * 1.6) - (0.15 if (_h(x, y, seed) % 23 == 0) else 0), OLIVE)
+    for y in range(13, 33):
+        for x in range(5, 14):
+            s.px(x, y, OLIVE[3] if x in (5, 13) or y == 13 else OLIVE[1])
+    for y in range(16, 30):                                                # agregát
+        for x in range(34, 51):
+            _shade(s, x, y, 0.55 - (y - 16) * 0.015 + (0.12 if y == 16 else 0), YELLOW)
+    for x in range(36, 49, 3):
+        for y in range(19, 27):
+            s.px(x, y, YELLOW[0])
+    for y in range(6, 16):
+        s.px(47, y, STEEL[1]); s.px(48, y, STEEL[2])                        # výfuk
+    for y in range(0, 12):                                                 # kořen přes střechu
+        for k in range(-2, 3):
+            _shade(s, 18 + y // 2 + k, y, 0.7 - abs(k) * 0.12, BARK)
+    tiny(s, 15, 20, "ZDROJ", c(0xD8D2BE))
+    return selout(s, 0.5, 0.8)
+
+
+def flamer_rack():
+    """Stojan ohňové hlídky: dva plamenomety (rudé tlakové lahve se zátěží), hadice, opuštěné."""
+    s = Spr(26, 26)
+    for x in range(1, 25):
+        s.px(x, 4, STEEL[3]); s.px(x, 20, STEEL[2])
+    for x in (2, 23):
+        for y in range(4, 26):
+            s.px(x, y, STEEL[2])
+    for (x0,) in ((5,), (14,)):
+        cylinder(s, x0, x0 + 6, 6, 19, RED[1:], amb=0.25)
+        sphere(s, x0 + 3, 6, 3.4, 1.5, RED[2:], amb=0.4)
+        s.rect(x0 + 2, 3, x0 + 4, 5, STEEL[3])
+    s.line(8, 19, 12, 25, c(0x1A1A1A)); s.line(17, 19, 22, 25, c(0x1A1A1A))   # hadice
+    return selout(s, 0.5, 0.8)
+
+
+def helmet():
+    s = Spr(10, 7)
+    sphere(s, 5, 5, 4.6, 3.8, OLIVE[1:], amb=0.25)
+    s.hline(0, 9, 6, OLIVE[0])
+    return selout(s, 0.5, 0.8)
+
+
+def check_post():
+    """Sloupek KONTROLA KOŘENŮ: cedule a pod ní tabulka s čárkami po dnech (každý den kořen blíž)."""
+    pl = plate("KONTROLA", c(0xE8E2CC), c(0x1E2A44), seed=13, pad=2)
+    s = Spr(pl.w, pl.h + 26)
+    s.a[:pl.h] = pl.a
+    for y in range(pl.h, pl.h + 26):
+        s.px(pl.w // 2, y, STEEL[3]); s.px(pl.w // 2 + 1, y, STEEL[1])
+    for y in range(pl.h + 2, pl.h + 13):                                   # tabulka s čárkami
+        for x in range(4, pl.w - 4):
+            s.px(x, y, PAPER[2] if (y - pl.h) % 3 else PAPER[1])
+    for i in range(14):
+        s.px(6 + i * 3, pl.h + 4 + (i % 3) * 3, RED[3])
+    return selout(s, 0.5, 0.85)
+
+
+def cable_pylon(h=70):
+    """Příhradový stožár lanovky (k rokli): vršek s kladkami, lana odcházejí vpravo."""
+    s = Spr(28, h)
+    for y in range(10, h):
+        t = (y - 10) / (h - 10)
+        a, b = int(11 - 8 * t), int(16 + 8 * t)
+        s.px(a, y, STEEL[3]); s.px(b, y, STEEL[1])
+        if (y - 10) % 10 == 0:
+            s.hline(a, b, y, STEEL[2])
+    for y0 in range(10, h - 10, 10):
+        t0, t1 = (y0 - 10) / (h - 10), (y0 - 0) / (h - 10)
+        s.line(int(11 - 8 * t0), y0, int(16 + 8 * t1), y0 + 10, STEEL[1])
+    s.rect(2, 6, 25, 9, STEEL[2]); s.hline(2, 25, 6, STEEL[3])
+    for x in (5, 22):
+        sphere(s, x, 5, 2.2, 2.2, STEEL[1:], amb=0.3)
+    return selout(s, 0.5, 0.85)

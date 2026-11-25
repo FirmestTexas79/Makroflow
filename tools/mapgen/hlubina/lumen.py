@@ -43,3 +43,20 @@ def ruin_facade(w=54, h=70):
     return selout(s, 0.5, 0.8)
 
 
+
+
+def carved_stairs(img, x0, y0, x1, y1, steps=12, width=14):
+    """Schody Lumenců vytesané diagonálně do skalní stěny (světlá stupnice, tmavá podstupnice, ohlazené hrany)."""
+    STONE = [c(0x1A1C24), c(0x2E3240), c(0x444A5A), c(0x5E6676), c(0x7E8696)]
+    for i in range(steps):
+        t0, t1 = i / steps, (i + 1) / steps
+        sx, sy = x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0
+        ex, ey = x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1
+        for y in range(int(sy), int(ey) + 1):
+            for x in range(int(sx), int(sx) + width):
+                if 0 <= y < img.shape[0] and 0 <= x < img.shape[1]:
+                    q = (y - sy) / max(1, ey - sy)
+                    v = 0.75 if q < 0.45 else 0.3
+                    if x in (int(sx), int(sx) + width - 1):
+                        v = 0.15
+                    img[y, x] = _pick(STONE, v + (_vn(x, y, 51, 3) - 0.5) * 0.15, x, y)

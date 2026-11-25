@@ -909,3 +909,44 @@ class CanyonIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 98, 168, 90) {
         }
     }
 }
+
+
+/** Pozorovatelna B (zóna 3): rozbitý reflektor nakloněné věže zaprská, kužel světla přejede terasu zleva
+ *  a zastaví se na očích ve tmě; po výpadu se zvedne prach a popel. */
+class WatchIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 236, 13) {
+    override val shade = hex(0x04060E)
+    override val accent = hex(0xFFD890)
+    override val dimMax = 0.7f
+    private val dust = ramp(0x5A4A36, 0x8A7658, 0xB8A27E)
+    private val bits = spray(22, 20f, 70f, 40f)
+
+    override fun act(t: Long) {
+        val ox = sx(160f); val oy = sy(168f)
+        val on = (pulse(t, TELL1, 140) + pulse(t, TELL1 + 260, 120) + p(t, TELL2 - 200, TELL2)).coerceAtMost(1f)
+        if (on > 0.05f) {
+            val sweep = p(t, TELL2, CLIMAX)
+            beam(ox, oy, sx(40f) + (cx - sx(40f)) * sweep, cy, on)
+        }
+        mapEyes(cx, cy - 2, 2.4f, hex(0xE8F4FF), eyeAlpha(t))
+        val s = since(t)
+        if (s > 0f) for (b in bits) { val (x, y) = ballistic(cx, cy, b[0], b[1], 90f, s); puff(x, y, 1.6f, dust, 0.7f * (1f - s)) }
+    }
+
+    private fun beam(ox: Float, oy: Float, tx: Float, ty: Float, a: Float) {
+        val dx = tx - ox; val dy = ty - oy
+        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+        val ux = dx / len; val uy = dy / len
+        for (y in 0 until h) for (x in 0 until w) {
+            val px = x - ox; val py = y - oy
+            val along = px * ux + py * uy
+            if (along < 0f || along > len * 1.15f) continue
+            val half = 2f + along * 0.22f
+            val across = abs(px * uy - py * ux)
+            if (across > half) continue
+            val k = (1f - across / half) * (1f - along / (len * 1.15f) * 0.5f) * a
+            val q = floor(k * 4f) / 4f
+            if (q > 0f) blend(x, y, hex(0xFFE0A0), q * 0.45f)
+        }
+        glow(tx, ty, 10f, hex(0xFFE0A0), 0.35f * a)
+    }
+}

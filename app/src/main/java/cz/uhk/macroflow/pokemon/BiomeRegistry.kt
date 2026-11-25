@@ -57,7 +57,9 @@ enum class BiomeType {
     /** Patro −2 – Sektor Hlubiny nad obrácenou korunou Lumiry (docs/adr/0104). */
     TOWER_ABYSS,
     /** Zóna 3 (Akt III – Hlubina): Tábor výprav na kořeni Spící (docs/adr/0106). */
-    ROOT_CAMP
+    ROOT_CAMP,
+    /** Zóna 3: Pozorovatelna B (pohlcení 2/8). */
+    ROOT_WATCH
 }
 
 object BiomeRegistry {
@@ -189,7 +191,8 @@ object BiomeRegistry {
         BiomeDefinition(BiomeType.TOWER_HIDEOUT, R.drawable.tower_hideout, graphOf(cz.uhk.macroflow.pokemon.cave.TowerHideout.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerHideout.MAP),
         BiomeDefinition(BiomeType.TOWER_ABYSS, R.drawable.tower_abyss, graphOf(cz.uhk.macroflow.pokemon.cave.TowerAbyss.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerAbyss.MAP),
         BiomeDefinition(BiomeType.TOWER_POISON, R.drawable.tower_poison, graphOf(cz.uhk.macroflow.pokemon.cave.TowerPoison.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerPoison.MAP),
-        BiomeDefinition(BiomeType.ROOT_CAMP, R.drawable.root_camp, graphOf(cz.uhk.macroflow.pokemon.cave.RootCamp.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootCamp.MAP)
+        BiomeDefinition(BiomeType.ROOT_CAMP, R.drawable.root_camp, graphOf(cz.uhk.macroflow.pokemon.cave.RootCamp.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootCamp.MAP),
+        BiomeDefinition(BiomeType.ROOT_WATCH, R.drawable.root_watch, graphOf(cz.uhk.macroflow.pokemon.cave.RootWatch.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootWatch.MAP)
         ).associateBy { it.type }
     }
 
