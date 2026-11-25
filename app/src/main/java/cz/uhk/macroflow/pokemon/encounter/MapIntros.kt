@@ -911,9 +911,9 @@ class CanyonIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 98, 168, 90) {
 }
 
 
-/** Pozorovatelna B (zóna 3): rozbitý reflektor nakloněné věže zaprská, kužel světla přejede terasu zleva
+/** Pozorovatelna B (zóna 3): prasklý světlomet na terase zaprská, kužel světla přejede terasu zprava
  *  a zastaví se na očích ve tmě; po výpadu se zvedne prach a popel. */
-class WatchIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 236, 13) {
+class WatchIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 196, 13) {
     override val shade = hex(0x04060E)
     override val accent = hex(0xFFD890)
     override val dimMax = 0.7f
@@ -921,11 +921,11 @@ class WatchIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 236, 13) {
     private val bits = spray(22, 20f, 70f, 40f)
 
     override fun act(t: Long) {
-        val ox = sx(160f); val oy = sy(168f)
+        val ox = sx(74f); val oy = sy(232f)
         val on = (pulse(t, TELL1, 140) + pulse(t, TELL1 + 260, 120) + p(t, TELL2 - 200, TELL2)).coerceAtMost(1f)
         if (on > 0.05f) {
             val sweep = p(t, TELL2, CLIMAX)
-            beam(ox, oy, sx(40f) + (cx - sx(40f)) * sweep, cy, on)
+            beam(ox, oy, sx(160f) + (cx - sx(160f)) * sweep, cy, on)
         }
         mapEyes(cx, cy - 2, 2.4f, hex(0xE8F4FF), eyeAlpha(t))
         val s = since(t)

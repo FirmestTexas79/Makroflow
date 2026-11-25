@@ -412,3 +412,165 @@ def cable_pylon(h=70):
     for x in (5, 22):
         sphere(s, x, 5, 2.2, 2.2, STEEL[1:], amb=0.3)
     return selout(s, 0.5, 0.85)
+
+
+# ── Pozorovatelna B – bunkr ve skále (verze 2) ──────────────────────────────
+def mount_plate(pl, posts=0, post_col=None):
+    """Cedule na sloupcích (posts = výška sloupků). Bez sloupků je to cedule na zeď – vrací se i se stínem pod sebou."""
+    if posts <= 0:
+        s = Spr(pl.w + 1, pl.h + 1)
+        for y in range(pl.h):                                              # vržený stín na zeď (o 1 px vpravo dolů)
+            for x in range(pl.w):
+                if pl.a[y, x, 3]:
+                    s.px(x + 1, y + 1, c(0x08080C))
+        for y in range(pl.h):
+            for x in range(pl.w):
+                if pl.a[y, x, 3]:
+                    s.px(x, y, pl.a[y, x])
+        return s
+    s = Spr(pl.w, pl.h + posts)
+    s.a[:pl.h] = pl.a
+    col = post_col or STEEL
+    for y in range(pl.h, pl.h + posts):
+        for x0 in (3, pl.w - 5):
+            s.px(x0, y, col[3]); s.px(x0 + 1, y, col[1])
+    return s
+
+
+def bunker_facade(W, H, x0, door_x, seed=0):
+    """Betonové čelo bunkru zapuštěné do skály (vrací masku a Spr přes celou šířku stěny): panely s bedněním,
+    světlejší hrana nahoře, rezavé stékance od kotev, ocelové dveře s pečetí a dvě střílny se světlem."""
+    s = Spr(W, H)
+    top = 26
+    for y in range(top, H):
+        for x in range(x0, W):
+            v = 0.5 + (_vn(x, y, seed + 41, 5) - 0.5) * 0.18 - (y - top) * 0.002
+            if (y - top) % 18 == 0 or (x - x0) % 30 == 0:
+                v = 0.25                                                  # spáry bednění
+            elif (y - top) % 18 == 1:
+                v += 0.1
+            if y < top + 3:
+                v = 0.72 - (y - top) * 0.12                              # horní hrana (atika)
+            if (x - x0) % 30 in (14, 15) and (y - top) % 18 in (6, 7):
+                v = 0.15                                                  # kotvy
+            s.px(x, y, _pick(CONC, max(0.0, min(1.0, v)), x, y))
+            if (x - x0) % 30 == 15 and 8 < (y - top) % 18 < 8 + _h(x, y // 18, seed) % 9:
+                s.px(x, y, RUST[2])                                       # rez od kotev
+    for y in range(top, H):                                               # boční hrana do skály
+        s.px(x0, y, CONC[0]); s.px(x0 + 1, y, CONC[5])
+    dw, dh = 22, 34                                                       # dveře
+    for y in range(H - dh, H):
+        for x in range(door_x, door_x + dw):
+            edge = x in (door_x, door_x + dw - 1) or y == H - dh
+            v = 0.62 if edge else 0.42 + 0.06 * ((x - door_x) // 4 % 2)
+            if x == door_x + dw // 2:
+                v = 0.2
+            s.px(x, y, _pick(STEEL, v, x, y))
+    for (dx, dy) in ((0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (1, -1), (3, -1), (2, -2), (0, 1), (4, 1)):
+        s.px(door_x + dw // 2 - 2 + dx, H - dh + 9 + dy, BRASS[3])          # pečeť vah
+    for k in range(3):
+        s.px(door_x + dw - 5, H - 16 + k, BRASS[2])                         # klika
+    for (sx0, sy0) in ((door_x - 36, H - 26), (door_x + dw + 16, H - 26)):  # střílny se světlem
+        for y in range(sy0, sy0 + 5):
+            for x in range(sx0, sx0 + 20):
+                s.px(x, y, SODIUM if y > sy0 and 0 < x - sx0 < 19 else CONC[0])
+        for x in range(sx0 - 1, sx0 + 21):
+            s.px(x, sy0 - 1, CONC[5]); s.px(x, sy0 + 5, CONC[1])
+    return s
+
+
+def railing(w, h=12, bend=None, gaps=()):
+    """Zábradlí na okraji terasy: sloupky po 12 px, madlo a středová tyč; bend = (x0, x1) úsek ohnutý kořenem
+    dolů; gaps = úseky bez zábradlí (průchody)."""
+    s = Spr(w, h + 4)
+    def gap(x):
+        return any(a <= x <= b for (a, b) in gaps)
+    for x in range(w):
+        if gap(x):
+            continue
+        dip = 0
+        if bend and bend[0] <= x <= bend[1]:
+            q = (x - bend[0]) / max(1, bend[1] - bend[0])
+            dip = int(math.sin(q * math.pi) * 6)
+        s.px(x, 1 + dip, STEEL[4]); s.px(x, 2 + dip, STEEL[2])            # madlo
+        s.px(x, 7 + dip // 2, STEEL[2])                                   # středová tyč
+        if x % 12 == 0:
+            for y in range(1 + dip, h + 2):
+                s.px(x, y, STEEL[3]); s.px(x + 1, y, STEEL[1])
+    return s
+
+
+def searchlight():
+    """Velký světlomet na otočném podstavci: buben s mřížkou přes čočku, třmen, točna; natočený dolů ke kmeni."""
+    s = Spr(36, 38)
+    for y in range(28, 38):                                               # točna
+        for x in range(4, 32):
+            if ((x - 18) / 14) ** 2 + ((y - 33) / 5) ** 2 < 1:
+                s.px(x, y, _pick(STEEL, 0.55 - (y - 28) * 0.03, x, y))
+    for y in range(14, 30):                                               # třmen
+        for x in (6, 7, 28, 29):
+            s.px(x, y, STEEL[3] if x in (6, 28) else STEEL[1])
+    cylinder(s, 8, 27, 6, 24, [c(0x1C2228), c(0x34404A), c(0x52626E), c(0x7A8C98), c(0xA8B8C2)], amb=0.25)
+    for y in range(10, 22):                                               # čočka (tmavá, rozbitá mřížka)
+        for x in range(11, 25):
+            if ((x - 18) / 7) ** 2 + ((y - 16) / 6) ** 2 < 1:
+                s.px(x, y, c(0xFFE6A8) if (x + y) % 5 == 0 else c(0x6A6040))
+                if x % 3 == 0:
+                    s.px(x, y, STEEL[1])
+    s.rect(12, 2, 23, 5, STEEL[2]); s.hline(12, 23, 2, STEEL[4])           # chladič nahoře
+    return selout(s, 0.5, 0.85)
+
+
+def rangefinder():
+    """Dálkoměr na trojnožce: dlouhá trubice se dvěma okuláry, štítek s měřítkem."""
+    s = Spr(30, 26)
+    for (x0, x1) in ((15, 5), (15, 25), (15, 15)):
+        s.line(x0, 12, x1, 25, STEEL[2])
+    for y in range(6, 11):
+        for x in range(1, 29):
+            s.px(x, y, _pick(OLIVE, 0.6 - abs(y - 8) * 0.12, x, y))
+    for x in (1, 28):
+        sphere(s, x, 8, 2.6, 2.8, STEEL[1:], amb=0.3)
+    s.rect(13, 3, 17, 6, OLIVE[2]); s.rect(14, 4, 16, 5, c(0x4A80C0))
+    return selout(s, 0.5, 0.85)
+
+
+def sandbag_ring(w=60, h=30):
+    """Půlkruh z pytlů kolem stanoviště (otevřený dozadu)."""
+    s = Spr(w, h)
+    for i in range(14):
+        a = math.pi * (0.05 + 0.9 * i / 13)
+        x = w / 2 + math.cos(a) * (w / 2 - 5); y = h - 8 - (1 - math.sin(a)) * 0 - math.sin(a) * 0 + (h - 14) * (1 - math.sin(a)) * 0
+        y = 8 + math.sin(a) * (h - 16)
+        for lvl in range(2):
+            sphere(s, x, y + 4 - lvl * 4, 5, 3.4, SAND, amb=0.25)
+    return selout(s, 0.45, 0.75)
+
+
+def field_phone():
+    """Polní telefon na zdi: olivová skříňka, sluchátko na vidlici, kroucená šňůra."""
+    s = Spr(12, 16)
+    for y in range(2, 14):
+        for x in range(1, 11):
+            s.px(x, y, _pick(OLIVE, 0.55 - (y - 2) * 0.02, x, y))
+    s.rect(2, 0, 9, 2, c(0x1A1A1A)); s.px(1, 1, c(0x1A1A1A)); s.px(10, 1, c(0x1A1A1A))
+    for y in range(4, 15):
+        s.px(5 + (y % 2), y + 1, c(0x1A1A1A)) if y > 12 else None
+    s.rect(4, 6, 7, 8, c(0xD8D2BE))
+    return selout(s, 0.5, 0.85)
+
+
+def wall_chart(title="KONTROLA"):
+    """Nástěnný graf kontrol kořenů: smaltovaný titulek nahoře, pod ním papír s křivkou, která klesá k nule."""
+    pl = plate(title, c(0xE8E2CC), c(0x1E2A44), seed=13, pad=2)
+    W, H = pl.w, pl.h + 22
+    s = Spr(W, H)
+    s.a[:pl.h] = pl.a
+    for y in range(pl.h, H):
+        for x in range(2, W - 2):
+            s.px(x, y, PAPER[2] if (x % 6) else PAPER[1])
+    pts = [(4 + i * (W - 10) // 9, pl.h + 3 + int(i * i * 0.2)) for i in range(10)]
+    for (a, b) in zip(pts, pts[1:]):
+        s.line(a[0], a[1], b[0], b[1], RED[3])
+    s.hline(3, W - 4, H - 3, c(0x3A3428))
+    return selout(s, 0.55, 0.9)
