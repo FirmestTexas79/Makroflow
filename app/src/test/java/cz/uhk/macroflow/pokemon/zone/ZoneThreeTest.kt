@@ -35,6 +35,8 @@ class ZoneThreeTest {
         val ends = Regex("\"(a|b)\": \"([A-Z_0-9]+)\",\\s*\"\\1Node\": \"([a-z_0-9]+)\",\\s*\"\\1Dir\": \"[nsew]\",\\s*\"\\1Pos\": \\[[^\\]]*\\],\\s*\"\\1Frac\": \\[\\s*([0-9.]+),\\s*([0-9.]+)\\s*\\]")
             .findAll(json).toList()
         assertEquals(10, ends.size)
+        val pairs = Regex("\"a\":\\s*\"(\\w+)\"[^}]*?\"b\":\\s*\"(\\w+)\"").findAll(json).map { it.groupValues[1] to it.groupValues[2] }.toSet()
+        assertEquals(pairs, ZoneOne.LINKS.filter { (a, b) -> a in ZoneOne.ZONE3 && b in ZoneOne.ZONE3 }.toSet())
         for (e in ends) {
             val g = e.groupValues
             val m = maps.getValue(g[2])

@@ -10,8 +10,9 @@ class TeleportCostTest {
     @Test fun `spoje odpovidaji mape zony`() {
         val json = listOf(File("src/main/assets/zone/zone1.json"), File("app/src/main/assets/zone/zone1.json")).first { it.exists() }.readText()
         val fromJson = Regex("\"a\":\\s*\"(\\w+)\"[^}]*?\"b\":\\s*\"(\\w+)\"").findAll(json).map { it.groupValues[1] to it.groupValues[2] }.toSet()
-        // zóna 1: spoje v zone1.json; spoje zóny 2 a průchod Branou světů hlídá ZoneTwoTest
-        assertEquals(fromJson, ZoneOne.LINKS.filter { (a, b) -> a !in ZoneOne.ZONE2 && b !in ZoneOne.ZONE2 }.toSet())
+        // zóna 1: spoje v zone1.json; spoje zóny 2 a průchod Branou světů hlídá ZoneTwoTest, zónu 3 ZoneThreeTest
+        val other = ZoneOne.ZONE2 + ZoneOne.ZONE3
+        assertEquals(fromJson, ZoneOne.LINKS.filter { (a, b) -> a !in other && b !in other }.toSet())
     }
 
     @Test fun `nejkratsi cesta`() {
