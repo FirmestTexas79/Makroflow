@@ -1435,7 +1435,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             glows = listOf(FxGlow(33, 46, 22, 6, 0x7EC0FF, 4.5f), FxGlow(33, 78, 12, 14, 0x4A80C0, 6f),
                 FxGlow(79, 273, 3, 3, 0x8AC8FF, 2.1f), FxGlow(51, 232, 3, 3, 0x8AC8FF, 2.7f), FxGlow(28, 180, 3, 3, 0x8AC8FF, 3.3f),
                 FxGlow(159, 214, 3, 3, 0x8AC8FF, 1.9f), FxGlow(14, 140, 3, 3, 0x8AC8FF, 3.9f), FxGlow(136, 215, 3, 3, 0x8AC8FF, 2.4f),
-                FxGlow(97, 303, 3, 3, 0x8AC8FF, 3.1f), FxGlow(54, 196, 10, 6, 0xFFC870, 5f))
+                FxGlow(97, 303, 3, 3, 0x8AC8FF, 3.1f), FxGlow(56, 196, 10, 6, 0xFFC870, 5f))
         )
 
         val ABYSS = InteriorFx(

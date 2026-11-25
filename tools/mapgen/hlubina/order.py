@@ -1,112 +1,11 @@
-"""
-Díly pro zónu 3 (Akt III – Hlubina), docs/adr/0106. Řád Váhy se pokusil Hlubinu obsadit: beton, plechové
-ubikace, pozorovatelny, reflektory se sodíkovým světlem, ohňové hlídky, které pálí kořeny, lanovka ke kmeni.
-Kořeny Spící to všechno pomalu pohlcují – čím blíž ke kmeni, tím víc. Pod tím vším starší vrstva: ruiny Lumenců
-vytesané do skály, které kořeny stahují do země.
-"""
+"""Zóna 3 – stavby a technika Řádu Váhy (obsazení Hlubiny)."""
 import math, os, sys
 import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "ashplain")); sys.path.insert(0, os.path.join(HERE, "..", "tower"))
-from pix import Spr, c  # noqa: E402
-from figures import sphere, cylinder, selout, _pick, BRASS, STEEL, RED, BAYER  # noqa: E402
-from hideout_parts import _h, _vn  # noqa: E402
-
-ROCK = [c(0x0E0E12), c(0x17171D), c(0x212129), c(0x2C2C36), c(0x3A3A46), c(0x4C4C5A)]
-CONC = [c(0x1C1E20), c(0x282B2E), c(0x34383C), c(0x42474C), c(0x52585E), c(0x666D74)]
-OLIVE = [c(0x161A12), c(0x232A1C), c(0x323C28), c(0x445236), c(0x5A6A48), c(0x748660)]
-RUST = [c(0x24140C), c(0x42261A), c(0x623A24), c(0x86522E)]
-BARK = [c(0x24221E), c(0x3E3A34), c(0x5E584E), c(0x827A6C), c(0xA49C8A), c(0xC8C0AC), c(0xE4DECC)]
-CHAR = [c(0x0C0A08), c(0x1A1612), c(0x2A241E), c(0x3C342A)]
-SAND = [c(0x2E2618), c(0x4A3E28), c(0x6A5C3C), c(0x8C7C54), c(0xAC9C70)]
-PAPER = [c(0x8A7E62), c(0xB4A882), c(0xD8CCA4), c(0xF0E6C4)]
-SODIUM = c(0xFFC870)
-GLYPH = c(0x7EC0FF)
-YELLOW = [c(0x5A4410), c(0x9C7A1E), c(0xD8AC30), c(0xF4D060)]
-
-
-def _shade(s, x, y, v, ramp):
-    s.px(x, y, _pick(ramp, max(0.0, min(1.0, v)), x, y))
-
-
-# ── skalní stěna dutiny s ruinou Lumenců a výstupem šachty ──────────────────
-def cavern_wall(W, H):
-    """Svislá čedičová stěna (vrstvy, praskliny), nahoře ztrácející se ve tmě stropu."""
-    s = Spr(W, H)
-    for y in range(H):
-        for x in range(W):
-            strata = math.sin(y / 5.5 + _vn(x, y, 3, 18) * 3) * 0.12
-            col = _vn(x * 0.6, y * 2.4, 4, 7)
-            v = 0.42 + strata + (col - 0.5) * 0.3 - (1 - y / H) * 0.25
-            if abs(_vn(x * 1.3, y * 0.5, 6, 9) - 0.5) < 0.03:
-                v = 0.06                                                  # svislé pukliny
-            if y > H - 6:
-                v -= 0.18 * (y - (H - 6)) / 6                             # pata stěny ve stínu
-            _shade(s, x, y, v, ROCK)
-    return s
-
-
-def ruin_facade(w=54, h=70):
-    """Fasáda Lumenců vytesaná do skály: lomený oblouk vchodu (zasypaný), dva štíhlé sloupy, římsa s řadou
-    drobných svítících znaků (hvězdy a vlny), nad obloukem vytesaná obrácená koruna. Starší než Řád."""
-    s = Spr(w, h)
-    STONE = [c(0x1A1C24), c(0x2E3240), c(0x444A5A), c(0x5E6676), c(0x7E8696), c(0xA4ACBA)]
-    cx = w // 2
-    for y in range(h):
-        for x in range(w):
-            v = 0.5 + (_vn(x, y, 31, 4) - 0.5) * 0.25
-            if y < 8:
-                v = 0.62 if y % 4 else 0.3                               # římsa
-            if y > 18 and abs(x - cx) < 14:                               # oblouk (lomený)
-                top = 18 + (abs(x - cx) / 14) ** 2 * 10
-                if y > top:
-                    v = 0.0                                               # tma za vchodem
-                elif y > top - 2:
-                    v = 0.75
-            for px_ in (5, w - 9):                                        # sloupy
-                if px_ <= x < px_ + 4 and y >= 8:
-                    v = 0.4 + (x - px_) * 0.12
-            _shade(s, x, y, v, STONE)
-    for i, x in enumerate(range(4, w - 4, 4)):                            # znaky na římse
-        if i % 2:
-            s.px(x, 3, GLYPH); s.px(x + 1, 4, GLYPH); s.px(x - 1, 4, GLYPH); s.px(x, 5, GLYPH)
-        else:
-            s.px(x, 4, GLYPH); s.px(x + 1, 3, GLYPH); s.px(x + 2, 4, GLYPH)
-    for k in range(9):                                                    # obrácená koruna nad obloukem
-        s.px(cx - 4 + k, 11, GLYPH)
-        if k % 2 == 0:
-            s.px(cx - 4 + k, 12, GLYPH); s.px(cx - 4 + k, 13, c(0x4A80C0))
-    s.px(cx, 10, GLYPH); s.px(cx, 9, GLYPH); s.px(cx, 8, c(0x4A80C0))
-    for (x, y) in ((cx - 6, h - 6), (cx + 3, h - 9), (cx - 1, h - 4)):    # sutina ve vchodu
-        sphere(s, x, y, 3, 2, STONE, amb=0.25)
-    return selout(s, 0.5, 0.8)
-
-
-def stencil(s, x0, y0, text, col, scale=1):
-    """Nastříkaný text 3×5 (velká písmena, číslice, mezera, tečka, pomlčka)."""
-    font = {
-        "S": ["###", "#..", "###", "..#", "###"], "T": ["###", ".#.", ".#.", ".#.", ".#."], "A": [".#.", "#.#", "###", "#.#", "#.#"],
-        "N": ["#.#", "###", "###", "#.#", "#.#"], "I": ["###", ".#.", ".#.", ".#.", "###"], "C": ["###", "#..", "#..", "#..", "###"],
-        "E": ["###", "#..", "##.", "#..", "###"], "8": ["###", "#.#", "###", "#.#", "###"], "H": ["#.#", "#.#", "###", "#.#", "#.#"],
-        "L": ["#..", "#..", "#..", "#..", "###"], "U": ["#.#", "#.#", "#.#", "#.#", "###"], "B": ["##.", "#.#", "##.", "#.#", "##."],
-        "Z": ["###", "..#", ".#.", "#..", "###"], "V": ["#.#", "#.#", "#.#", "#.#", ".#."], "R": ["##.", "#.#", "##.", "#.#", "#.#"],
-        "O": ["###", "#.#", "#.#", "#.#", "###"], "K": ["#.#", "##.", "#..", "##.", "#.#"], "M": ["#.#", "###", "###", "#.#", "#.#"],
-        "P": ["##.", "#.#", "##.", "#..", "#.."], "D": ["##.", "#.#", "#.#", "#.#", "##."], "J": ["..#", "..#", "..#", "#.#", "###"],
-        "2": ["###", "..#", "###", "#..", "###"], "1": [".#.", "##.", ".#.", ".#.", "###"], "0": ["###", "#.#", "#.#", "#.#", "###"],
-        "·": ["...", "...", ".#.", "...", "..."], "-": ["...", "...", "###", "...", "..."], " ": ["...", "...", "...", "...", "..."],
-        ">": ["#..", ".#.", "..#", ".#.", "#.."], "!": [".#.", ".#.", ".#.", "...", ".#."],
-    }
-    x = x0
-    for ch in text:
-        g = font.get(ch, font[" "])
-        for dy, row in enumerate(g):
-            for dx, b in enumerate(row):
-                if b == "#":
-                    for sy in range(scale):
-                        for sx in range(scale):
-                            s.px(x + dx * scale + sx, y0 + dy * scale + sy, col)
-        x += 4 * scale
-    return x
+sys.path.insert(0, os.path.join(HERE, "..", "ashplain")); sys.path.insert(0, os.path.join(HERE, "..", "tower")); sys.path.insert(0, HERE)
+from common import *  # noqa: E402,F401,F403
+from common import _shade, _pick, _h, _vn  # noqa: E402,F401
+from signs import plate, painted, tiny  # noqa: E402
 
 
 def shaft_lift(w=46, h=110):
@@ -143,8 +42,8 @@ def shaft_lift(w=46, h=110):
 
 # ── budovy a technika Řádu ──────────────────────────────────────────────────
 def barrack(w=56, h=40, seed=0):
-    """Plechová ubikace (kontejner) ve 3/4: zvlněný plech, střecha s anténou, dveře s pečetí vah, okno se
-    světlem (někdo nechal lampu), zespodu z rohu prolamuje plech bledý kořen."""
+    """Plechová ubikace (kontejner) ve 3/4: zvlněný plech, dveře s pečetí vah, okno se světlem (někdo nechal
+    lampu), levý roh zespodu prolamuje bledý kořen (navazuje na kořen v mapě)."""
     s = Spr(w, h)
     roof_h = 9
     for y in range(roof_h):                                               # střecha shora
@@ -170,10 +69,13 @@ def barrack(w=56, h=40, seed=0):
         for x in range(28, 44):
             edge = y in (roof_h + 7, roof_h + 16) or x in (28, 43) or x == 36
             s.px(x, y, OLIVE[4] if edge else (SODIUM if (y - roof_h) < 12 else c(0xC8904A)))
-    stencil(s, 30, roof_h + 20, "S-8", c(0xD8D2BE))
-    for y in range(h - 12, h):                                            # kořen prolamuje roh
-        for x in range(w - 14, w - 1):
-            d = (x - (w - 14)) - (h - y) * 1.2
+    pl = plate("S-8", c(0xE8E2CC), c(0x2A3424), seed=2, pad=2)
+    for yy in range(pl.h):
+        for xx in range(pl.w):
+            s.px(28 + xx, roof_h + 19 + yy, pl.a[yy, xx])
+    for y in range(h - 14, h):                                            # kořen prolamuje levý roh zespodu
+        for x in range(1, 15):
+            d = (14 - x) - (h - y) * 1.2
             if 0 < d < 6:
                 _shade(s, x, y, 0.75 - abs(d - 3) * 0.15, BARK)
     return selout(s, 0.5, 0.8)
@@ -224,7 +126,10 @@ def obs_tower(w=40, h=104, seed=0):
                 s.px(x, y, c(0x10141C) if (x + y) % 7 else c(0x2A3446))
             else:
                 _shade(s, x, y, v, OLIVE)
-    stencil(s, w // 2 - 2, 18, "A", c(0xD8D2BE))
+    pl = plate("A", c(0x1A1A1A), c(0xD8B030), seed=4, pad=2, rivets=False)
+    for yy in range(pl.h):
+        for xx in range(pl.w):
+            s.px(w // 2 - pl.w // 2 + xx, 16 + yy, pl.a[yy, xx])
     s.rect(w - 4, 8, w - 1, 12, STEEL[3]); s.rect(w - 2, 13, w - 1, 14, SODIUM)   # reflektor
     for y in range(h - 30, h):                                            # kořen kolem levé nohy
         t = (y - cab_h) / (h - cab_h)
@@ -257,17 +162,25 @@ def sandbags(w=40, rows=2):
     return selout(s, 0.45, 0.75)
 
 
-def barrier(w=52):
-    """Závora s žlutočerným ramenem a cedulí UZÁVĚRA na betonových patkách."""
-    s = Spr(w, 26)
-    for x in range(2, w - 2):
-        for y in range(10, 13):
+def barrier(w=64):
+    """Závora: žlutočerné rameno na betonových patkách a nad ním plechová cedule UZÁVĚRA s rudým lemem."""
+    pl = plate("UZÁVĚRA", c(0xB8261E), c(0xE6E0CC), seed=9, pad=3, border=c(0xB8261E))
+    H = pl.h + 18
+    s = Spr(w, H)
+    for x in range(4, w - 4):                                              # rameno
+        for y in range(pl.h + 4, pl.h + 7):
             s.px(x, y, YELLOW[2] if (x // 4) % 2 else c(0x16161C))
-    for (x0, y0) in ((0, 12), (w - 8, 12)):
-        s.rect(x0, y0, x0 + 7, y0 + 13, CONC[3]); s.hline(x0, x0 + 7, y0, CONC[5])
-    s.rect(w // 2 - 15, 0, w // 2 + 15, 8, c(0xE8E2CC)); s.hline(w // 2 - 15, w // 2 + 15, 8, c(0x8A8470))
-    stencil(s, w // 2 - 14, 2, "UZAVERA", RED[2])
-    return selout(s, 0.5, 0.8)
+        s.px(x, pl.h + 7, c(0x0A0A0E))
+    for (x0,) in ((0,), (w - 9,)):                                         # patky
+        for y in range(pl.h + 6, H):
+            for x in range(x0, x0 + 9):
+                s.px(x, y, CONC[4] if y == pl.h + 6 else CONC[3] if x < x0 + 6 else CONC[1])
+    for y in range(pl.h, pl.h + 5):                                        # nosníky cedule
+        s.px(w // 2 - 12, y, STEEL[2]); s.px(w // 2 + 12, y, STEEL[2])
+    for yy in range(pl.h):
+        for xx in range(pl.w):
+            s.px(w // 2 - pl.w // 2 + xx, yy, pl.a[yy, xx])
+    return selout(s, 0.5, 0.85)
 
 
 def fuel_drums(n=3):
@@ -336,48 +249,6 @@ def cable_station(w=50, h=36):
     return selout(s, 0.5, 0.8)
 
 
-# ── kořeny a kreslení přímo do mapy ─────────────────────────────────────────
-def root_path(img, depth, pts, w0, w1, AW, AH, block=None, lift=0.0, d=0.5):
-    """Kořen podél křivky bodů (šířka w0→w1) ve 3/4: válcové stínování, praskliny v kůře, stín pod ním.
-    Kreslí přímo do img; block = kořen je překážka. lift = kořen vystupuje nad zem (víc stínu)."""
-    n = len(pts)
-    for i in range(n - 1):
-        (x0, y0), (x1, y1) = pts[i], pts[i + 1]
-        t = i / (n - 1)
-        w = (w0 + (w1 - w0) * t) * (1 + 0.18 * math.sin(t * 23 + w0) + 0.1 * math.sin(t * 61))   # hrboly
-        dx, dy = x1 - x0, y1 - y0
-        ln = math.hypot(dx, dy) or 1
-        nx, ny = -dy / ln, dx / ln
-        steps = max(1, int(ln * 1.6))
-        for s_ in range(steps):
-            cx, cy = x0 + dx * s_ / steps, y0 + dy * s_ / steps
-            for k in np.linspace(-w / 2, w / 2, max(2, int(w * 2.2))):
-                X, Y = int(round(cx + nx * k)), int(round(cy + ny * k))
-                if not (0 <= X < AW and 0 <= Y < AH):
-                    continue
-                if depth[Y, X] and depth[Y, X] < d - 0.01:
-                    continue
-                u = k / (w / 2 + 0.01)
-                v = 0.52 - 0.38 * u * (1 if nx >= 0 else -1) + 0.08 * math.cos(u * math.pi)
-                v += (_vn(X * 1.4, Y * 1.4, 11, 3) - 0.5) * 0.3                  # kůra
-                if abs(_vn(cx * 0.9 + k * 2, cy * 0.9, 12, 4) - 0.5) < 0.04:
-                    v -= 0.3                                                  # podélné rýhy
-                if abs(u) > 0.84:
-                    v = 0.08
-                if _h(int(cx * 0.6), int(cy * 0.6), 7) % 9 == 0 and abs(u) < 0.5:
-                    v -= 0.3
-                v = min(v, 0.82)
-                img[Y, X] = _pick(BARK, max(0.0, min(1.0, v)), X, Y)
-                depth[Y, X] = d
-                if block is not None:
-                    block[Y, X] = True
-            # stín pod kořenem (vpravo dole)
-            for k in range(1, int(2 + lift * 3)):
-                X, Y = int(round(cx + w / 2 * 0.3 + k)), int(round(cy + w / 2 + k))
-                if 0 <= X < AW and 0 <= Y < AH and not depth[Y, X]:
-                    img[Y, X, :3] = (img[Y, X, :3] * 0.55).astype(np.uint8)
-
-
 def army_crate(seed=0, w=18, h=16):
     """Vojenská bedna Řádu (olivové prkna, kování, nastříkané S-8 a pečeť)."""
     s = Spr(w, h)
@@ -393,5 +264,6 @@ def army_crate(seed=0, w=18, h=16):
             _shade(s, x, y, v, OLIVE)
     for y in range(top + 1, h - 1):
         s.px(3, y, RUST[2]); s.px(w - 4, y, RUST[2])
-    stencil(s, 5, top + 4, "S8", c(0xCFC8B0))
+    tiny(s, 5, top + 4, "S8", c(0xCFC8B0))
     return selout(s, 0.5, 0.8)
+

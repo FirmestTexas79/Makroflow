@@ -22,7 +22,7 @@ object RootCamp {
         artW = 176, artH = 352,
         nodes = listOf(
             CaveNode(CAGE_NODE, 88, 124), CaveNode("kt_stred", 88, 168), CaveNode("kt_ruina", 34, 124),
-            CaveNode("kt_radio", 28, 210), CaveNode("kt_tabule", 78, 204), CaveNode("kt_vez", 140, 246),
+            CaveNode("kt_radio", 28, 212), CaveNode("kt_tabule", 78, 204), CaveNode("kt_vez", 140, 246),
             CaveNode("kt_hlidka", 108, 262), CaveNode("kt_dole", 84, 290), CaveNode("kt_lanovka", 130, 300),
             CaveNode("kt_krida", 62, 312), CaveNode(DOWN_NODE, 36, 338)
         ),
