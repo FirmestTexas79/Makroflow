@@ -82,6 +82,74 @@ for y in range(WALL_H, AH):                                                # vrs
         a = math.floor(max(0.0, (m - 0.6) * 1.6) * 4) / 4 * 0.5
         if a > 0:
             img[y, x, :3] = np.clip(img[y, x, :3] * (1 - a) + np.array([64, 128, 108]) * a, 0, 255)
+# ── kmen: kůra jako kost, hluboké svislé rýhy se zeleným světlem (stěna nahoře i pokračování dolů do tmy) ──
+TRUNK = [c(0x14130F), c(0x2A2722), c(0x433F37), c(0x5E594E), c(0x7C7668), c(0x9C9584), c(0xBDB6A2)]
+FUR = []                                                                  # svislé rýhy kůry
+for k in range(-1, 16):
+    FUR.append((k * 12.5 + rng.uniform(-3, 3), rng.uniform(0, 6), rng.uniform(26, 44), k))
+
+
+def fur_x(f, y):
+    b, ph, per, k = f
+    return b + 3.5 * math.sin(y / per + ph) + (_vn(k * 31, y, 71, 14) - 0.5) * 5
+
+
+def trunk_v(x, y, xs):
+    """Světlost kůry v bodě (0–1) a zda svítí rýha; xs = seřazené x rýh v řádku y."""
+    i = int(np.searchsorted(xs, x + 0.5))
+    lft, rgt = xs[max(0, i - 1)], xs[min(len(xs) - 1, i)]
+    t = (x + 0.5 - lft) / max(1.0, rgt - lft)                             # 0 u levé rýhy … 1 u pravé
+    dist = min(abs(x + 0.5 - lft), abs(rgt - x - 0.5))
+    v = 0.6 - abs((x - 88) / 110) ** 2 * 0.45                             # obrovský válec, světlo uprostřed
+    v += 0.12 * (0.5 - t) + (_vn(x * 1.4, y * 0.5, 74, 3) - 0.5) * 0.16
+    if t < 0.18:
+        v += 0.12                                                         # levá hrana plátu ve světle
+    if (y + int(lft * 7)) % 23 == 0 and _h(int(lft), y // 23, 78) % 3 == 0:
+        v -= 0.3                                                          # příčná prasklina plátu
+    g = 0.0
+    if dist < 1.3:
+        v = 0.04
+        if _vn(int(lft) * 13, y * 0.05, 75, 1) > 0.8:
+            g = 1.0
+    elif dist < 2.4:
+        v = min(v, 0.2)
+    return v, g
+
+
+# kmen pokračuje pod kořenem dolů k obrácené koruně: zužuje se do hloubky, tmavne a mizí v mlze
+TRUNK_DEPTH = 240
+trunk_ext = np.zeros((AH, AW))
+for y in range(WALL_H, WALL_H + TRUNK_DEPTH):
+    d = (y - WALL_H) / TRUNK_DEPTH
+    half = 110 - (y - WALL_H) * 0.26 + (_vn(0, y, 81, 12) - 0.5) * 4
+    xs = sorted(fur_x(f, y) for f in FUR)
+    L, R = edges(y)
+    for x in range(AW):
+        off = abs(x + 0.5 - 88)
+        if off > half or L - 3 <= x <= R + 3:
+            continue
+        v, g = trunk_v(x, y, xs)
+        v *= 1 - 0.55 * d
+        if off > half - 2.5:
+            v = 0.03                                                      # obrys válce, který se stáčí pryč
+        near = min(abs(x - (L - 3)), abs(x - (R + 3)))                     # kořen vrhá stín na kmen za sebou
+        if near < 10:
+            v *= 0.45 + 0.55 * near / 10
+        col = np.array(_pick(TRUNK, max(0.0, min(1.0, v)), x, y)[:3], float)
+        if g and d < 0.75:
+            col = col * d + np.array([62, 150, 108], float) * (1 - d) * 0.9
+        haze = min(1.0, d ** 1.25 * 1.05)                                  # do hloubky ho pohlcuje mlha a tma
+        mcol = np.clip(mist(x, y), 0, 255) * (0.75 + 0.25 * d)
+        img[y, x, :3] = np.clip(col * (1 - haze) + mcol * haze, 0, 255)
+        trunk_ext[y, x] = 1 - haze
+# rozhraní: pás mlhy přes pokračování kmene (měkké vrstvy, aby nebyl vidět řez)
+for y in range(WALL_H + 60, WALL_H + TRUNK_DEPTH + 20):
+    for x in range(AW):
+        m = _vn(x * 0.6 + 5, y * 1.3, 82, 20)
+        a = math.floor(max(0.0, (m - 0.55) * 1.4) * min(1.0, (y - WALL_H - 60) / 70) * 4) / 4 * 0.45
+        L, R = edges(y)
+        if a > 0 and not (L - 3 <= x <= R + 3):
+            img[y, x, :3] = np.clip(img[y, x, :3] * (1 - a) + np.array([58, 118, 98]) * a, 0, 255)
 vista = img.copy()
 
 # ── kořenový most ───────────────────────────────────────────────────────────
@@ -151,18 +219,27 @@ for t in np.linspace(0, 1, 120):
         img[Y, X, :3] = (26, 30, 34)
 
 # potrubí s pěnou: od nádrží vpravo vzhůru podél hrany, u kmene přes hranu dolů (k ráně)
-pipe = [(140, 270), (146, 240), (148, 214), (146, 186), (150, 168), (164, 160), (176, 168)]
+pipe = [(140, 270), (146, 240), (148, 214), (146, 186), (150, 168), (160, 160), (166, 168)]
 pts = bez(pipe[0], pipe[1], pipe[2], 30) + bez(pipe[2], pipe[3], pipe[4], 30) + bez(pipe[4], pipe[5], pipe[6], 30)
 for i, (x, y) in enumerate(pts):
     for k in range(-3, 4):
         X, Y = int(x + k), int(y)
         if 0 <= X < AW and 0 <= Y < AH:
             img[Y, X] = [STEEL[0], STEEL[2], STEEL[4], STEEL[5], STEEL[3], STEEL[1], STEEL[0]][k + 3]
-            block[Y, X] = True
+            block[Y, X] = True; sc.depth[Y, X] = sc.depth[Y, X] or 0.01
     if i % 14 == 0:                                                       # objímky přišroubované do kůry
         for k in range(-3, 4):
             if 0 <= int(x + k) < AW:
                 img[int(y), int(x + k)] = O.RUST[2]
+for y in range(168, 262):                                                 # dolů po kmeni, ztrácí se ve tmě
+    d = (y - 168) / 94
+    x0 = 166 + int(math.sin(y / 30) * 1.5)
+    for k in range(-3, 4):
+        col = np.array([STEEL[0], STEEL[2], STEEL[4], STEEL[5], STEEL[3], STEEL[1], STEEL[0]][k + 3][:3], float)
+        if (y - 168) % 18 == 0:
+            col = np.array(O.RUST[2][:3], float)
+        img[y, x0 + k, :3] = np.clip(col * (1 - d) * (1 - 0.4 * d) + img[y, x0 + k, :3] * d, 0, 255)
+        sc.depth[y, x0 + k] = 0.01
 # kůra přerůstá potrubí (pohlcení): úseky trubky pod kůrou
 for (i0, i1) in ((18, 26), (44, 52), (64, 72)):
     for (x, y) in pts[i0:i1]:
@@ -216,37 +293,12 @@ for (x, y) in ((70, 350), (74, 356), (62, 358), (80, 344), (58, 312), (86, 360))
 sc.shadows(floor)
 
 # ── kmen (zadní stěna): kůra jako kost, hluboké rýhy, zelené světlo v nich ──
-TRUNK = [c(0x14130F), c(0x2A2722), c(0x433F37), c(0x5E594E), c(0x7C7668), c(0x9C9584), c(0xBDB6A2)]
-FUR = []                                                                  # svislé rýhy kůry
-for k in range(-1, 16):
-    FUR.append((k * 12.5 + rng.uniform(-3, 3), rng.uniform(0, 6), rng.uniform(26, 44), k))
-
-
-def fur_x(f, y):
-    b, ph, per, k = f
-    return b + 3.5 * math.sin(y / per + ph) + (_vn(k * 31, y, 71, 14) - 0.5) * 5
-
-
 glow_mask = np.zeros((AH, AW))
 for y in range(WALL_H):
     xs = sorted(fur_x(f, y) for f in FUR)
     for x in range(AW):
-        i = int(np.searchsorted(xs, x + 0.5))
-        lft, rgt = xs[max(0, i - 1)], xs[min(len(xs) - 1, i)]
-        t = (x + 0.5 - lft) / max(1.0, rgt - lft)                         # 0 u levé rýhy … 1 u pravé
-        dist = min(abs(x + 0.5 - lft), abs(rgt - x - 0.5))
-        cyl = 0.6 - abs((x - 88) / 110) ** 2 * 0.45                       # obrovský válec, světlo uprostřed
-        v = cyl + 0.12 * (0.5 - t) + (_vn(x * 1.4, y * 0.5, 74, 3) - 0.5) * 0.16
-        if t < 0.18:
-            v += 0.12                                                     # levá hrana plátu ve světle
-        if (y + int(lft * 7)) % 23 == 0 and _h(int(lft), y // 23, 78) % 3 == 0:
-            v -= 0.3                                                      # příčná prasklina plátu
-        if dist < 1.3:
-            v = 0.04
-            if _vn(int(lft) * 13, y * 0.05, 75, 1) > 0.8:
-                glow_mask[y, x] = 1.0
-        elif dist < 2.4:
-            v = min(v, 0.2)
+        v, g = trunk_v(x, y, xs)
+        glow_mask[y, x] = g
         img[y, x] = _pick(TRUNK, max(0.0, min(1.0, v)), x, y)
 for y in range(WALL_H):                                                   # zelené světlo z rýh (+ jemná záře okolo)
     for x in range(AW):
@@ -257,7 +309,7 @@ for y in range(WALL_H):                                                   # zele
 # pata kmene přechází do kořene (stín v koutě)
 for y in range(WALL_H - 6, WALL_H + 10):
     for x in range(AW):
-        if floor[y, x] or y < WALL_H:
+        if floor[y, x] or (y < WALL_H and floor[WALL_H + 2, x]):
             k = max(0.0, 1 - abs(y - WALL_H) / 10) * 0.45
             img[y, x, :3] = (img[y, x, :3] * (1 - k)).astype(np.uint8)
 
@@ -343,7 +395,8 @@ sc.light(
     dark_k=0.36, warm_k=0.32, cold_k=0.2)
 keep = ~floor & (sc.zbuf < -1e8) & (sc.depth == 0)
 keep[:WALL_H] = False
-img[keep, :3] = (vista[keep, :3] * 0.8 + img[keep, :3] * 0.2).astype(np.uint8)
+wv = (1 - trunk_ext[keep])[:, None]                                       # kmen do hloubky plynule přechází do výhledu
+img[keep, :3] = ((vista[keep, :3] * 0.8 + img[keep, :3] * 0.2) * wv + img[keep, :3] * (1 - wv)).astype(np.uint8)
 sc.export("root_bridge", "gen_root_bridge.py")
 
 # portrét magnetofonu pro dialogy úkolu (8× bez vyhlazení)
