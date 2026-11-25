@@ -13,8 +13,8 @@ object Signal {
     const val NODE = "su_kesh"
     const val LAMP_NODE = "su_lampa"
     /** Pata Keshe (art px útesu). */
-    const val X = 96
-    const val Y = 270
+    const val X = 124
+    const val Y = 194
 
     const val STARTED_KEY = "signal_started"
     const val ANSWER_KEY = "signal_answer"

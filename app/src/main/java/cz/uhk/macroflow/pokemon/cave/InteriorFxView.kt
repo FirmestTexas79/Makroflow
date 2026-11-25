@@ -80,6 +80,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         snail(canvas, now)
         pebbles(canvas, now)
         crumbles(canvas, now)
+        falls(canvas, now)
         scorpion(canvas, now)
         dustDevil(canvas, now)
         glows(canvas, t)
@@ -508,6 +509,29 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
                 val r = (2 + k * 5).roundToInt()
                 for (dx in -r..r step 2) px(c, x + dx, b.y1 - (k * 3).roundToInt() - (if (dx % 4 == 0) 1 else 0), (a shl 24) or 0xBEAA8C)
             }
+        }
+    }
+
+    private val fallAt = LongArray(fx.falls.size) { t0 + 2000L + rnd.nextInt(9000) }
+    private val fallX = IntArray(fx.falls.size)
+    private val fallY = IntArray(fx.falls.size)
+
+    /** Kus kůry se odlomí od vzdáleného stromu a pomalu, kolébavě padá do mlhy, kde vybledne. */
+    private fun falls(c: Canvas, now: Long) {
+        for ((i, b) in fx.falls.withIndex()) {
+            val ms = now - fallAt[i]
+            if (ms < 0) continue
+            if (fallX[i] == 0) { fallX[i] = b.x0 + rnd.nextInt(maxOf(1, b.x1 - b.x0)); fallY[i] = b.y0 + rnd.nextInt(maxOf(1, (b.y1 - b.y0) / 3)) }
+            val dur = 4200L
+            if (ms > dur) { fallAt[i] = now + 5000L + rnd.nextInt(12000); fallX[i] = 0; continue }
+            val k = ms / dur.toFloat()
+            val x = (fallX[i] + sin(k * 7f + i) * 3f + k * 4f).roundToInt()
+            val y = (fallY[i] + (b.y1 - fallY[i]) * (k * 0.6f + k * k * 0.4f)).roundToInt()
+            val a = ((if (k < 0.7f) 1f else (1f - k) / 0.3f) * 230).toInt().coerceIn(0, 255)
+            val col = (a shl 24) or fx.fallColor
+            val tilt = (ms / 160) % 2 == 0L
+            px(c, x, y, col); px(c, x + if (tilt) 1 else 0, y + if (tilt) 0 else 1, col)
+            px(c, x - 1, y - 1, ((a / 3) shl 24) or 0x6AB496)                                      // slabý odlesk mlhy
         }
     }
 
@@ -1465,17 +1489,22 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
                 FxGlow(130, 181, 3, 3, 0x8AC8FF, 3.1f), FxGlow(82, 272, 3, 3, 0x8AC8FF, 2.6f), FxGlow(144, 54, 18, 8, 0x7EC0FF, 5f))
         )
 
-        /** Zóna 3, Signální útes: rána v kmeni pulzuje zeleně, šest světel v kmeni slabě dýchá, mlha se valí přes
-         *  korunu, z komínku boudy kouří, okno boudy a signální lampa blikají. */
+        /** Zóna 3, Signální útes: od vzdáleného stromu občas odpadne kůra a dlouho padá do mlhy, kolem koruny krouží
+         *  létavci, ze skalní hrany se drolí kamínky, rána v kmeni pulzuje, šest světel dýchá, mlha se valí přes korunu,
+         *  signální lampa cvaká clonou, z komínku boudy kouří a lampy podél stezky blikají. */
         val ROOT_SIGNAL = InteriorFx(
-            lamps = listOf(FxLamp(140, 300, 30, 18, FxBox(145, 280, 156, 284)), FxLamp(70, 248, 22, 14, null)),
-            steam = listOf(156 to 258),
-            fog = listOf(FxBox(0, 150, 176, 200), FxBox(0, 180, 176, 232)),
+            lamps = listOf(FxLamp(136, 140, 30, 20, FxBox(141, 120, 152, 125)), FxLamp(151, 286, 24, 16, FxBox(149, 266, 152, 268)),
+                FxLamp(155, 436, 24, 16, FxBox(153, 416, 156, 418)), FxLamp(150, 516, 24, 16, FxBox(148, 496, 151, 498))),
+            blinks = listOf(FxBlink(FxBox(104, 141, 110, 145), 0xFFFFE8B0.toInt())),
+            steam = listOf(152 to 98),
+            falls = listOf(FxBox(28, 80, 60, 300), FxBox(0, 200, 110, 470), FxBox(10, 230, 100, 520)),
+            crumbles = listOf(FxBox(104, 300, 112, 330), FxBox(108, 450, 116, 480)),
+            bats = FxBox(0, 60, 110, 320),
+            fog = listOf(FxBox(0, 260, 120, 320), FxBox(0, 380, 120, 460), FxBox(0, 480, 176, 560)),
             fogColor = 0x5CB496,
-            motes = listOf(FxBox(0, 40, 176, 230)),
+            motes = listOf(FxBox(0, 60, 150, 540)),
             moteColor = 0x9AF0C8,
-            glows = listOf(FxGlow(87, 78, 8, 14, 0x7AF0B0, 4.5f), FxGlow(96, 64, 4, 3, 0x9AFFC8, 6.5f),
-                FxGlow(171, 267, 3, 3, 0x8AC8FF, 2.1f), FxGlow(55, 265, 3, 3, 0x8AC8FF, 2.7f), FxGlow(62, 275, 3, 3, 0x8AC8FF, 3.3f))
+            glows = listOf(FxGlow(40, 113, 8, 14, 0x7AF0B0, 4.5f), FxGlow(49, 98, 4, 3, 0x9AFFC8, 6.5f), FxGlow(108, 166, 10, 6, 0xFFE8B0, 3f))
         )
 
         val ABYSS = InteriorFx(
@@ -1554,6 +1583,9 @@ data class InteriorFx(
     val snail: Pair<Pair<Int, Int>, Pair<Int, Int>>? = null,
     val pebbles: List<FxPath> = emptyList(),
     val crumbles: List<FxBox> = emptyList(),
+    /** Dlouhé pomalé pády (kůra odpadlá od vzdáleného stromu do mlhy): start v horní části boxu, dopad u y1. */
+    val falls: List<FxBox> = emptyList(),
+    val fallColor: Int = 0x0E1614,
     val scorpion: List<Pair<Int, Int>>? = null,
     val dustDevil: FxBox? = null,
     val glows: List<FxGlow> = emptyList(),

@@ -34,7 +34,9 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   Hunfrey sem nedošel (držíme jeho „Byl jsem až tady.“ ze Stanice 8). Setkání DUCH lv 30–34, intro SlopeCampIntro.
   Vstup z Pozorovatelny B schody dolů; dolů na Svah zatím nepřístupné.
 - **Signální útes** (`ROOT_SIGNAL`, `RootSignal.kt`, `gen_signal.py`), vedlejší lokace místo plánované „Lanovky nad
-  roklí“: ostroh na okraji propasti, přes horní půlku mapy výhled na celou Spící (kořeny po stropě, kmen s ránou a
+  roklí“ – přepracováno: vysoká mapa 176 × 560 (kamera jede s hráčem), stezka podél stěny stoupá přes lávku na ostroh;
+  vlevo v pozadí, daleko a ve stínu, celá Spící (`hlubina/tree.py`: souvislé větve s plynulým ohybem a pravidlem
+  trubek, jemné větvičky do mlhy, vzdušná perspektiva) – původně výhled na celou Spící (kořeny po stropě, kmen s ránou a
   zelenou mlhou, obrácená koruna, kopí a šest světel – Trpitel jen v náznaku), lana lanovky s uvízlou gondolou.
   Signální lampa, bouda signalisty, Kniha signálů, lavička. Vedlejší úkol **Signalista** (`story/Signal.kt`,
   `SIGNAL_QUEST`): Kesh (Lumex) nesl lucernu výpravy 7, jednou ráno promluvil a výprava byla pryč; každou noc
@@ -43,3 +45,5 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   Setkání DUCH a PSYCHO lv 30–34, intro SignalIntro. Grafika zóny: cedule s tloušťkou, leskem a špínou, sloupky
   s hlavicí a objímkami, stany v pohledu 3/4 shora (dvě plochy střechy, štít se vchodem), nová polní kuchyně
   a registrační stolek.
+- Živé detaily: nový efekt `falls` (kůra odpadlá od vzdáleného stromu pomalu padá do mlhy) vedle létavců, drolení
+  hrany, mlhy, pulzující rány a blikající clony signální lampy.

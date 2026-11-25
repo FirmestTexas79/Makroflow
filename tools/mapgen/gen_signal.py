@@ -3,232 +3,247 @@ Použití:  python tools/mapgen/gen_signal.py
 Výstup:   app/src/main/res/drawable-nodpi/root_signal.png, app/src/main/assets/walk/root_signal.txt,
           tools/mapgen/root_signal_debug.png
 
-Zóna 3 (Akt III – Hlubina), lokace 3 z 8 – vedlejší: SIGNÁLNÍ ÚTES (176 × 352, pohled 3/4 shora, docs/adr/0106).
-Skalní ostroh na okraji obrovské propasti; přes celou horní polovinu mapy výhled na Spící: kořeny rozlezlé po stropě
-dutiny, kmen visící do prázdna s ránou, ze které teče zelená mlha, a dole obrácená koruna, která se ztrácí v mlze.
-V kmeni se blýská kopí a u něj šest drobných zelených světel (Trpitel – zatím jen náznak). Od ostrohu vedou ke kmeni
-lana lanovky, uprostřed visí uvízlá gondola. Na ostrohu signální stanoviště Řádu: signální lampa s clonou,
-bouda signalisty (kouř z komínku, světlo v okně), stojan s KNIHOU SIGNÁLŮ, lavička k propasti, horní stanice
-lanovky. Vedlejší úkol „Signalista“ (Kesh). Vstup zprava po lávce z Pozorovatelny B.
-Setkání DUCH, LÉTAVÝ. Živé detaily: InteriorFxView.ROOT_SIGNAL. NODES / EDGES jsou ZDROJ PRAVDY i pro RootSignal.kt.
+Zóna 3 (Akt III – Hlubina), lokace 3 z 8 – vedlejší: SIGNÁLNÍ ÚTES (176 × 560, pohled 3/4 shora, docs/adr/0106).
+Vysoká mapa, kamera jede s hráčem: po skalní římse podél stěny dutiny se stoupá vzhůru – přes dřevěnou lávku
+nad průrvou – až na ostroh, který vybíhá do propasti. Celou dobu vlevo v pozadí, daleko a ve stínu, visí Spící:
+kořeny rozlezlé po stropě, krátký mohutný kmen a obrácená koruna, jejíž větve se dělí do jemné sítě a noří se
+do zářící zelené mlhy. Dole je vidět jen koruna v mlze, výš kmen s ránou (kopí, šest světel – jen náznak), nahoře
+kořeny ve stropě. Na ostrohu signální stanoviště Řádu: lampa s clonou, bouda signalisty, Kniha signálů, lavička,
+horní stanice lanovky s lany ke kmeni a uvízlou gondolou. Podél stezky lampy na tyčích a lanové zábradlí.
+Vedlejší úkol „Signalista“ (Kesh). Setkání DUCH a PSYCHO. Živé detaily: InteriorFxView.ROOT_SIGNAL.
+NODES / EDGES jsou ZDROJ PRAVDY i pro RootSignal.kt. Strom: tools/mapgen/hlubina/tree.py.
 """
 import math, os, sys
 import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "hlubina")); sys.path.insert(0, os.path.join(HERE, "tower"))
-from common import Spr, c, _pick, _h, _vn, ROCK, STEEL, SCREE, BAYER  # noqa: E402
+from common import Spr, c, _pick, _h, _vn, ROCK, STEEL, SCREE  # noqa: E402
 from scene import Scene  # noqa: E402
 from roots import root, bez  # noqa: E402
+from tree import TreePainter  # noqa: E402
 import order as O, signs as SG  # noqa: E402
 
-AW, AH = 176, 352
-LEDGE = 214                                                               # odkud začíná ostroh (nad ním výhled)
+AW, AH = 176, 560
+TX = 46                                                                   # osa stromu v pozadí
 NODES = {
-    "su_vstup": (166, 326), "su_bouda": (138, 318), "su_kesh": (96, 266), "su_lampa": (70, 262),
-    "su_kniha": (52, 284), "su_lavicka": (112, 250), "su_lanovka": (30, 300), "su_okraj": (88, 236),
+    "su_vstup": (150, 548), "su_cesta1": (138, 484), "su_lavka": (138, 388), "su_cesta2": (136, 306),
+    "su_lanovka": (138, 252), "su_kniha": (116, 216), "su_kesh": (124, 192), "su_lampa": (112, 178),
+    "su_lavicka": (136, 176), "su_bouda": (136, 152), "su_okraj": (108, 164),
 }
-EDGES = [("su_vstup", "su_bouda"), ("su_bouda", "su_kesh"), ("su_kesh", "su_lampa"), ("su_lampa", "su_kniha"),
-         ("su_kesh", "su_lavicka"), ("su_lavicka", "su_okraj"), ("su_kniha", "su_lanovka"), ("su_lampa", "su_okraj")]
+EDGES = [("su_vstup", "su_cesta1"), ("su_cesta1", "su_lavka"), ("su_lavka", "su_cesta2"), ("su_cesta2", "su_lanovka"),
+         ("su_lanovka", "su_kniha"), ("su_kniha", "su_kesh"), ("su_kesh", "su_lampa"), ("su_kesh", "su_lavicka"),
+         ("su_lavicka", "su_bouda"), ("su_lampa", "su_okraj")]
 sc = Scene(AW, AH, 0, NODES, EDGES)
 img, block = sc.img, sc.block
 rng = np.random.default_rng(66)
 
-# ── výhled: záře mlhy zpoza a zespodu, tmavý strop, vzdálené stěny dutiny ──
+
+# ── pozadí: zářící mlha zespodu, závoj za kmenem, strop dutiny ───────────────
+def mist(x, y):
+    d = math.hypot((x - TX) / 150, (y - 470) / 330)
+    g = max(0.0, 1 - d) ** 1.2
+    col = np.array([4, 8, 9], float) * (1 - g) + np.array([62, 128, 106], float) * g
+    veil = math.exp(-((x - TX) / 46) ** 2) * max(0.0, min(1.0, (y - 30) / 60)) * 0.5
+    col = col + np.array([18, 40, 34]) * veil
+    n = _vn(x * 0.6, y * 1.2, 3, 26) * 0.65 + _vn(x, y, 5, 8) * 0.35
+    return col * (0.82 + 0.36 * n)
+
+
 for y in range(AH):
     for x in range(AW):
-        d = math.hypot((x - 92) / 120, (y - 200) / 150)
-        g = max(0.0, 1 - d) ** 1.3
-        col = np.array([5, 9, 10], float) * (1 - g) + np.array([58, 132, 106], float) * g
-        n = _vn(x, y * 1.8, 3, 18) * 0.6 + _vn(x, y, 5, 6) * 0.4
-        col = col * (0.86 + 0.28 * n)
-        img[y, x, :3] = np.clip(col, 0, 255)
-for y in range(0, 30):                                                    # strop dutiny
+        img[y, x, :3] = np.clip(mist(x, y), 0, 255)
+for y in range(0, 44):                                                    # strop dutiny
     for x in range(AW):
-        edge = 12 + _vn(x, 0, 7, 9) * 14
-        if y < edge:
-            img[y, x] = _pick(ROCK, 0.18 + (_vn(x, y, 8, 4) - 0.5) * 0.25 + (y / edge) * 0.12, x, y)
-for side in (0, 1):                                                       # vzdálené stěny dutiny
-    for y in range(20, LEDGE + 20):
-        wv = 8 + _vn(side * 50, y, 9, 20) * 18 + (y - 20) * 0.05
-        for x in range(int(wv)):
-            X = x if side == 0 else AW - 1 - x
-            img[y, X, :3] = np.clip(img[y, X, :3] * 0.45 + np.array([8, 16, 15]) * 0.5, 0, 255)
+        if y < 18 + _vn(x, 0, 7, 11) * 22:
+            img[y, x] = _pick(ROCK, 0.15 + (_vn(x, y, 8, 4) - 0.5) * 0.25 + y / 44 * 0.12, x, y)
 
-# ── Spící: kořeny po stropě, kmen s ránou, obrácená koruna ──────────────────
-TREE = [c(0x030504), c(0x080C0B), c(0x0E1614), c(0x16201D), c(0x22302B), c(0x324540)]
-TX, T0, T1 = 92, 26, 118
-mask = np.zeros((AH, AW), bool)
+# ── Spící ───────────────────────────────────────────────────────────────────
+def haze(x, y):
+    return np.clip(mist(x, y), 0, 255), min(0.85, 0.22 + max(0.0, (y - 300) / 260) * 0.6)
 
 
-def limb(pts, w0, w1, haze=0.0):
-    """Silueta větve/kořene: skoro černá kůra s jemnými rýhami, vzdušná perspektiva (haze) do barvy mlhy."""
-    n = len(pts)
-    for i in range(n - 1):
-        (x0, y0), (x1, y1) = pts[i], pts[i + 1]
-        t = i / (n - 1)
-        w = (w0 + (w1 - w0) * t) * (1 + 0.1 * math.sin(t * 17 + w0))
-        dx, dy = x1 - x0, y1 - y0
-        ln = math.hypot(dx, dy) or 1
-        nx, ny = -dy / ln, dx / ln
-        steps = max(1, int(ln * 1.6))
-        for s_ in range(steps):
-            cx, cy = x0 + dx * s_ / steps, y0 + dy * s_ / steps
-            for k in np.linspace(-w / 2, w / 2, max(2, int(w * 2.4))):
-                X, Y = int(round(cx + nx * k)), int(round(cy + ny * k))
-                if not (0 <= X < AW and 0 <= Y < AH) or mask[Y, X] and haze > 0.3:
-                    continue
-                u = k / (w / 2 + 0.01)
-                v = 0.4 - 0.25 * u + (_vn(X * 1.6, Y * 0.7, 13, 3) - 0.5) * 0.3
-                if abs(_vn(cx * 0.8 + k * 2.5, cy * 0.8, 14, 3) - 0.5) < 0.05:
-                    v -= 0.2                                              # podélné rýhy kůry
-                col = _pick(TREE, max(0.0, min(1.0, v)), X, Y)[:3].astype(float)
-                img[Y, X, :3] = np.clip(col * (1 - haze) + img[Y, X, :3] * haze, 0, 255)
-                mask[Y, X] = True
+tp = TreePainter(img, haze, seed=4)
+trunk = []
+for i in range(41):
+    t = i / 40
+    trunk.append((TX + math.sin(t * 2.2) * 3, 36 + t * 150, 8.5 - 2.0 * t + 4 * max(0, 0.08 - t) / 0.08 + 3 * max(0, t - 0.9) / 0.1))
+tp.stroke(trunk)
+bx, by = trunk[-1][0], trunk[-1][1]
+tp.split3 = 0.45
+for ang, r, L in ((math.pi / 2 - 1.25, 4.0, 62), (math.pi / 2 - 0.75, 4.6, 72), (math.pi / 2 - 0.25, 5.0, 78),
+                  (math.pi / 2 + 0.25, 5.0, 78), (math.pi / 2 + 0.75, 4.6, 72), (math.pi / 2 + 1.25, 4.0, 62)):
+    tp.branch(bx, by, ang, r, L, 0, math.pi / 2, spread=(0.38, 0.72), bend=0.05, maxdepth=8, pull=0.018)
+tp.split3 = 0.3
+tx_, ty_ = trunk[0][0], trunk[0][1]
+for ang, r, L in ((-math.pi / 2 - 1.3, 4.5, 60), (-math.pi / 2 - 0.8, 4.0, 50), (-math.pi / 2 + 0.4, 3.8, 40),
+                  (-math.pi / 2 + 0.95, 4.2, 55), (-math.pi / 2 + 1.35, 4.6, 70)):
+    g = math.pi if math.cos(ang) < 0 else 0.0
+    tp.branch(tx_, ty_ + 2, ang, r * 1.3, L * 1.2, 0, g, spread=(0.3, 0.6), bend=0.06, maxdepth=7, clamp_y=6, pull=0.04)
+tp.composite()
 
-
-def bz(p0, p1, p2, n=40):
-    return [((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
-             (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]) for t in np.linspace(0, 1, n)]
-
-
-def branch(x, y, ang, ln, w, lvl, down=True):
-    if lvl > 5 or ln < 3 or w < 0.5:
-        return
-    pts = []
-    a = ang
-    for _ in range(9):
-        pts.append((x, y))
-        a += rng.uniform(-0.2, 0.2)
-        if not down and y < 16:
-            a = a * 0.7 + (0 if math.cos(a) > 0 else math.pi) * 0.3       # po stropě se kořen stáčí do strany
-        x += math.cos(a) * ln / 8; y += math.sin(a) * ln / 8
-        y = max(y, 6) if not down else y
-    haze = min(0.6, 0.06 * lvl + (max(0, y - 160) / 140 if down else 0.0))
-    limb(pts, w, max(0.5, w * 0.6), haze)
-    tips.append((x, y, lvl))
-    for s_ in (-1, 1):
-        if rng.random() < 0.88:
-            branch(x, y, ang + s_ * rng.uniform(0.25, 0.6), ln * rng.uniform(0.6, 0.78), w * 0.62, lvl + 1, down)
-
-
-tips = []
-for ang in (math.pi / 2 - 1.3, math.pi / 2 - 0.7, math.pi / 2 - 0.2, math.pi / 2 + 0.25, math.pi / 2 + 0.75, math.pi / 2 + 1.3):
-    branch(TX + math.cos(ang) * 5, T1, ang, 48, 10, 0, True)              # obrácená koruna dolů
-for ang in (-math.pi / 2 - 1.2, -math.pi / 2 - 0.7, -math.pi / 2 - 0.25, -math.pi / 2 + 0.25, -math.pi / 2 + 0.7, -math.pi / 2 + 1.2):
-    branch(TX + math.cos(ang) * 5, T0 + 4, ang, 30, 12, 0, False)          # kořeny nahoru a po stropě
-limb([(TX + math.sin(i / 3) * 1.2, T0 + i * (T1 - T0) / 24) for i in range(25)], 22, 16, 0.0)              # kmen
-# světelný lem: pixely stromu, které mají vlevo dole mlhu, chytnou její záři
-for y in range(1, AH - 1):
-    for x in range(1, AW - 1):
-        if mask[y, x] and not mask[y + 1, x - 1] and T0 + 6 < y < LEDGE:
-            img[y, x, :3] = np.clip(img[y, x, :3] * 0.65 + np.array([80, 170, 130]) * 0.35, 0, 255)
-# rána v kmeni: úzká rozštěpená štěrbina se září
-for y in range(66, 90):
-    q = (y - 66) / 24
-    half = 1.6 * math.sin(q * math.pi)
-    for x in range(int(TX - 5 - half), int(TX - 5 + half) + 1):
-        img[y, x, :3] = (170, 255, 200) if abs(x - (TX - 5)) < half * 0.5 else (70, 190, 130)
-for y in range(56, 100):                                                  # halo kolem rány
-    for x in range(TX - 20, TX + 10):
-        d = math.hypot((x - (TX - 5)) / 14, (y - 78) / 20)
-        if d < 1 and not mask[y, x]:
-            a = round((1 - d) * 3) / 3 * 0.4
-            img[y, x, :3] = np.clip(img[y, x, :3] * (1 - a) + np.array([110, 230, 160]) * a, 0, 255)
-# kopí a šest světel (Trpitel – jen náznak)
-for i in range(16):
-    img[54 + i, TX + 8 + i // 3, :3] = (210, 216, 224) if i < 3 else (120, 126, 136)
-for (ex, ey) in ((TX + 3, 62), (TX + 6, 62), (TX + 2, 64), (TX + 7, 64), (TX + 3, 66), (TX + 6, 66)):
-    img[ey, ex, :3] = (170, 255, 200)
-for (x, y) in ((TX - 10, 40), (TX + 10, 52), (TX - 9, 104)):              # kotvy Řádu v kmeni
-    img[y, x, :3] = (255, 200, 110)
-for (x, y, lvl) in tips:                                                  # bioluminiscence na konečcích koruny
-    if lvl >= 3 and 0 <= int(x) < AW and 120 <= int(y) < LEDGE and rng.random() < 0.6:
-        img[int(y), int(x), :3] = (170, 230, 255)
-# zelená mlha: stéká z rány a vrství se přes korunu (měkké pásy, 4 stupně průhlednosti)
-for y in range(76, LEDGE + 24):
+# rána v kmeni (tlumeně – je to daleko), kopí a šest světel jen jako náznak
+for y in range(104, 122):
+    q = (y - 104) / 18
+    half = 1.2 * math.sin(q * math.pi)
+    for x in range(int(TX - 6 - half), int(TX - 6 + half) + 1):
+        img[y, x, :3] = (96, 190, 140) if abs(x - (TX - 6)) <= half * 0.5 else (52, 120, 92)
+for y in range(92, 140):
+    for x in range(TX - 22, TX + 8):
+        d = math.hypot((x - (TX - 6)) / 14, (y - 113) / 22)
+        if d < 1 and tp.cov[y, x] < 0.5:
+            a = round((1 - d) * 3) / 3 * 0.22
+            img[y, x, :3] = np.clip(img[y, x, :3] * (1 - a) + np.array([90, 200, 150]) * a, 0, 255)
+for i in range(10):
+    img[88 + i, TX + 7 + i // 3, :3] = (150, 156, 164) if i < 2 else (70, 78, 84)
+for (ex, ey) in ((TX + 2, 96), (TX + 4, 96), (TX + 1, 98), (TX + 5, 98), (TX + 2, 100), (TX + 4, 100)):
+    img[ey, ex, :3] = (110, 200, 150)
+for (x, y, lvl) in [(x, y, 0) for (x, y) in tp.tips]:                     # světélka na konečcích (jen některá)
+    if 0 <= int(x) < AW and 230 <= int(y) < AH and rng.random() < 0.25:
+        img[int(y), int(x), :3] = np.clip(img[int(y), int(x), :3] * 0.4 + np.array([150, 220, 240]) * 0.6, 0, 255)
+# zelená mlha z rány a vrstvy mlhy před korunou (měkké, 4 stupně)
+for y in range(110, AH):
     for x in range(AW):
-        stream = max(0.0, 1 - abs(x - (TX - 6 - (y - 76) * 0.12)) / (3 + (y - 76) * 0.3)) * max(0.0, 1 - (y - 76) / 170)
-        m = _vn(x + 30, y * 2.2, 21, 14) * 0.7 + _vn(x, y * 1.5, 22, 6) * 0.3
-        layer = max(0.0, (m - 0.6) * 2.0) * min(1.0, max(0.0, (y - 150) / 50))
-        a = min(0.6, stream * 0.7 + layer * 0.45)
-        a = math.floor(a * 4) / 4
+        stream = max(0.0, 1 - abs(x - (TX - 7 - (y - 110) * 0.1)) / (2.5 + (y - 110) * 0.22)) * max(0.0, 1 - (y - 110) / 200)
+        m = _vn(x * 0.7 + 40, y * 1.6, 21, 22) * 0.7 + _vn(x, y * 1.2, 22, 8) * 0.3
+        layer = max(0.0, (m - 0.62) * 1.8) * min(1.0, max(0.0, (y - 220) / 80))
+        a = math.floor(min(0.5, stream * 0.45 + layer * 0.4) * 4) / 4
         if a > 0:
-            img[y, x, :3] = np.clip(img[y, x, :3] * (1 - a) + np.array([92, 190, 150]) * a, 0, 255)
+            img[y, x, :3] = np.clip(img[y, x, :3] * (1 - a) + np.array([86, 170, 136]) * a, 0, 255)
 
-# lana lanovky z ostrohu ke kmeni a uvízlá gondola
-for (x0, y0, x1, y1) in ((26, 262, TX - 9, 96), (32, 262, TX - 8, 100)):
-    for t in np.linspace(0, 1, 400):
-        X = int(x0 + (x1 - x0) * t); Y = int(y0 + (y1 - y0) * t + math.sin(t * math.pi) * 10)
-        img[Y, X, :3] = (30, 36, 40) if t < 0.5 else (24, 38, 36)
-gx, gy = 56, 180
-for y in range(gy, gy + 9):
-    for x in range(gx, gx + 8):
-        img[y, x] = _pick(O.YELLOW, 0.5 - (x - gx) * 0.04, x, y) if not (y in (gy + 2, gy + 3) and 1 < x - gx < 7) else c(0x14181C)
-for y in range(gy - 4, gy):
-    img[y, gx + 4] = STEEL[2]
+# ── popředí: skalní římsa podél stěny a ostroh ──────────────────────────────
+def brink(y):
+    """Levá hrana pochozí plochy (vlevo od ní propast); None = v tomto řádku není podlaha."""
+    if y < 104:
+        return None
+    if y < 240:                                                           # ostroh vybíhá doleva do propasti
+        return 94 + ((y - 172) / 68) ** 2 * 26 + (_vn(0, y, 31, 9) - 0.5) * 6
+    if 372 <= y <= 404:                                                   # průrva – jen lávka
+        return None
+    return 112 + math.sin(y / 40) * 9 + (_vn(0, y, 32, 11) - 0.5) * 8
 
-# ── ostroh (podlaha) ────────────────────────────────────────────────────────
-def ledge_top(x):
-    return LEDGE + 18 + math.sin(x / 13) * 6 + (_vn(x, 0, 33, 7) - 0.5) * 10 - max(0, 40 - x) * 0.4
+
+def wall_x(y):
+    return 160 + math.sin(y / 31) * 3 + (_vn(1, y, 33, 9) - 0.5) * 5
 
 
 block[:, :] = True
-for x in range(AW):
-    top = int(ledge_top(x))
-    for y in range(top, AH):
-        v = 0.48 + (_vn(x * 1.2, y, 23, 6) - 0.5) * 0.3 + (_vn(x, y, 24, 2) - 0.5) * 0.14
+floor = np.zeros((AH, AW), bool)
+for y in range(AH):
+    b = brink(y)
+    wx = int(wall_x(y))
+    for x in range(wx, AW):                                               # stěna dutiny vpravo (svislá skála)
+        v = 0.34 + (_vn(x * 2, y * 0.5, 41, 5) - 0.5) * 0.3 - (x - wx) * 0.01
+        if abs(_vn(x, y * 0.6, 42, 7) - 0.5) < 0.03:
+            v = 0.1
+        img[y, x] = _pick(ROCK, max(0.0, min(1.0, v)), x, y)
+        if x == wx:
+            img[y, x] = ROCK[4]
+    if b is None:
+        continue
+    b = int(b)
+    for x in range(max(0, b), wx):
+        v = 0.46 + (_vn(x * 1.2, y, 23, 6) - 0.5) * 0.3 + (_vn(x, y, 24, 2) - 0.5) * 0.14
         if _h(x, y, 25) % 37 == 0:
             v += 0.22
         img[y, x] = _pick(SCREE, max(0.0, min(1.0, v)), x, y)
-        if y > top + 4:
+        floor[y, x] = True
+        if x > b + 3 and x < wx - 2:
             block[y, x] = False
-    for y in range(top, top + 3):                                         # hrana ostrohu světlejší
-        img[y, x] = _pick(ROCK, 0.55 - (y - top) * 0.1, x, y)
-    for y in range(top - 6, top):                                         # spodní stín hrany (tloušťka skály není vidět – jen tma)
-        if y >= 0 and y < AH:
-            img[y, x, :3] = (img[y, x, :3] * (0.7 + (top - y) * 0.05)).astype(np.uint8)
+    for x in range(max(0, b), min(wx, b + 2)):                            # hrana nad propastí
+        img[y, x] = _pick(ROCK, 0.6, x, y)
+    for x in range(max(0, b - 3), max(0, b)):                             # stinná boční hrana skály
+        img[y, x] = ROCK[1]
+# spodní (jižní) hrana ostrohu: tloušťka skály pod ním
+for x in range(AW):
+    for y in range(236, 250):
+        if not floor[y, x] and floor[y - 1, x] if y > 0 else False:
+            for k in range(10):
+                if y + k < AH and not floor[y + k, x]:
+                    img[y + k, x] = _pick(ROCK, 0.3 - k * 0.03, x, y + k)
 
-# kořeny (3/8): lezou přes hranu ostrohu z propasti
-root(sc, bez((60, 220), (50, 260), (20, 290)), 10, 5, lift=0.6, d=0.45)
-root(sc, bez((150, 226), (160, 262), (176, 280)), 11, 6, lift=0.6, d=0.45)
-for (p0, p1, p2, w) in (((50, 260), (64, 276), (70, 300), 3), ((160, 262), (140, 272), (124, 270), 3)):
-    root(sc, bez(p0, p1, p2, 30), w, 1.2, solid=False, d=0.5)
+# lávka přes průrvu
+for y in range(368, 408):
+    for x in range(118, 160):
+        edge = x in (118, 119, 158, 159)
+        seam = (y - 368) % 5 == 0
+        img[y, x] = _pick(O.WOOD_POLE, 0.2 if edge or seam else 0.62 + (_vn(x, y, 81, 2) - 0.5) * 0.3, x, y)
+        floor[y, x] = True
+        if 121 < x < 157:
+            block[y, x] = False
+    for xr in (117, 160):
+        img[y, xr] = c(0xC8BE9C) if y % 2 else c(0x8A8268)                 # lanové zábradlí
+for y in range(408, 412):                                                 # stín lávky do průrvy
+    for x in range(118, 160):
+        img[y, x, :3] = (img[y, x, :3] * 0.55).astype(np.uint8)
+# lanové zábradlí podél hrany stezky: sloupky po 22 px a prověšené lano
+prev = None
+for y in range(250, AH, 22):
+    b = brink(y)
+    if b is None:
+        prev = None
+        continue
+    x = int(b) + 4
+    for k in range(7):
+        img[y - k, x] = O.WOOD_POLE[2]; img[y - k, x + 1] = O.WOOD_POLE[0]
+    if prev:
+        for t in np.linspace(0, 1, 30):
+            X = int(prev[0] + (x - prev[0]) * t); Y = int(prev[1] - 6 + (y - prev[1]) * t + math.sin(t * math.pi) * 3)
+            img[Y, X] = c(0xB8AE8C)
+    prev = (x, y)
 
-# ── předměty na ostrohu ─────────────────────────────────────────────────────
-sc.place(O.signal_lamp(), 70, 256, foot=(24, 6))
-sc.place(O.signal_hut(2), 140, 304, foot=(46, 18))
-hut_sign = SG.plate("SIGNÁLNÍ STANOVIŠTĚ", c(0xE8E2CC), c(0x1E2A44), seed=31, pad=2, wear=0.0)
-if hut_sign.w > 70:
-    hut_sign = SG.plate("SIGNÁL", c(0xE8E2CC), c(0x1E2A44), seed=31, pad=2, wear=0.0)
-sc.place(O.mount_plate(hut_sign, posts=8), 92, 318, foot=(4, 2))
-sc.place(O.lectern_book(), 50, 290, foot=(8, 4))
-sc.place(O.bench(), 112, 256, foot=(26, 4))
-sc.place(O.cable_pylon(54), 28, 290, foot=(18, 5))
+# kořeny (3/8): z propasti přes hranu na stezku a ostroh
+root(sc, bez((96, 214), (106, 226), (112, 238)), 8, 4, lift=0.6, d=0.45)          # kořen přes hranu ostrohu
+root(sc, bez((106, 470), (114, 480), (122, 500)), 7, 3, lift=0.5, d=0.45)          # a přes hranu stezky
+
+# ── předměty ────────────────────────────────────────────────────────────────
+sc.place(O.signal_lamp(), 108, 172, foot=(24, 6))
+sc.place(O.signal_hut(2), 136, 144, foot=(46, 18))
+hut_sign = SG.plate("SIGNÁL", c(0xE8E2CC), c(0x1E2A44), seed=31, pad=2, wear=0.0)
+sc.place(O.mount_plate(hut_sign, posts=8), 150, 236, foot=(4, 2))
+sc.place(O.lectern_book(), 108, 210, foot=(8, 4))
+sc.place(O.bench(), 140, 184, foot=(26, 4))
+sc.place(O.cable_pylon(54), 126, 244, foot=(18, 5))
 pl = SG.plate("LANOVKA", c(0x141414), c(0xE2BA34), seed=5, pad=3, wear=0.0)
-sc.place(O.mount_plate(pl, posts=8), 30, 318, foot=(4, 2))
-for (x, y, sd) in ((122, 334, 3), (108, 340, 5)):
+sc.place(O.mount_plate(pl, posts=8), 146, 262, foot=(4, 2))
+for (y,) in ((290,), (440,), (520,)):                                    # lampy na tyčích podél stezky
+    lamp = Spr(8, 26)
+    for yy in range(4, 26):
+        lamp.px(3, yy, O.WOOD_POLE[3]); lamp.px(4, yy, O.WOOD_POLE[1])
+    lamp.rect(1, 0, 6, 4, STEEL[2]); lamp.rect(2, 2, 5, 4, O.SODIUM)
+    sc.place(lamp, int(wall_x(y)) - 8, y, foot=(4, 2))
+for (x, y, sd) in ((150, 200, 3), (152, 212, 5)):
     sc.place(O.army_crate(sd), x, y, pad=0)
-sc.shadows(~block)
+# lana lanovky z ostrohu ke kmeni a uvízlá gondola
+for (y0, y1) in ((192, 132), (196, 138)):
+    for t in np.linspace(0, 1, 300):
+        X = int(124 + (TX + 9 - 124) * t); Y = int(y0 + (y1 - y0) * t + math.sin(t * math.pi) * 10)
+        img[Y, X, :3] = (28, 34, 38) if t < 0.5 else (34, 52, 48)
+gx, gy = 80, 168
+for y in range(gy, gy + 8):
+    for x in range(gx, gx + 7):
+        img[y, x] = _pick(O.YELLOW, 0.45 - (x - gx) * 0.04, x, y) if not (y in (gy + 2, gy + 3) and 0 < x - gx < 6) else c(0x14181C)
+for y in range(gy - 5, gy):
+    img[y, gx + 3] = STEEL[2]
+
+sc.shadows(floor)
 sc.draw_sprites()
 
 fungi = []
-for _ in range(6000):
-    x, y = int(rng.integers(2, AW - 3)), int(rng.integers(LEDGE, 340))
+for _ in range(9000):
+    x, y = int(rng.integers(2, AW - 3)), int(rng.integers(100, AH - 4))
     if sc.depth[y, x] and not sc.depth[y, x + 2] and len(fungi) < 30:
         fungi.append((x, y))
         img[y, x, :3] = (150, 210, 255); img[y, x - 1, :3] = (80, 140, 220); img[y + 1, x, :3] = (40, 70, 120)
 
-block[:, :2] = True; block[:, AW - 2:] = True
-block[318:334, AW - 2:] = False                                           # vstup zprava (lávka)
-for y in range(318, 334):
-    for x in range(160, AW):
-        img[y, x] = STEEL[2] if (x + y) % 3 else STEEL[1]
-
-vista = img[:LEDGE + 10].copy()
+# vstup dole vpravo (lávka z Pozorovatelny B)
+block[536:AH, 140:160] = False
+vista = img.copy()
+lamps_xy = [(int(wall_x(y)) - 8, y - 22) for y in (290, 440, 520)]
 sc.light(
-    warm=[(140, 300, 32, 20, 0.9), (70, 252, 24, 16, 0.8), (50, 286, 14, 10, 0.5)],
-    cold=[(x, y, 7, 6, 0.6) for (x, y) in fungi] + [(TX - 4, 78, 16, 14, 0.6)],
-    dark_k=0.3, warm_k=0.32, cold_k=0.15)
-img[:LEDGE + 10, :, :3] = (vista[:, :, :3] * 0.8 + img[:LEDGE + 10, :, :3] * 0.2).astype(np.uint8)   # výhled se nestmívá
+    warm=[(136, 140, 30, 20, 0.9), (108, 166, 22, 14, 0.8), (108, 206, 14, 10, 0.5)] + [(x, y + 18, 26, 16, 0.8) for (x, y) in lamps_xy],
+    cold=[(x, y, 7, 6, 0.6) for (x, y) in fungi] + [(TX - 6, 113, 14, 16, 0.5)],
+    dark_k=0.32, warm_k=0.32, cold_k=0.15)
+keep = ~floor                                                             # výhled (vše mimo podlahu) se nestmívá
+img[keep, :3] = (vista[keep, :3] * 0.85 + img[keep, :3] * 0.15).astype(np.uint8)
 sc.export("root_signal", "gen_signal.py")
-print("FUNGI", fungi[:10])
+print("LAMPS", lamps_xy, "FUNGI", fungi[:8])

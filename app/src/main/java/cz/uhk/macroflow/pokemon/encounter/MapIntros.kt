@@ -980,7 +980,7 @@ class SlopeCampIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 132, 290, 21) {
 
 /** Signální útes (zóna 3): signální lampa vyšle přes propast tři krátké záblesky, pak se kužel stočí dolů k okraji
  *  útesu – a v mlze pod hranou se rozsvítí oči; při výpadu se zvedne zelená mlha. */
-class SignalIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 90, 238, 17) {
+class SignalIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 96, 196, 17) {
     override val shade = hex(0x030806)
     override val accent = hex(0xB8FFD8)
     override val dimMax = 0.6f
@@ -988,11 +988,11 @@ class SignalIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 90, 238, 17) {
     private val wisps = spray(20, 15f, 50f, 20f)
 
     override fun act(t: Long) {
-        val ox = sx(70f); val oy = sy(246f)
+        val ox = sx(106f); val oy = sy(143f)
         val flash = pulse(t, Kit.FADE + 100, 110) + pulse(t, Kit.FADE + 330, 110) + pulse(t, Kit.FADE + 560, 110)
-        if (flash > 0.05f) beam(ox, oy, sx(92f), sy(70f), flash.coerceAtMost(1f), hex(0xFFE8B0))
+        if (flash > 0.05f) beam(ox, oy, sx(48f), sy(110f), flash.coerceAtMost(1f), hex(0xFFE8B0))
         val dip = p(t, TELL2, CLIMAX)
-        if (dip > 0f) beam(ox, oy, sx(92f) + (cx - sx(92f)) * dip, sy(70f) + (cy - sy(70f)) * dip, 0.9f, hex(0xFFE8B0))
+        if (dip > 0f) beam(ox, oy, sx(48f) + (cx - sx(48f)) * dip, sy(110f) + (cy - sy(110f)) * dip, 0.9f, hex(0xFFE8B0))
         mapEyes(cx, cy, 2.4f, hex(0xB8FFD8), eyeAlpha(t))
         val s = since(t)
         if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -18f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
