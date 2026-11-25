@@ -333,28 +333,34 @@ def fence(w, h=22, seed=0, gap=None):
 def gen_shed(seed=0):
     """Bouda s generátorem: malý plechový kontejner, vedle naftový agregát s výfukem a kabely, střechou
     prorůstá kořen."""
-    s = Spr(52, 34)
+    s = Spr(58, 34)
+    CW = 38                                                               # šířka kontejneru
     for y in range(8):
-        for x in range(1, 33):
+        for x in range(1, CW):
             _shade(s, x, y, 0.6 - y * 0.02, OLIVE)
     for y in range(8, 34):
-        for x in range(1, 33):
+        for x in range(1, CW):
             _shade(s, x, y, 0.4 + 0.12 * math.cos(x * 1.6) - (0.15 if (_h(x, y, seed) % 23 == 0) else 0), OLIVE)
-    for y in range(13, 33):
-        for x in range(5, 14):
-            s.px(x, y, OLIVE[3] if x in (5, 13) or y == 13 else OLIVE[1])
+    for y in range(13, 33):                                                # dveře
+        for x in range(4, 13):
+            s.px(x, y, OLIVE[3] if x in (4, 12) or y == 13 else OLIVE[1])
+    for y in range(16, 25):                                                # štítek ZDROJ: tmavý panel přišroubovaný na plech
+        for x in range(15, 36):
+            s.px(x, y, c(0x14161A) if 15 < x < 35 and 16 < y < 24 else c(0x5A6270))
+    for (x, y) in ((16, 17), (34, 17), (16, 23), (34, 23)):
+        s.px(x, y, c(0xB8C0CC))
+    tiny(s, 16, 18, "ZDROJ", c(0xE8E2CC))
     for y in range(16, 30):                                                # agregát
-        for x in range(34, 51):
+        for x in range(40, 57):
             _shade(s, x, y, 0.55 - (y - 16) * 0.015 + (0.12 if y == 16 else 0), YELLOW)
-    for x in range(36, 49, 3):
+    for x in range(42, 55, 3):
         for y in range(19, 27):
             s.px(x, y, YELLOW[0])
     for y in range(6, 16):
-        s.px(47, y, STEEL[1]); s.px(48, y, STEEL[2])                        # výfuk
+        s.px(53, y, STEEL[1]); s.px(54, y, STEEL[2])                        # výfuk
     for y in range(0, 12):                                                 # kořen přes střechu
         for k in range(-2, 3):
-            _shade(s, 18 + y // 2 + k, y, 0.7 - abs(k) * 0.12, BARK)
-    tiny(s, 15, 20, "ZDROJ", c(0xD8D2BE))
+            _shade(s, 20 + y // 2 + k, y, 0.7 - abs(k) * 0.12, BARK)
     return selout(s, 0.5, 0.8)
 
 
@@ -574,3 +580,168 @@ def wall_chart(title="KONTROLA"):
         s.line(a[0], a[1], b[0], b[1], RED[3])
     s.hline(3, W - 4, H - 3, c(0x3A3428))
     return selout(s, 0.55, 0.9)
+
+
+# ── Tábor na svahu (pohlcení 4/8) ───────────────────────────────────────────
+CANVAS = [c(0x2E2C22), c(0x48443A), c(0x6A6450), c(0x8E8668), c(0xB0A884), c(0xCEC6A2)]
+
+
+def pennant(num, h=26):
+    """Tyč s praporkem výpravy: rudý praporek s bílým číslem (glyf 5×7), tyč zatlučená do země."""
+    from signs import glyph
+    s = Spr(16, h)
+    for y in range(h):
+        s.px(1, y, WOOD_POLE[2]); s.px(2, y, WOOD_POLE[0])
+    for y in range(1, 12):
+        for x in range(3, 15):
+            if x - 3 < 12 - abs(y - 6) * 0.4:
+                s.px(x, y, RED[3] if y > 1 else RED[4])
+    g = glyph(num)[2:]
+    for dy, row in enumerate(g):
+        for dx, b in enumerate(row):
+            if b == "#":
+                s.px(5 + dx, 2 + dy, c(0xF0EADA))
+    return selout(s, 0.55, 0.85)
+
+
+WOOD_POLE = [c(0x2A1A10), c(0x4A3020), c(0x6E4A30), c(0x8C6444)]
+
+
+def ridge_tent(num, overgrowth=0.0, seed=0, w=40, h=28, dx=12, dy=10):
+    """Hřebenový stan Řádu ve 3/4 (zepředu zleva): čelní štít s vchodem, pravá plocha střechy ubíhá dozadu
+    (o dx, dy), švy plachty, kotevní lana s kolíky, praporek výpravy na tyči u hřebene. overgrowth 0–1:
+    propadlé a ztmavlé plochy plachty."""
+    W, H = w + dx + 8, h + dy + 16
+    s = Spr(W, H)
+    ox, oy = 3, dy + 14                                                   # levý dolní roh štítu = (ox, oy + h)
+    ax, ay = ox + w / 2, oy                                               # vrchol štítu
+    rx, ry = ox + w, oy + h                                               # pravý dolní roh štítu
+    def roofv(u, v):
+        return 0.42 - v * 0.08 + (0.05 if int(u * 9) % 2 else 0)
+    for i in range(0, 101):                                               # pravá střecha: rovnoběžník (vrchol→pravý roh) + (dx, -dy)
+        u = i / 100
+        ex, ey = ax + (rx - ax) * u, ay + (ry - ay) * u
+        for j in range(0, 41):
+            v = j / 40
+            X, Y = ex + dx * v, ey - dy * v
+            val = roofv(u, v)
+            if overgrowth > 0.2 and _vn(X * 0.8, Y * 0.8, seed + 9, 5) < overgrowth * 0.45:
+                val -= 0.18
+            s.px(X, Y, _pick(CANVAS, max(0.0, min(1.0, val)), int(X), int(Y)))
+    for y in range(h + 1):                                                # čelní štít
+        t = y / h
+        hw = (w / 2) * t
+        for x in range(int(ax - hw), int(ax + hw) + 1):
+            side = (x - ax) / max(1.0, hw)
+            val = 0.68 - side * 0.12 - t * 0.06 + (_vn(x, y, seed + 2, 3) - 0.5) * 0.1
+            if abs(x - ax) < 1:
+                val -= 0.1                                                # šev uprostřed
+            if overgrowth > 0.2 and _vn(x * 0.8, y, seed + 9, 5) < overgrowth * 0.4:
+                val -= 0.2
+            if abs(x - ax) < 4.5 * t and t > 0.45:
+                val = 0.06                                                # vchod (rozhrnutý)
+            s.px(x, oy + y, _pick(CANVAS, max(0.0, min(1.0, val)), x, oy + y))
+    s.line(ax, ay, ax + dx, ay - dy, CANVAS[5])                           # hřeben
+    for (x0, y0, x1, y1) in ((ox, oy + h, ox - 3, oy + h + 3), (rx, ry, rx + 4, ry + 2),
+                             (ax + dx, ay - dy, ax + dx + 6, ay - dy + 14)):
+        s.line(x0, y0, x1, y1, CANVAS[1]); s.px(x1, y1, WOOD_POLE[1])     # kotevní lana a kolíky
+    p = pennant(str(num), 18)
+    for yy in range(p.h):
+        for xx in range(p.w):
+            if p.a[yy, xx, 3]:
+                s.px(int(ax) - 2 + xx, int(ay) - 16 + yy, p.a[yy, xx])
+    return selout(s, 0.5, 0.82)
+
+
+def mess_canopy(w=58, h=40):
+    """Polní kuchyně: plachtová stříška na čtyřech tyčích, pod ní stůl s kotlem a ešusy, studená plotýnka."""
+    s = Spr(w, h)
+    for y in range(0, 10):                                                # stříška
+        for x in range(2, w - 2):
+            v = 0.6 - y * 0.03 + (0.08 if (x // 6) % 2 else 0)
+            s.px(x, y + (1 if x in (2, w - 3) else 0), _pick(CANVAS, v, x, y))
+    for x in range(2, w - 2, 6):
+        s.px(x, 10, CANVAS[1]); s.px(x + 1, 11, CANVAS[1])                  # třásně / prověšení
+    for x0 in (4, w - 6):
+        for y in range(9, h):
+            s.px(x0, y, WOOD_POLE[2]); s.px(x0 + 1, y, WOOD_POLE[0])
+    for y in range(24, 30):                                               # stůl
+        for x in range(10, w - 10):
+            s.px(x, y, WOOD_POLE[3] if y == 24 else WOOD_POLE[2])
+    for x0 in (12, w - 13):
+        for y in range(30, h):
+            s.px(x0, y, WOOD_POLE[1])
+    cylinder(s, 16, 27, 16, 24, STEEL[1:5], amb=0.3)                       # kotel
+    for (x0,) in ((32,), (38,), (44,)):                                    # ešusy
+        cylinder(s, x0, x0 + 4, 20, 24, STEEL[1:4], amb=0.3)
+    return selout(s, 0.5, 0.82)
+
+
+def reg_desk():
+    """Registrační stolek: skládací stůl, otevřená kniha zápisů (jména přeškrtaná, místo nich čísla), lampa, židle."""
+    s = Spr(34, 26)
+    for y in range(8, 13):
+        for x in range(1, 33):
+            s.px(x, y, WOOD_POLE[3] if y == 8 else WOOD_POLE[2])
+    for (x0,) in ((3,), (29,)):
+        s.line(x0, 13, x0 + 2, 25, WOOD_POLE[1]); s.line(x0 + 2, 13, x0, 25, WOOD_POLE[0])
+    for y in range(4, 9):                                                 # kniha
+        for x in range(8, 22):
+            s.px(x, y, PAPER[3] if x != 15 else PAPER[1])
+    for yy in (5, 7):
+        for x in range(9, 15, 1):
+            s.px(x, yy, c(0x5A5040))
+        s.line(9, yy, 14, yy, RED[3])                                     # přeškrtnuté
+        for x in range(16, 21):
+            s.px(x, yy, c(0x2A2A3A) if x % 2 else PAPER[3])              # číslo
+    s.rect(25, 3, 29, 7, STEEL[2]); s.rect(26, 6, 28, 7, SODIUM)          # lampa
+    s.px(27, 0, STEEL[3]); s.px(27, 1, STEEL[3]); s.px(27, 2, STEEL[3])
+    return selout(s, 0.5, 0.85)
+
+
+def count_board(title="SČÍTÁNÍ"):
+    """Sčítací tabule na dvou sloupech: smaltovaný titulek, pod ním čárky po pěti – stovky; poslední řádky
+    přeškrtané a přes ně křídou NEPOČÍTEJTE."""
+    pl = plate(title, c(0xE8E2CC), c(0x1E2A44), seed=23, pad=2, wear=0.0)
+    W = max(pl.w, 48); H = pl.h + 40
+    s = Spr(W, H)
+    for yy in range(pl.h):
+        for xx in range(pl.w):
+            s.px((W - pl.w) // 2 + xx, yy, pl.a[yy, xx])
+    for y in range(pl.h + 1, pl.h + 26):                                  # černá tabule
+        for x in range(1, W - 1):
+            s.px(x, y, c(0x1E2620) if 1 < x < W - 2 and pl.h + 1 < y < pl.h + 25 else WOOD_POLE[2])
+    for r in range(4):
+        for gidx in range(7):
+            gx = 4 + gidx * 6; gy = pl.h + 4 + r * 5
+            for k in range(4):
+                s.px(gx + k, gy, c(0xD8D8CC)); s.px(gx + k, gy + 1, c(0xD8D8CC))
+            s.line(gx - 1, gy + 2, gx + 4, gy - 1, c(0xD8D8CC))
+    s.line(3, pl.h + 18, W - 4, pl.h + 22, c(0xD8D8CC))                   # přeškrtnuto
+    for x0 in (6, W - 8):
+        for y in range(pl.h + 26, H):
+            s.px(x0, y, WOOD_POLE[2]); s.px(x0 + 1, y, WOOD_POLE[0])
+    return selout(s, 0.5, 0.85)
+
+
+def stake(h=18):
+    """Měřicí kolík Řádu: červenobílý, nahoře očko na lano."""
+    s = Spr(4, h)
+    for y in range(h):
+        col = RED[3] if (y // 3) % 2 == 0 else c(0xE6E0D0)
+        s.px(1, y, col); s.px(2, y, _pick([c(0x000000), col], 0.6, 2, y) if False else col)
+    s.px(1, 0, STEEL[3]); s.px(2, 0, STEEL[3])
+    return s
+
+
+def winch():
+    """Ruční naviják s bubnem a klikou na rámu; lano odchází dolů po svahu."""
+    s = Spr(30, 24)
+    for (x0,) in ((3,), (25,)):
+        s.line(x0, 4, x0 - 2, 23, STEEL[2]); s.line(x0 + 1, 4, x0 + 3, 23, STEEL[1])
+    cylinder(s, 6, 24, 6, 14, [c(0x2A2620), c(0x4A4032), c(0x6E5E44), c(0x8C7A58)], amb=0.25)
+    for y in range(7, 14):
+        for x in range(7, 24, 2):
+            s.px(x, y, c(0x3A3428))                                        # navinuté lano
+    s.line(25, 10, 29, 6, STEEL[3]); s.rect(28, 4, 29, 6, RED[3])          # klika
+    return selout(s, 0.5, 0.85)

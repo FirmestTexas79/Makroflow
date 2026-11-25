@@ -27,3 +27,9 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   intro WatchIntro (světlomet přejede terasu a zastaví se na očích). Závora ze Stanice 8 zatím pouští jen debug
   volný výtah – podmínka přijde s fází
   „Výprava 8“ kapitoly VI. Východy k Lanovce nad roklí a k Táboru na svahu zatím nepřístupné.
+- **Tábor na svahu** (`ROOT_SLOPECAMP`, `RootSlopeCamp.kt`, `gen_slope_camp.py`), pohlcení 4/8: fáze 3 obsazení –
+  opuštěno; registrační kniha (jména → čísla), polní kuchyně („NEZAPOMEŇTE JÍST“), stany výprav 1, 3, 5, 7 s deníky
+  (měření → tep kořenů → zapomínání, „Kdo spí, pamatuje si“ → „Nepočítejte je.“), kořen středem tábora se spolknutými
+  stany 2, 4, 6 a prkennou lávkou, sčítací tabule, naviják, kolíky do mlhy, žebra dlouhého domu Lumenců ve skále.
+  Hunfrey sem nedošel (držíme jeho „Byl jsem až tady.“ ze Stanice 8). Setkání DUCH lv 30–34, intro SlopeCampIntro.
+  Vstup z Pozorovatelny B schody dolů; dolů na Svah zatím nepřístupné.

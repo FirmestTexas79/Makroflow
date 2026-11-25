@@ -950,3 +950,27 @@ class WatchIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 112, 196, 13) {
         glow(tx, ty, 10f, hex(0xFFE0A0), 0.35f * a)
     }
 }
+
+
+/** Tábor na svahu (zóna 3): lucerna ve stanu výpravy 7 dvakrát zakolísá a zhasne, plachta se vydme, jako by
+ *  se uvnitř někdo zvedal, a ve vchodu se rozsvítí oči; při výpadu se z vchodu vyvalí mlha. */
+class SlopeCampIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 132, 290, 21) {
+    override val shade = hex(0x05070F)
+    override val accent = hex(0xC8DCFF)
+    override val dimMax = 0.68f
+    private val mist = ramp(0x3A4A6A, 0x6A7A9A, 0x9AAACA)
+    private val wisps = spray(20, 15f, 55f, 20f)
+
+    override fun before(t: Long) {
+        val lamp = (1f - p(t, TELL2 - 150, TELL2)) * (0.8f + 0.2f * sinf(t * 0.05f)) - 0.6f * pulse(t, TELL1, 160)
+        if (lamp > 0f) tintWhere(cx - 20f, cy - 26f, cx + 20f, cy + 6f, hex(0xFFD890), lamp * 0.35f) { bright(it, 90) }
+    }
+
+    override fun act(t: Long) {
+        val bulge = p(t, TELL1 + 150, CLIMAX)
+        if (bulge > 0f) wobble(cx - 18f, cy - 26f, cx + 18f, cy + 2f, 1.6f * bulge, t, 0.02f)
+        mapEyes(cx, cy - 6, 2.2f, hex(0xE0ECFF), eyeAlpha(t))
+        val s = since(t)
+        if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy - 4, b[0], b[1], -15f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
+    }
+}

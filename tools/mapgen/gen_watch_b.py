@@ -95,7 +95,7 @@ for (p0, p1, p2, w) in (((150, 210), (170, 226), (176, 250), 4), ((142, 260), (1
 # ── předměty na terase ──────────────────────────────────────────────────────
 sc.place(O.sandbag_ring(64, 30), 74, 264, foot=None, pad=0)
 sc.place(O.searchlight(), 74, 248, foot=(30, 8))
-sc.place(O.gen_shed(4), 38, 166, foot=(52, 14))
+sc.place(O.gen_shed(4), 40, 166, foot=(58, 14))
 sc.place(O.flamer_rack(), 140, 146, foot=(24, 6))
 sc.place(O.helmet(), 118, 168, collide=False)
 for (x, y, sd) in ((72, 168, 7), (80, 180, 8)):

@@ -205,6 +205,7 @@ object LocationIntros {
         "TOWER_FAIRY" -> LocationIntro("tower_fairy", argb(255, 228, 248)) { m, w, h -> FairyIntro(m, w, h) }
         "TOWER_POISON" -> LocationIntro("tower_poison", argb(214, 255, 170)) { m, w, h -> PoisonIntro(m, w, h) }
         "ROOT_WATCH" -> LocationIntro("root_watch", argb(255, 232, 180)) { m, w, h -> WatchIntro(m, w, h) }
+        "ROOT_SLOPECAMP" -> LocationIntro("root_slopecamp", argb(220, 236, 255)) { m, w, h -> SlopeCampIntro(m, w, h) }
         else -> null
     }
 }

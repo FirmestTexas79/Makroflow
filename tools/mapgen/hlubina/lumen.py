@@ -60,3 +60,27 @@ def carved_stairs(img, x0, y0, x1, y1, steps=12, width=14):
                     if x in (int(sx), int(sx) + width - 1):
                         v = 0.15
                     img[y, x] = _pick(STONE, v + (_vn(x, y, 51, 3) - 0.5) * 0.15, x, y)
+
+
+def longhouse_ribs(w=60, h=34, sink=0.4, seed=0):
+    """Pozůstatky dlouhého domu Lumenců: řada kamenných žeber (oblouků) zapadajících do země; sink = jak hluboko
+    je kořeny stáhly (zadní žebra víc)."""
+    STONE = [c(0x1A1C24), c(0x2E3240), c(0x444A5A), c(0x5E6676), c(0x7E8696), c(0xA4ACBA)]
+    s = Spr(w, h)
+    n = 5
+    for i in range(n):
+        cx = 6 + i * (w - 12) / (n - 1)
+        r = 10 - i * 0.6
+        base = h - 2 - i * 2
+        depth_in = (sink * (i + 1) / n) * r
+        for a in range(0, 181, 3):
+            x = cx + math.cos(math.radians(a)) * r * 0.55
+            y = base - math.sin(math.radians(a)) * r + depth_in
+            if y > base:
+                continue
+            for k in range(3):
+                v = 0.7 - k * 0.2 - i * 0.06 + (_vn(x, y, seed + i, 2) - 0.5) * 0.2
+                s.px(x + k * 0.6, y, _pick(STONE, max(0.0, min(1.0, v)), int(x), int(y)))
+        if i % 2 == 0:
+            s.px(cx, base - r + depth_in - 1, GLYPH)                       # znak na vrcholu oblouku
+    return selout(s, 0.5, 0.8)

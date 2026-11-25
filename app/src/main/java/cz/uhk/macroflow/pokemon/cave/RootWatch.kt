@@ -50,7 +50,7 @@ object RootWatch {
         "pb_hlidka" to "🔥 Stojan ohňové hlídky: dva plamenomety, nádrže plné. Helma leží opodál, jako by ji tu někdo upustil v půlce kroku.\nTady už nikdo nepálil. Kořeny vyhrály bez boje.",
         "pb_dalkomer" to "🔭 Dálkoměr na trojnožce míří přes zábradlí do tmy. Na stupnici ryska KMEN – 2 400 m. Pod ní tužkou 2 100 m. A ještě jedna: 1 900 m.\nKmen se nehýbe. Vzdálenost se přesto zkracuje.",
         RAVINE_NODE to "🚡 Průchod v zábradlí na ocelovou lávku k lanovce přes rokli. Lávku zatím zavalují kořeny – ZATÍM NEPŘÍSTUPNÉ.",
-        DOWN_NODE to "⬇️ Schody z terasy dolů, cedule DOLŮ: TÁBOR. Dole je zatím zavaleno – ZATÍM NEPŘÍSTUPNÉ."
+        DOWN_NODE to "⬇️ Schody z terasy dolů, cedule DOLŮ: TÁBOR."
     )
     val ACTION_NODES = TEXTS.keys
 }

@@ -1451,6 +1451,20 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
                 FxGlow(172, 84, 3, 3, 0x8AC8FF, 3.1f), FxGlow(74, 238, 8, 5, 0xFFE0A0, 6f))
         )
 
+        /** Zóna 3, Tábor na svahu: lampa na registračním stolku a lucerna ve stanu 7 blikají, popel, houby na kořeni,
+         *  mlha stoupající ze Svahu. */
+        val ROOT_SLOPECAMP = InteriorFx(
+            lamps = listOf(FxLamp(64, 112, 28, 18, FxBox(64, 104, 66, 105)), FxLamp(138, 292, 22, 14, null)),
+            ash = listOf(FxBox(10, 80, 166, 300)),
+            fog = listOf(FxBox(0, 300, 176, 352), FxBox(0, 320, 176, 352)),
+            fogColor = 0x3A4A70,
+            motes = listOf(FxBox(0, 60, 176, 340)),
+            moteColor = 0x9AC8FF,
+            glows = listOf(FxGlow(159, 161, 3, 3, 0x8AC8FF, 2.1f), FxGlow(62, 215, 3, 3, 0x8AC8FF, 2.7f), FxGlow(15, 169, 3, 3, 0x8AC8FF, 3.3f),
+                FxGlow(156, 127, 3, 3, 0x8AC8FF, 1.9f), FxGlow(115, 308, 3, 3, 0x8AC8FF, 3.9f), FxGlow(144, 147, 3, 3, 0x8AC8FF, 2.4f),
+                FxGlow(130, 181, 3, 3, 0x8AC8FF, 3.1f), FxGlow(82, 272, 3, 3, 0x8AC8FF, 2.6f), FxGlow(144, 54, 18, 8, 0x7EC0FF, 5f))
+        )
+
         val ABYSS = InteriorFx(
             sparkles = listOf(FxBox(10, 230, 166, 345)),
             fog = listOf(FxBox(0, 250, 176, 290), FxBox(0, 300, 176, 340)),
