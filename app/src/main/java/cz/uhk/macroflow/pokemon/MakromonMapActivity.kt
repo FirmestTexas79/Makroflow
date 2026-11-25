@@ -1728,13 +1728,23 @@ class MakromonMapActivity : AppCompatActivity() {
             val open = towerFloors.filter { (f, _, _) -> free || cz.uhk.macroflow.pokemon.story.TowerStory.approved(f, idx, done) }
             val floors = open.map { (_, label, target) ->
                     val (biome, node) = target
-                    val go: (() -> Unit)? = if (currentBiome == biome) null else ({ walkInto(biome, node, MapTransition.FADE) })
+                    val go: (() -> Unit)? = if (currentBiome == biome) null else ({ rideTo(biome, node) })
                     label to go
                 }
             val at = towerFloors.firstOrNull { it.third.first == currentBiome }?.first ?: 0
             cz.uhk.macroflow.pokemon.story.TowerUi.showElevator(findViewById(R.id.mapRootContainer), StoryFlags.insight(this), floors, at,
                 numbers = open.map { it.first })
         }, 150)
+    }
+
+    /** Jízda výtahem; poprvé na −2 nejdřív cutscéna „Sjezd do Hlubiny“. */
+    private fun rideTo(biome: BiomeType, node: String) = payMove(biome) {
+        val seen = cz.uhk.macroflow.pokemon.cutscene.StoryCutscenes.DESCENT_SEEN
+        if (biome != BiomeType.TOWER_ABYSS || gamePrefs.getBoolean(seen, false)) { enterBiomeAtNode(biome, node, MapTransition.FADE); return@payMove }
+        gamePrefs.edit().putBoolean(seen, true).apply()
+        cz.uhk.macroflow.pokemon.cutscene.CutsceneView.play(findViewById(android.R.id.content), cz.uhk.macroflow.pokemon.cutscene.DescentCutsceneView(this)) {
+            enterBiomeAtNode(biome, node, MapTransition.FADE)
+        }
     }
 
     /** Stopa příběhu nebo útržek Hunfreyho mapy na patře Věže; jinak obyčejný text místa. */
@@ -2859,6 +2869,7 @@ class MakromonMapActivity : AppCompatActivity() {
             "🕯 Světlo mezi stromy (Ztichlý sad)" to { play(cz.uhk.macroflow.pokemon.cutscene.FennCutsceneView(this)) },
             "🌑 Bezejmenní (finále sadu)" to { play(cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this)) },
             "⚖️ Dveře Věže (Ozvěna)" to { play(cz.uhk.macroflow.pokemon.cutscene.TowerDoorCutsceneView(this)) },
+            "🌳 Sjezd do Hlubiny (Věž −2)" to { play(cz.uhk.macroflow.pokemon.cutscene.DescentCutsceneView(this)) },
             "📚 Archiv okruhů – patro 1 (test)" to { enterBiomeAtNode(BiomeType.TOWER_ARCHIVE, cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, MapTransition.FADE) }
         )
         android.app.AlertDialog.Builder(this)

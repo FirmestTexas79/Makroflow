@@ -101,7 +101,7 @@ abstract class CutsceneView(context: Context) : View(context) {
     private fun ease(x: Float) = x * x * (3 - 2 * x)
 
     /** Kamera v čase t (plynulý přechod mezi záběry). */
-    private fun cameraAt(t: Float): Shot {
+    protected open fun cameraAt(t: Float): Shot {
         val i = shots.indexOfLast { it.t <= t }.coerceAtLeast(0)
         val a = shots[i]; val b = shots.getOrNull(i + 1) ?: return a
         val k = ease(((t - a.t) / (b.t - a.t)).coerceIn(0f, 1f))

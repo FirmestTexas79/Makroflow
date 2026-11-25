@@ -9,4 +9,6 @@ object StoryCutscenes {
     const val GROVE_SEEN = "cutscene_grove_seen"
     /** Soulord právě padl – „Pád Soulorda“ se přehraje před odměnou od Starého dubu. */
     const val SOULORD_PENDING = "cutscene_soulord_pending"
+    /** První jízda výtahem na −2 – „Sjezd do Hlubiny“ (jen jednou). */
+    const val DESCENT_SEEN = "cutscene_descent_seen"
 }
