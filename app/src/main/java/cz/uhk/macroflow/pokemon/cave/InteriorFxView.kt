@@ -1420,6 +1420,18 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         )
 
         /** Patro −2, Sektor Hlubiny: modrá světla na větvích, mlha v hlubině, prach nad propastí. */
+        /** Zóna 3, Tábor výprav: shora padá teplý popel, modré houby dýchají, mlha a světlušky nad propastí. */
+        val ROOT_CAMP = InteriorFx(
+            ash = listOf(FxBox(20, 40, 156, 340)),
+            fog = listOf(FxBox(0, 280, 176, 330), FxBox(0, 0, 176, 40)),
+            fogColor = 0x3A4A70,
+            motes = listOf(FxBox(0, 60, 176, 340)),
+            moteColor = 0x9AC8FF,
+            glows = listOf(FxGlow(51, 85, 4, 4, 0x8AC8FF, 1.5f), FxGlow(44, 293, 4, 4, 0x8AC8FF, 2.1f), FxGlow(128, 73, 4, 4, 0x8AC8FF, 3.3f),
+                FxGlow(23, 129, 4, 4, 0x8AC8FF, 3.9f), FxGlow(143, 98, 4, 4, 0x8AC8FF, 1.5f), FxGlow(28, 243, 4, 4, 0x8AC8FF, 3.9f),
+                FxGlow(153, 210, 4, 4, 0x8AC8FF, 2.1f), FxGlow(53, 95, 2, 2, 0xFFE070, 1.2f), FxGlow(88, 70, 30, 22, 0xFFD8A0, 5f))
+        )
+
         val ABYSS = InteriorFx(
             sparkles = listOf(FxBox(10, 230, 166, 345)),
             fog = listOf(FxBox(0, 250, 176, 290), FxBox(0, 300, 176, 340)),

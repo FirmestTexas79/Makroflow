@@ -55,7 +55,9 @@ enum class BiomeType {
     /** Patro −1 – Hunfreyho skrýš (docs/adr/0104). */
     TOWER_HIDEOUT,
     /** Patro −2 – Sektor Hlubiny nad obrácenou korunou Lumiry (docs/adr/0104). */
-    TOWER_ABYSS
+    TOWER_ABYSS,
+    /** Zóna 3 (Akt III – Hlubina): Tábor výprav na kořeni Spící (docs/adr/0106). */
+    ROOT_CAMP
 }
 
 object BiomeRegistry {
@@ -186,7 +188,8 @@ object BiomeRegistry {
         BiomeDefinition(BiomeType.TOWER_FAIRY, R.drawable.tower_fairy, graphOf(cz.uhk.macroflow.pokemon.cave.TowerFairy.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerFairy.MAP),
         BiomeDefinition(BiomeType.TOWER_HIDEOUT, R.drawable.tower_hideout, graphOf(cz.uhk.macroflow.pokemon.cave.TowerHideout.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerHideout.MAP),
         BiomeDefinition(BiomeType.TOWER_ABYSS, R.drawable.tower_abyss, graphOf(cz.uhk.macroflow.pokemon.cave.TowerAbyss.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerAbyss.MAP),
-        BiomeDefinition(BiomeType.TOWER_POISON, R.drawable.tower_poison, graphOf(cz.uhk.macroflow.pokemon.cave.TowerPoison.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerPoison.MAP)
+        BiomeDefinition(BiomeType.TOWER_POISON, R.drawable.tower_poison, graphOf(cz.uhk.macroflow.pokemon.cave.TowerPoison.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerPoison.MAP),
+        BiomeDefinition(BiomeType.ROOT_CAMP, R.drawable.root_camp, graphOf(cz.uhk.macroflow.pokemon.cave.RootCamp.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootCamp.MAP)
         ).associateBy { it.type }
     }
 

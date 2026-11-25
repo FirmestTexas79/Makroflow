@@ -8,6 +8,7 @@ package cz.uhk.macroflow.pokemon.cave
 object TowerAbyss {
     const val ELEVATOR_NODE = "hlub_vytah"
     const val VIEW_NODE = "hlub_vyhled"
+    const val CAGE_NODE = "hlub_klec"
 
     val MAP = CaveMap(
         artW = 176, artH = 352,

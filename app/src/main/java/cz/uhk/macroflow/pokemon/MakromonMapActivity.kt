@@ -154,7 +154,7 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
@@ -951,6 +951,10 @@ class MakromonMapActivity : AppCompatActivity() {
                 in cz.uhk.macroflow.pokemon.story.TowerStory.TAP_NODES -> onTowerClue(nodeName)
                 in cz.uhk.macroflow.pokemon.cave.TowerHideout.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerHideout.TEXTS.getValue(nodeName))
                 cz.uhk.macroflow.pokemon.cave.TowerAbyss.VIEW_NODE -> onAbyssView()
+                cz.uhk.macroflow.pokemon.cave.TowerAbyss.CAGE_NODE -> onAbyssCage()
+                // Zóna 3 – Tábor výprav (docs/adr/0106): klec zpět nahoru, jinak texty míst
+                cz.uhk.macroflow.pokemon.cave.RootCamp.CAGE_NODE -> walkInto(BiomeType.TOWER_ABYSS, cz.uhk.macroflow.pokemon.cave.TowerAbyss.CAGE_NODE)
+                in cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS.getValue(nodeName))
@@ -1483,6 +1487,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.TOWER_POISON -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.POISON)
                 currentBiome == BiomeType.TOWER_HIDEOUT -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.HIDEOUT)
                 currentBiome == BiomeType.TOWER_ABYSS -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ABYSS)
+                currentBiome == BiomeType.ROOT_CAMP -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_CAMP)
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)
@@ -1775,9 +1780,36 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun onAbyssView() {
         val first = !StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.TowerStory.ABYSS_KEY)
         StoryFlags.set(this, cz.uhk.macroflow.pokemon.story.TowerStory.ABYSS_KEY)
+        if (first) gamePrefs.edit().putInt(cz.uhk.macroflow.pokemon.cave.RootCamp.ABYSS_DAY_KEY, java.time.LocalDate.now().toEpochDay().toInt()).apply()
         cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Sektor Hlubiny",
             if (first) "Konec kapitoly V · Ozvěna" else null) { ui, body, _ ->
             body.addView(ui.text(cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.getValue(cz.uhk.macroflow.pokemon.cave.TowerAbyss.VIEW_NODE), 15f))
+        }
+    }
+
+    /**
+     * Klec v Sektoru Hlubiny (docs/adr/0106): den po prvním výhledu na Spící je sestup schválen a klec sjede do zóny 3
+     * (Tábor výprav). Starší uložené hry bez dne výhledu se berou jako „už včera“. Debug volný výtah ji pustí hned.
+     */
+    private fun onAbyssCage() {
+        val R3 = cz.uhk.macroflow.pokemon.cave.RootCamp
+        val seen = StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.TowerStory.ABYSS_KEY)
+        val today = java.time.LocalDate.now().toEpochDay().toInt()
+        val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
+        val open = free || (seen && today > gamePrefs.getInt(R3.ABYSS_DAY_KEY, Int.MIN_VALUE))
+        val locked = cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.getValue(cz.uhk.macroflow.pokemon.cave.TowerAbyss.CAGE_NODE)
+        when {
+            !open -> showMapToast(locked + if (seen) R3.CAGE_WAIT_TEXT else "")
+            StoryFlags.isSet(this, R3.VISITED_KEY) -> walkInto(BiomeType.ROOT_CAMP, R3.CAGE_NODE)
+            else -> cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Sestup schválen", "Kapitola VI · Hlubina") { ui, body, close ->
+                body.addView(ui.text(R3.CAGE_OPENED_TEXT, 15f))
+                body.addView(ui.spacer(14f))
+                body.addView(ui.button("⛓️ Sjet klecí dolů") {
+                    close()
+                    StoryFlags.set(this, R3.VISITED_KEY)
+                    walkInto(BiomeType.ROOT_CAMP, R3.CAGE_NODE)
+                })
+            }
         }
     }
 

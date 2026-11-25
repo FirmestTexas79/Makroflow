@@ -18,8 +18,9 @@ object ZoneOne {
     /** Lokace aktu II (Zóna 2) – mapa v assets/zone2 (tools/mapgen/gen_zone2.py). */
     val ZONE2 = setOf("ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA")
 
-    /** Interiéry zóny 2 (na mapě nejsou, ale patří do ní). */
-    val ZONE2_INTERIORS = setOf("ARENA_HALL", "TOWER_LOBBY", "TOWER_HIDEOUT", "TOWER_ABYSS", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_ROCK", "TOWER_CAVE", "TOWER_WATER", "TOWER_DORM", "TOWER_ICE", "TOWER_FIRE", "TOWER_OFFICE", "TOWER_FAIRY", "TOWER_POISON")
+    /** Interiéry zóny 2 (na mapě nejsou, ale patří do ní). ROOT_CAMP je už zóna 3 (Hlubina, ADR 0106).
+     *  ponytail: dokud zóna 3 nemá druhou lokaci a vlastní stránku mapy, počítá se pod zónu 2. */
+    val ZONE2_INTERIORS = setOf("ARENA_HALL", "TOWER_LOBBY", "TOWER_HIDEOUT", "TOWER_ABYSS", "ROOT_CAMP", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_ROCK", "TOWER_CAVE", "TOWER_WATER", "TOWER_DORM", "TOWER_ICE", "TOWER_FIRE", "TOWER_OFFICE", "TOWER_FAIRY", "TOWER_POISON")
 
     fun zoneOf(biome: String): Int = if (biome in ZONE2 || biome in ZONE2_INTERIORS) 2 else 1
 
