@@ -317,7 +317,7 @@ class MealBuilderSheet(private val isPreSelected: Boolean = false) : BottomSheet
         if (staple) {
             cz.uhk.macroflow.nutrition.plan.DailyStaples.add(requireContext(),
                 MealRepeat.Item(mealName, t.p, t.s, t.t, t.kcal, t.kj, t.fiber, ""))
-            root.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            root.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
             parentFragmentManager.setFragmentResult(cz.uhk.macroflow.nutrition.plan.DayPlanSheet.REFRESH, Bundle())
             dismiss(); return
         }
@@ -329,7 +329,7 @@ class MealBuilderSheet(private val isPreSelected: Boolean = false) : BottomSheet
             calories = t.kcal,
             mealContext = if (isPreSelected) "PRE_WORKOUT" else "POST_WORKOUT"
         )
-        root.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+        root.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
         val app = requireContext().applicationContext
         lifecycleScope.launch(Dispatchers.IO) {
             FoodLog.insert(app, entity)   // lokálně i do cloudu

@@ -140,10 +140,14 @@ object    MacroCalculator {
 
         val list = mutableListOf<Exercise>()
 
-        StrengthKind.from(prefs.getString("type_$day", "rest"))?.let { kind ->
+        val planned = StrengthKind.from(prefs.getString("type_$day", "rest"))
+        planned?.let { kind ->
             // Délka silového tréninku zatím v UI není → výchozí 60 min
             list += Exercise.Strength(kind, num("strength_duration_$day", EnergyModel.DEFAULT_STRENGTH_MINUTES))
         }
+        // Rychlý zápis „Jdu na trénink“ mimo plán (platí jen pro dnešek)
+        if (SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date) == java.time.LocalDate.now().toString())
+            cz.uhk.macroflow.training.QuickWorkout.strengthForModel(cz.uhk.macroflow.training.QuickWorkout.today(context), planned != null)?.let { list += it }
 
         val minutes = num("kardio_duration_$day", 0.0)
         when (prefs.getString("kardio_type_$day", "rest")?.lowercase()) {

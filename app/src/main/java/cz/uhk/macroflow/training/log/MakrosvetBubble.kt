@@ -55,7 +55,7 @@ object MakrosvetBubble {
             elevation = 10 * dp
         }
         content.setOnClickListener {
-            it.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            it.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
             popup.dismiss()
             main.openMakromonBattle()
         }

@@ -198,7 +198,7 @@ class EvolutionDialog(
         namesText.text = "$oldName  ➜  $newName"
         namesText.scaleX = 1.25f; namesText.scaleY = 1.25f
         namesText.animate().scaleX(1f).scaleY(1f).setDuration(380).start()
-        stage.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+        stage.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
 
         // co uměl, zůstává – i když měl dosud jen výchozí útoky starého druhu
         val oldMoves = cz.uhk.macroflow.pokemon.wild.MovePool.resolve(mon.moveListStr, BattleFactory.createById(mon.makromonId).moves)

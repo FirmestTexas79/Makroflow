@@ -215,7 +215,7 @@ class DayPlanSheet : BottomSheetDialogFragment() {
         if (done) row.addView(pill("✓ DNES", c(R.color.brand_primary), c(R.color.brand_cream)))
         else row.addView(pill("ZAPSAT", c(R.color.brand_accent_warm), c(R.color.brand_dark)).apply {
             isClickable = true; contentDescription = "Zapsat ${item.name}"
-            setOnClickListener { v -> v.performHapticFeedback(HapticFeedbackConstants.CONFIRM); logStaple(item) }
+            setOnClickListener { v -> v.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM); logStaple(item) }
         })
         row.addView(ImageView(requireContext()).apply {
             setImageResource(R.drawable.ic_close); setColorFilter(c(R.color.brand_dark)); alpha = 0.45f

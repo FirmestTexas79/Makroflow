@@ -574,7 +574,7 @@ class MakromonMapActivity : AppCompatActivity() {
         if (more.background == null) more.background = restBgMore()
         more.setOnClickListener { restExtra = 30_000; renderRest() }
         restPill.setOnClickListener {
-            it.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+            it.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
             finish()
         }
         if (restAlertedFor != lastSetAt + restExtra) {

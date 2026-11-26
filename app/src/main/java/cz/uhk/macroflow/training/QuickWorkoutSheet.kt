@@ -361,7 +361,7 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
             }
             v.findViewById<TextView>(R.id.tvQwRunHint).text = if (rewarded) "Energie čeká v Makrosvětu." else "Dobrá práce."
             v.removeCallbacks(ticker)
-            v.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            v.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
             v.postDelayed({ if (isAdded) dismiss() }, 1400)
         }
     }

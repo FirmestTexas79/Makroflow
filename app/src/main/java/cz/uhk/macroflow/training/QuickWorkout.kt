@@ -130,6 +130,20 @@ object QuickWorkout {
 
     fun active(ctx: Context): Entry? = today(ctx)?.takeIf { it.running() }
 
+    /**
+     * Silový trénink „Jdu na trénink“ pro energetický model dneška – jen když týdenní plán na dnešek silový trénink nemá
+     * (jinak by se počítal dvakrát). Hotový trénink jeho skutečnou délkou, naplánovaný / běžící výchozí délkou.
+     * „Jiný“ trénink = MET 3,5 (spodní odhad posilování). Kardio se nepočítá – nevíme jaké.
+     */
+    // ponytail: kardio z rychlého zápisu chybí v cíli dne, doplní ho adaptivní výdej; přidat typ kardia do zápisu, když bude potřeba
+    fun strengthForModel(e: Entry?, plannedStrength: Boolean): cz.uhk.macroflow.energy.Exercise.Strength? {
+        if (e == null || plannedStrength || e.kind == CARDIO) return null
+        val kind = e.strength?.let { cz.uhk.macroflow.energy.StrengthKind.from(it.planType) } ?: cz.uhk.macroflow.energy.StrengthKind.PUSH
+        val minutes = if (e.finishedAt > 0 && e.startedAt > 0) ((e.finishedAt - e.startedAt) / 60_000.0).coerceIn(10.0, 180.0)
+            else cz.uhk.macroflow.energy.EnergyModel.DEFAULT_STRENGTH_MINUTES
+        return cz.uhk.macroflow.energy.Exercise.Strength(kind, minutes)
+    }
+
     private fun save(ctx: Context, kind: String, variant: Char?, time: String, startedAt: Long, muscles: Set<Muscle>) =
         prefs(ctx).edit()
             .putString(K_MUSCLES, muscles.joinToString(",") { it.name })

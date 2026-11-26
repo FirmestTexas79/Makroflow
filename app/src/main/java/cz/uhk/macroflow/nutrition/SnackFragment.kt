@@ -343,7 +343,7 @@ class SnackFragment : Fragment() {
         val ctx = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
             val ts = FoodLog.add(ctx, name, scaled)
-            root.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            root.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
             val label = "${SnackRowBinder.grams(scaled.grams)} g"
             Snackbar.make(root, "$name ($label) · ${scaled.kcal} kcal přidáno", Snackbar.LENGTH_LONG)
                 .setAnchorView(fab)
@@ -531,7 +531,7 @@ class SnackFragment : Fragment() {
         MealRepeatSheet(this) { label, kcal, timestamps ->
             if (!isAdded || timestamps.isEmpty()) return@MealRepeatSheet
             val ctx = requireContext().applicationContext
-            root.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            root.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
             Snackbar.make(root, "$label · $kcal kcal přidáno", Snackbar.LENGTH_LONG)
                 .setAnchorView(fab)
                 .setBackgroundTint(ContextCompat.getColor(ctx, R.color.brand_dark))

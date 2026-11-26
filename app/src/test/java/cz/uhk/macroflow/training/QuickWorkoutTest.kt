@@ -36,4 +36,15 @@ class QuickWorkoutTest {
         assertNull(QuickWorkout.restLeft(t, t + 1000, endedAt = t + 500))                  // Hotovo po sérii
         assertEquals(QuickWorkout.REST_MS - 1000, QuickWorkout.restLeft(t, t + 1000, endedAt = t - 1))  // nová série po ukončení
     }
+
+    @Test fun `rychly trening se pocita do vydeje jen mimo plan`() {
+        val legs = QuickWorkout.Entry("LEGS", 'A', "18:00", startedAt = 0, finishedAt = 0)
+        assertEquals(cz.uhk.macroflow.energy.StrengthKind.LEGS, QuickWorkout.strengthForModel(legs, plannedStrength = false)!!.kind)
+        assertNull(QuickWorkout.strengthForModel(legs, plannedStrength = true))
+        assertNull(QuickWorkout.strengthForModel(legs.copy(kind = QuickWorkout.CARDIO), plannedStrength = false))
+        val done = legs.copy(startedAt = 1_000_000, finishedAt = 1_000_000 + 45 * 60_000)
+        assertEquals(45.0, QuickWorkout.strengthForModel(done, false)!!.minutes, 0.01)
+        assertEquals(cz.uhk.macroflow.energy.StrengthKind.PUSH, QuickWorkout.strengthForModel(legs.copy(kind = QuickWorkout.OTHER), false)!!.kind)
+        assertNull(QuickWorkout.strengthForModel(null, false))
+    }
 }

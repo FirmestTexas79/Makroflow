@@ -449,7 +449,7 @@ class QuestJournalFragment : Fragment() {
                     viewLifecycleOwner.lifecycleScope.launch {
                         val (ok, fresh) = withContext(Dispatchers.IO) { SS.unlock(ctx, node.id).let { it to SS.state(ctx) } }
                         if (!isAdded) return@launch
-                        if (ok) rootView.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                        if (ok) rootView.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
                         done(if (ok) fresh else null)
                         renderCharacter()
                     }
@@ -460,7 +460,7 @@ class QuestJournalFragment : Fragment() {
                         if (!isAdded) return@launch
                         when (r) {
                             is cz.uhk.macroflow.pokemon.skills.SkillStore.ResetResult.Done -> {
-                                rootView.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                                rootView.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
                                 done(fresh, "🔄 Strom ${skill.label} přeučen – body jsou zpět.")
                             }
                             is cz.uhk.macroflow.pokemon.skills.SkillStore.ResetResult.NoCoins ->
@@ -562,7 +562,7 @@ class QuestJournalFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val got = withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.daily.DailyQuestStore.claim(ctx, q) }
             if (got > 0) {
-                rootView.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                rootView.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
                 android.widget.Toast.makeText(ctx, "+$got makro penízků", android.widget.Toast.LENGTH_SHORT).show()
                 // zůstatek i do cloudu
                 if (cz.uhk.macroflow.data.FirebaseRepository.isLoggedIn) withContext(Dispatchers.IO) {

@@ -222,7 +222,7 @@ object LogSetSheet {
             val e1 = StrengthModel.setEstimate(entity.toLogged())
             val isPr = kind == SetKind.WORK && e1 != null && prevBest != null && e1 > prevBest
             dialog.dismiss()
-            v.rootView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            v.rootView.performHapticFeedback(cz.uhk.macroflow.common.Haptics.CONFIRM)
             scope.launch {
                 WorkoutRepository.log(ctx.applicationContext, entity)
                 if (isPr) Toast.makeText(ctx, "Nový rekord: odhad 1RM ${kg(e1!!)} kg 🏆", Toast.LENGTH_LONG).show()
