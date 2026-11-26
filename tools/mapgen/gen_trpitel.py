@@ -31,6 +31,9 @@ for _f in BLINK:
 # kde sprite leží v mapě Kmene (levý horní roh, art px) – musí sedět s RootTrunk.kt a gen_trunk.py
 MAP_X0, MAP_Y0 = 0, 16
 CX = 132
+# Póza pro cutscény konců (tools/cutscene): breath = pevný nádech místo snímku, smile 0–1 = oči se usmějí (spodní víčka),
+# release 0–3 = pouští postupně: levá horní okraj rány, levá prostřední a levá dolní ratiště. Výchozí = sprite do mapy.
+POSE = dict(breath=None, smile=0.0, release=0.0)
 
 
 def nrm(v):
@@ -129,6 +132,10 @@ class Model:
 def build(fi):
     t = fi / FRAMES
     b = (1 - math.cos(2 * math.pi * t)) / 2                               # 0 výdech … 1 nádech
+    if POSE["breath"] is not None:
+        b = POSE["breath"]
+    rel = POSE["release"]
+    u1, u2, u3 = (min(1.0, max(0.0, rel - k)) for k in (0, 1, 2))
     M = Model()
     S = 1.9
     lean = math.radians(24 + 4 * b)
@@ -186,7 +193,11 @@ def build(fi):
         return d * S
     M.skin.append(head_sdf)
     op = BLINK.get(fi, 1.0)                                               # mrknutí: víčka sjedou shora přes oči
+    sm = POSE["smile"]
     for k, e_ in enumerate(EYES):                                         # oční koule hluboko v očnicích (svítí)
+        if sm > 0:                                                        # úsměv: spodní víčko zvedne oko do oblouku
+            lc = HC + HR @ (np.array([e_[0], e_[1] + 1.9 - 0.95 * sm, 6.4]) * S)
+            M.lids.append(lambda p, c=lc, rr=np.array([2.3, 1.35 * sm + 0.05, 1.15]) * S: sd_ell(p, c, rr, HR))
         if op > 0.05:
             M.eyes.append(lambda p, c=HC + HR @ (np.array(e_) * S), rr=np.array([1.05, 1.05 * max(op, 0.2), 1.05]) * S:
                           sd_ell(p, c, rr, HR))
@@ -240,8 +251,9 @@ def build(fi):
         M.skin.append(lambda p, c=h + f * 4: sd_ell(p, c, np.array([7.6, 7.2, 7.2])))
 
     # levá horní: drápe se za okraj rány a vytahuje se ven
-    e, h = arm((-27, -60, -2), (80 + b * 1.5, 30 - b * 2, 4), (50, 80, 50))
-    open_hand(h, e, 0.25, curl=0.9)
+    lip = np.array([80 + b * 1.5, 30 - b * 2, 4.0])
+    e, h = arm((-27, -60, -2), lip + u1 * (np.array([104.0, 96.0, 46.0]) - lip), (50, 80, 50))
+    open_hand(h, e, 0.25 + 0.2 * u1, curl=0.9 * (1 - u1) + 0.2 * u1)
     # pravá horní: pořád v objímce Řádu v kůře
     e, h = arm((27, -60, -2), (208, 50, -2), (200, 100, 30))
     open_hand(h, e, 0.18, curl=0.6)
@@ -250,10 +262,14 @@ def build(fi):
     wr_r = h
     # levá prostřední a levá dolní svírají ratiště vpředu, zápěstí vytočená ven; s dechem kopí lehce zvedne
     lift = np.array([0, -2.0 * b, 0])
-    for (sh, g, pole, l1, l2, r) in (((-23, -46, -4), H1, (10, 150, 50), 44, 42, (10.0, 8.0, 7.8, 5.6)),
-                                     ((-19, -30, 3), H2, (30, 240, 40), 34, 32, (8.6, 7.0, 6.8, 5.0))):
-        e, h = arm(sh, g + lift - nrm(g - W_(sh)) * 5, pole, l1=l1, l2=l2, r=r)
-        M.skin.append(lambda p, c=g + lift: sd_ell(p, c, np.array([7.4, 7.0, 7.4])))   # pěst kolem ratiště
+    for (sh, g, pole, l1, l2, r, u, away) in (((-23, -46, -4), H1, (10, 150, 50), 44, 42, (10.0, 8.0, 7.8, 5.6), u2, (26.0, 14.0, -30.0)),
+                                     ((-19, -30, 3), H2, (30, 240, 40), 34, 32, (8.6, 7.0, 6.8, 5.0), u3, (24.0, 10.0, -26.0))):
+        gg = g + lift + u * np.array(away)                                # pustí: dlaň se otevře a stáhne k tělu
+        e, h = arm(sh, gg - nrm(g - W_(sh)) * 5 * (1 - u), pole, l1=l1, l2=l2, r=r)
+        if u < 0.35:
+            M.skin.append(lambda p, c=gg: sd_ell(p, c, np.array([7.4, 7.0, 7.4])))   # pěst kolem ratiště
+        else:
+            open_hand(h, e, 0.35 * u, curl=0.6 * (1 - u))
     # pravá prostřední se opírá dlaní o kůru, pravá dolní se zapírá o pěnu
     e, h = arm((23, -46, -4), (214, 150 + b * 2, 2), (240, 110, 40), l1=44, l2=42)
     open_hand(h, e, 0.4, curl=0.3)
@@ -424,6 +440,8 @@ def render(fi):
     edge &= ~a
     out[edge] = (12, 9, 11, 255)
     info["alpha"] = a
+    mm = np.full(H * W, -1); mm[hi] = mat
+    info["mat"] = mm.reshape(H, W)
     return out, info
 
 

@@ -2249,12 +2249,27 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    private fun endingVideo(end: cz.uhk.macroflow.pokemon.story.Finale.End) = when (end) {
+        cz.uhk.macroflow.pokemon.story.Finale.End.SPEAR -> R.raw.ending_kopi
+        else -> 0
+    }
+
+    /** Debug: přehrát konec bez příznaků a bez návratu do Města. */
+    private fun debugEnding(end: cz.uhk.macroflow.pokemon.story.Finale.End) {
+        cz.uhk.macroflow.pokemon.audio.GameAudio.pause()
+        cz.uhk.macroflow.pokemon.cutscene.EndingScene.show(findViewById(R.id.mapRootContainer),
+            cz.uhk.macroflow.pokemon.story.Finale.ENDINGS.getValue(end), endingVideo(end)) { cz.uhk.macroflow.pokemon.audio.GameAudio.resume(this) }
+    }
+
     /** Dohrání konce přes celou obrazovku, pak návrat do Města (Makrosvět jde dál). */
     private fun playEnding(end: cz.uhk.macroflow.pokemon.story.Finale.End) {
         val F = cz.uhk.macroflow.pokemon.story.Finale
         StoryFlags.set(this, end.key)
-        cz.uhk.macroflow.pokemon.cutscene.EndingScene.show(findViewById(R.id.mapRootContainer), F.ENDINGS.getValue(end)) {
+        val video = endingVideo(end)
+        if (video != 0) cz.uhk.macroflow.pokemon.audio.GameAudio.pause()           // cutscéna má vlastní hudbu
+        cz.uhk.macroflow.pokemon.cutscene.EndingScene.show(findViewById(R.id.mapRootContainer), F.ENDINGS.getValue(end), video) {
             if (isFinishing) return@show
+            if (video != 0) cz.uhk.macroflow.pokemon.audio.GameAudio.resume(this)
             enterBiomeAtNode(BiomeType.TOWN, "spawn")
         }
     }
@@ -3936,6 +3951,10 @@ class MakromonMapActivity : AppCompatActivity() {
             "🌑 Bezejmenní (finále sadu)" to { play(cz.uhk.macroflow.pokemon.cutscene.NamelessCutsceneView(this)) },
             "⚖️ Dveře Věže (Ozvěna)" to { play(cz.uhk.macroflow.pokemon.cutscene.TowerDoorCutsceneView(this)) },
             "🌳 Sjezd do Hlubiny (Věž −2)" to { play(cz.uhk.macroflow.pokemon.cutscene.DescentCutsceneView(this)) },
+            "🗡 Konec I · Kopí" to { debugEnding(cz.uhk.macroflow.pokemon.story.Finale.End.SPEAR) },
+            "🌸 Konec II · Den kvetení" to { debugEnding(cz.uhk.macroflow.pokemon.story.Finale.End.BLOOM) },
+            "✨ Konec III · Poslední přání" to { debugEnding(cz.uhk.macroflow.pokemon.story.Finale.End.WISH) },
+            "🌙 Konec IV · Probuzení" to { debugEnding(cz.uhk.macroflow.pokemon.story.Finale.End.SECRET) },
             "📚 Archiv okruhů – patro 1 (test)" to { enterBiomeAtNode(BiomeType.TOWER_ARCHIVE, cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, MapTransition.FADE) }
         )
         android.app.AlertDialog.Builder(this)

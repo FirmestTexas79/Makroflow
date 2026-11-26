@@ -25,7 +25,11 @@ object EndingScene {
 
     fun isOpen(root: FrameLayout) = root.findViewWithTag<View>(TAG) != null
 
-    fun show(root: FrameLayout, ending: Finale.Ending, onDone: () -> Unit) {
+    /**
+     * [videoRes] ≠ 0: konec má vlastní cutscénu (res/raw, tools/cutscene) – přehraje se celá obrazovka, klepnutí ukáže
+     * „přeskočit“, druhé ji přeskočí; pak titulek. Jinak stránky textu po písmenech.
+     */
+    fun show(root: FrameLayout, ending: Finale.Ending, videoRes: Int = 0, onDone: () -> Unit) {
         val ctx = root.context
         val d = ctx.resources.displayMetrics.density
         fun dp(v: Float) = (v * d).toInt()
@@ -115,6 +119,33 @@ object EndingScene {
             })
             shell.addView(card)
             card.animate().alpha(1f).setStartDelay(900).setDuration(1600).start()
+        }
+        if (videoRes != 0) {
+            fx.visibility = View.INVISIBLE
+            val video = android.widget.VideoView(ctx).apply {
+                layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER)
+            }
+            shell.addView(video, 1)
+            var ended = false
+            val end = {
+                if (!ended) {
+                    ended = true
+                    runCatching { video.stopPlayback() }
+                    video.animate().alpha(0f).setDuration(500).withEndAction { shell.removeView(video); fx.visibility = View.VISIBLE; finish() }.start()
+                }
+            }
+            hint.text = "klepni znovu – přeskočit ▸▸"
+            var armed = 0L
+            shell.setOnClickListener {
+                val now = System.currentTimeMillis()
+                if (now - armed < 2500) end() else { armed = now; hint.animate().alpha(1f).setDuration(200).withEndAction {
+                    hint.animate().alpha(0f).setStartDelay(1800).setDuration(400).start() }.start() }
+            }
+            video.setOnCompletionListener { end() }
+            video.setOnErrorListener { _, _, _ -> end(); true }
+            video.setVideoURI(android.net.Uri.parse("android.resource://${ctx.packageName}/$videoRes"))
+            video.setOnPreparedListener { video.start() }
+            return
         }
         shell.setOnClickListener {
             if (shown < body().length) { typer?.cancel(); shown = body().length; pageView.text = body(); hint.animate().alpha(1f).setDuration(300).start(); return@setOnClickListener }
