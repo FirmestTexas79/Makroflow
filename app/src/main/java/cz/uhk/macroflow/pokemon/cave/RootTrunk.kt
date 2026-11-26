@@ -14,10 +14,10 @@ object RootTrunk {
     const val VISITED_KEY = "zona3_kmen"
 
     /** Trpitel: levý horní roh spritu v mapě (art px), počet snímků v pásu a jejich délka (gen_trpitel.py). */
-    const val TRPITEL_X0 = 8
-    const val TRPITEL_Y0 = 26
-    const val TRPITEL_FRAMES = 10
-    const val TRPITEL_FRAME_MS = 320
+    const val TRPITEL_X0 = 0
+    const val TRPITEL_Y0 = 14
+    const val TRPITEL_FRAMES = 12
+    const val TRPITEL_FRAME_MS = 280
 
     val MAP = CaveMap(
         artW = 176, artH = 560,

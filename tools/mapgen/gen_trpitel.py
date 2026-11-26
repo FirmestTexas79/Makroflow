@@ -1,327 +1,412 @@
 """
-Použití:  python tools/mapgen/gen_trpitel.py
+Použití:  python tools/mapgen/gen_trpitel.py [--frames N]
 Výstup:   app/src/main/res/drawable-nodpi/trpitel_sheet.png (pás FRAMES snímků vedle sebe, 1 px = 1 px mapy),
           tools/mapgen/trpitel_preview.png
 
-TRPITEL (Kazimír) – bůh ve Stromu, NPC na mapě Kmene (gen_trunk.py, RootTrunk.kt). Obr s tělem kulturisty barvy
-popela, kůže popraskaná jako vyschlé bahno (víc na pravé straně, kudy prochází bolest), hladká hlava bez tváře se
-šesti svítícími očima ve dvou sloupcích. Šest paží: horní pár roztažený vzhůru, zápěstí v ocelových objímkách Řádu
-přišroubovaných do kůry; prostřední pár rozpažený s otevřenými dlaněmi; dolní pár svírá ratiště kopí, které mu
-prochází hrudí a trčí z rány ven. Od stehen ho pohltila pěna (Operace Pečeť). Snímky = jeden nádech a výdech:
-hrudník se zvedne a rozšíří, rozpažené ruce se zvednou, dolní ruce zatáhnou za ratiště, oči pulzují a jeden pár
-mrkne. Světlo: slabě shora, zespodu sodíkové světlomety, zezadu studená záře z rány (obrys).
+TRPITEL (Kazimír) – bůh ve Stromu, NPC na mapě Kmene (gen_trunk.py, RootTrunk.kt). Ne plochá kresba, ale 3D postava
+(SDF: svaly jako elipsoidy a kužely s plynulým sjednocením, raymarching, stíny, okluze) natočená do 3/4: vylézá z rány
+v kmeni, předkloněný k hráči, boky a nohy ještě v kmeni pod pěnou. Tělo kulturisty barvy popela, popraskaná kůže
+(praskliny jsou 3D Voronoi v prostoru těla, drží na kůži), ve prasklinách doutná studené světlo, které sílí s nádechem.
+Hladká hlava bez tváře, šest očí. Šest paží: levá horní se drápe za okraj rány (vytahuje se ven), pravá horní je pořád
+v ocelové objímce Řádu v kůře; levá prostřední se natahuje k hráči otevřenou dlaní, pravá prostřední se opírá o kůru;
+dolní pár svírá ratiště kopí, které mu prochází hrudí a přibíjí ho ke kmeni. Ruce řeší IK (rameno–loket–dlaň).
+Světlo: zespodu teplé sodíkové světlomety (vrhají jeho stín nahoru na kmen), shora studená záře rány, obrys azurový.
+Snímky = jeden dech: hrudník se zvedne, předkloní se, natažená ruka se přiblíží, dolní ruce zatáhnou za kopí.
 """
-import math, os
+import math, os, sys
 import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-W, H = 160, 232
-CX = 80
-FRAMES = 10
+W, H = 176, 272
+FRAMES = 12
 # kde sprite leží v mapě Kmene (levý horní roh, art px) – musí sedět s RootTrunk.kt a gen_trunk.py
-MAP_X0, MAP_Y0 = 8, 26
-SPEAR_IN, SPEAR_OUT = (CX - 4, 68), (CX + 46, 226)
-CLAMP_T = 0.62
-CLAMP = (SPEAR_IN[0] + (SPEAR_OUT[0] - SPEAR_IN[0]) * CLAMP_T, SPEAR_IN[1] + (SPEAR_OUT[1] - SPEAR_IN[1]) * CLAMP_T)
-
-SKIN = np.array([(18, 16, 18), (32, 29, 31), (50, 46, 47), (72, 67, 67), (96, 90, 88), (122, 116, 112), (150, 144, 138)], float)
-FOAM = np.array([(48, 44, 32), (84, 78, 56), (120, 112, 82), (154, 144, 106), (186, 176, 134), (212, 204, 164)], float) * 0.62
-WARM, CYAN = np.array((255, 168, 90.0)), np.array((120, 236, 224.0))
-LIGHT = np.array((-0.45, -0.55, 0.7)); LIGHT /= np.linalg.norm(LIGHT)
-UNDER = np.array((0.1, 0.85, 0.5)); UNDER /= np.linalg.norm(UNDER)
+MAP_X0, MAP_Y0 = 0, 14
+CX = 88
 
 
-def h32(*a):
-    v = 2166136261
-    for x in a:
-        v = ((v ^ (int(x) & 0xFFFFFFFF)) * 16777619) & 0xFFFFFFFF
-    return v
+def nrm(v):
+    v = np.asarray(v, float)
+    return v / np.linalg.norm(v)
 
 
-def ramp(R, v, x, y):
-    v = max(0.0, min(0.999, v)) * (len(R) - 1)
-    i = int(v)
-    return R[i + 1] if i + 1 < len(R) and (v - i) > ((x * 3 + y * 5) % 7) / 7 * 0.8 + 0.1 else R[i]
+def rot_x(a):
+    c, s = math.cos(a), math.sin(a)
+    return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
 
 
-rs = np.random.default_rng(6)
-SEEDS = np.column_stack([rs.uniform(0, W, 420), rs.uniform(0, H, 420)])
+def rot_y(a):
+    c, s = math.cos(a), math.sin(a)
+    return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
 
 
-def crack(x, y):
-    """Síť prasklin (Voronoi hrany); víc vpravo a na hrudi, hlava hladká."""
-    d = np.hypot(SEEDS[:, 0] - x, (SEEDS[:, 1] - y) * 1.1)
-    a, b = np.partition(d, 1)[:2]
-    edge = (b - a) < 0.85
-    density = 0.45 + 0.55 * max(0.0, min(1.0, (x - CX + 24) / 44))
-    return edge and (h32(int(a * 3), int(b * 3), 7) % 100) / 100 < density
+# ── SDF primitiva (p: N×3) ──────────────────────────────────────────────────
+def sd_ell(p, c, r, R=None):
+    q = p - c
+    if R is not None:
+        q = q @ R
+    k0 = np.linalg.norm(q / r, axis=1)
+    k1 = np.linalg.norm(q / (r * r), axis=1)
+    return k0 * (k0 - 1.0) / np.maximum(k1, 1e-6)
 
 
-class Frame:
-    """Výšková mapa těla: každý sval je elipsoid, z = nejvyšší povrch. Normály z gradientu → svaly do sebe plynule
-    přecházejí (údolí mezi nimi jsou tmavší), překryv (ruka před trupem) dá tmavou spáru."""
+def sd_cone(p, a, b, ra, rb):
+    pa = p - a; ba = b - a
+    h = np.clip((pa @ ba) / (ba @ ba), 0, 1)
+    return np.linalg.norm(pa - np.outer(h, ba), axis=1) - (ra + (rb - ra) * h)
+
+
+def smin(a, b, k):
+    h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1)
+    return b * (1 - h) + a * h - k * h * (1 - h)
+
+
+def ik(s, h, l1, l2, pole):
+    """Dvoukloubová IK: rameno s, dlaň h, délky, pomocný bod pole (kam má trčet loket) → loket, skutečná dlaň."""
+    d = h - s
+    L = np.linalg.norm(d)
+    L = min(L, l1 + l2 - 0.5)
+    dn = nrm(d)
+    hh = s + dn * L
+    a = (l1 * l1 - l2 * l2 + L * L) / (2 * L)
+    k = math.sqrt(max(0.0, l1 * l1 - a * a))
+    pv = np.asarray(pole, float) - s
+    pv = pv - dn * (pv @ dn)
+    pv = nrm(pv) if np.linalg.norm(pv) > 1e-6 else np.array([0, 0, 1.0])
+    return s + dn * a + pv * k, hh
+
+
+def seg_frame(a, b):
+    """Matice lokálních os pro sval podél úseku a→b: lokální y míří po úseku."""
+    f = nrm(b - a)
+    s = np.cross(f, np.array([0, 0, 1.0]))
+    s = nrm(s) if np.linalg.norm(s) > 1e-4 else np.array([1.0, 0, 0])
+    u = np.cross(s, f)
+    return np.column_stack([s, f, u])
+
+
+class Model:
+    """Postava jako skupiny primitiv: kůže (plynulé sjednocení), kopí, kov, pěna."""
     def __init__(self):
-        self.z = np.full((H, W), -1e9); self.pid = np.full((H, W), -1)
-        self.base = np.zeros((H, W)); self.n = 0
-        self.rgb = np.zeros((H, W, 3)); self.a = np.zeros((H, W), bool); self.skin = np.zeros((H, W), bool)
+        self.skin, self.spear, self.metal, self.foam = [], [], [], []
 
-    def _put(self, x, y, z, pid, base):
-        if z > self.z[y, x]:
-            self.z[y, x] = z; self.pid[y, x] = pid; self.base[y, x] = base
-
-    def blob(self, cx, cy, rx, ry, base=0.0, z0=0.0, rz=None):
-        pid = self.n; self.n += 1
-        rz = rz if rz is not None else min(rx, ry) * 0.9
-        for y in range(int(cy - ry) - 1, int(cy + ry) + 2):
-            for x in range(int(cx - rx) - 1, int(cx + rx) + 2):
-                if 0 <= x < W and 0 <= y < H:
-                    d = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2
-                    if d <= 1:
-                        self._put(x, y, z0 + rz * math.sqrt(1 - d), pid, base)
-        return pid
-
-    def capsule(self, pts, radii, base=0.0, z0=0.0):
-        seg = []
-        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
-            k = max(1, int(math.hypot(x1 - x0, y1 - y0) * 1.5))
-            seg += [(x0 + (x1 - x0) * i / k, y0 + (y1 - y0) * i / k) for i in range(k)]
-        seg.append(pts[-1])
-        pid = self.n; self.n += 1
-        for i, (cx, cy) in enumerate(seg):
-            r = np.interp(i / max(1, len(seg) - 1), np.linspace(0, 1, len(radii)), radii)
-            for y in range(int(cy - r) - 1, int(cy + r) + 2):
-                for x in range(int(cx - r) - 1, int(cx + r) + 2):
-                    if 0 <= x < W and 0 <= y < H:
-                        d = ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2) / (r * r)
-                        if d <= 1:
-                            self._put(x, y, z0 + r * 0.9 * math.sqrt(1 - d), pid, base)
-        return pid
-
-    def bake(self):
-        """Stínování z výškové mapy: světlo shora zleva, zespodu sodík, zezadu studený obrys."""
-        m = self.z > -1e8
-        z = np.where(m, self.z, np.nan)
-        zp = np.pad(z, 1, mode="edge")
-        gx = (zp[1:-1, 2:] - zp[1:-1, :-2]) / 2; gy = (zp[2:, 1:-1] - zp[:-2, 1:-1]) / 2
-        gx = np.nan_to_num(gx, nan=0.0); gy = np.nan_to_num(gy, nan=0.0)
-        gx = np.clip(gx, -3, 3); gy = np.clip(gy, -3, 3)
-        nl = np.sqrt(gx * gx + gy * gy + 1)
-        nx, ny, nz = -gx / nl, -gy / nl, 1 / nl
-        edge = np.zeros_like(m)
-        edge[1:, :] |= ~m[:-1, :]; edge[:-1, :] |= ~m[1:, :]; edge[:, 1:] |= ~m[:, :-1]; edge[:, :-1] |= ~m[:, 1:]
-        edge &= m
-        for y, x in zip(*np.nonzero(m)):
-            n = np.array((nx[y, x], ny[y, x], nz[y, x]))
-            dif = max(0.0, n @ LIGHT); und = max(0.0, n @ UNDER)
-            col = ramp(SKIN, 0.1 + dif * 0.7 + self.base[y, x], x, y).copy()
-            col += WARM * und * 0.12
-            rim = 0.45 if edge[y, x] else (1 - nz[y, x]) ** 4 * 0.3
-            col = col * (1 - rim) + CYAN * rim * 0.75 + col * rim * 0.25
-            self.rgb[y, x] = np.clip(col * (0.86 if y > 120 else 0.94), 0, 255)
-            self.a[y, x] = True; self.skin[y, x] = True
-        rgb0 = self.rgb.copy()                                            # spára tam, kde něco leží před něčím
-        for y in range(1, H - 1):
-            for x in range(1, W - 1):
-                if m[y, x]:
-                    for dy, dx in ((-1, 0), (0, -1), (1, 0), (0, 1)):
-                        if m[y + dy, x + dx] and self.z[y + dy, x + dx] - self.z[y, x] > 3.0:
-                            self.rgb[y, x] = rgb0[y, x] * 0.45
-                            break
-
-    def px(self, x, y, col, a=1.0):
-        X, Y = int(round(x)), int(round(y))
-        if 0 <= X < W and 0 <= Y < H:
-            self.rgb[Y, X] = self.rgb[Y, X] * (1 - a) + np.asarray(col, float) * a if self.a[Y, X] else np.asarray(col, float)
-            self.a[Y, X] = True
+    def sdf(self, p, mats=False):
+        def grp(lst, k):
+            d = None
+            for f in lst:
+                v = f(p)
+                d = v if d is None else (smin(d, v, k) if k else np.minimum(d, v))
+            return d if d is not None else np.full(len(p), 1e9)
+        ds = grp(self.skin, 3.2)
+        dp = grp(self.spear, 0)
+        dm = grp(self.metal, 0)
+        df = grp(self.foam, 2.0)
+        d = np.minimum(np.minimum(ds, dp), np.minimum(dm, df))
+        if not mats:
+            return d
+        m = np.zeros(len(p), int)                                         # 0 kůže, 1 kopí, 2 kov, 3 pěna
+        m[dp <= d + 1e-4] = 1; m[dm <= d + 1e-4] = 2; m[df <= d + 1e-4] = 3; m[ds <= d + 1e-4] = 0
+        return d, m
 
 
-def arm(f, sh, el, wr, big=1.0, z0=0.0):
-    f.capsule([sh, el], [7.4 * big, 8.2 * big, 6.6 * big, 5.4 * big], z0=z0)   # rameno a biceps
-    f.capsule([el, wr], [6.0 * big, 5.8 * big, 4.6 * big, 3.6 * big], z0=z0 + 0.5)   # předloktí
+def build(fi):
+    t = fi / FRAMES
+    b = (1 - math.cos(2 * math.pi * t)) / 2                               # 0 výdech … 1 nádech
+    M = Model()
+    S = 1.62
+    lean = math.radians(24 + 4 * b)
+    yaw = math.radians(50)
+    R = rot_x(-lean) @ rot_y(yaw)                                         # tělo: předklon k hráči, natočené do 3/4
+    hl = R @ np.array([0, -83.0, 5.0])
+    P0 = np.array([86.0 - S * hl[0], 54.0 - S * hl[1], -16.0])           # pánev v kmeni; hlava nahoře v ráně
+
+    def W_(v):
+        return P0 + S * (R @ np.asarray(v, float))
+
+    def ell(c, r, Rl=None, k=None):
+        cw, rr, RR = W_(c), np.asarray(r, float) * S, R if Rl is None else R @ Rl
+        M.skin.append(lambda p, cw=cw, rr=rr, RR=RR: sd_ell(p, cw, rr, RR))
+
+    def cone(a, b_, ra, rb, lst=None, world=False):
+        A = np.asarray(a, float) if world else W_(a)
+        B = np.asarray(b_, float) if world else W_(b_)
+        (M.skin if lst is None else lst).append(lambda p, A=A, B=B: sd_cone(p, A, B, ra, rb))
+
+    chest = 1 + 0.05 * b
+    # ── trup kulturisty (lokální souřadnice: x vpravo, y dolů, z dopředu; pánev = 0) ──
+    ell((0, -4, 0), (17, 11, 12))                                         # pánev
+    ell((0, -24, 2), (15, 16, 11))                                        # břicho
+    ell((0, -47, 0), (22 * chest, 17 * chest, 14 * chest))               # hrudní koš
+    for sx in (-1, 1):
+        ell((sx * 10.5, -51, 8 * chest), (13, 8, 5.2), rot_y(sx * 0.25))  # prsní svaly (ploché desky)
+        ell((sx * 20, -40, -3), (8.5, 15, 9))                             # široké zádové svaly
+        ell((sx * 9, -66, -4), (13, 7, 8))                                # trapézy
+        ell((sx * 26, -59, -1), (9.5, 12, 9.5), rot_x(0.3))               # deltové svaly
+        ell((sx * 13.5, -17, 5), (5.5, 11, 6))                            # šikmé svaly
+        for k, yy in enumerate((-35, -26, -17)):
+            ell((sx * 5, yy, 10.5), (5, 4.4, 3.2))                        # břišní svaly
+    cone((0, -62, -1), (0, -74, 3), 9.5, 8.0)                             # krk (silný)
+    head_c = (0, -83, 5)
+    Rh = rot_y(math.radians(-22 + 4 * math.sin(2 * math.pi * t))) @ rot_x(math.radians(-18))   # hlava se otáčí k hráči
+    ell(head_c, (8.2, 10.5, 9.0), Rh)
+    ell((0, -87, 11), (6.5, 2.6, 2.6), Rh)                                # nadočnicový val
+    # ── kopí: hrudí do kmene, ratiště trčí k hráči ──
+    spear_in = W_((-4, -44, 13))
+    sd = nrm((0.3, 0.42, 0.86))
+    spear_out = spear_in + sd * 110
+    M.spear.append(lambda p, A=spear_in - sd * 30, B=spear_out: sd_cone(p, A, B, 3.0, 4.0))
+    clamp = spear_in + sd * 60
+    M.metal.append(lambda p, c=clamp: sd_cone(p, c - sd * 3.5, c + sd * 3.5, 7.0, 7.0))
+    # ── paže (IK) ──
+    def arm(sh_local, hand, pole, l1=40, l2=37, r=(10.0, 8.0, 7.8, 5.6)):
+        s = W_(sh_local)
+        e, h = ik(s, np.asarray(hand, float), l1, l2, pole)
+        mid = s + (e - s) * 0.5
+        cone(s, e, r[0], r[1], world=True)
+        Fu = seg_frame(s, e); lu = np.linalg.norm(e - s)
+        M.skin.append(lambda p, c=mid + Fu[:, 2] * 1.5, rr=np.array([r[0] * 1.05, lu * 0.36, r[0] * 1.2]), Fu=Fu: sd_ell(p, c, rr, Fu))   # biceps
+        cone(e, h, r[2], r[3], world=True)
+        Ff = seg_frame(e, h); lf = np.linalg.norm(h - e)
+        fm = e + (h - e) * 0.3
+        M.skin.append(lambda p, c=fm, rr=np.array([r[2] * 1.15, lf * 0.3, r[2] * 1.05]), Ff=Ff: sd_ell(p, c, rr, Ff))   # svaly předloktí
+        return e, h
+
+    def open_hand(h, e, spread, curl=0.0):
+        f = nrm(h - e)
+        side = nrm(np.cross(f, np.array([0, 0, 1.0])) + 1e-6)
+        up = nrm(np.cross(side, f))
+        palm = h + f * 5
+        M.skin.append(lambda p, c=palm: sd_ell(p, c, np.array([7.0, 7.0, 6.0])))
+        for k, a in enumerate((-1.5, -0.5, 0.5, 1.5)):
+            base = palm + f * 5 + side * a * 3.2
+            dirf = nrm(f + side * a * spread - up * curl)
+            ln = 12 - abs(a) * 2
+            mid = base + dirf * ln * 0.55
+            tip = mid + nrm(dirf - up * curl * 1.5) * ln * 0.5
+            cone(base, mid, 2.4, 2.1, world=True); cone(mid, tip, 2.1, 1.6, world=True)
+        th = palm - side * 6 + f * 1
+        cone(th, th - side * 5 + f * 6 - up * curl * 2, 2.6, 2.0, world=True)
+
+    def fist(h, e):
+        f = nrm(h - e)
+        M.skin.append(lambda p, c=h + f * 4: sd_ell(p, c, np.array([7.6, 7.2, 7.2])))
+
+    # levá horní: drápe se za okraj rány a vytahuje se ven
+    e, h = arm((-27, -60, -2), (34 + b * 1.5, 34 - b * 2, 4), (10, 80, 50))
+    open_hand(h, e, 0.25, curl=0.9)
+    # pravá horní: pořád v objímce Řádu v kůře
+    e, h = arm((27, -60, -2), (156, 52, -2), (150, 100, 30))
+    open_hand(h, e, 0.18, curl=0.6)
+    f = nrm(h - e)
+    M.metal.append(lambda p, A=h - f * 7, B=h - f * 1: sd_cone(p, A, B, 6.0, 6.0))
+    wr_r = h
+    # levá prostřední: natahuje se k hráči
+    e, h = arm((-23, -46, -4), (30 - b * 2, 112 + b * 3, 118 + b * 12), (-30, 170, 60))
+    open_hand(h, e, 0.42 + 0.1 * b, curl=0.15 - 0.1 * b)
+    # pravá prostřední: opírá se dlaní o kůru
+    e, h = arm((23, -46, -4), (164, 150, 2), (180, 110, 40))
+    open_hand(h, e, 0.4, curl=0.3)
+    # dolní pár svírá ratiště, při výdechu zatáhne
+    pull = (1 - b) * 3
+    g = spear_in + sd * (22 + pull)                                       # pravá dolní svírá ratiště
+    e, h = arm((19, -30, 3), g, (180, 170, 70), l1=28, l2=26, r=(8.6, 7.0, 6.8, 5.0))
+    fist(h, e)
+    e, h = arm((-19, -30, 3), (22, 212 - b * 2, 4), (-20, 230, 40), l1=32, l2=30, r=(8.6, 7.0, 6.8, 5.0))   # levá dolní se zapírá o pěnu
+    open_hand(h, e, 0.5, curl=0.5)
+    # pravé koleno se zapírá o okraj rány – leze ven
+    hip = W_((10, 2, 2))
+    knee = np.array([hip[0] + 34, hip[1] - 6 - b * 2, 30.0])
+    foot = np.array([knee[0] + 10, knee[1] + 34, 2.0])
+    cone(hip, knee, 13, 9.5, world=True)
+    M.skin.append(lambda p, c=hip + (knee - hip) * 0.45: sd_ell(p, c, np.array([12.5, 12.5, 12.5])))
+    cone(knee, foot, 9, 6.5, world=True)
+    # pěna kolem místa, kde tělo vystupuje z kmene
+    rf = np.random.default_rng(31)
+    for _ in range(110):
+        c = np.array([P0[0] + rf.uniform(-46, 50), P0[1] + rf.uniform(-30, 26), rf.uniform(-2, 8)])
+        r = rf.uniform(3.5, 8)
+        M.foam.append(lambda p, c=c, rr=np.array([r, r * 0.9, r * 0.55]): sd_ell(p, c, rr))
+    info = dict(R=R, P0=P0, S=S, Rh=Rh, head_c=W_(head_c), b=b, spear_in=spear_in, spear_dir=sd, clamp=clamp, wrist_r=wr_r,
+                W_=W_, head_R=R @ Rh)
+    return M, info
 
 
-def palm(f, wx, wy, side, lift, z0):
-    """Otevřená dlaň s roztaženými prsty (rozpažená ruka)."""
-    f.blob(wx + side * 4, wy, 5.6, 4.4, z0=z0)
-    for k, a in enumerate((-0.55, -0.18, 0.18, 0.5)):
-        ang = a - 0.3 * lift
-        ln = 7 - (k in (0, 3)) * 2
-        x1 = wx + side * (8 + math.cos(ang) * ln); y1 = wy + math.sin(ang) * ln * 1.1
-        f.capsule([(wx + side * 8, wy + (k - 1.5) * 1.6), (x1, y1 + (k - 1.5) * 1.2)], [1.5, 1.2], z0=z0)
-    f.capsule([(wx + side * 3, wy - 3), (wx + side * 7, wy - 7)], [1.7, 1.3], z0=z0)   # palec
+# ── render ──────────────────────────────────────────────────────────────────
+KEY = nrm((-0.45, -0.6, 0.66))                                            # studená záře shora zleva (hlavní)
+FILL = nrm((0.25, 0.85, 0.45))                                            # sodík zespodu
+WARM = np.array((200, 214, 214.0)) / 255
+COOL = np.array((255, 170, 100.0)) / 255
+CYAN = np.array((120, 240, 228.0))
+ALB = {0: np.array((108, 100, 98.0)), 1: np.array((96, 72, 50.0)), 2: np.array((130, 136, 144.0)), 3: np.array((118, 110, 82.0))}
+rs = np.random.default_rng(6)
+SEEDS = rs.uniform((-60, -140, -40), (60, 20, 40), (3200, 3))             # Voronoi prasklin v prostoru těla
+SEEDS_W = rs.uniform((0, 0, -20), (W, H, 130), (9000, 3))                  # … a pro paže ve světě
+BAYER = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) / 16.0
 
 
-def fist(f, x, y, z0):
-    f.blob(x, y, 5.4, 4.8, z0=z0, base=0.04)
-    f.knuckles = getattr(f, "knuckles", []) + [(x, y)]
-
-
-def cuff(f, x, y, z0):
-    f.blob(x, y + 2, 5.0, 5.0, z0=z0)                                     # ruka v objímce
-    for k in range(4):
-        f.capsule([(x - 3.5 + k * 2.3, y - 1), (x - 4 + k * 2.6, y - 6)], [1.3, 1.1], z0=z0)   # prsty zaťaté do kůry
-    f.cuffs = getattr(f, "cuffs", []) + [(x, y)]
-
-
-def draw_cuffs(f):
-    for (x, y) in getattr(f, "cuffs", []):
-        for yy in range(int(y) + 3, int(y) + 9):
-            for xx in range(int(x) - 6, int(x) + 7):
-                v = 0.85 - (yy - y - 3) * 0.1
-                f.px(xx, yy, (50 + v * 120, 54 + v * 120, 60 + v * 120) if yy < y + 8 else (20, 20, 24))
-        for (bx, by) in ((x - 5, y + 4), (x + 5, y + 4), (x - 5, y + 7), (x + 5, y + 7)):
-            f.px(bx, by, (24, 24, 28))
-    for (x, y) in getattr(f, "knuckles", []):
-        for k in range(4):
-            f.px(x - 3 + k * 2, y - 3, SKIN[5] * 0.9 + CYAN * 0.1)
+def cracks(pts, seeds):
+    out = np.zeros(len(pts)); idx = np.zeros(len(pts), int)
+    for i in range(0, len(pts), 2000):
+        d = np.linalg.norm(pts[i:i + 2000, None, :] - seeds[None, :, :], axis=2)
+        part = np.partition(d, 1, axis=1)
+        out[i:i + 2000] = part[:, 1] - part[:, 0]
+        idx[i:i + 2000] = np.argmin(d, axis=1)
+    return out, idx
 
 
 def render(fi):
-    t = fi / FRAMES
-    b = (1 - math.cos(2 * math.pi * t)) / 2                               # 0 = výdech, 1 = nádech
-    up = -round(b * 1.6)                                                  # hrudník a ramena se zvednou
-    f = Frame()
-    # ── zadní vrstva: horní a prostřední paže (za trupem) ──
-    for side in (-1, 1):
-        sh = (CX + side * 26, 50 + up)
-        el = (CX + side * (48 + b * 1.5), 30 + up * 0.5)
-        wr = (CX + side * 62, 13)
-        arm(f, sh, el, wr, big=1.0, z0=-8)
-        cuff(f, wr[0], wr[1] - 4, z0=-8)
-        sh2 = (CX + side * 26, 64 + up)
-        el2 = (CX + side * 48, 72 - b * 2)
-        wr2 = (CX + side * 64, 76 - b * 4.5)
-        arm(f, sh2, el2, wr2, big=0.95, z0=-6)
-        palm(f, wr2[0], wr2[1], side, b, z0=-6)
-    # ── trup kulturisty ──
-    f.blob(CX, 142, 22, 26, z0=-2, base=-0.06)                           # pánev
-    for side in (-1, 1):
-        f.blob(CX + side * 11, 154, 12, 24, z0=0, base=-0.04)             # stehna
-        f.blob(CX + side * 20, 82 + up * 0.5, 10, 20, z0=-2, base=-0.04)  # široké zádové svaly (do V)
-        f.blob(CX + side * 14, 116, 6, 12, z0=0, base=-0.03)              # šikmé svaly
-    f.blob(CX, 96, 18, 34, z0=0, rz=10)                                   # hrudní koš a břicho
-    for row, yy in enumerate((86, 98, 110)):                              # břišní svaly 3 × 2
-        for side in (-1, 1):
-            f.blob(CX + side * 5.4, yy - row * 0.4, 5.2, 5.6, z0=6, base=0.02 - row * 0.03, rz=4)
-    for side in (-1, 1):
-        f.blob(CX + side * 12.5, 64 + up, 13.5 + b * 0.9, 9.5 + b * 0.7, z0=6, base=0.06, rz=7)   # prsní svaly
-        f.blob(CX + side * 29, 56 + up, 11.5, 12, z0=2, base=0.05, rz=9)  # deltové svaly
-        f.blob(CX + side * 14, 46 + up, 13, 7, z0=0, base=0.0, rz=6)      # trapézy
-    f.blob(CX, 56 + up, 22, 9, z0=2, base=0.02, rz=6)                     # horní hrudník mezi rameny
-    f.blob(CX, 44 + up, 8, 9, z0=0, base=-0.04)                           # krk
-    pid_head = f.blob(CX, 28 + up, 8.5, 11.5, z0=4, base=0.12, rz=8)      # hlava bez tváře
-    # ── dolní pár paží svírá ratiště (před tělem) ──
-    (x0, y0), (x1, y1) = SPEAR_IN, SPEAR_OUT
-    pull = (1 - b) * 2.2                                                  # výdech: zatáhne za ratiště
-    dirx, diry = (x1 - x0), (y1 - y0)
-    Lsp = math.hypot(dirx, diry); dirx, diry = dirx / Lsp, diry / Lsp
-    gl = (x0 + dirx * (36 + pull), y0 + diry * (36 + pull))
-    gr = (x0 + dirx * (56 + pull), y0 + diry * (56 + pull))
-    arm(f, (CX - 24, 76 + up), (CX - 38, 100), gl, big=0.95, z0=12)
-    arm(f, (CX + 24, 78 + up), (CX + 40, 106), gr, big=0.95, z0=12)
-    f.bake()
-    # ── praskliny a světlé žilky na kůži ──
-    shift = up
-    for y in range(H):
-        for x in range(W):
-            if f.skin[y, x] and f.pid[y, x] != pid_head and crack(x, y - (shift if y < 92 else 0)):
-                f.rgb[y, x] = f.rgb[y, x] * 0.3 + np.array((34, 14, 16)) * 0.7
-    for (x0, y0, n) in ((CX - 14, 66, 50), (CX - 22, 80, 30), (CX - 6, 100, 40)):
-        x, y = x0, y0 + up
-        for i in range(n):
-            x += math.sin(i * 0.35 + x0) * 0.6; y += 1
-            if 0 <= int(y) < H and f.skin[int(y), int(x)]:
-                f.rgb[int(y), int(x)] = f.rgb[int(y), int(x)] * 0.6 + np.array((196, 190, 182)) * 0.4
-    # ── šest očí: dva sloupce po třech, pulzují; v jednom snímku spodní pár mrkne ──
-    glow = 0.8 + 0.2 * math.sin(2 * math.pi * t + 1)
-    for k, ey in enumerate((21, 27, 33)):
-        for side in (-1, 1):
-            ex = CX + side * 4.2
-            shut = fi == 6 and k == 2
-            for dx in (-2, -1, 0, 1):
-                for dy in (0, 1):
-                    edge_ = dx in (-2, 1)
-                    if shut:
-                        col = (26, 30, 32) if dy == 1 else (60, 66, 66)
-                    elif edge_:
-                        col = CYAN * 0.55 * glow + 10
-                    else:
-                        col = (226, 255, 250) if dy == 0 else CYAN * glow
-                    f.px(ex + dx + 0.5, ey + up + dy, np.clip(col, 0, 255))
-    # ── pěna pohltila stehna ──
-    rf = np.random.default_rng(31)
-    for _ in range(170):
-        bx, by, r = rf.uniform(CX - 34, CX + 34), rf.uniform(150, 180) - (6 if rf.random() < 0.3 else 0), rf.uniform(2.5, 7)
-        for y in range(int(by - r), int(by + r) + 1):
-            for x in range(int(bx - r), int(bx + r) + 1):
-                if 0 <= x < W and 0 <= y < H:
-                    dd = ((x - bx) ** 2 + (y - by) ** 2) / (r * r)
-                    if dd < 1 and (f.a[y, x] or y > 156) and ((x - CX) / 38) ** 2 + ((y - 156) / 28) ** 2 < 1:
-                        f.rgb[y, x] = ramp(FOAM, 0.78 - dd * 0.42 - ((x - bx) - (y - by)) / r * 0.12, x, y)
-                        f.a[y, x] = True; f.skin[y, x] = False; f.pid[y, x] = 950
-    # ── kopí: rána v hrudi, ratiště k divákovi, objímka Řádu, ruce dolního páru ho svírají ──
-    for y in range(y0 - 4, y0 + 5):
-        for x in range(x0 - 5, x0 + 6):
-            d = math.hypot(x - x0, (y - y0) * 1.2)
-            if d < 4.6:
-                f.px(x, y, (10, 8, 10) if d < 2.8 else (54, 24, 24))
-    for k in range(int(y0 + 4), 140):                                     # studené světlo stéká z rány
-        xx = x0 - 1 + math.sin(k * 0.3) * 0.8
-        if f.skin[k, int(xx)]:
-            f.px(xx, k, (170, 246, 232), 0.85 if (k + fi) % 4 else 0.5)
-    n = 160
-    for i in range(n):
-        tt = i / n
-        x, y = x0 + (x1 - x0) * tt, y0 + (y1 - y0) * tt
-        r = 1.8 + tt * 2.2
-        for dx in np.arange(-r, r + 0.5, 0.5):
-            u = dx / r
-            v = 0.55 - u * 0.4
-            col = np.array((30, 22, 18)) * (1 - v) + np.array((128, 100, 72)) * v
-            band = int(tt * 44)
-            if band % 7 == 0:
-                col = np.array((58, 60, 66)) * (1 - v) + np.array((176, 182, 188)) * v   # železný okov
-            elif int(tt * 90) % 9 < 2:
-                col = np.array((66, 54, 38)) * (1 - v) + np.array((156, 132, 92)) * v   # omotávka
-            f.px(x + dx * 0.9, y - dx * 0.3, col)
-    cx_, cy_ = CLAMP
-    for y in range(int(cy_) - 4, int(cy_) + 5):                           # objímka Řádu
-        for x in range(int(cx_) - 8, int(cx_) + 9):
-            v = 0.85 - (y - cy_ + 4) / 8 * 0.6
-            f.px(x, y, (40 + v * 140, 44 + v * 140, 50 + v * 140) if abs(y - cy_) < 4 else (24, 24, 28))
-    for (bx, by) in ((cx_ - 6, cy_), (cx_ + 6, cy_)):
-        f.px(bx, by, (220, 224, 228))
-    for y in range(int(y1) - 1, int(y1) + 5):                             # pata ratiště
-        for x in range(int(x1) - 4, int(x1) + 5):
-            if abs(x - x1) + abs(y - y1 - 1) * 1.4 < 5:
-                f.px(x, y, (60, 62, 68) if y > y1 else (150, 156, 162))
-    g = Frame()                                                           # pěsti přes ratiště
-    fist(g, *gl, z0=0); fist(g, *gr, z0=0)
-    g.bake()
-    for y, x in zip(*np.nonzero(g.a)):
-        f.rgb[y, x] = g.rgb[y, x]; f.a[y, x] = True
-    draw_cuffs(f); draw_cuffs(g)
-    for (kx, ky) in g.knuckles:
-        for k in range(4):
-            f.px(kx - 3 + k * 2, ky - 3, SKIN[5])
-    # ── tmavý obrys siluety ──
+    M, info = build(fi)
+    ys, xs = np.mgrid[0:H, 0:W]
+    cam = np.array([CX, 150.0, 420.0])                                    # perspektiva: blízké (ruka k hráči) je větší
+    tgt = np.column_stack([xs.ravel() + 0.5, ys.ravel() + 0.5, np.zeros(W * H)])
+    rdv = tgt - cam; rdv /= np.linalg.norm(rdv, axis=1)[:, None]
+    ro = np.tile(cam, (W * H, 1))
+    tt = np.full(W * H, 90.0); hit = np.zeros(W * H, bool); alive = np.ones(W * H, bool)
+    for _ in range(140):
+        idx = np.nonzero(alive)[0]
+        if len(idx) == 0:
+            break
+        p = ro[idx] + rdv[idx] * tt[idx, None]
+        d = M.sdf(p)
+        h_ = d < 0.25
+        hit[idx[h_]] = True; alive[idx[h_]] = False
+        tt[idx] += np.maximum(d * 0.85, 0.2)
+        gone = p[:, 2] - d * 0 < -3                                # za rovinou kůry = uvnitř kmene
+        alive[idx[gone]] = False
+    hi = np.nonzero(hit)[0]
+    P = ro[hi] + rdv[hi] * tt[hi, None]
+    _, mat = M.sdf(P, mats=True)
+    e = 0.5
+    k1, k2, k3, k4 = np.array([1, -1, -1.]), np.array([-1, -1, 1.]), np.array([-1, 1, -1.]), np.array([1, 1, 1.])
+    n = (k1 * M.sdf(P + k1 * e)[:, None] + k2 * M.sdf(P + k2 * e)[:, None] + k3 * M.sdf(P + k3 * e)[:, None] + k4 * M.sdf(P + k4 * e)[:, None])
+    n /= np.linalg.norm(n, axis=1)[:, None]
+    ao = np.ones(len(P)); w = 1.0
+    for i in range(1, 6):
+        hh = 2.2 * i
+        ao -= np.maximum(0, hh - M.sdf(P + n * hh)) / hh * 0.22 * w; w *= 0.75
+    ao = np.clip(ao, 0.15, 1)
+    sh = np.ones(len(P)); ts = np.full(len(P), 1.5)
+    for _ in range(40):                                                   # měkký stín od sodíku
+        q = P + n * 0.6 + np.outer(ts, KEY)
+        d = M.sdf(q)
+        sh = np.minimum(sh, np.clip(6 * d / ts, 0, 1))
+        ts += np.clip(d, 0.6, 6)
+    dk = np.clip(n @ KEY, 0, 1); df = np.clip(n @ FILL, 0, 1)
+    fres = (1 - np.clip(n[:, 2], 0, 1)) ** 2.6
+    alb = np.array([ALB[m] for m in mat])
+    b = info["b"]
+    light = 0.14 + WARM * (dk * sh)[:, None] * 0.95 + COOL * df[:, None] * 0.38
+    col = alb * light * ao[:, None] + CYAN * (fres * 0.5 * (mat != 3))[:, None]
+    # praskliny: v těle drží na kůži (lokální souřadnice trupu), na pažích ve světě
+    R, P0, S = info["R"], info["P0"], info["S"]
+    loc = ((P - P0) @ R) / S
+    on_torso = (loc[:, 1] > -100) & (loc[:, 1] < 4) & (np.abs(loc[:, 0]) < 30)
+    cw, cid = cracks(np.where(on_torso[:, None], loc * 1.0, P / S), SEEDS)
+    cw2, cid2 = cracks(P, SEEDS_W)
+    crack_w = np.where(on_torso, cw * S, cw2)
+    cell = np.where(on_torso, cid, cid2 + 5000)
+    skin = mat == 0
+    head = np.linalg.norm((P - info["head_c"]) / np.array([9.5, 12, 10]) / S, axis=1) < 1.15
+    isc = skin & ~head & (crack_w < 0.6) & ((cell * 2654435761 % 100) < 75)
+    glow = isc & ((cell * 40503 % 100) < 22)
+    col[isc] = col[isc] * 0.28 + np.array((26, 10, 12.0)) * 0.7
+    col[glow] += CYAN * (0.22 + 0.4 * b)
+    # kopí: okovy a omotávky podle vzdálenosti po ratišti, objímka kovová
+    along = (P - info["spear_in"]) @ info["spear_dir"]
+    sp = mat == 1
+    band = sp & ((along.astype(int) % 15) < 2)
+    rope = sp & ((along.astype(int) % 7) == 4)
+    col[band] = np.array((120, 124, 130.0)) * light[band] * 1.2
+    col[rope] = np.array((150, 128, 88.0)) * light[rope]
+    # pěna: hrbolatá
+    fm = mat == 3
+    img = np.zeros((H * W, 3)); img[hi] = col
+    depth = np.full(H * W, -1e9); depth[hi] = P[:, 2]
+    img = img.reshape(H, W, 3); depth = depth.reshape(H, W); a = hit.reshape(H, W)
+    # posterizace s ditheringem (pixel art), obrysy na skocích hloubky a kolem siluety
+    q = 14.0
+    th = BAYER[np.arange(H)[:, None] % 4, np.arange(W)[None, :] % 4][:, :, None]
+    img = np.floor(img / q + th) * q
     out = np.zeros((H, W, 4), np.uint8)
-    out[f.a, :3] = np.clip(f.rgb[f.a], 0, 255); out[f.a, 3] = 255
-    a = f.a
+    # stín postavy na kůře a pěně za ní (světlo shora zleva) – průhledná tma, mapa pod ní zůstane vidět
+    miss = np.nonzero(~hit)[0]
+    Q = np.column_stack([xs.ravel()[miss] + 0.5, ys.ravel()[miss] + 0.5, np.full(len(miss), 0.5)])
+    shq = np.ones(len(miss)); ts = np.full(len(miss), 1.0)
+    for _ in range(36):
+        d = M.sdf(Q + np.outer(ts, KEY))
+        shq = np.minimum(shq, np.clip(4 * d / ts, 0, 1))
+        ts += np.clip(d, 1.0, 10)
+    sa = np.zeros(H * W); sa[miss] = (1 - shq) * 0.62
+    sa = sa.reshape(H, W)
+    sm = (sa > 0.04) & ~a
+    out[sm, :3] = (6, 6, 10)
+    out[sm, 3] = np.clip(np.floor(sa[sm] * 4 + BAYER[np.nonzero(sm)[0] % 4, np.nonzero(sm)[1] % 4]) / 4 * 255, 0, 200).astype(np.uint8)
+    out[a, :3] = np.clip(img[a], 0, 255); out[a, 3] = 255
+    for y in range(1, H - 1):
+        for x in range(1, W - 1):
+            if a[y, x]:
+                for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    if a[y + dy, x + dx] and depth[y + dy, x + dx] - depth[y, x] > 7:
+                        out[y, x, :3] = (out[y, x, :3] * 0.35).astype(np.uint8)
+                        break
     edge = np.zeros_like(a)
     edge[1:, :] |= a[:-1, :]; edge[:-1, :] |= a[1:, :]; edge[:, 1:] |= a[:, :-1]; edge[:, :-1] |= a[:, 1:]
     edge &= ~a
-    out[edge] = (14, 10, 12, 255)
-    return out
+    out[edge] = (12, 9, 11, 255)
+    # šest očí: body na přední straně hlavy, viditelné jen když je nic nezakrývá
+    hc, HR = info["head_c"], info["head_R"]
+    for k, ey in enumerate((-5.0, 0.0, 5.0)):
+        for sx in (-1, 1):
+            lp = np.array([sx * 3.4 * (1 - 0.08 * k), ey, 8.4 - abs(ey) * 0.12]) * S
+            wp = hc + HR @ lp
+            sc_ = 420.0 / (420.0 - wp[2])
+            X, Y = int(CX + (wp[0] - CX) * sc_), int(150 + (wp[1] - 150) * sc_)
+            if 0 <= X < W - 1 and 0 <= Y < H and a[Y, X] and wp[2] >= depth[Y, X] - 7:
+                shut = fi == 8 and k == 2
+                c1 = (40, 52, 54) if shut else (230, 255, 250)
+                c2 = (24, 30, 32) if shut else tuple(int(v) for v in CYAN * (0.75 + 0.25 * b))
+                if not shut:
+                    for (dx, dy) in ((-1, 0), (2, 0), (0, -1), (1, -1), (0, 2), (1, 2)):
+                        if 0 <= X + dx < W and 0 <= Y + dy < H and a[Y + dy, X + dx]:
+                            out[Y + dy, X + dx, :3] = (out[Y + dy, X + dx, :3] * 0.4 + CYAN * 0.6 * (0.6 + 0.4 * info["b"])).astype(np.uint8)
+                out[Y, X, :3] = c1; out[Y, X + 1, :3] = c1
+                if Y + 1 < H:
+                    out[Y + 1, X, :3] = c2; out[Y + 1, X + 1, :3] = c2
+    info["alpha"] = a
+    return out, info
+
+
+def chain_points(info):
+    """Body pro řetězy v mapě (sprite px): objímka na ratišti a objímka pravého horního zápěstí."""
+    return dict(clamp=info["clamp"][:2], wrist=info["wrist_r"][:2], spear_in=info["spear_in"][:2])
+
+
+def proj(wp):
+    """Bod ze světa do px spritu (stejná perspektiva jako render)."""
+    k = 420.0 / (420.0 - wp[2])
+    return (CX + (wp[0] - CX) * k, 150 + (wp[1] - 150) * k)
+
+
+_I0 = build(0)[1]
+SPEAR_IN = proj(_I0["spear_in"])
+CLAMP = proj(_I0["clamp"])
+WRIST_R = proj(_I0["wrist_r"])
+
+def _frame(i):
+    return render(i)[0]
 
 
 if __name__ == "__main__":
-    frames = [render(i) for i in range(FRAMES)]
-    sheet = np.concatenate(frames, axis=1)
-    Image.fromarray(sheet, "RGBA").save(os.path.join(ROOT, "app", "src", "main", "res", "drawable-nodpi", "trpitel_sheet.png"))
-    big = Image.fromarray(frames[5], "RGBA").resize((W * 3, H * 3), Image.NEAREST)
-    prev = Image.new("RGBA", (W * 3, H * 3), (20, 22, 26, 255)); prev.alpha_composite(big)
+    n = FRAMES
+    if "--frames" in sys.argv:
+        n = int(sys.argv[sys.argv.index("--frames") + 1])
+    from multiprocessing import Pool
+    with Pool(min(n, os.cpu_count() or 2)) as pool:
+        frames = pool.map(_frame, range(n))
+    if n == FRAMES:
+        Image.fromarray(np.concatenate(frames, axis=1), "RGBA").save(os.path.join(ROOT, "app", "src", "main", "res", "drawable-nodpi", "trpitel_sheet.png"))
+    prev = Image.new("RGBA", (W * 3, H * 3), (20, 22, 26, 255))
+    prev.alpha_composite(Image.fromarray(frames[0], "RGBA").resize((W * 3, H * 3), Image.NEAREST))
     prev.save(os.path.join(HERE, "trpitel_preview.png"))
-    print("trpitel", FRAMES, "snímků", W, "x", H, "clamp", tuple(round(v) for v in CLAMP))
+    print("trpitel", n, "snímků", W, "x", H, "clamp", tuple(round(v) for v in CLAMP), "wrist", tuple(round(v) for v in WRIST_R))

@@ -191,9 +191,7 @@ def chain(p0, p1, sag=8):
 
 chain(CLAMP, (ANCHORS[2][0] + 6, ANCHORS[2][1] + 4), 10)
 chain(CLAMP, (ANCHORS[5][0] - 6, ANCHORS[5][1] + 4), 6)
-for side, k in ((-1, 0), (1, 3)):                                         # řetězy od objímek horních zápěstí ke kotvám
-    chain((TP.MAP_X0 + TP.CX + side * 62, TP.MAP_Y0 + 14), (ANCHORS[k][0], ANCHORS[k][1] - 8), 3)
-    chain((TP.MAP_X0 + TP.CX + side * 66, TP.MAP_Y0 + 80), (ANCHORS[k + 1][0], ANCHORS[k + 1][1] - 8), 5)
+chain((TP.MAP_X0 + TP.WRIST_R[0], TP.MAP_Y0 + TP.WRIST_R[1]), (ANCHORS[3][0], ANCHORS[3][1] - 8), 4)   # objímka pravého horního zápěstí
 # ocelové pásy přes ránu (stehy Řádu) nad a pod Trpitelem
 for (yb, x0, x1) in ((240, ANCHORS[2][0], ANCHORS[5][0]),):
     for x in range(x0, x1 + 1):

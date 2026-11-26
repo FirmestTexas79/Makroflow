@@ -1140,7 +1140,7 @@ class TrunkIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 140, 48) {
     override fun act(t: Long) {
         val q = p(t, TELL1, CLIMAX)
         if (q > 0f) wobble(sx(40f), sy(20f), sx(136f), sy(262f), 1.0f * q, t, 0.015f)
-        for (k in 0 until 3) mapEyes(cx, cy - 93 + k * 6, 4.2f, hex(0x9CF0E4), eyeAlpha(t))   // šest očí Trpitele
+        for (k in 0 until 3) mapEyes(cx, cy - 78 + k * 6, 4.2f, hex(0x9CF0E4), eyeAlpha(t))   // šest očí Trpitele
         val s = since(t)
         if (s > 0f) for (b in flakes) { val (x, y) = ballistic(cx, cy, b[0], b[1], 10f, s); puff(x, y, 1.8f, ash, 0.8f * (1f - s)) }
     }

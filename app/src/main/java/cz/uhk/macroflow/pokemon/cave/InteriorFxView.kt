@@ -1602,8 +1602,8 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
                 FxGlow(30, 296, 8, 5, 0xFFC870, 0.9f), FxGlow(146, 292, 8, 5, 0xFFC870, 1.1f), FxGlow(44, 336, 2, 2, 0xFF4030, 1.2f),
                 FxGlow(156, 280, 3, 10, 0x5A90C0, 4.8f), FxGlow(80, 230, 10, 6, 0x9CF0E4, 5.6f), FxGlow(110, 220, 8, 5, 0x9CF0E4, 4.4f))
         )
-        private const val TRUNK_TX = 84
-        private const val TRUNK_TY = 94
+        private const val TRUNK_TX = 92
+        private const val TRUNK_TY = 129
 
         val ABYSS = InteriorFx(
             sparkles = listOf(FxBox(10, 230, 166, 345)),
