@@ -115,3 +115,14 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   bez řetězů, nejde chytit ani utéct, souboj na pozadí Prahu). Po výhře příznak `drakirra_prah_porazena`, Drakirra
   leží na boku v mělčině, jednou se ukáže dohra (Spirra si k ní lehne, ze sondy za branou Sept: „Test síly nádoby:
   úspěšný. Podruhé… Sestup je schválen.“). Větev za trůnem pak vede ke Kmeni (Trpitel – další krok).
+
+## Kmen – Trpitel a volba konce (8/8, 2026-11-26)
+- Mapa `root_trunk` (tools/mapgen/gen_trunk.py, 176 × 560): kmen Spící s ránou zalitou pěnou (Operace Pečeť), pás PEČEŤ,
+  kotvy K1–K6 s řetězy, lávka Řádu (sonda, nádrže s pěnou, světlomety, popel), větev se stupy z Prahu, puklina do Středu kořenů.
+- Trpitel je NPC (`trpitel_sheet.png`, tools/mapgen/gen_trpitel.py): 10 snímků po 320 ms – dech (hrudník, rozpažené ruce,
+  dolní ruce táhnou za ratiště, oči pulzují, spodní pár mrkne). Podle referencí od Samuela: tělo kulturisty barvy popela
+  s prasklinami, hlava bez tváře se šesti očima, šest paží. Kopí mu prochází hrudí, Řád ratiště sevřel objímkou s řetězy.
+- Přístup z Prahu (`pr_vetev`) až po porážce Drakirry (nebo s dev keycard). Trpitel se probudí jen ve vyvážený den
+  (90–110 % cíle energie, Adherence.KCAL); pod pásmem se nepočítá – hra neodměňuje hladovění.
+- Volba konce (nevratná, potvrzení): Kopí / Den kvetení (Trpitel zmizí) / Poslední přání. Konec se dohraje ve Středu kořenů
+  (zatím se staví). Tajný konec (Mydrus, Elderan, Gudwin) zatím otevřený.
