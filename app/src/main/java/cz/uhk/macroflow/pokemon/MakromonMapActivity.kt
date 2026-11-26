@@ -739,13 +739,25 @@ class MakromonMapActivity : AppCompatActivity() {
             MotionEvent.ACTION_DOWN -> {
                 touchDownX = event.rawX; touchDownY = event.rawY
                 touchDownOnUi = isOverUi(event.rawX, event.rawY)
+                holdDone = false
+                val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+                if (!touchDownOnUi && !questDialogManager.isVisible() && !cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.isOpen(root) &&
+                    !cz.uhk.macroflow.pokemon.inspect.InspectPanel.isOpen(root))
+                    inspectableAt(event.rawX, event.rawY)?.let { startHold(it, event.rawX, event.rawY) }
                 if (!hudMenuOpen()) {
                     val r = android.graphics.Rect()
                     hudViews.firstOrNull { it.isShown && it.getGlobalVisibleRect(r) && r.contains(event.rawX.toInt(), event.rawY.toInt()) }
                         ?.let { hudFocus = it; it.animate().alpha(1f).setDuration(200).start() }
                 }
             }
+            MotionEvent.ACTION_MOVE -> if (holdRing != null || holdAnim != null) {
+                val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
+                if (kotlin.math.hypot(event.rawX - touchDownX, event.rawY - touchDownY) > slop * 2) cancelHold()
+            }
+            MotionEvent.ACTION_CANCEL -> cancelHold()
             MotionEvent.ACTION_UP -> {
+                if (holdDone) { holdDone = false; return true }           // podržení otevřelo panel – žádná chůze
+                cancelHold()
                 if (hudFocus != null) mapWorld.postDelayed({ if (!isFinishing) syncHud() }, 700)   // nic se neotevřelo → zpět do průsvitu
                 if (!touchDownOnUi && handleMapTap(event)) return true
             }
@@ -775,6 +787,7 @@ class MakromonMapActivity : AppCompatActivity() {
         if (questDialogManager.isVisible() || supportFragmentManager.backStackEntryCount != 0) return false
         if (cameraOverride) return true          // kamera se kochá výhledem
         if (cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.isOpen(findViewById(R.id.mapRootContainer))) return false
+        if (cz.uhk.macroflow.pokemon.inspect.InspectPanel.isOpen(findViewById(R.id.mapRootContainer))) return false
         val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
         if (kotlin.math.hypot(event.rawX - touchDownX, event.rawY - touchDownY) > slop * 2) return false
 
@@ -951,7 +964,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.TowerArchive.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerMeasure.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerPlain.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerForest.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerRock.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerCave.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerWater.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerDorm.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerIce.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerFire.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerOffice.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerFairy.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerPoison.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerHideout.ELEVATOR_NODE, cz.uhk.macroflow.pokemon.cave.TowerAbyss.ELEVATOR_NODE -> onElevator()
                 // Kapitola V ve Věži (docs/adr/0104): stopy příběhu a útržky Hunfreyho mapy na patrech
                 in cz.uhk.macroflow.pokemon.story.TowerStory.TAP_NODES -> onTowerClue(nodeName)
-                in cz.uhk.macroflow.pokemon.cave.TowerHideout.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerHideout.TEXTS.getValue(nodeName))
+                in cz.uhk.macroflow.pokemon.cave.TowerHideout.TEXTS.keys -> onInspectTap()
                 cz.uhk.macroflow.pokemon.cave.TowerAbyss.VIEW_NODE -> onAbyssView()
                 cz.uhk.macroflow.pokemon.cave.TowerAbyss.CAGE_NODE -> onAbyssCage()
                 // Zóna 3 – Tábor výprav (docs/adr/0106): klec zpět nahoru, jinak texty míst
@@ -971,9 +984,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.story.NightShift.VALVE_NODE -> onFoamValve()
                 cz.uhk.macroflow.pokemon.story.NightShift.SHRINE_NODE -> onHiddenReel(nodeName, cz.uhk.macroflow.pokemon.story.NightShift.REEL_SHRINE_KEY, cz.uhk.macroflow.pokemon.story.NightShift.REEL_SHRINE)
                 cz.uhk.macroflow.pokemon.story.NightShift.SCAFFOLD_NODE -> onHiddenReel(nodeName, cz.uhk.macroflow.pokemon.story.NightShift.REEL_SCAFFOLD_KEY, cz.uhk.macroflow.pokemon.story.NightShift.REEL_SCAFFOLD)
-                in cz.uhk.macroflow.pokemon.cave.RootBridge.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootBridge.TEXTS.getValue(nodeName))
+                in cz.uhk.macroflow.pokemon.cave.RootBridge.TEXTS.keys -> onInspectTap()
                 cz.uhk.macroflow.pokemon.story.Signal.LAMP_NODE -> onSignalLamp()
-                in cz.uhk.macroflow.pokemon.cave.RootSignal.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootSignal.TEXTS.getValue(nodeName))
+                in cz.uhk.macroflow.pokemon.cave.RootSignal.TEXTS.keys -> onInspectTap()
                 cz.uhk.macroflow.pokemon.cave.RootWatch.DOWN_NODE -> {
                     StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.VISITED_KEY)
                     walkInto(BiomeType.ROOT_SLOPECAMP, cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ENTRY_NODE)
@@ -1005,34 +1018,36 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.RootTrunk.ENTRY_NODE -> walkInto(BiomeType.ROOT_THRESHOLD, cz.uhk.macroflow.pokemon.cave.RootThreshold.BRANCH_NODE)
                 cz.uhk.macroflow.pokemon.cave.RootTrunk.TRPITEL_NODE -> onTrpitel()
                 cz.uhk.macroflow.pokemon.cave.RootTrunk.CRACK_NODE -> showMapToast(cz.uhk.macroflow.pokemon.story.Trpitel.crack(trpitelEnding() != null))
-                in cz.uhk.macroflow.pokemon.cave.RootTrunk.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootTrunk.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS.getValue(nodeName))
+                in cz.uhk.macroflow.pokemon.cave.RootTrunk.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS.keys -> onInspectTap()
+                cz.uhk.macroflow.pokemon.cave.RootForest.GUDWIN_NODE -> onForestGudwin()
+                in cz.uhk.macroflow.pokemon.cave.RootForest.TAG_NODES -> onForestTag(nodeName)
+                in cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS.keys -> onInspectTap()
                 "sb_chram" -> {
                     StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootTemple.VISITED_KEY)
                     walkInto(BiomeType.ROOT_TEMPLE, cz.uhk.macroflow.pokemon.cave.RootTemple.ENTRY_NODE)
                 }
                 cz.uhk.macroflow.pokemon.cave.RootTemple.ENTRY_NODE -> walkInto(BiomeType.ROOT_NAMELESS, "sb_chram")
-                in cz.uhk.macroflow.pokemon.cave.RootTemple.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootTemple.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.RootNameless.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootNameless.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.RootWatch.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootWatch.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerFire.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerFire.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerOffice.textFor(nodeName, StoryFlags.isSet(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY))!!)
-                in cz.uhk.macroflow.pokemon.cave.TowerFairy.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerFairy.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerPoison.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerPoison.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerWater.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerWater.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerCave.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerCave.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerRock.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerRock.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerForest.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerForest.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerPlain.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerPlain.TEXTS.getValue(nodeName))
-                in cz.uhk.macroflow.pokemon.cave.TowerMeasure.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerMeasure.TEXTS.getValue(nodeName))
+                in cz.uhk.macroflow.pokemon.cave.RootTemple.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.RootNameless.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.RootWatch.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerFire.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerFairy.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerPoison.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerWater.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerCave.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerRock.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerForest.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerPlain.TEXTS.keys -> onInspectTap()
+                in cz.uhk.macroflow.pokemon.cave.TowerMeasure.TEXTS.keys -> onInspectTap()
                 cz.uhk.macroflow.pokemon.cave.TowerArchive.FILE_NODE -> onFile212()
-                in cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS.getValue(nodeName))
+                in cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS.keys -> onInspectTap()
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.WAITING_TEXT)
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES_TEXT)
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES2_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.TowerLobby.FILES2_TEXT)
@@ -1522,6 +1537,7 @@ class MakromonMapActivity : AppCompatActivity() {
             clearDecor()
             val cave = BiomeRegistry.definition(currentBiome)?.cave
             placeExitMarkers()
+            placeInspectGlitter()
             when {
                 currentBiome == BiomeType.SKY_PASS -> { placeSkyPassDecor(); placeHunfrey() }
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
@@ -1562,7 +1578,12 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.ROOT_BRIDGE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_BRIDGE)
                 currentBiome == BiomeType.ROOT_NAMELESS -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_NAMELESS)
                 currentBiome == BiomeType.ROOT_TEMPLE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_TEMPLE)
-                currentBiome == BiomeType.ROOT_FOREST -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_FOREST)
+                currentBiome == BiomeType.ROOT_FOREST -> if (worldScale > 0) {
+                    addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_FOREST)
+                    placeMakromonNpc(R.drawable.makromon_30_gudwin, cz.uhk.macroflow.pokemon.cave.RootForest.GUDWIN_X,
+                        cz.uhk.macroflow.pokemon.cave.RootForest.GUDWIN_Y, "Gudwin")
+                    placeForestTags()
+                }
                 currentBiome == BiomeType.ROOT_THRESHOLD -> if (worldScale > 0) {
                     addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_THRESHOLD)
                     val D = cz.uhk.macroflow.pokemon.story.DrakirraFinal
@@ -2035,7 +2056,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val fw = sheet.width / K.TRPITEL_FRAMES
         val anim = android.graphics.drawable.AnimationDrawable().apply {
             for (i in 0 until K.TRPITEL_FRAMES) addFrame(android.graphics.drawable.BitmapDrawable(resources,
-                android.graphics.Bitmap.createBitmap(sheet, i * fw, 0, fw, sheet.height)).apply { isFilterBitmap = false }, K.TRPITEL_FRAME_MS)
+                android.graphics.Bitmap.createBitmap(sheet, i * fw, 0, fw, sheet.height)).apply { isFilterBitmap = false }, K.TRPITEL_FRAME_MS[i])
             isOneShot = false
         }
         val v = ImageView(this).apply {
@@ -2237,6 +2258,232 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     private fun addDecor(v: View) { mapWorld.addView(v); decorViews += v }
+
+    // ── Prozkoumávání míst (docs/adr/0107): třpyt, podržení prstu s pixelovým kruhem, panel „Prozkoumáno“ ──
+
+    private val inspectMaps: Map<BiomeType, Map<String, String>> by lazy { mapOf(
+            BiomeType.ROOT_TRUNK to cz.uhk.macroflow.pokemon.cave.RootTrunk.TEXTS,
+            BiomeType.ROOT_THRESHOLD to cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS,
+            BiomeType.ROOT_FOREST to cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS,
+            BiomeType.ROOT_TEMPLE to cz.uhk.macroflow.pokemon.cave.RootTemple.TEXTS,
+            BiomeType.ROOT_NAMELESS to cz.uhk.macroflow.pokemon.cave.RootNameless.TEXTS,
+            BiomeType.ROOT_SLOPECAMP to cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.TEXTS,
+            BiomeType.ROOT_WATCH to cz.uhk.macroflow.pokemon.cave.RootWatch.TEXTS,
+            BiomeType.ROOT_CAMP to cz.uhk.macroflow.pokemon.cave.RootCamp.TEXTS,
+            BiomeType.ROOT_BRIDGE to cz.uhk.macroflow.pokemon.cave.RootBridge.TEXTS,
+            BiomeType.ROOT_SIGNAL to cz.uhk.macroflow.pokemon.cave.RootSignal.TEXTS,
+            BiomeType.TOWER_HIDEOUT to cz.uhk.macroflow.pokemon.cave.TowerHideout.TEXTS,
+            BiomeType.TOWER_ABYSS to cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS,
+            BiomeType.TOWER_DORM to cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS,
+            BiomeType.TOWER_ICE to cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS,
+            BiomeType.TOWER_FIRE to cz.uhk.macroflow.pokemon.cave.TowerFire.TEXTS,
+            BiomeType.TOWER_OFFICE to cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS,
+            BiomeType.TOWER_FAIRY to cz.uhk.macroflow.pokemon.cave.TowerFairy.TEXTS,
+            BiomeType.TOWER_POISON to cz.uhk.macroflow.pokemon.cave.TowerPoison.TEXTS,
+            BiomeType.TOWER_WATER to cz.uhk.macroflow.pokemon.cave.TowerWater.TEXTS,
+            BiomeType.TOWER_CAVE to cz.uhk.macroflow.pokemon.cave.TowerCave.TEXTS,
+            BiomeType.TOWER_ROCK to cz.uhk.macroflow.pokemon.cave.TowerRock.TEXTS,
+            BiomeType.TOWER_FOREST to cz.uhk.macroflow.pokemon.cave.TowerForest.TEXTS,
+            BiomeType.TOWER_PLAIN to cz.uhk.macroflow.pokemon.cave.TowerPlain.TEXTS,
+            BiomeType.TOWER_MEASURE to cz.uhk.macroflow.pokemon.cave.TowerMeasure.TEXTS,
+            BiomeType.TOWER_ARCHIVE to cz.uhk.macroflow.pokemon.cave.TowerArchive.TEXTS
+        ) }
+
+    private fun inspectText(node: String): String? = when (currentBiome) {
+        BiomeType.TOWER_OFFICE -> cz.uhk.macroflow.pokemon.cave.TowerOffice.textFor(node, StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY))
+        BiomeType.ROOT_FOREST -> cz.uhk.macroflow.pokemon.cave.RootForest.textFor(node, forestRested)
+        else -> inspectMaps[currentBiome]?.get(node)
+    }
+
+    // ── Les pod korunou: vedlejší úkol Jména v mlze (docs/adr/0107) ──
+
+    /** Hráč se vyspal (úkol je za fází spánku) – značky na kůře jdou přečíst a jmenovky jsou vidět. */
+    private var forestRested = false
+    private val forestTagViews = mutableMapOf<String, List<View>>()
+
+    /** Fáze úkolu z databáze (nemusí být zrovna aktivní úkol): index, hotovo; null = nezačal. */
+    private suspend fun forestProgress(): Pair<Int, Boolean>? = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        runCatching { db.questDao().getAllQuests().firstOrNull { it.questId == cz.uhk.macroflow.pokemon.story.ForestNames.QUEST_ID } }
+            .getOrNull()?.let { it.currentStageIndex to it.isCompleted }
+    }
+
+    /** Jmenovky ve větvičkách: vidět jsou až po spánku, sebrané zmizí; plech se pohupuje a třpytí. */
+    private fun placeForestTags() {
+        val F = cz.uhk.macroflow.pokemon.story.ForestNames
+        lifecycleScope.launch {
+            val (stage, done) = forestProgress() ?: (-1 to false)
+            forestRested = done || stage >= F.TAGS_STAGE
+            if (!forestRested || currentBiome != BiomeType.ROOT_FOREST || worldScale <= 0) return@launch
+            val cave = cz.uhk.macroflow.pokemon.cave.RootForest.MAP
+            val s = worldScale
+            val rows = listOf("...b...", "...b...", "..ooo..", ".oSSSo.", ".oSdSo.", ".oSSSo.", ".oSdSo.", ".oSSSo.", "..ooo..")
+            val px = IntArray(7 * 9) { i ->
+                when (rows[i / 7][i % 7]) { 'b' -> 0xFF8C6A44.toInt(); 'o' -> 0xFF1C2026.toInt(); 'S' -> 0xFFC4CCD4.toInt(); 'd' -> 0xFF6A7280.toInt(); else -> 0 }
+            }
+            for (tag in F.TAGS) {
+                if (StoryFlags.isSet(this@MakromonMapActivity, tag.key)) continue
+                val n = cave.node(tag.node) ?: continue
+                val glow = glowView(10 * s, 0xFFDFF8FF.toInt(), 0x88).apply { x = n.x * s - 5f * s; y = (n.y - 18) * s - 5f * s; elevation = 2.9f }
+                val v = pixelView(px, 7, 9, 7 * s, 9 * s).apply {
+                    x = n.x * s - 3.5f * s; y = (n.y - 22) * s.toFloat(); elevation = 3f
+                    contentDescription = "Jmenovka"
+                    setOnClickListener { triggerHotspotAction(tag.node) }
+                }
+                addDecor(glow); addDecor(v)
+                bob(v, 2f * s, 1900L + (n.x % 5) * 170)
+                crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.2f, 0.85f, 0.2f).apply {
+                    duration = 1500L + (n.y % 7) * 120; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+                }
+                forestTagViews[tag.node] = listOf(glow, v)
+            }
+        }
+    }
+
+    /** Jmenovka: po spánku se dá sebrat (panel Prozkoumáno), před ním ji mlha rozmaže. */
+    private fun onForestTag(node: String) {
+        val F = cz.uhk.macroflow.pokemon.story.ForestNames
+        val tag = F.tagAt(node) ?: return
+        if (StoryFlags.isSet(this, tag.key)) return
+        if (!forestRested || !StoryFlags.isSet(this, F.STARTED_KEY)) { showMapToast(F.TAG_TOO_EARLY); return }
+        StoryFlags.set(this, tag.key)
+        forestTagViews.remove(node)?.forEach { v -> v.animate().alpha(0f).translationYBy(-8f * worldScale).setDuration(400).start() }
+        val count = F.TAGS.count { StoryFlags.isSet(this, it.key) }
+        cz.uhk.macroflow.pokemon.inspect.InspectPanel.show(findViewById(R.id.mapRootContainer), "Les pod korunou", F.tagFound(tag, count))
+        questManager.loadQuest(F.QUEST_ID)
+        mapWorld.postDelayed({ if (!isFinishing) questManager.recheck() }, 200)
+    }
+
+    /** Gudwin u kruhu stop: první setkání spustí úkol, po spánku pošle pro jmenovky, se všemi je přečte nahlas. */
+    private fun onForestGudwin() {
+        val F = cz.uhk.macroflow.pokemon.story.ForestNames
+        StoryFlags.set(this, F.STARTED_KEY)
+        questManager.loadQuest(F.QUEST_ID)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            questManager.recheck()
+            mapWorld.postDelayed({
+                if (isFinishing) return@postDelayed
+                val p = questManager.getCurrentProgress()?.takeIf { questManager.getActiveQuestId() == F.QUEST_ID }
+                val stage = p?.currentStageIndex ?: 0; val done = p?.isCompleted ?: false
+                val all = F.TAGS.all { StoryFlags.isSet(this, it.key) }
+                when {
+                    done -> showMapToast(F.IDLE)
+                    stage == F.FINAL_STAGE && all && !StoryFlags.isSet(this, F.FINAL_KEY) -> {
+                        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Jména nahlas", F.NAME) { ui, body, _ ->
+                            body.addView(ui.text(F.FINAL, 15f))
+                        }
+                        StoryFlags.set(this, F.FINAL_KEY)
+                        questManager.recheck()
+                    }
+                    else -> questManager.checkNpcInteraction()
+                }
+                if (!forestRested && stage >= F.TAGS_STAGE) refreshStoryDecor()        // po spánku se objeví jmenovky
+            }, 250)
+        }, 150)
+    }
+
+    /** Místa s příběhovým textem v aktuální lokaci (bez východů – ty mají šipky). */
+    private fun inspectNodes(): Set<String> {
+        val cave = BiomeRegistry.definition(currentBiome)?.cave ?: return emptySet()
+        val exits = cz.uhk.macroflow.pokemon.cave.ExitMarkers.EXITS[currentBiome.name].orEmpty().map { it.node }.toSet()
+        return (inspectMaps[currentBiome]?.keys ?: emptySet()) - exits - cave.exitNode
+    }
+
+    private fun inspectReadKey(node: String) = "inspect_read_${currentBiome.name}_$node"
+
+    /** Krátké klepnutí na místo s textem jen dojde; prvních pár krát poradí, jak ho prozkoumat. */
+    private fun onInspectTap() {
+        val n = gamePrefs.getInt("inspect_hint_count", 0)
+        if (n < 3) {
+            gamePrefs.edit().putInt("inspect_hint_count", n + 1).apply()
+            showMapToast("✨ Místa, která se třpytí, prozkoumáš tak, že na nich podržíš prst.")
+        }
+    }
+
+    private var glitterView: View? = null
+
+    private fun placeInspectGlitter() {
+        val cave = BiomeRegistry.definition(currentBiome)?.cave ?: return
+        if (worldScale <= 0) return
+        val spots = inspectNodes().mapNotNull { id ->
+            val (x, y) = cave.tapAreas[id]?.let { (x, y, _) -> x.toFloat() to y.toFloat() }
+                ?: cave.node(id)?.let { it.x.toFloat() to it.y - 10f } ?: return@mapNotNull null
+            cz.uhk.macroflow.pokemon.inspect.InspectGlitterView.Spot(x, y, gamePrefs.getBoolean(inspectReadKey(id), false))
+        }
+        if (spots.isEmpty()) return
+        val v = cz.uhk.macroflow.pokemon.inspect.InspectGlitterView(this, worldScale, spots).apply {
+            layoutParams = FrameLayout.LayoutParams(cave.artW * worldScale, cave.artH * worldScale)
+            elevation = 2.8f
+        }
+        glitterView = v
+        addDecor(v)
+    }
+
+    /** Místo k prozkoumání pod prstem (oblast klepnutí nebo nejbližší uzel v dosahu). */
+    private fun inspectableAt(rawX: Float, rawY: Float): String? {
+        val cave = BiomeRegistry.definition(currentBiome)?.cave ?: return null
+        val nodes = inspectNodes().takeIf { it.isNotEmpty() } ?: return null
+        if (mapWorld.width <= 0) return null
+        val loc = IntArray(2); mapWorld.getLocationOnScreen(loc)
+        val relX = (rawX - loc[0]) / mapWorld.width; val relY = (rawY - loc[1]) / mapWorld.height
+        cave.tapAreaAt(relX * cave.artW, relY * cave.artH)?.takeIf { it in nodes }?.let { return it }
+        val viewport = findViewById<View>(R.id.mapMainContent)
+        return movementEngine.navigationGraph.filter { it.id in nodes }
+            .map { it to MapCamera.tapDistance(it.pos.x, it.pos.y, relX, relY, mapWorld.width, mapWorld.height, viewport.width, viewport.height) }
+            .filter { it.second < CAVE_TAP_RADIUS }.minByOrNull { it.second }?.first?.id
+    }
+
+    private var holdRing: cz.uhk.macroflow.pokemon.inspect.HoldRingView? = null
+    private var holdAnim: android.animation.ValueAnimator? = null
+    private var holdDone = false
+
+    private fun startHold(node: String, rawX: Float, rawY: Float) {
+        cancelHold()
+        val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+        val ring = cz.uhk.macroflow.pokemon.inspect.HoldRingView(this)
+        val size = ring.sizePx
+        val loc = IntArray(2); root.getLocationOnScreen(loc)
+        ring.layoutParams = FrameLayout.LayoutParams(size, size)
+        ring.x = rawX - loc[0] - size / 2f
+        ring.y = rawY - loc[1] - size * 1.25f                              // nad prstem, ať je vidět
+        ring.elevation = 41f
+        ring.alpha = 0f
+        root.addView(ring)
+        holdRing = ring
+        holdAnim = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = cz.uhk.macroflow.pokemon.inspect.Inspect.HOLD_MS
+            interpolator = android.view.animation.LinearInterpolator()
+            startDelay = 180                                               // krátké klepnutí kruh vůbec neukáže
+            addUpdateListener { ring.alpha = 1f; ring.progress = it.animatedValue as Float }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                private var cancelled = false
+                override fun onAnimationCancel(animation: android.animation.Animator) { cancelled = true }
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    root.removeView(ring); if (holdRing === ring) holdRing = null
+                    if (cancelled || isFinishing) return
+                    holdDone = true
+                    ring.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                    openInspect(node)
+                }
+            })
+            start()
+        }
+    }
+
+    private fun cancelHold() {
+        holdAnim?.cancel(); holdAnim = null
+        holdRing?.let { (it.parent as? ViewGroup)?.removeView(it) }; holdRing = null
+    }
+
+    private fun openInspect(node: String) {
+        val text = inspectText(node) ?: return
+        gamePrefs.edit().putBoolean(inspectReadKey(node), true).apply()
+        val place = cz.uhk.macroflow.pokemon.zone.ZoneOne.NAMES[currentBiome.name] ?: ""
+        cz.uhk.macroflow.pokemon.inspect.InspectPanel.show(findViewById(R.id.mapRootContainer), place, text) {
+            glitterView?.let { decorViews.remove(it); mapWorld.removeView(it) }; glitterView = null
+            placeInspectGlitter()                                          // přečtené místo třpytí slaběji
+        }
+    }
 
     /** Je přechod z [node] zatím zavřený příběhem? (šedá šipka se zámkem) */
     private fun exitLocked(node: String): Boolean = when (node) {

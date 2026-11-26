@@ -11,7 +11,7 @@ import gen_zone as Z
 Z.OUT = os.path.join(Z.ASSETS, "zone3")
 Z.ZONE_JSON = "zone3.json"
 Z.ZONE_TITLE = "zóna 3"
-Z.W, Z.H = 1160 + 2 * Z.MX, 2080 + 2 * Z.MY
+Z.W, Z.H = 1160 + 2 * Z.MX, 2240 + 2 * Z.MY
 Z.LOC = {
     "ROOT_CAMP":      dict(img="root_camp",      outdoor=False, x=60,  y=40,   h=380),
     "ROOT_WATCH":     dict(img="root_watch",     outdoor=False, x=80,  y=520,  h=380),
@@ -20,7 +20,7 @@ Z.LOC = {
     "ROOT_SLOPECAMP": dict(img="root_slopecamp", outdoor=False, x=90,  y=1000, h=380),
     "ROOT_NAMELESS":  dict(img="root_nameless",  outdoor=False, x=420, y=960,  h=640),
     "ROOT_TEMPLE":    dict(img="root_temple",    outdoor=False, x=660, y=1180, h=380),
-    "ROOT_FOREST":    dict(img="root_forest",    outdoor=False, x=360, y=1660, h=420),
+    "ROOT_FOREST":    dict(img="root_forest",    outdoor=False, x=120, y=1660, h=540),
     "ROOT_THRESHOLD": dict(img="root_threshold", outdoor=False, x=620, y=1640, h=440),
     "ROOT_TRUNK":     dict(img="root_trunk",     outdoor=False, x=960, y=1250, h=320),
 }
@@ -31,8 +31,8 @@ Z.NODES = {
     ("ROOT_WATCH", "pb_dolu"): (24, 340), ("ROOT_SLOPECAMP", "tv_vstup"): (22, 86),
     ("ROOT_SLOPECAMP", "tv_dolu"): (92, 346), ("ROOT_NAMELESS", "sb_vstup"): (62, 24),
     ("ROOT_NAMELESS", "sb_chram"): (44, 546), ("ROOT_TEMPLE", "ch_vstup"): (88, 338),
-    ("ROOT_NAMELESS", "sb_les"): (110, 548), ("ROOT_FOREST", "lp_vstup"): (90, 22),
-    ("ROOT_FOREST", "lp_prah"): (88, 548), ("ROOT_THRESHOLD", "pr_vstup"): (88, 550),
+    ("ROOT_NAMELESS", "sb_les"): (110, 548), ("ROOT_FOREST", "lp_vstup"): (352, 24),
+    ("ROOT_FOREST", "lp_prah"): (352, 1100), ("ROOT_THRESHOLD", "pr_vstup"): (88, 550),
     ("ROOT_THRESHOLD", "pr_vetev"): (134, 262), ("ROOT_TRUNK", "kn_vstup"): (224, 950),
 }
 Z.LINKS = [
@@ -47,9 +47,9 @@ Z.LINKS = [
     (("ROOT_THRESHOLD", "pr_vetev", "e"), ("ROOT_TRUNK", "kn_vstup", "s"), False),
 ]
 Z.LABEL = {"ROOT_CAMP": (330, 120), "ROOT_WATCH": (330, 600), "ROOT_SIGNAL": (520, 280), "ROOT_BRIDGE": (800, 46),
-           "ROOT_SLOPECAMP": (250, 990), "ROOT_NAMELESS": (640, 1060), "ROOT_TEMPLE": (790, 1160), "ROOT_FOREST": (300, 1640), "ROOT_THRESHOLD": (840, 1630), "ROOT_TRUNK": (1040, 1230)}
+           "ROOT_SLOPECAMP": (250, 990), "ROOT_NAMELESS": (640, 1060), "ROOT_TEMPLE": (790, 1160), "ROOT_FOREST": (120, 1640), "ROOT_THRESHOLD": (840, 1630), "ROOT_TRUNK": (1040, 1230)}
 Z.LABEL_SIZE = 40
-Z.TITLE = (170, 1900)
+Z.TITLE = (760, 2160)
 Z.TEX = {"ROOT_CAMP": (60, 0, 30, 24), "ROOT_WATCH": (60, 0, 30, 24), "ROOT_SLOPECAMP": (60, 0, 30, 24),   # skála stěny
          "ROOT_SIGNAL": (162, 300, 14, 200), "ROOT_BRIDGE": (0, 0, 60, 110), "ROOT_NAMELESS": (0, 120, 20, 90),
          "ROOT_TEMPLE": (0, 120, 10, 200), "ROOT_FOREST": (0, 60, 40, 60), "ROOT_THRESHOLD": (0, 260, 14, 200), "ROOT_TRUNK": (0, 420, 40, 100)}

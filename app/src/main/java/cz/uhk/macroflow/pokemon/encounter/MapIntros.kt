@@ -1072,7 +1072,7 @@ class TempleIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 216, 29) {
 
 /** Les pod korunou (zóna 3): světla na konečcích visících větviček se rozzáří a jedno po druhém zhasnou, záclona větviček
  *  se zavlní – a mezi nimi se otevřou oči; při výpadu se zvedne zelená mlha zapomnění. */
-class ForestIntro3(m: Img, w: Int, h: Int) : MapScene(m, w, h, 82, 300, 31) {
+class ForestIntro3(m: Img, w: Int, h: Int) : MapScene(m, w, h, 360, 430, 31) {
     override val shade = hex(0x030806)
     override val accent = hex(0xB8FFE0)
     override val dimMax = 0.66f

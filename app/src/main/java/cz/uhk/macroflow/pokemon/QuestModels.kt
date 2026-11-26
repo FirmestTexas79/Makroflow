@@ -737,7 +737,40 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST, NIGHT_SHIFT_QUEST) }
+    val FOREST_NAMES_QUEST = QuestDefinition(
+        id = cz.uhk.macroflow.pokemon.story.ForestNames.QUEST_ID,
+        chapter = "🏷️ JMÉNA V MLZE",
+        side = true,
+        farewell = cz.uhk.macroflow.pokemon.story.ForestNames.FAREWELL,
+        stages = listOf(
+            QuestStage(
+                title = "Mlha se živí únavou",
+                text = cz.uhk.macroflow.pokemon.story.ForestNames.MEET,
+                speakerResId = R.drawable.makromon_30_gudwin, speakerName = cz.uhk.macroflow.pokemon.story.ForestNames.NAME,
+                requirementType = RequirementType.SLEEP_NIGHTS, targetValue = cz.uhk.macroflow.pokemon.story.ForestNames.SLEEP_NIGHTS,
+                targetId = cz.uhk.macroflow.pokemon.story.ForestNames.SLEEP_HOURS,
+                hint = cz.uhk.macroflow.pokemon.story.ForestNames.MEET_HINT
+            ),
+            QuestStage(
+                title = "Sedm jmenovek",
+                text = cz.uhk.macroflow.pokemon.story.ForestNames.RESTED,
+                speakerResId = R.drawable.makromon_30_gudwin, speakerName = cz.uhk.macroflow.pokemon.story.ForestNames.NAME,
+                requirementType = RequirementType.FLAGS_COUNT, targetValue = cz.uhk.macroflow.pokemon.story.ForestNames.TAGS.size,
+                targetId = cz.uhk.macroflow.pokemon.story.ForestNames.TAG_KEYS,
+                hint = cz.uhk.macroflow.pokemon.story.ForestNames.RESTED_HINT
+            ),
+            QuestStage(
+                title = "Jména nahlas",
+                text = cz.uhk.macroflow.pokemon.story.ForestNames.ALL_FOUND,
+                speakerResId = R.drawable.makromon_30_gudwin, speakerName = cz.uhk.macroflow.pokemon.story.ForestNames.NAME,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.ForestNames.FINAL_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.ForestNames.ALL_FOUND_HINT
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST, NIGHT_SHIFT_QUEST, FOREST_NAMES_QUEST) }
 
     /** Pořadí kapitoly v deníku (neznámé na konec). */
     fun journalOrder(id: String): Int {

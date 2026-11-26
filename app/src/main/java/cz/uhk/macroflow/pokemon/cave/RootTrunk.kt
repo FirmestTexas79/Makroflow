@@ -17,7 +17,8 @@ object RootTrunk {
     const val TRPITEL_X0 = 0
     const val TRPITEL_Y0 = 16
     const val TRPITEL_FRAMES = 12
-    const val TRPITEL_FRAME_MS = 280
+    /** Délky snímků: dech po 280 ms, mrknutí (snímky 7–9) rychle po 110 ms – musí sedět s gen_trpitel.py FRAME_MS. */
+    val TRPITEL_FRAME_MS = IntArray(TRPITEL_FRAMES) { if (it in 7..9) 110 else 280 }
 
     val MAP = CaveMap(
         artW = 432, artH = 960,

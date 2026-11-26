@@ -105,7 +105,7 @@ def wound_hw(y):
     return WOUND["hw"] * math.sin(math.pi * t) ** 0.75 + (_vn(0, y * 0.4, 31, 4) - 0.5) * 5
 
 
-for y in range(TB):
+for y in range(AH):                                                       # kmen pokračuje i pod lávkou do tmy
     for x in range(AW):
         u = (x - CX) / 260                                                # válec: kraje do tmy
         warp = (_vn(x, y * 0.25, 60, 18) - 0.5) * 20
@@ -127,6 +127,9 @@ for y in range(TB):
         img[y, x, :3] = ramp(BARKF, v, x, y)
         if _vn(x * 0.5, y * 0.2, 66, 10) > 0.8 and ridge > 0.35:
             img[y, x, :3] = np.clip(img[y, x, :3] * 0.6 + F((54, 72, 58)) * 0.4, 0, 255)   # mech v brázdách
+        if y > TB:                                                        # pod lávkou kmen mizí v mlze a tmě propasti
+            f = ((y - TB) / (AH - TB)) ** 0.6 * 0.9
+            img[y, x, :3] = np.clip(img[y, x, :3] * (1 - f) + void(x, y) * f, 0, 255)
 for (x0, y0) in ((40, 30), (390, 60), (34, 300), (396, 320), (70, 190), (360, 200), (16, 110), (414, 400), (60, 430), (380, 470)):   # svítící jizvy znaků Lumenců
     x, y = x0, y0
     for i in range(40):
