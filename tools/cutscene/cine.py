@@ -48,7 +48,7 @@ def blit(dst, spr, x, y, alpha=1.0):
         return
     s = spr[y0 - y:y1 - y, x0 - x:x1 - x]
     a = (s[:, :, 3:4] / 255.0) * alpha if s.shape[2] == 4 else np.full(s.shape[:2] + (1,), alpha)
-    dst[y0:y1, x0:x1] = dst[y0:y1, x0:x1] * (1 - a) + s[:, :, :3] * a
+    dst[y0:y1, x0:x1, :3] = dst[y0:y1, x0:x1, :3] * (1 - a) + s[:, :, :3] * a
 
 
 def view(img, cx, cy, zoom=1):
@@ -81,13 +81,13 @@ def fade(img, k, color=(0, 0, 0)):
 
 def dots(img, xs, ys, col, alpha=1.0):
     xs = np.asarray(xs).astype(int); ys = np.asarray(ys).astype(int)
-    ok = (xs >= 0) & (xs < W) & (ys >= 0) & (ys < H)
+    ok = (xs >= 0) & (xs < img.shape[1]) & (ys >= 0) & (ys < img.shape[0])
     xs, ys = xs[ok], ys[ok]
     a = alpha[ok][:, None] if np.ndim(alpha) else alpha
     c = np.asarray(col, np.float32)
     if c.ndim == 2:
         c = c[ok]
-    img[ys, xs] = img[ys, xs] * (1 - a) + c * a
+    img[ys, xs, :3] = img[ys, xs, :3] * (1 - a) + c * a
 
 
 def hero(name, frame=0):
