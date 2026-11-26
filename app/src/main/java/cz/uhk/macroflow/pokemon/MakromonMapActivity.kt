@@ -2603,13 +2603,12 @@ class MakromonMapActivity : AppCompatActivity() {
     private var pendingCollect: String? = null
 
     private fun collectiblePixels(kind: cz.uhk.macroflow.pokemon.story.Collectibles.Kind): Pair<IntArray, Int> {
-        val K = cz.uhk.macroflow.pokemon.story.Collectibles.Kind
         val (rows, pal) = when (kind) {
-            K.PAGE -> listOf("ooooooo.", "oPPPPPoo", "oPllllPo", "oPPPPPPo", "oPllllPo", "oPPPPPPo", "oPlllPPo", "oooooooo") to
+            cz.uhk.macroflow.pokemon.story.Collectibles.Kind.PAGE -> listOf("ooooooo.", "oPPPPPoo", "oPllllPo", "oPPPPPPo", "oPllllPo", "oPPPPPPo", "oPlllPPo", "oooooooo") to
                 mapOf('P' to 0xFFF2E6C4, 'l' to 0xFFA08A60)
-            K.LETTER -> listOf("oooooooo", "oEEEEEEo", "oeEEEEeo", "oEeEEeEo", "oEEeeEEo", "oEEErEEo", "oEEEEEEo", "oooooooo") to
+            cz.uhk.macroflow.pokemon.story.Collectibles.Kind.LETTER -> listOf("oooooooo", "oEEEEEEo", "oeEEEEeo", "oEeEEeEo", "oEEeeEEo", "oEEErEEo", "oEEEEEEo", "oooooooo") to
                 mapOf('E' to 0xFFE8DCC0, 'e' to 0xFF9C8A6A, 'r' to 0xFFB8342C)
-            K.LOG -> listOf(".ooooooo", "obBBBBBo", "obBBmBBo", "obBmBBBo", "obBBmBBo", "obBBBBBo", "obBBBBBo", ".ooooooo") to
+            cz.uhk.macroflow.pokemon.story.Collectibles.Kind.LOG -> listOf(".ooooooo", "obBBBBBo", "obBBmBBo", "obBmBBBo", "obBBmBBo", "obBBBBBo", "obBBBBBo", ".ooooooo") to
                 mapOf('b' to 0xFF20305A, 'B' to 0xFF3A5A9A, 'm' to 0xFFF2E6A0)
         }
         return IntArray(8 * 8) { i -> when (val ch = rows[i / 8][i % 8]) { 'o' -> 0xFF1A1410.toInt(); '.' -> 0; else -> pal.getValue(ch).toInt() } } to 8
@@ -2630,7 +2629,7 @@ class MakromonMapActivity : AppCompatActivity() {
             val glow = glowView(14 * s, set.glow.toInt(), 0x99).apply { x = cx * s - 7f * s; y = cy * s - 7f * s; elevation = 2.9f }
             val (px, w) = collectiblePixels(set.kind)
             val v = pixelView(px, w, w, w * s, w * s).apply {
-                x = cx * s - 4f * s; y = cy * s - 4f * s; elevation = 3f; rotation = if (set.kind == C.Kind.PAGE) -8f else 0f
+                x = cx * s - 4f * s; y = cy * s - 4f * s; elevation = 3f; rotation = if (set.kind == cz.uhk.macroflow.pokemon.story.Collectibles.Kind.PAGE) -8f else 0f
                 contentDescription = set.label
                 setOnClickListener { pendingCollect = item.node; triggerHotspotAction(item.node) }
             }
