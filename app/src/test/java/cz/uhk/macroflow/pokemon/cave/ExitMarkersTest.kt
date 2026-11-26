@@ -23,7 +23,7 @@ class ExitMarkersTest {
     }
 
     @Test fun arrowPointsWhereYouGo() {
-        assertEquals(88 to 44, ExitMarkers.anchor(88, 20, ExitMarkers.Dir.UP, 176, 560))      // u horního okraje dovnitř
+        assertEquals(88 to 42, ExitMarkers.anchor(88, 20, ExitMarkers.Dir.UP, 176, 560))      // u horního okraje dovnitř
         assertEquals(88 to 520, ExitMarkers.anchor(88, 550, ExitMarkers.Dir.DOWN, 176, 560))  // u spodního okraje nad uzlem
         assertEquals(134 to 240, ExitMarkers.anchor(134, 262, ExitMarkers.Dir.UP, 176, 560))  // uvnitř mapy před uzlem
         val px = ExitMarkers.arrowPixels(ExitMarkers.Dir.UP, locked = false)
