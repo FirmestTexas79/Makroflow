@@ -131,12 +131,12 @@ object InspectPanel {
 
     fun isOpen(root: FrameLayout) = root.findViewWithTag<View>(TAG) != null
 
-    fun show(root: FrameLayout, place: String, text: String, onClose: () -> Unit = {}) {
+    fun show(root: FrameLayout, place: String, message: String, onClose: () -> Unit = {}) {
         root.findViewWithTag<View>(TAG)?.let { root.removeView(it) }
         val ctx = root.context
         val d = ctx.resources.displayMetrics.density
         fun dp(v: Float) = (v * d).toInt()
-        val (icon, body) = Inspect.split(text)
+        val (icon, body) = Inspect.split(message)
 
         val dim = FrameLayout(ctx).apply {
             tag = TAG
