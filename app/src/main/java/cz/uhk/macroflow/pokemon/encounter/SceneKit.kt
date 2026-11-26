@@ -210,6 +210,7 @@ object LocationIntros {
         "ROOT_BRIDGE" -> LocationIntro("root_bridge", argb(210, 236, 255)) { m, w, h -> BridgeIntro(m, w, h) }
         "ROOT_NAMELESS" -> LocationIntro("root_nameless", argb(214, 230, 220)) { m, w, h -> NamelessIntro(m, w, h) }
         "ROOT_TEMPLE" -> LocationIntro("root_temple", argb(200, 228, 255)) { m, w, h -> TempleIntro(m, w, h) }
+        "ROOT_FOREST" -> LocationIntro("root_forest", argb(190, 255, 225)) { m, w, h -> ForestIntro3(m, w, h) }
         else -> null
     }
 }

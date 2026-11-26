@@ -68,7 +68,7 @@ object RootNameless {
             "Pod korunou je v mlze druhý svah. I tam leží. Rozbíhají se od stromu na všechny strany jako kruhy na vodě – " +
             "ke stěnám, k puklinám, nahoru. Nikdo z nich nedošel.\nA ty jdeš dolů.",
         "sb_chram" to "⬇️ Schody Lumenců vytesané do skály vedou dolů do mlhy – k Chrámu Lumenců. Vedle nich se do země noří žebra dlouhého domu.",
-        "sb_les" to "⬇️ Kolíky Řádu mizí v zelené mlze – dole je Les pod korunou. Dál už je nikdo nezatloukal.\nZATÍM NEPŘÍSTUPNÉ."
+        "sb_les" to "⬇️ Kolíky Řádu mizí v zelené mlze – dole je Les pod korunou. Dál už je nikdo nezatloukal."
     )
     val ACTION_NODES = TEXTS.keys
 }

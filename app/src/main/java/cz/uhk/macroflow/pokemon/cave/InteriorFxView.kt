@@ -1556,6 +1556,23 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
                 FxGlow(27, 54, 16, 26, 0xB8C8E8, 7.3f), FxGlow(151, 54, 16, 26, 0xB8C8E8, 6.6f))
         )
 
+        /** Zóna 3, Les pod korunou: z koruny nad námi odpadá kůra a pomalu padá, světla na konečcích větviček dýchají,
+         *  ztracená sonda bliká rudou kontrolkou, mlha zapomnění se plíží ve vrstvách, kolem Drakirry doutná žár. */
+        val ROOT_FOREST = InteriorFx(
+            blinks = listOf(FxBlink(FxBox(124, 218, 124, 218), 0xFFFF3030.toInt())),
+            falls = listOf(FxBox(0, 0, 176, 300), FxBox(0, 200, 176, 520)),
+            fallColor = 0x3A372F,
+            fog = listOf(FxBox(0, 160, 176, 230), FxBox(40, 340, 176, 440), FxBox(0, 480, 176, 560)),
+            fogColor = 0x5CB496,
+            motes = listOf(FxBox(0, 0, 176, 560)),
+            moteColor = 0x9AF0C8,
+            glowworms = FxBox(0, 20, 176, 540),
+            glows = listOf(FxGlow(143, 14, 3, 3, 0xAAF0DC, 2.1f), FxGlow(33, 64, 3, 3, 0xAAF0DC, 3.3f), FxGlow(107, 108, 3, 3, 0xAAF0DC, 2.7f),
+                FxGlow(7, 174, 3, 3, 0xAAF0DC, 3.9f), FxGlow(58, 253, 3, 3, 0xAAF0DC, 2.4f), FxGlow(15, 333, 3, 3, 0xAAF0DC, 3.1f),
+                FxGlow(127, 346, 3, 3, 0xAAF0DC, 2.9f), FxGlow(162, 311, 3, 3, 0xAAF0DC, 3.6f), FxGlow(42, 427, 3, 3, 0xAAF0DC, 2.2f),
+                FxGlow(141, 529, 3, 3, 0xAAF0DC, 3.4f), FxGlow(112, 392, 40, 26, 0x7AD8B0, 6.5f), FxGlow(88, 476, 26, 14, 0xFF8A3A, 2.6f))
+        )
+
         val ABYSS = InteriorFx(
             sparkles = listOf(FxBox(10, 230, 166, 345)),
             fog = listOf(FxBox(0, 250, 176, 290), FxBox(0, 300, 176, 340)),

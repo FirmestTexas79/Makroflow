@@ -66,7 +66,8 @@ enum class BiomeType {
     ROOT_SIGNAL,
     ROOT_BRIDGE,
     ROOT_NAMELESS,
-    ROOT_TEMPLE
+    ROOT_TEMPLE,
+    ROOT_FOREST
 }
 
 object BiomeRegistry {
@@ -204,7 +205,8 @@ object BiomeRegistry {
         BiomeDefinition(BiomeType.ROOT_SIGNAL, R.drawable.root_signal, graphOf(cz.uhk.macroflow.pokemon.cave.RootSignal.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootSignal.MAP),
         BiomeDefinition(BiomeType.ROOT_BRIDGE, R.drawable.root_bridge, graphOf(cz.uhk.macroflow.pokemon.cave.RootBridge.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootBridge.MAP),
         BiomeDefinition(BiomeType.ROOT_NAMELESS, R.drawable.root_nameless, graphOf(cz.uhk.macroflow.pokemon.cave.RootNameless.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootNameless.MAP),
-        BiomeDefinition(BiomeType.ROOT_TEMPLE, R.drawable.root_temple, graphOf(cz.uhk.macroflow.pokemon.cave.RootTemple.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootTemple.MAP)
+        BiomeDefinition(BiomeType.ROOT_TEMPLE, R.drawable.root_temple, graphOf(cz.uhk.macroflow.pokemon.cave.RootTemple.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootTemple.MAP),
+        BiomeDefinition(BiomeType.ROOT_FOREST, R.drawable.root_forest, graphOf(cz.uhk.macroflow.pokemon.cave.RootForest.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootForest.MAP)
         ).associateBy { it.type }
     }
 

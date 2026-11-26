@@ -1068,3 +1068,27 @@ class TempleIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 216, 29) {
         if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -18f, s); puff(x, y, 1.8f, sparks, 0.7f * (1f - s)) }
     }
 }
+
+
+/** Les pod korunou (zóna 3): světla na konečcích visících větviček se rozzáří a jedno po druhém zhasnou, záclona větviček
+ *  se zavlní – a mezi nimi se otevřou oči; při výpadu se zvedne zelená mlha zapomnění. */
+class ForestIntro3(m: Img, w: Int, h: Int) : MapScene(m, w, h, 82, 300, 31) {
+    override val shade = hex(0x030806)
+    override val accent = hex(0xB8FFE0)
+    override val dimMax = 0.66f
+    private val mist = ramp(0x2E6A54, 0x5CB496, 0x9AE8C8)
+    private val wisps = spray(22, 15f, 50f, 20f)
+
+    override fun before(t: Long) {
+        val glow = (0.7f + 0.3f * sinf(t * 0.025f)) * (1f - p(t, TELL1, TELL2))
+        if (glow > 0f) tintWhere(cx - 70f, cy - 80f, cx + 70f, cy + 40f, hex(0xAAF0D8), glow * 0.25f) { bright(it, 70) }
+    }
+
+    override fun act(t: Long) {
+        val sway = p(t, TELL1, CLIMAX)
+        if (sway > 0f) wobble(cx - 60f, cy - 70f, cx + 60f, cy + 10f, 1.4f * sway, t, 0.015f)
+        mapEyes(cx, cy, 2.3f, hex(0xB8FFE0), eyeAlpha(t))
+        val s = since(t)
+        if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -16f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
+    }
+}

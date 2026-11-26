@@ -91,3 +91,12 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   Řádu NEINVENTARIZOVAT s razítkem S-0. Bez prozrazení, že Makromoni byli lidé. Setkání PSYCHO a VÍLA lv 34–38,
   intro TempleIntro, živé detaily `InteriorFxView.ROOT_TEMPLE`, díly `lumen.column/column_drum/deer_statue/wish_altar`.
   Na mapě zóny 3 vpravo dole.
+- **Les pod korunou** (`ROOT_FOREST`, `RootForest.kt`, `gen_crown_forest.py`), lokace 7, pohlcení 7/8 – poslední před
+  Kmenem. Vysoká mapa 176 × 560; vstup ze Svahu bezejmenných (uzel `sb_les`). Obrácený les: holé větve koruny visí shora
+  (nahoře mizí ve tmě), kroutí se, dole se rozpadají na záclony větviček, které se dotknou země a svítí. Mlha zapomnění
+  z rány ve vrstvách (nejhustší na mýtině ticha), tůňky s odrazy světel, stopy v kruhu, kolík se třemi směrovkami VEN
+  (každá jinam), ztracená sonda Řádu (pípá, 4 113 neodeslaných hlášení), značky na kůře, které se rozmazávají (přečíst
+  je půjde po spánku – fáze kap. VI), zářezy nehtem. Dole nejtlustší větev skloněná k zemi se stupy – cesta ke Kmeni;
+  přes ni leží **Drakirra** (NPC `makromon_19_drakirra`; vidí, neodletí, souboj přijde s kapitolou VI). Setkání PŘÍRODA
+  a JED lv 34–38, intro ForestIntro3, živé detaily `InteriorFxView.ROOT_FOREST` (padající kůra, žár u Drakirry).
+  Mapa zóny 3 se protáhla dolů (Les pod Svahem).
