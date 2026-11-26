@@ -38,7 +38,7 @@ object EndingScene {
         val fx = EndingFxView(ctx, ending.end).apply {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
-        val text = TextView(ctx).apply {
+        val pageView = TextView(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply {
                 setMargins(dp(28f), 0, dp(28f), 0)
             }
@@ -55,7 +55,7 @@ object EndingScene {
             text = "klepni ▸"; textSize = 12f; alpha = 0f
             setTextColor(0x99F4ECD8.toInt()); typeface = Typeface.MONOSPACE
         }
-        shell.addView(fx); shell.addView(text); shell.addView(hint)
+        shell.addView(fx); shell.addView(pageView); shell.addView(hint)
         root.addView(shell)
         shell.animate().alpha(1f).setDuration(1400).start()
 
@@ -65,12 +65,12 @@ object EndingScene {
         fun body() = ending.pages[page]
         fun type() {
             val b = body()
-            text.alpha = 0f; text.text = ""; hint.alpha = 0f
-            text.animate().alpha(1f).setDuration(500).start()
+            pageView.alpha = 0f; pageView.text = ""; hint.alpha = 0f
+            pageView.animate().alpha(1f).setDuration(500).start()
             typer = ValueAnimator.ofInt(0, b.length).apply {
                 duration = (b.length * 34L).coerceIn(900L, 9000L)
                 startDelay = 300
-                addUpdateListener { shown = it.animatedValue as Int; text.text = b.substring(0, shown) }
+                addUpdateListener { shown = it.animatedValue as Int; pageView.text = b.substring(0, shown) }
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: android.animation.Animator) { hint.animate().alpha(1f).setDuration(600).start() }
                 })
@@ -79,7 +79,7 @@ object EndingScene {
         }
         fun finish() {
             shell.setOnClickListener(null)
-            text.animate().alpha(0f).setDuration(600).start(); hint.animate().alpha(0f).setDuration(300).start()
+            pageView.animate().alpha(0f).setDuration(600).start(); hint.animate().alpha(0f).setDuration(300).start()
             val card = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
                 layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply {
@@ -117,7 +117,7 @@ object EndingScene {
             card.animate().alpha(1f).setStartDelay(900).setDuration(1600).start()
         }
         shell.setOnClickListener {
-            if (shown < body().length) { typer?.cancel(); shown = body().length; text.text = body(); hint.animate().alpha(1f).setDuration(300).start(); return@setOnClickListener }
+            if (shown < body().length) { typer?.cancel(); shown = body().length; pageView.text = body(); hint.animate().alpha(1f).setDuration(300).start(); return@setOnClickListener }
             page++
             if (page >= ending.pages.size) finish() else type()
         }

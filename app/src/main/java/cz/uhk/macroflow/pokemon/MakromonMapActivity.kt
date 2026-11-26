@@ -2234,7 +2234,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     }.getOrDefault(false)
                 }
                 if (isFinishing) return@launch
-                if (slept || devKeycard()) playEnding(F.End.SECRET) else showMapToast(F.NOT_YET_SLEPT)
+                if (slept || devKeycard()) playEnding(cz.uhk.macroflow.pokemon.story.Finale.End.SECRET) else showMapToast(F.NOT_YET_SLEPT)
             }
             return
         }
