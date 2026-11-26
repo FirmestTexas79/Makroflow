@@ -19,11 +19,11 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-W, H = 176, 272
+W, H = 264, 290
 FRAMES = 12
 # kde sprite leží v mapě Kmene (levý horní roh, art px) – musí sedět s RootTrunk.kt a gen_trunk.py
-MAP_X0, MAP_Y0 = 0, 14
-CX = 88
+MAP_X0, MAP_Y0 = 0, 10
+CX = 132
 
 
 def nrm(v):
@@ -55,6 +55,12 @@ def sd_cone(p, a, b, ra, rb):
     pa = p - a; ba = b - a
     h = np.clip((pa @ ba) / (ba @ ba), 0, 1)
     return np.linalg.norm(pa - np.outer(h, ba), axis=1) - (ra + (rb - ra) * h)
+
+
+def ssub(d, hole, k):
+    """Plynulé odečtení (vyhloubení) díry hole z tvaru d."""
+    h = np.clip(0.5 - 0.5 * (d + hole) / k, 0, 1)
+    return d * (1 - h) + (-hole) * h + k * h * (1 - h)
 
 
 def smin(a, b, k):
@@ -89,7 +95,7 @@ def seg_frame(a, b):
 class Model:
     """Postava jako skupiny primitiv: kůže (plynulé sjednocení), kopí, kov, pěna."""
     def __init__(self):
-        self.skin, self.spear, self.metal, self.foam = [], [], [], []
+        self.skin, self.spear, self.metal, self.foam, self.eyes = [], [], [], [], []
 
     def sdf(self, p, mats=False):
         def grp(lst, k):
@@ -102,11 +108,12 @@ class Model:
         dp = grp(self.spear, 0)
         dm = grp(self.metal, 0)
         df = grp(self.foam, 2.0)
-        d = np.minimum(np.minimum(ds, dp), np.minimum(dm, df))
+        de = grp(self.eyes, 0)
+        d = np.minimum(np.minimum(np.minimum(ds, dp), np.minimum(dm, df)), de)
         if not mats:
             return d
         m = np.zeros(len(p), int)                                         # 0 kůže, 1 kopí, 2 kov, 3 pěna
-        m[dp <= d + 1e-4] = 1; m[dm <= d + 1e-4] = 2; m[df <= d + 1e-4] = 3; m[ds <= d + 1e-4] = 0
+        m[dp <= d + 1e-4] = 1; m[dm <= d + 1e-4] = 2; m[df <= d + 1e-4] = 3; m[ds <= d + 1e-4] = 0; m[de <= d + 1e-4] = 4
         return d, m
 
 
@@ -114,12 +121,12 @@ def build(fi):
     t = fi / FRAMES
     b = (1 - math.cos(2 * math.pi * t)) / 2                               # 0 výdech … 1 nádech
     M = Model()
-    S = 1.62
+    S = 1.9
     lean = math.radians(24 + 4 * b)
     yaw = math.radians(50)
     R = rot_x(-lean) @ rot_y(yaw)                                         # tělo: předklon k hráči, natočené do 3/4
     hl = R @ np.array([0, -83.0, 5.0])
-    P0 = np.array([86.0 - S * hl[0], 54.0 - S * hl[1], -16.0])           # pánev v kmeni; hlava nahoře v ráně
+    P0 = np.array([130.0 - S * hl[0], 64.0 - S * hl[1], -18.0])           # pánev v kmeni; hlava nahoře v ráně
 
     def W_(v):
         return P0 + S * (R @ np.asarray(v, float))
@@ -142,22 +149,44 @@ def build(fi):
         ell((sx * 10.5, -51, 8 * chest), (13, 8, 5.2), rot_y(sx * 0.25))  # prsní svaly (ploché desky)
         ell((sx * 20, -40, -3), (8.5, 15, 9))                             # široké zádové svaly
         ell((sx * 9, -66, -4), (13, 7, 8))                                # trapézy
-        ell((sx * 26, -59, -1), (9.5, 12, 9.5), rot_x(0.3))               # deltové svaly
+        ell((sx * 25, -59, -1), (8.4, 11, 8.4), rot_x(0.3))               # deltové svaly
         ell((sx * 13.5, -17, 5), (5.5, 11, 6))                            # šikmé svaly
         for k, yy in enumerate((-35, -26, -17)):
             ell((sx * 5, yy, 10.5), (5, 4.4, 3.2))                        # břišní svaly
     cone((0, -62, -1), (0, -74, 3), 9.5, 8.0)                             # krk (silný)
     head_c = (0, -83, 5)
-    Rh = rot_y(math.radians(-22 + 4 * math.sin(2 * math.pi * t))) @ rot_x(math.radians(-18))   # hlava se otáčí k hráči
-    ell(head_c, (8.2, 10.5, 9.0), Rh)
-    ell((0, -87, 11), (6.5, 2.6, 2.6), Rh)                                # nadočnicový val
+    Rh = rot_y(math.radians(-22 + 4 * math.sin(2 * math.pi * t))) @ rot_x(math.radians(14))   # hlava se otáčí k hráči a zvedá tvář
+    HC, HR = W_(head_c), R @ Rh
+    EYES = [(sx * 3.0, ey, 5.4) for ey in (-2.4, 1.0, 4.4) for sx in (-1, 1)]
+
+    def head_sdf(p, HC=HC, HR=HR):
+        """Vymodelovaná hlava bez tváře: lebka, užší dolní obličej, lícní kosti, čelisti, těžký nadočnicový val,
+        hřbet mezi sloupci očí, propadlé spánky a šest hlubokých očnic."""
+        q = ((p - HC) @ HR) / S
+        d = sd_ell(q, np.array([0, -2.5, -1.0]), np.array([8.6, 9.4, 9.2]))              # lebka
+        d = smin(d, sd_ell(q, np.array([0, 3.6, 1.6]), np.array([6.6, 7.4, 7.6])), 2.0)   # dolní obličej
+        for sx in (-1, 1):
+            d = smin(d, sd_ell(q, np.array([sx * 4.9, 3.2, 5.0]), np.array([2.8, 2.0, 2.6])), 1.2)   # lícní kosti
+            d = smin(d, sd_ell(q, np.array([sx * 5.2, 6.4, 0.5]), np.array([3.0, 3.6, 4.0])), 1.5)   # úhel čelisti
+            d = ssub(d, sd_ell(q, np.array([sx * 8.2, -2.0, 3.0]), np.array([2.2, 3.4, 3.0])), 1.2)  # propadlé spánky
+        for sx in (-1, 1):
+            d = smin(d, sd_ell(q, np.array([sx * 3.1, -4.6, 7.0]), np.array([3.4, 1.5, 2.0])), 1.8)   # oblouky nadočnicového valu
+        d = smin(d, sd_ell(q, np.array([0, 1.2, 8.0]), np.array([1.1, 5.6, 1.6])), 0.8)    # hřbet mezi sloupci očí
+        for (ex, ey, ez) in EYES:
+            d = ssub(d, sd_ell(q, np.array([ex, ey, 9.2]), np.array([2.25, 1.7, 4.8])), 0.45)   # hluboká očnice
+        return d * S
+    M.skin.append(head_sdf)
+    for k, e_ in enumerate(EYES):                                         # oční koule hluboko v očnicích (svítí)
+        if fi == 8 and k >= 4:
+            continue                                                      # spodní pár mrkne
+        M.eyes.append(lambda p, c=HC + HR @ (np.array(e_) * S): np.linalg.norm(p - c, axis=1) - 1.05 * S)
     # ── kopí: hrudí do kmene, ratiště trčí k hráči ──
     spear_in = W_((-4, -44, 13))
-    sd = nrm((0.3, 0.42, 0.86))
-    spear_out = spear_in + sd * 110
-    M.spear.append(lambda p, A=spear_in - sd * 30, B=spear_out: sd_cone(p, A, B, 3.0, 4.0))
-    clamp = spear_in + sd * 60
-    M.metal.append(lambda p, c=clamp: sd_cone(p, c - sd * 3.5, c + sd * 3.5, 7.0, 7.0))
+    sd = nrm((-0.66, 0.62, 0.42))
+    spear_out = spear_in + sd * 150
+    M.spear.append(lambda p, A=spear_in - sd * 30, B=spear_out: sd_cone(p, A, B, 3.4, 4.8))
+    clamp = spear_out
+    M.metal.append(lambda p, c=spear_out: sd_cone(p, c - sd * 6, c + sd * 1, 5.6, 5.0))   # železná pata ratiště
     # ── paže (IK) ──
     def arm(sh_local, hand, pole, l1=40, l2=37, r=(10.0, 8.0, 7.8, 5.6)):
         s = W_(sh_local)
@@ -193,26 +222,26 @@ def build(fi):
         M.skin.append(lambda p, c=h + f * 4: sd_ell(p, c, np.array([7.6, 7.2, 7.2])))
 
     # levá horní: drápe se za okraj rány a vytahuje se ven
-    e, h = arm((-27, -60, -2), (34 + b * 1.5, 34 - b * 2, 4), (10, 80, 50))
+    e, h = arm((-27, -60, -2), (80 + b * 1.5, 30 - b * 2, 4), (50, 80, 50))
     open_hand(h, e, 0.25, curl=0.9)
     # pravá horní: pořád v objímce Řádu v kůře
-    e, h = arm((27, -60, -2), (156, 52, -2), (150, 100, 30))
+    e, h = arm((27, -60, -2), (208, 50, -2), (200, 100, 30))
     open_hand(h, e, 0.18, curl=0.6)
     f = nrm(h - e)
     M.metal.append(lambda p, A=h - f * 7, B=h - f * 1: sd_cone(p, A, B, 6.0, 6.0))
     wr_r = h
-    # levá prostřední: natahuje se k hráči
-    e, h = arm((-23, -46, -4), (30 - b * 2, 112 + b * 3, 118 + b * 12), (-30, 170, 60))
-    open_hand(h, e, 0.42 + 0.1 * b, curl=0.15 - 0.1 * b)
-    # pravá prostřední: opírá se dlaní o kůru
-    e, h = arm((23, -46, -4), (164, 150, 2), (180, 110, 40))
-    open_hand(h, e, 0.4, curl=0.3)
-    # dolní pár svírá ratiště, při výdechu zatáhne
+    # levá prostřední a levá dolní drží ratiště kopí, které mu prochází hrudí; při výdechu za něj zatáhnou
     pull = (1 - b) * 3
-    g = spear_in + sd * (22 + pull)                                       # pravá dolní svírá ratiště
-    e, h = arm((19, -30, 3), g, (180, 170, 70), l1=28, l2=26, r=(8.6, 7.0, 6.8, 5.0))
+    g = spear_in + sd * (100 + pull)
+    e, h = arm((-23, -46, -4), g, (40, 120, 90), l1=44, l2=42)
     fist(h, e)
-    e, h = arm((-19, -30, 3), (22, 212 - b * 2, 4), (-20, 230, 40), l1=32, l2=30, r=(8.6, 7.0, 6.8, 5.0))   # levá dolní se zapírá o pěnu
+    g = spear_in + sd * (50 + pull)
+    e, h = arm((-19, -30, 3), g, (70, 200, 90), l1=32, l2=30, r=(8.6, 7.0, 6.8, 5.0))
+    fist(h, e)
+    # pravá prostřední se opírá dlaní o kůru, pravá dolní se zapírá o pěnu
+    e, h = arm((23, -46, -4), (214, 150 + b * 2, 2), (240, 110, 40), l1=44, l2=42)
+    open_hand(h, e, 0.4, curl=0.3)
+    e, h = arm((19, -30, 3), (172, 206 - b * 2, 0), (200, 240, 40), l1=36, l2=34, r=(8.6, 7.0, 6.8, 5.0))
     open_hand(h, e, 0.5, curl=0.5)
     # pravé koleno se zapírá o okraj rány – leze ven
     hip = W_((10, 2, 2))
@@ -227,7 +256,7 @@ def build(fi):
         c = np.array([P0[0] + rf.uniform(-46, 50), P0[1] + rf.uniform(-30, 26), rf.uniform(-2, 8)])
         r = rf.uniform(3.5, 8)
         M.foam.append(lambda p, c=c, rr=np.array([r, r * 0.9, r * 0.55]): sd_ell(p, c, rr))
-    info = dict(R=R, P0=P0, S=S, Rh=Rh, head_c=W_(head_c), b=b, spear_in=spear_in, spear_dir=sd, clamp=clamp, wrist_r=wr_r,
+    info = dict(R=R, P0=P0, S=S, Rh=Rh, head_c=W_(head_c), eyes=[HC + HR @ (np.array(e_) * S) for e_ in EYES], b=b, spear_in=spear_in, spear_dir=sd, clamp=clamp, wrist_r=wr_r,
                 W_=W_, head_R=R @ Rh)
     return M, info
 
@@ -238,7 +267,7 @@ FILL = nrm((0.25, 0.85, 0.45))                                            # sod�
 WARM = np.array((200, 214, 214.0)) / 255
 COOL = np.array((255, 170, 100.0)) / 255
 CYAN = np.array((120, 240, 228.0))
-ALB = {0: np.array((108, 100, 98.0)), 1: np.array((96, 72, 50.0)), 2: np.array((130, 136, 144.0)), 3: np.array((118, 110, 82.0))}
+ALB = {4: np.array((0, 0, 0.0)), 0: np.array((108, 100, 98.0)), 1: np.array((96, 72, 50.0)), 2: np.array((130, 136, 144.0)), 3: np.array((118, 110, 82.0))}
 rs = np.random.default_rng(6)
 SEEDS = rs.uniform((-60, -140, -40), (60, 20, 40), (3200, 3))             # Voronoi prasklin v prostoru těla
 SEEDS_W = rs.uniform((0, 0, -20), (W, H, 130), (9000, 3))                  # … a pro paže ve světě
@@ -258,7 +287,7 @@ def cracks(pts, seeds):
 def render(fi):
     M, info = build(fi)
     ys, xs = np.mgrid[0:H, 0:W]
-    cam = np.array([CX, 150.0, 420.0])                                    # perspektiva: blízké (ruka k hráči) je větší
+    cam = np.array([CX, 150.0, 460.0])                                    # perspektiva: blízké (ruka k hráči) je větší
     tgt = np.column_stack([xs.ravel() + 0.5, ys.ravel() + 0.5, np.zeros(W * H)])
     rdv = tgt - cam; rdv /= np.linalg.norm(rdv, axis=1)[:, None]
     ro = np.tile(cam, (W * H, 1))
@@ -282,9 +311,9 @@ def render(fi):
     n = (k1 * M.sdf(P + k1 * e)[:, None] + k2 * M.sdf(P + k2 * e)[:, None] + k3 * M.sdf(P + k3 * e)[:, None] + k4 * M.sdf(P + k4 * e)[:, None])
     n /= np.linalg.norm(n, axis=1)[:, None]
     ao = np.ones(len(P)); w = 1.0
-    for i in range(1, 6):
-        hh = 2.2 * i
-        ao -= np.maximum(0, hh - M.sdf(P + n * hh)) / hh * 0.22 * w; w *= 0.75
+    for i in range(1, 7):
+        hh = 1.2 * i
+        ao -= np.maximum(0, hh - M.sdf(P + n * hh)) / hh * 0.2 * w; w *= 0.8
     ao = np.clip(ao, 0.15, 1)
     sh = np.ones(len(P)); ts = np.full(len(P), 1.5)
     for _ in range(40):                                                   # měkký stín od sodíku
@@ -297,7 +326,7 @@ def render(fi):
     alb = np.array([ALB[m] for m in mat])
     b = info["b"]
     light = 0.14 + WARM * (dk * sh)[:, None] * 0.95 + COOL * df[:, None] * 0.38
-    col = alb * light * ao[:, None] + CYAN * (fres * 0.5 * (mat != 3))[:, None]
+    col = alb * light * ao[:, None] + CYAN * (fres * 0.5 * ao ** 3 * (mat != 3))[:, None]
     # praskliny: v těle drží na kůži (lokální souřadnice trupu), na pažích ve světě
     R, P0, S = info["R"], info["P0"], info["S"]
     loc = ((P - P0) @ R) / S
@@ -307,11 +336,26 @@ def render(fi):
     crack_w = np.where(on_torso, cw * S, cw2)
     cell = np.where(on_torso, cid, cid2 + 5000)
     skin = mat == 0
-    head = np.linalg.norm((P - info["head_c"]) / np.array([9.5, 12, 10]) / S, axis=1) < 1.15
+    head = np.linalg.norm((P - info["head_c"]) / np.array([10.5, 13, 11]) / S, axis=1) < 1.1
     isc = skin & ~head & (crack_w < 0.6) & ((cell * 2654435761 % 100) < 75)
     glow = isc & ((cell * 40503 % 100) < 22)
     col[isc] = col[isc] * 0.28 + np.array((26, 10, 12.0)) * 0.7
     col[glow] += CYAN * (0.22 + 0.4 * b)
+    # oči: svítí zevnitř očnic – jádro, záře po stěnách jamky; okolí očnic v tvrdé tmě (okluze + stín valu)
+    pulse = 0.75 + 0.25 * b
+    for k, E in enumerate(info["eyes"]):
+        shut = fi == 8 and k >= 4                                         # spodní pár mrkne
+        dd = np.linalg.norm(P - E, axis=1) / S
+        if shut:
+            continue
+        sock = (dd < 3.6) & (mat != 4)
+        col[sock] *= np.clip((dd[sock] - 0.6) / 3.0, 0.03, 1)[:, None] ** 2.2   # tvrdá tma kolem očí
+        g = np.exp(-((dd - 1.0) / 0.7) ** 2) * 0.9 * pulse * (mat != 4)   # záře na stěnách očnice
+        col += CYAN[None, :] * g[:, None]
+    ey_ = mat == 4                                                        # oči: jádro bílé, okraj azurový
+    facing = np.clip(-(n[ey_] @ np.array([0, 0, -1.0])), 0, 1)
+    col[ey_] = CYAN * (1.0 + 0.3 * pulse) * (0.7 + 0.3 * facing[:, None]) + (facing[:, None] > 0.75) * np.array((150, 60, 70.0))
+    col[head] *= np.clip(ao[head] * 1.25, 0.08, 1)[:, None] ** 1.6      # hloubky hlavy tmavší než trup
     # kopí: okovy a omotávky podle vzdálenosti po ratišti, objímka kovová
     along = (P - info["spear_in"]) @ info["spear_dir"]
     sp = mat == 1
@@ -322,6 +366,7 @@ def render(fi):
     # pěna: hrbolatá
     fm = mat == 3
     img = np.zeros((H * W, 3)); img[hi] = col
+    eyem = np.zeros(H * W, bool); eyem[hi[mat == 4]] = True; eyem = eyem.reshape(H, W)
     depth = np.full(H * W, -1e9); depth[hi] = P[:, 2]
     img = img.reshape(H, W, 3); depth = depth.reshape(H, W); a = hit.reshape(H, W)
     # posterizace s ditheringem (pixel art), obrysy na skocích hloubky a kolem siluety
@@ -350,29 +395,18 @@ def render(fi):
                     if a[y + dy, x + dx] and depth[y + dy, x + dx] - depth[y, x] > 7:
                         out[y, x, :3] = (out[y, x, :3] * 0.35).astype(np.uint8)
                         break
+    ey, ex = np.nonzero(eyem)                                             # záře očí přesahuje přes okraj očnic
+    for y0, x0 in zip(ey, ex):
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
+                y1, x1 = y0 + dy, x0 + dx
+                if 0 <= y1 < H and 0 <= x1 < W and a[y1, x1] and not eyem[y1, x1]:
+                    k = 0.22 / (1 + dx * dx + dy * dy)
+                    out[y1, x1, :3] = np.clip(out[y1, x1, :3] + CYAN * k, 0, 255).astype(np.uint8)
     edge = np.zeros_like(a)
     edge[1:, :] |= a[:-1, :]; edge[:-1, :] |= a[1:, :]; edge[:, 1:] |= a[:, :-1]; edge[:, :-1] |= a[:, 1:]
     edge &= ~a
     out[edge] = (12, 9, 11, 255)
-    # šest očí: body na přední straně hlavy, viditelné jen když je nic nezakrývá
-    hc, HR = info["head_c"], info["head_R"]
-    for k, ey in enumerate((-5.0, 0.0, 5.0)):
-        for sx in (-1, 1):
-            lp = np.array([sx * 3.4 * (1 - 0.08 * k), ey, 8.4 - abs(ey) * 0.12]) * S
-            wp = hc + HR @ lp
-            sc_ = 420.0 / (420.0 - wp[2])
-            X, Y = int(CX + (wp[0] - CX) * sc_), int(150 + (wp[1] - 150) * sc_)
-            if 0 <= X < W - 1 and 0 <= Y < H and a[Y, X] and wp[2] >= depth[Y, X] - 7:
-                shut = fi == 8 and k == 2
-                c1 = (40, 52, 54) if shut else (230, 255, 250)
-                c2 = (24, 30, 32) if shut else tuple(int(v) for v in CYAN * (0.75 + 0.25 * b))
-                if not shut:
-                    for (dx, dy) in ((-1, 0), (2, 0), (0, -1), (1, -1), (0, 2), (1, 2)):
-                        if 0 <= X + dx < W and 0 <= Y + dy < H and a[Y + dy, X + dx]:
-                            out[Y + dy, X + dx, :3] = (out[Y + dy, X + dx, :3] * 0.4 + CYAN * 0.6 * (0.6 + 0.4 * info["b"])).astype(np.uint8)
-                out[Y, X, :3] = c1; out[Y, X + 1, :3] = c1
-                if Y + 1 < H:
-                    out[Y + 1, X, :3] = c2; out[Y + 1, X + 1, :3] = c2
     info["alpha"] = a
     return out, info
 
@@ -384,7 +418,7 @@ def chain_points(info):
 
 def proj(wp):
     """Bod ze světa do px spritu (stejná perspektiva jako render)."""
-    k = 420.0 / (420.0 - wp[2])
+    k = 460.0 / (460.0 - wp[2])
     return (CX + (wp[0] - CX) * k, 150 + (wp[1] - 150) * k)
 
 

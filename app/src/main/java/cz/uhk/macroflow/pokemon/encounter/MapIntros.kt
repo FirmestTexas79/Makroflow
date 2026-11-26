@@ -1125,7 +1125,7 @@ class ThresholdIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 352, 37) {
 
 /** Kmen (zóna 3): rána v kmeni se rozsvítí studeným světlem, v ní se otevře šest očí Trpitele – při výpadu z něj
  *  vyletí mrak popela. */
-class TrunkIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 140, 48) {
+class TrunkIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 132, 140, 48) {
     override val shade = hex(0x030507)
     override val accent = hex(0x9CF0E4)
     override val dimMax = 0.62f
@@ -1134,13 +1134,13 @@ class TrunkIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 140, 48) {
 
     override fun before(t: Long) {
         val glow = (0.6f + 0.4f * sinf(t * 0.015f)) * (1f - 0.5f * p(t, TELL2, CLIMAX)) + pulse(t, TELL1, 280)
-        if (glow > 0f) tintWhere(sx(40f), sy(20f), sx(136f), sy(262f), hex(0x9CF0E4), glow.coerceAtMost(1f) * 0.22f) { bright(it, 70) }
+        if (glow > 0f) tintWhere(sx(68f), sy(12f), sx(196f), sy(266f), hex(0x9CF0E4), glow.coerceAtMost(1f) * 0.22f) { bright(it, 70) }
     }
 
     override fun act(t: Long) {
         val q = p(t, TELL1, CLIMAX)
-        if (q > 0f) wobble(sx(40f), sy(20f), sx(136f), sy(262f), 1.0f * q, t, 0.015f)
-        for (k in 0 until 3) mapEyes(cx, cy - 78 + k * 6, 4.2f, hex(0x9CF0E4), eyeAlpha(t))   // šest očí Trpitele
+        if (q > 0f) wobble(sx(68f), sy(12f), sx(196f), sy(266f), 1.0f * q, t, 0.015f)
+        for (k in 0 until 3) mapEyes(cx + 3, cy - 83 + k * 7, 5.5f, hex(0x9CF0E4), eyeAlpha(t))   // šest očí Trpitele
         val s = since(t)
         if (s > 0f) for (b in flakes) { val (x, y) = ballistic(cx, cy, b[0], b[1], 10f, s); puff(x, y, 1.8f, ash, 0.8f * (1f - s)) }
     }

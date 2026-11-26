@@ -1591,19 +1591,19 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         /** Zóna 3, Kmen: z Trpitele pomalu padá popel na lávku, prasklinami v pěně pulzuje studené světlo, sodíkové
          *  světlomety bzučí, rudá kontrolka sondy bliká, z propasti stoupají světélka, dole leží mlha. */
         val ROOT_TRUNK = InteriorFx(
-            ash = listOf(FxBox(40, 160, 136, 340), FxBox(56, 200, 120, 320)),
-            falls = listOf(FxBox(44, 150, 132, 330), FxBox(60, 180, 116, 300)),
+            ash = listOf(FxBox(84, 160, 180, 340), FxBox(100, 200, 164, 320)),
+            falls = listOf(FxBox(88, 150, 176, 330), FxBox(104, 180, 160, 300)),
             fallColor = 0x9A948C,
-            motes = listOf(FxBox(0, 300, 176, 560)),
+            motes = listOf(FxBox(0, 300, 264, 560)),
             moteColor = 0xB8F0E4,
-            fog = listOf(FxBox(0, 400, 176, 460), FxBox(0, 500, 176, 560)),
+            fog = listOf(FxBox(0, 400, 264, 460), FxBox(0, 500, 264, 560)),
             fogColor = 0x3A5458,
-            glows = listOf(FxGlow(88, 150, 44, 100, 0x9CF0E4, 3.2f), FxGlow(TRUNK_TX, TRUNK_TY, 5, 5, 0xB8FFF0, 3.2f),
-                FxGlow(30, 296, 8, 5, 0xFFC870, 0.9f), FxGlow(146, 292, 8, 5, 0xFFC870, 1.1f), FxGlow(44, 336, 2, 2, 0xFF4030, 1.2f),
-                FxGlow(156, 280, 3, 10, 0x5A90C0, 4.8f), FxGlow(80, 230, 10, 6, 0x9CF0E4, 5.6f), FxGlow(110, 220, 8, 5, 0x9CF0E4, 4.4f))
+            glows = listOf(FxGlow(132, 150, 60, 110, 0x9CF0E4, 3.36f), FxGlow(TRUNK_TX, TRUNK_TY, 5, 5, 0xB8FFF0, 3.36f),
+                FxGlow(58, 296, 8, 5, 0xFFC870, 0.9f), FxGlow(206, 292, 8, 5, 0xFFC870, 1.1f), FxGlow(74, 336, 2, 2, 0xFF4030, 1.2f),
+                FxGlow(214, 280, 3, 10, 0x5A90C0, 4.8f), FxGlow(110, 236, 10, 6, 0x9CF0E4, 5.6f), FxGlow(164, 222, 8, 5, 0x9CF0E4, 4.4f))
         )
-        private const val TRUNK_TX = 92
-        private const val TRUNK_TY = 129
+        private const val TRUNK_TX = 137
+        private const val TRUNK_TY = 147
 
         val ABYSS = InteriorFx(
             sparkles = listOf(FxBox(10, 230, 166, 345)),
