@@ -2252,6 +2252,7 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun endingVideo(end: cz.uhk.macroflow.pokemon.story.Finale.End) = when (end) {
         cz.uhk.macroflow.pokemon.story.Finale.End.SPEAR -> R.raw.ending_kopi
         cz.uhk.macroflow.pokemon.story.Finale.End.BLOOM -> R.raw.ending_kveteni
+        cz.uhk.macroflow.pokemon.story.Finale.End.WISH -> R.raw.ending_prani
         else -> 0
     }
 
