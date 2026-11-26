@@ -2253,7 +2253,7 @@ class MakromonMapActivity : AppCompatActivity() {
         cz.uhk.macroflow.pokemon.story.Finale.End.SPEAR -> R.raw.ending_kopi
         cz.uhk.macroflow.pokemon.story.Finale.End.BLOOM -> R.raw.ending_kveteni
         cz.uhk.macroflow.pokemon.story.Finale.End.WISH -> R.raw.ending_prani
-        else -> 0
+        cz.uhk.macroflow.pokemon.story.Finale.End.SECRET -> R.raw.ending_probuzeni
     }
 
     /** Debug: přehrát konec bez příznaků a bez návratu do Města. */
