@@ -18,7 +18,8 @@ class ZoneThreeTest {
     private val maps: Map<String, CaveMap> = mapOf("ROOT_CAMP" to RootCamp.MAP, "ROOT_WATCH" to RootWatch.MAP, "ROOT_SIGNAL" to RootSignal.MAP,
         "ROOT_BRIDGE" to RootBridge.MAP, "ROOT_SLOPECAMP" to RootSlopeCamp.MAP, "ROOT_NAMELESS" to RootNameless.MAP,
         "ROOT_TEMPLE" to cz.uhk.macroflow.pokemon.cave.RootTemple.MAP, "ROOT_FOREST" to cz.uhk.macroflow.pokemon.cave.RootForest.MAP,
-        "ROOT_THRESHOLD" to cz.uhk.macroflow.pokemon.cave.RootThreshold.MAP, "ROOT_TRUNK" to cz.uhk.macroflow.pokemon.cave.RootTrunk.MAP)
+        "ROOT_THRESHOLD" to cz.uhk.macroflow.pokemon.cave.RootThreshold.MAP, "ROOT_TRUNK" to cz.uhk.macroflow.pokemon.cave.RootTrunk.MAP,
+        "ROOT_HEART" to cz.uhk.macroflow.pokemon.cave.RootHeart.MAP)
 
     @Test fun zone3LocationsHaveArrivalNamesAndZone() {
         assertEquals(maps.keys, ZoneOne.ZONE3)
@@ -36,7 +37,7 @@ class ZoneThreeTest {
         val json = file("src/main/assets/zone3/zone3.json").readText()
         val ends = Regex("\"(a|b)\": \"([A-Z_0-9]+)\",\\s*\"\\1Node\": \"([a-z_0-9]+)\",\\s*\"\\1Dir\": \"[nsew]\",\\s*\"\\1Pos\": \\[[^\\]]*\\],\\s*\"\\1Frac\": \\[\\s*([0-9.]+),\\s*([0-9.]+)\\s*\\]")
             .findAll(json).toList()
-        assertEquals(18, ends.size)
+        assertEquals(20, ends.size)
         val pairs = Regex("\"a\":\\s*\"(\\w+)\"[^}]*?\"b\":\\s*\"(\\w+)\"").findAll(json).map { it.groupValues[1] to it.groupValues[2] }.toSet()
         assertEquals(pairs, ZoneOne.LINKS.filter { (a, b) -> a in ZoneOne.ZONE3 && b in ZoneOne.ZONE3 }.toSet())
         for (e in ends) {

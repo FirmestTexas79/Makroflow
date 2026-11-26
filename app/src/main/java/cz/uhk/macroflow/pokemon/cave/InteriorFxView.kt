@@ -1604,6 +1604,17 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
                 FxGlow(340, 490, 4, 14, 0x5A90C0, 4.8f), FxGlow(180, 420, 14, 8, 0x9CF0E4, 5.6f), FxGlow(264, 400, 12, 7, 0x9CF0E4, 4.4f),
                 FxGlow(221, 112, 16, 18, 0x9CF0E4, 2.85f))
         )
+        /** Střed kořenů (finále): poslední světlo dýchá, z klenby plují světélka a pyl světla, nad vodou mlha. */
+        val ROOT_HEART = InteriorFx(
+            motes = listOf(FxBox(10, 40, 166, 440)),
+            moteColor = 0xFFF0C8,
+            sparkles = listOf(FxBox(70, 290, 106, 318), FxBox(24, 60, 152, 150)),
+            fog = listOf(FxBox(0, 260, 176, 300), FxBox(0, 360, 176, 400)),
+            fogColor = 0xF0D8A8,
+            glows = listOf(FxGlow(cz.uhk.macroflow.pokemon.cave.RootHeart.LIGHT_X, cz.uhk.macroflow.pokemon.cave.RootHeart.LIGHT_Y, 10, 9, 0xFFF4D0, 3.2f),
+                FxGlow(cz.uhk.macroflow.pokemon.cave.RootHeart.LIGHT_X, cz.uhk.macroflow.pokemon.cave.RootHeart.LIGHT_Y, 40, 30, 0xFFD890, 6.4f),
+                FxGlow(88, 18, 8, 16, 0xD8F0F0, 5f), FxGlow(38, 298, 18, 8, 0xC8E8A0, 7f))
+        )
         private const val TRUNK_TX = 225
         private const val TRUNK_TY = 256
 

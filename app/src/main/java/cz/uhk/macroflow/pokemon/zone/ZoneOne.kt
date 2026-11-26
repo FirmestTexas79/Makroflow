@@ -19,7 +19,7 @@ object ZoneOne {
     val ZONE2 = setOf("ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA")
 
     /** Lokace aktu III (Zóna 3, Hlubina, docs/adr/0106) – mapa v assets/zone3 (tools/mapgen/gen_zone3.py). */
-    val ZONE3 = setOf("ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS", "ROOT_TEMPLE", "ROOT_FOREST", "ROOT_THRESHOLD", "ROOT_TRUNK")
+    val ZONE3 = setOf("ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS", "ROOT_TEMPLE", "ROOT_FOREST", "ROOT_THRESHOLD", "ROOT_TRUNK", "ROOT_HEART")
 
     /** Interiéry zóny 2 (na mapě nejsou, ale patří do ní). */
     val ZONE2_INTERIORS = setOf("ARENA_HALL", "TOWER_LOBBY", "TOWER_HIDEOUT", "TOWER_ABYSS", "TOWER_ARCHIVE", "TOWER_MEASURE", "TOWER_PLAIN", "TOWER_FOREST", "TOWER_ROCK", "TOWER_CAVE", "TOWER_WATER", "TOWER_DORM", "TOWER_ICE", "TOWER_FIRE", "TOWER_OFFICE", "TOWER_FAIRY", "TOWER_POISON")
@@ -42,7 +42,7 @@ object ZoneOne {
     /** Lokace zóny v pořadí kreslení. */
     val LOCATIONS = listOf("TOWN", "MEADOW", "FOREST", "HIDDEN_GROVE", "MOUNTAINS", "CAVE_MAZE", "MINES", "CAVE_OPEN", "SKY_PASS",
         "ASH_PLAIN", "QUIET_ORCHARD", "ECHO_CANYON", "OZVENA",
-        "ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS", "ROOT_TEMPLE", "ROOT_FOREST", "ROOT_THRESHOLD", "ROOT_TRUNK")
+        "ROOT_CAMP", "ROOT_WATCH", "ROOT_SIGNAL", "ROOT_BRIDGE", "ROOT_SLOPECAMP", "ROOT_NAMELESS", "ROOT_TEMPLE", "ROOT_FOREST", "ROOT_THRESHOLD", "ROOT_TRUNK", "ROOT_HEART")
 
     /** Tajné lokace – na mapě jen, když v nich hráč stojí. */
     val SECRET = setOf("HIDDEN_GROVE")
@@ -55,7 +55,7 @@ object ZoneOne {
         "OZVENA" to "Ozvěna",
         "ROOT_CAMP" to "Stanice 8", "ROOT_WATCH" to "Pozorovatelna B", "ROOT_SIGNAL" to "Signální útes",
         "ROOT_BRIDGE" to "Kořenový most", "ROOT_SLOPECAMP" to "Tábor na svahu", "ROOT_NAMELESS" to "Svah bezejmenných",
-        "ROOT_TEMPLE" to "Chrám Lumenců", "ROOT_FOREST" to "Les pod korunou", "ROOT_THRESHOLD" to "Práh", "ROOT_TRUNK" to "Kmen"
+        "ROOT_TEMPLE" to "Chrám Lumenců", "ROOT_FOREST" to "Les pod korunou", "ROOT_THRESHOLD" to "Práh", "ROOT_TRUNK" to "Kmen", "ROOT_HEART" to "Střed kořenů"
     )
 
     /** Lokace, kam se chodí přes hory – teleport je hlídá stejný krokový zámek jako vstup do hor. */
@@ -79,7 +79,8 @@ object ZoneOne {
         "ROOT_TEMPLE" to cz.uhk.macroflow.pokemon.cave.RootTemple.ENTRY_NODE,
         "ROOT_FOREST" to cz.uhk.macroflow.pokemon.cave.RootForest.ENTRY_NODE,
         "ROOT_THRESHOLD" to cz.uhk.macroflow.pokemon.cave.RootThreshold.ENTRY_NODE,
-        "ROOT_TRUNK" to cz.uhk.macroflow.pokemon.cave.RootTrunk.ENTRY_NODE
+        "ROOT_TRUNK" to cz.uhk.macroflow.pokemon.cave.RootTrunk.ENTRY_NODE,
+        "ROOT_HEART" to cz.uhk.macroflow.pokemon.cave.RootHeart.ENTRY_NODE
     )
 
     enum class Shown {
@@ -132,7 +133,7 @@ object ZoneOne {
         "SKY_PASS" to "ASH_PLAIN", "ASH_PLAIN" to "QUIET_ORCHARD", "ASH_PLAIN" to "ECHO_CANYON", "ASH_PLAIN" to "OZVENA",
         // Zóna 3 (Hlubina): sjezd výtahem z Věže je přechod mezi zónami, spoje jen uvnitř zóny
         "ROOT_CAMP" to "ROOT_WATCH", "ROOT_WATCH" to "ROOT_SIGNAL", "ROOT_SIGNAL" to "ROOT_BRIDGE",
-        "ROOT_WATCH" to "ROOT_SLOPECAMP", "ROOT_SLOPECAMP" to "ROOT_NAMELESS", "ROOT_NAMELESS" to "ROOT_TEMPLE", "ROOT_NAMELESS" to "ROOT_FOREST", "ROOT_FOREST" to "ROOT_THRESHOLD", "ROOT_THRESHOLD" to "ROOT_TRUNK"
+        "ROOT_WATCH" to "ROOT_SLOPECAMP", "ROOT_SLOPECAMP" to "ROOT_NAMELESS", "ROOT_NAMELESS" to "ROOT_TEMPLE", "ROOT_NAMELESS" to "ROOT_FOREST", "ROOT_FOREST" to "ROOT_THRESHOLD", "ROOT_THRESHOLD" to "ROOT_TRUNK", "ROOT_TRUNK" to "ROOT_HEART"
     )
 
     /** Počet přechodů po nejkratší cestě (BFS); null = nespojeno. */
@@ -202,7 +203,8 @@ object ZoneOne {
             cz.uhk.macroflow.pokemon.cave.RootTemple.VISITED_KEY to "ROOT_TEMPLE",
             cz.uhk.macroflow.pokemon.cave.RootForest.VISITED_KEY to "ROOT_FOREST",
             cz.uhk.macroflow.pokemon.cave.RootThreshold.VISITED_KEY to "ROOT_THRESHOLD",
-            cz.uhk.macroflow.pokemon.cave.RootTrunk.VISITED_KEY to "ROOT_TRUNK")
+            cz.uhk.macroflow.pokemon.cave.RootTrunk.VISITED_KEY to "ROOT_TRUNK",
+            cz.uhk.macroflow.pokemon.cave.RootHeart.VISITED_KEY to "ROOT_HEART")
             .forEach { (k, b) -> if (k in flags) s += b }
         // kdo byl za horami, prošel horami i loukou; kdo byl v Hvozdu, prošel loukou
         if (s.any { it in BEHIND_MOUNTAINS }) s += "MOUNTAINS"

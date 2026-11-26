@@ -8,8 +8,8 @@ import cz.uhk.macroflow.energy.Adherence
  * je jeho maso. Kopí drží ránu zavřenou a Řád chce, aby ho po Kazimírovi držel hráč (Subjekt 213).
  *
  * Trpitel se probudí jen nádobě v rovnováze: dnes 90–110 % denního cíle energie (stejné pásmo jako Adherence.KCAL).
- * Hladovění se nikdy nepočítá. Pak hráč volí konec – nevratně; dohraje se ve Středu kořenů (zatím se staví).
- * Tajný konec (Mydrus, Elderan, Gudwin) je zatím otevřený.
+ * Hladovění se nikdy nepočítá. Pak hráč volí konec – nevratně; dohraje se ve Středu kořenů (story/Finale.kt).
+ * Tajný konec (Mydrus, Elderan, Gudwin) se odemyká pamětí na mechovém lůžku ve Středu (Finale.End.SECRET).
  */
 object Trpitel {
     enum class Ending(val key: String) { SPEAR("konec_kopi"), BLOOM("konec_kveteni"), WISH("konec_prani") }
@@ -75,7 +75,7 @@ object Trpitel {
             "Zdola, z koruny, se ozve hukot. Voda stoupá."
         Ending.WISH -> "Kazimír dlouho mlčí. Pak dolní ruce sevřou ratiště pevněji – ne aby ho vytáhly, ale aby ho podržely ještě chvíli.\n" +
             "„Tak jdi,“ řekne. „Já tu vydržím. V tom jsem dobrý.“\n\nŠest očí se otočí k patě kmene. Kůra se tam s praskotem rozestoupí."
-    } + "\n\nU paty kmene se otevřela puklina dolů – do Středu kořenů.\nZATÍM NEPŘÍSTUPNÉ – Střed kořenů se staví."
+    } + "\n\nU paty kmene se otevřela puklina dolů – do Středu kořenů."
 
     /** Text u Trpitele, když už je volba za hráčem. */
     fun after(e: Ending) = when (e) {
@@ -85,6 +85,6 @@ object Trpitel {
     }
 
     fun crack(chosen: Boolean) = if (chosen)
-        "⬇️ Puklina u paty kmene vede dolů, do Středu kořenů.\nZATÍM NEPŘÍSTUPNÉ – Střed kořenů se staví."
+        "⬇️ Puklina u paty kmene vede dolů, do Středu kořenů. Zevnitř jde teplo a světlo."
     else "⬇️ U paty kmene je v kůře úzká puklina zalitá pěnou. Zevnitř je slyšet vodu. Neprojdeš."
 }

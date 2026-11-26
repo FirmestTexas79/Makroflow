@@ -69,7 +69,9 @@ enum class BiomeType {
     ROOT_TEMPLE,
     ROOT_FOREST,
     ROOT_THRESHOLD,
-    ROOT_TRUNK
+    ROOT_TRUNK,
+    /** Zóna 3: Střed kořenů – finální lokace, dohrání konce (docs/adr/0110). */
+    ROOT_HEART
 }
 
 object BiomeRegistry {
@@ -210,7 +212,8 @@ object BiomeRegistry {
         BiomeDefinition(BiomeType.ROOT_TEMPLE, R.drawable.root_temple, graphOf(cz.uhk.macroflow.pokemon.cave.RootTemple.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootTemple.MAP),
         BiomeDefinition(BiomeType.ROOT_FOREST, R.drawable.root_forest, graphOf(cz.uhk.macroflow.pokemon.cave.RootForest.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootForest.MAP),
         BiomeDefinition(BiomeType.ROOT_THRESHOLD, R.drawable.root_threshold, graphOf(cz.uhk.macroflow.pokemon.cave.RootThreshold.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootThreshold.MAP),
-        BiomeDefinition(BiomeType.ROOT_TRUNK, R.drawable.root_trunk, graphOf(cz.uhk.macroflow.pokemon.cave.RootTrunk.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootTrunk.MAP)
+        BiomeDefinition(BiomeType.ROOT_TRUNK, R.drawable.root_trunk, graphOf(cz.uhk.macroflow.pokemon.cave.RootTrunk.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootTrunk.MAP),
+        BiomeDefinition(BiomeType.ROOT_HEART, R.drawable.root_heart, graphOf(cz.uhk.macroflow.pokemon.cave.RootHeart.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootHeart.MAP)
         ).associateBy { it.type }
     }
 

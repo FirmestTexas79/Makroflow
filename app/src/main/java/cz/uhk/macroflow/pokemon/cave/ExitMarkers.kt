@@ -60,7 +60,8 @@ object ExitMarkers {
         "ROOT_TEMPLE" to listOf(Exit(RootTemple.ENTRY_NODE, "Svah bezejmenných", D)),
         "ROOT_FOREST" to listOf(Exit(RootForest.ENTRY_NODE, "Svah bezejmenných", U), Exit(RootForest.THRESHOLD_NODE, "Práh", D)),
         "ROOT_THRESHOLD" to listOf(Exit(RootThreshold.ENTRY_NODE, "Les pod korunou", D), Exit(RootThreshold.BRANCH_NODE, "Kmen", U)),
-        "ROOT_TRUNK" to listOf(Exit(RootTrunk.ENTRY_NODE, "Práh", D), Exit(RootTrunk.CRACK_NODE, "Střed kořenů", U))
+        "ROOT_TRUNK" to listOf(Exit(RootTrunk.ENTRY_NODE, "Práh", D), Exit(RootTrunk.CRACK_NODE, "Střed kořenů", D)),
+        "ROOT_HEART" to listOf(Exit(RootHeart.ENTRY_NODE, "Kmen", U))
     )
 
     /**

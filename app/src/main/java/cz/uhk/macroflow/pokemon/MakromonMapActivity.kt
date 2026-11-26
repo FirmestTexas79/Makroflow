@@ -154,7 +154,7 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootBridge.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootNameless.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTemple.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootThreshold.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTrunk.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootBridge.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootNameless.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTemple.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootThreshold.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTrunk.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootHeart.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
@@ -1018,7 +1018,15 @@ class MakromonMapActivity : AppCompatActivity() {
                 // Kmen (docs/adr/0106): Trpitel ve Stromu, volba konce
                 cz.uhk.macroflow.pokemon.cave.RootTrunk.ENTRY_NODE -> walkInto(BiomeType.ROOT_THRESHOLD, cz.uhk.macroflow.pokemon.cave.RootThreshold.BRANCH_NODE)
                 cz.uhk.macroflow.pokemon.cave.RootTrunk.TRPITEL_NODE -> onTrpitel()
-                cz.uhk.macroflow.pokemon.cave.RootTrunk.CRACK_NODE -> showMapToast(cz.uhk.macroflow.pokemon.story.Trpitel.crack(trpitelEnding() != null))
+                cz.uhk.macroflow.pokemon.cave.RootTrunk.CRACK_NODE -> if (trpitelEnding() != null || devKeycard()) {
+                    StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootHeart.VISITED_KEY)
+                    walkInto(BiomeType.ROOT_HEART, cz.uhk.macroflow.pokemon.cave.RootHeart.ENTRY_NODE)
+                } else showMapToast(cz.uhk.macroflow.pokemon.story.Trpitel.crack(false))
+                // Střed kořenů (docs/adr/0110): poslední světlo, mechové lůžko, dohrání konce
+                cz.uhk.macroflow.pokemon.cave.RootHeart.ENTRY_NODE -> walkInto(BiomeType.ROOT_TRUNK, cz.uhk.macroflow.pokemon.cave.RootTrunk.CRACK_NODE)
+                cz.uhk.macroflow.pokemon.cave.RootHeart.LIGHT_NODE -> onLastLight()
+                cz.uhk.macroflow.pokemon.cave.RootHeart.MOSS_NODE -> onMossBed()
+                in cz.uhk.macroflow.pokemon.cave.RootHeart.TEXTS.keys -> onInspectTap()
                 in cz.uhk.macroflow.pokemon.cave.RootTrunk.TEXTS.keys -> onInspectTap()
                 in cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS.keys -> onInspectTap()
                 cz.uhk.macroflow.pokemon.cave.RootForest.GUDWIN_NODE -> onForestGudwin()
@@ -1580,6 +1588,17 @@ class MakromonMapActivity : AppCompatActivity() {
                     placeMakromonNpc(R.drawable.makromon_30_gudwin, cz.uhk.macroflow.pokemon.cave.RootForest.GUDWIN_X,
                         cz.uhk.macroflow.pokemon.cave.RootForest.GUDWIN_Y, "Gudwin")
                     placeForestTags()
+                }
+                currentBiome == BiomeType.ROOT_HEART -> if (worldScale > 0) {
+                    addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_HEART)
+                    val F = cz.uhk.macroflow.pokemon.story.Finale
+                    if (!StoryFlags.isSet(this@MakromonMapActivity, F.ARRIVED_KEY)) mapWorld.postDelayed({
+                        if (isFinishing) return@postDelayed
+                        StoryFlags.set(this@MakromonMapActivity, F.ARRIVED_KEY)
+                        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), F.TITLE, "Kapitola VI · Konec cesty") { ui, body, _ ->
+                            body.addView(ui.text(F.ARRIVE, 15f))
+                        }
+                    }, 900)
                 }
                 currentBiome == BiomeType.ROOT_THRESHOLD -> if (worldScale > 0) {
                     addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_THRESHOLD)
@@ -2180,6 +2199,66 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    // ── Střed kořenů a konce (story/Finale, docs/adr/0110) ──
+
+    private fun finaleWritten() = cz.uhk.macroflow.pokemon.story.MemoryBook.RESIDENTS.count {
+        StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.MemoryBook.writtenKey(it.id)) }
+
+    /** Poslední světlo Lumiry: dohraje konec zvolený u Trpitele; po dohrání jen dovětek. */
+    private fun onLastLight() {
+        val F = cz.uhk.macroflow.pokemon.story.Finale
+        F.played { StoryFlags.isSet(this, it) }?.let { showMapToast(F.after(it)); return }
+        val chosen = trpitelEnding() ?: run { showMapToast(F.LIGHT_NONE); return }
+        val end = F.pending(chosen)
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), F.TITLE, "Poslední světlo") { ui, body, close ->
+            body.addView(ui.text(F.lightBefore(end), 15f))
+            body.addView(ui.spacer(14f))
+            body.addView(ui.button(F.go(end)) { close(); playEnding(end) })
+        }
+    }
+
+    /** Mechové lůžko: s celou pamětí si hráč lehne a tajný konec přijde po skutečné noci spánku (≥ 7 h). */
+    private fun onMossBed() {
+        val F = cz.uhk.macroflow.pokemon.story.Finale
+        if (F.played { StoryFlags.isSet(this, it) } != null) { showMapToast("🌿 Mech je měkký a teplý. Spirra v něm spí."); return }
+        val missing = F.memoriesMissing({ StoryFlags.isSet(this, it) }, finaleWritten())
+        if (missing.isNotEmpty() && !devKeycard()) { showMapToast(F.MOSS_PLAIN + missing.joinToString("\n")); return }
+        val layDay = gamePrefs.getLong(F.LAY_DAY_KEY, -1L)
+        if (layDay >= 0) {
+            lifecycleScope.launch {
+                val slept = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    runCatching {
+                        val since = java.time.LocalDate.ofEpochDay(layDay + 1).toString()
+                        val today = java.time.LocalDate.now().toString()
+                        db.wearableDao().getDaysSync(since, today).any { (it.sleepSec ?: 0) >= F.SLEEP_HOURS * 3600 }
+                    }.getOrDefault(false)
+                }
+                if (isFinishing) return@launch
+                if (slept || devKeycard()) playEnding(F.End.SECRET) else showMapToast(F.NOT_YET_SLEPT)
+            }
+            return
+        }
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), F.TITLE, "Mechové lůžko") { ui, body, close ->
+            body.addView(ui.text(F.MOSS_READY, 15f))
+            body.addView(ui.spacer(14f))
+            body.addView(ui.button(F.LIE_DOWN) {
+                close()
+                gamePrefs.edit().putLong(F.LAY_DAY_KEY, java.time.LocalDate.now().toEpochDay()).apply()
+                showMapToast(F.LAY)
+            })
+        }
+    }
+
+    /** Dohrání konce přes celou obrazovku, pak návrat do Města (Makrosvět jde dál). */
+    private fun playEnding(end: cz.uhk.macroflow.pokemon.story.Finale.End) {
+        val F = cz.uhk.macroflow.pokemon.story.Finale
+        StoryFlags.set(this, end.key)
+        cz.uhk.macroflow.pokemon.cutscene.EndingScene.show(findViewById(R.id.mapRootContainer), F.ENDINGS.getValue(end)) {
+            if (isFinishing) return@show
+            enterBiomeAtNode(BiomeType.TOWN, "spawn")
+        }
+    }
+
     /** Spis 212: stránky odkrývají noci spánku; po fázi Spis 212 je odkrytý celý. */
     private fun onFile212() {
         questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID)
@@ -2320,6 +2399,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     private val inspectMaps: Map<BiomeType, Map<String, String>> by lazy { mapOf(
             BiomeType.ROOT_TRUNK to cz.uhk.macroflow.pokemon.cave.RootTrunk.TEXTS,
+            BiomeType.ROOT_HEART to cz.uhk.macroflow.pokemon.cave.RootHeart.TEXTS,
             BiomeType.ROOT_THRESHOLD to cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS,
             BiomeType.ROOT_FOREST to cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS,
             BiomeType.ROOT_TEMPLE to cz.uhk.macroflow.pokemon.cave.RootTemple.TEXTS,
@@ -2826,7 +2906,7 @@ class MakromonMapActivity : AppCompatActivity() {
         cz.uhk.macroflow.pokemon.cave.RootCamp.DOWN_NODE -> !stationBarrierOpen()
         "su_lanovka" -> !StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Signal.ANSWER_KEY) && !devKeycard()
         cz.uhk.macroflow.pokemon.cave.RootThreshold.BRANCH_NODE -> !StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.DrakirraFinal.DEFEATED_KEY) && !devKeycard()
-        cz.uhk.macroflow.pokemon.cave.RootTrunk.CRACK_NODE -> true            // Střed kořenů se teprve staví
+        cz.uhk.macroflow.pokemon.cave.RootTrunk.CRACK_NODE -> trpitelEnding() == null && !devKeycard()   // puklina se otevře volbou u Trpitele
         cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> !StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY) && !coupon()
         cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIFT_NODE -> !cz.uhk.macroflow.pokemon.story.AbyssLift.open { StoryFlags.isSet(this, it) } && !coupon()
         "hory" -> !(BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false) || coupon()) && !BiomeAccess.canEnter(BiomeType.MOUNTAINS, currentDailySteps)
