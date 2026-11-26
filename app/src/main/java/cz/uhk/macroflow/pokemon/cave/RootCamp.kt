@@ -10,6 +10,9 @@ package cz.uhk.macroflow.pokemon.cave
 object RootCamp {
     const val CAGE_NODE = "kt_klec"
     const val DOWN_NODE = "kt_sestup"
+    /** Vysílačka v ubikaci: když ji hráč vyslechne (podrží prst), Sept odjistí závoru dolů. */
+    const val RADIO_NODE = "kt_radio"
+    const val BARRIER_HINT = "\n\nZ ubikace S-8 je slyšet šum vysílačky. Možná by stálo za to ji vyslechnout."
     /** Hráč už sjel klecí do tábora (Výprava 8). */
     const val VISITED_KEY = "zona3_tabor"
     /** Den, kdy hráč poprvé uviděl Spící z balkonu (klec se otevře až další den – Septovo „už brzy“); GamePrefs. */
@@ -49,7 +52,7 @@ object RootCamp {
         "kt_ruina" to "🏛️ Ve skále je vytesaná fasáda – starší než Řád, starší než Ozvěna. Lomený oblouk, štíhlé sloupy, nad vchodem obrácená koruna. Drobné znaky na římse pořád slabě svítí modře.\n" +
             "Kořeny ji objímají a pomalu stahují do skály. Přes sloup je nastříkáno: OBJEKT NEPŘÍSTUPNÝ – NEINVENTARIZOVAT.",
         "kt_radio" to "📻 Ubikace S-8. V okně svítí lampa, kterou nikdo nezhasl. Šest lůžek, deky ostře složené.\n" +
-            "Na stole šumí vysílačka a v šumu Sept: „Subjekte 213, Stanice 8 vás vítá. Výprava 8 je na místě. Zapisujte, co vidíte. Hlavně zapisujte.“\n" +
+            "Na stole šumí vysílačka a v šumu Sept: „Subjekte 213, Stanice 8 vás vítá. Výprava 8 je na místě. Zapisujte, co vidíte. Hlavně zapisujte. Závoru na římse vám odjišťuji – sestup na svah schválen.“\n" +
             "Roh ubikace prolomil kořen. Plech je ohnutý zevnitř ven.",
         "kt_tabule" to "📋 OBSAZENÍ HLUBINY\nFÁZE 1: STANICE 8 – DOKONČENO · FÁZE 2: POZOROVATELNA B – DOKONČENO · FÁZE 3: TÁBOR NA SVAHU – OPUŠTĚNO · FÁZE 4: KMEN – ███\n" +
             "VÝPRAVY 1–7: NEVRÁCENY.\nPoslední řádek čerstvým inkoustem: VÝPRAVA 8 – SUBJEKT 213 – PROBÍHÁ.",

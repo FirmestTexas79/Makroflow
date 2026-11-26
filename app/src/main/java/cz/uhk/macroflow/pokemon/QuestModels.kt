@@ -770,7 +770,32 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST, NIGHT_SHIFT_QUEST, FOREST_NAMES_QUEST) }
+    val LANTERNS_QUEST = QuestDefinition(
+        id = cz.uhk.macroflow.pokemon.story.Lanterns.QUEST_ID,
+        chapter = "🏮 CESTA ZPÁTKY",
+        side = true,
+        farewell = cz.uhk.macroflow.pokemon.story.Lanterns.FAREWELL,
+        stages = listOf(
+            QuestStage(
+                title = "Sedm luceren",
+                text = cz.uhk.macroflow.pokemon.story.Lanterns.GIVE,
+                speakerResId = R.drawable.makromon_11_lumex, speakerName = cz.uhk.macroflow.pokemon.story.Lanterns.NAME,
+                requirementType = RequirementType.FLAGS_COUNT, targetValue = cz.uhk.macroflow.pokemon.story.Lanterns.ALL.size,
+                targetId = cz.uhk.macroflow.pokemon.story.Lanterns.KEYS_CSV,
+                hint = cz.uhk.macroflow.pokemon.story.Lanterns.GIVE_HINT
+            ),
+            QuestStage(
+                title = "Tečkovaná čára",
+                text = cz.uhk.macroflow.pokemon.story.Lanterns.ALL_LIT,
+                speakerResId = R.drawable.makromon_11_lumex, speakerName = cz.uhk.macroflow.pokemon.story.Lanterns.NAME,
+                requirementType = RequirementType.STORY_FLAG, targetValue = 1,
+                targetId = cz.uhk.macroflow.pokemon.story.Lanterns.FINAL_KEY,
+                hint = cz.uhk.macroflow.pokemon.story.Lanterns.ALL_LIT_HINT
+            )
+        )
+    )
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST, NIGHT_SHIFT_QUEST, FOREST_NAMES_QUEST, LANTERNS_QUEST) }
 
     /** Pořadí kapitoly v deníku (neznámé na konec). */
     fun journalOrder(id: String): Int {

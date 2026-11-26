@@ -24,9 +24,9 @@ ROOT = os.path.join(HERE, "..", "..")
 AW, AH = 176, 352
 WALL_H = 92
 NODES = {"hlub_vytah": (88, 102), "hlub_most": (88, 140), "hlub_cedule": (76, 186), "hlub_vyhled": (88, 196),
-         "hlub_klec": (114, 184)}
+         "hlub_klec": (114, 184), "hlub_venku": (56, 196)}
 EDGES = [("hlub_vytah", "hlub_most"), ("hlub_most", "hlub_vyhled"), ("hlub_most", "hlub_cedule"), ("hlub_vyhled", "hlub_klec"),
-         ("hlub_cedule", "hlub_vyhled")]
+         ("hlub_cedule", "hlub_vyhled"), ("hlub_cedule", "hlub_venku"), ("hlub_venku", "hlub_vyhled")]
 
 BARK = [c(0x2A2824), c(0x4A4640), c(0x75706A), c(0xA29C92), c(0xCCC6BA), c(0xEEE8DC)]
 BASALT = [c(0x0C0C10), c(0x16161C), c(0x202028), c(0x2C2C36), c(0x3A3A46), c(0x4E4E5C)]
@@ -327,6 +327,39 @@ for yy in range(196, 222):
 img[208, 121:126] = STEEL[3]                                                  # závora se zámkem
 img[207:210, 121:123] = c(0xA82A24)
 block[194:224, 122:148] = True
+
+# železný výtah z Ozvěny vlevo od balkonu: dlouhé řetězy shora z propasti, nýtovaná klec s padací mříží,
+# lávka z plechu k balkonu, nahoře kladka a žlutočerná výstražná páska (výtah „nad propastí“ z náměstí)
+for yy in range(0, 196):
+    for (xx, ph) in ((30, 0), (46, 1)):
+        img[yy, xx] = STEEL[3] if (yy + ph) % 2 else STEEL[1]
+        if (yy + ph) % 4 == 0:
+            img[yy, xx + 1] = STEEL[2]
+for xx in range(27, 51):                                                      # kladka nad klecí
+    img[188, xx] = STEEL[2]; img[189, xx] = STEEL[1]
+for yy in range(190, 224):
+    for xx in range(26, 50):
+        edge = xx in (26, 49) or yy in (190, 223)
+        bar = (xx - 26) % 3 == 0
+        if edge:
+            img[yy, xx] = STEEL[4] if xx < 38 else STEEL[2]
+        elif bar:
+            img[yy, xx] = STEEL[3] if xx < 38 else STEEL[1]
+        elif yy in (200, 213):
+            img[yy, xx] = STEEL[1]
+        elif yy > 214:
+            img[yy, xx, :3] = (img[yy, xx, :3] * 0.6).astype(np.uint8)
+for xx in range(26, 50):                                                      # výstražná páska na podlaze klece
+    img[222, xx] = c(0xE0B030) if (xx // 3) % 2 else c(0x1A1A1A)
+for (xx, yy) in ((27, 191), (48, 191), (27, 222), (48, 222)):
+    img[yy, xx] = STEEL[5]                                                    # nýty
+for yy in range(194, 202):                                                    # plechová lávka ke balkonu
+    for xx in range(49, 58):
+        img[yy, xx] = GR[2 if (xx + yy) % 2 else 1]
+        block[yy, xx] = False
+lamp_y = 186
+img[lamp_y:lamp_y + 2, 36:40] = c(0xF2C94C)                                   # signálka „PŘIPRAVEN“
+block[188:226, 24:50] = True
 
 L_v = np.zeros((AH, AW)); L.vignette(L_v, AW / 2, AH * 0.45, AW * 0.62, AH * 0.6, k=0.55)
 L.darken(img, L_v, 0.7, (2, 2, 6), dither=True, steps=10)
