@@ -8,6 +8,8 @@ package cz.uhk.macroflow.pokemon.story
  * Desáté jméno (nosič lucerny) je rozmazané – prozrazení, že Makromoni byli lidé, patří jen konci III.
  */
 object SlopeWater {
+    private const val V7_LIST_PLACEHOLDER = "§"
+
     const val QUEST_ID = "hlubina_voda"
     const val NAME = "Vodočetná lať"
     const val WATER_NODE = "sb_voda"
@@ -55,7 +57,6 @@ object SlopeWater {
     const val V7_DONE = "Devět vedle sebe, ruce natažené k sobě. Na štítcích už není jen V7 – připsal jsi k nim jména.\n" +
         "Mezi pátým a šestým leží pouzdro s docházkou. Nahoře na útesu pořád někdo svítí."
 
-    private const val V7_LIST_PLACEHOLDER = "§"
 
     /** Text docházky se jmény (v [OPENED] je místo nich značka). */
     fun opened() = OPENED.replace(V7_LIST_PLACEHOLDER, V7.joinToString("\n") { "– $it" })
