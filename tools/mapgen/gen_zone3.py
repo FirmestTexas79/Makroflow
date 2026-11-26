@@ -33,7 +33,7 @@ Z.NODES = {
     ("ROOT_NAMELESS", "sb_chram"): (44, 546), ("ROOT_TEMPLE", "ch_vstup"): (88, 338),
     ("ROOT_NAMELESS", "sb_les"): (110, 548), ("ROOT_FOREST", "lp_vstup"): (90, 22),
     ("ROOT_FOREST", "lp_prah"): (88, 548), ("ROOT_THRESHOLD", "pr_vstup"): (88, 550),
-    ("ROOT_THRESHOLD", "pr_vetev"): (134, 262), ("ROOT_TRUNK", "kn_vstup"): (140, 550),
+    ("ROOT_THRESHOLD", "pr_vetev"): (134, 262), ("ROOT_TRUNK", "kn_vstup"): (224, 950),
 }
 Z.LINKS = [
     (("ROOT_CAMP", "kt_sestup", "s"), ("ROOT_WATCH", "pb_vstup", "n"), False),

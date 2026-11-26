@@ -1591,19 +1591,20 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
         /** Zóna 3, Kmen: z Trpitele pomalu padá popel na lávku, prasklinami v pěně pulzuje studené světlo, sodíkové
          *  světlomety bzučí, rudá kontrolka sondy bliká, z propasti stoupají světélka, dole leží mlha. */
         val ROOT_TRUNK = InteriorFx(
-            ash = listOf(FxBox(84, 160, 180, 340), FxBox(100, 200, 164, 320)),
-            falls = listOf(FxBox(88, 150, 176, 330), FxBox(104, 180, 160, 300)),
+            ash = listOf(FxBox(130, 300, 300, 560), FxBox(160, 380, 270, 540)),
+            falls = listOf(FxBox(140, 280, 290, 560), FxBox(170, 340, 260, 520)),
             fallColor = 0x9A948C,
-            motes = listOf(FxBox(0, 300, 264, 560)),
+            motes = listOf(FxBox(0, 520, 432, 960)),
             moteColor = 0xB8F0E4,
-            fog = listOf(FxBox(0, 400, 264, 460), FxBox(0, 500, 264, 560)),
+            fog = listOf(FxBox(0, 660, 432, 740), FxBox(0, 840, 432, 960)),
             fogColor = 0x3A5458,
-            glows = listOf(FxGlow(132, 150, 60, 110, 0x9CF0E4, 3.36f), FxGlow(TRUNK_TX, TRUNK_TY, 5, 5, 0xB8FFF0, 3.36f),
-                FxGlow(58, 296, 8, 5, 0xFFC870, 0.9f), FxGlow(206, 292, 8, 5, 0xFFC870, 1.1f), FxGlow(74, 336, 2, 2, 0xFF4030, 1.2f),
-                FxGlow(214, 280, 3, 10, 0x5A90C0, 4.8f), FxGlow(110, 236, 10, 6, 0x9CF0E4, 5.6f), FxGlow(164, 222, 8, 5, 0x9CF0E4, 4.4f))
+            glows = listOf(FxGlow(216, 260, 110, 220, 0x9CF0E4, 3.36f), FxGlow(TRUNK_TX, TRUNK_TY, 7, 7, 0xB8FFF0, 3.36f),
+                FxGlow(84, 520, 10, 6, 0xFFC870, 0.9f), FxGlow(348, 516, 10, 6, 0xFFC870, 1.1f), FxGlow(118, 576, 2, 2, 0xFF4030, 1.2f),
+                FxGlow(340, 490, 4, 14, 0x5A90C0, 4.8f), FxGlow(180, 420, 14, 8, 0x9CF0E4, 5.6f), FxGlow(264, 400, 12, 7, 0x9CF0E4, 4.4f),
+                FxGlow(221, 112, 16, 18, 0x9CF0E4, 3.36f))
         )
-        private const val TRUNK_TX = 137
-        private const val TRUNK_TY = 147
+        private const val TRUNK_TX = 225
+        private const val TRUNK_TY = 256
 
         val ABYSS = InteriorFx(
             sparkles = listOf(FxBox(10, 230, 166, 345)),

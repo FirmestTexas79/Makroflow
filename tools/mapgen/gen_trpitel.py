@@ -19,10 +19,13 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-W, H = 264, 290
+W0, H0 = 264, 290                                                         # rámec, ve kterém je postava modelovaná
+K = 1.75                                                                  # zvětšení do mapy Kmene (432 × 960)
+W, H = 432, 507                                                           # výstupní sprite (px mapy)
+OFFX, OFFY = (W - W0 * K) / 2, 0.0
 FRAMES = 12
 # kde sprite leží v mapě Kmene (levý horní roh, art px) – musí sedět s RootTrunk.kt a gen_trunk.py
-MAP_X0, MAP_Y0 = 0, 10
+MAP_X0, MAP_Y0 = 0, 16
 CX = 132
 
 
@@ -270,7 +273,7 @@ CYAN = np.array((120, 240, 228.0))
 ALB = {4: np.array((0, 0, 0.0)), 0: np.array((108, 100, 98.0)), 1: np.array((96, 72, 50.0)), 2: np.array((130, 136, 144.0)), 3: np.array((118, 110, 82.0))}
 rs = np.random.default_rng(6)
 SEEDS = rs.uniform((-60, -140, -40), (60, 20, 40), (3200, 3))             # Voronoi prasklin v prostoru těla
-SEEDS_W = rs.uniform((0, 0, -20), (W, H, 130), (9000, 3))                  # … a pro paže ve světě
+SEEDS_W = rs.uniform((0, 0, -20), (W0, H0, 130), (9000, 3))                  # … a pro paže ve světě
 BAYER = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) / 16.0
 
 
@@ -288,7 +291,7 @@ def render(fi):
     M, info = build(fi)
     ys, xs = np.mgrid[0:H, 0:W]
     cam = np.array([CX, 150.0, 460.0])                                    # perspektiva: blízké (ruka k hráči) je větší
-    tgt = np.column_stack([xs.ravel() + 0.5, ys.ravel() + 0.5, np.zeros(W * H)])
+    tgt = np.column_stack([(xs.ravel() + 0.5 - OFFX) / K, (ys.ravel() + 0.5 - OFFY) / K, np.zeros(W * H)])   # pixel → rámec modelu
     rdv = tgt - cam; rdv /= np.linalg.norm(rdv, axis=1)[:, None]
     ro = np.tile(cam, (W * H, 1))
     tt = np.full(W * H, 90.0); hit = np.zeros(W * H, bool); alive = np.ones(W * H, bool)
@@ -376,7 +379,7 @@ def render(fi):
     out = np.zeros((H, W, 4), np.uint8)
     # stín postavy na kůře a pěně za ní (světlo shora zleva) – průhledná tma, mapa pod ní zůstane vidět
     miss = np.nonzero(~hit)[0]
-    Q = np.column_stack([xs.ravel()[miss] + 0.5, ys.ravel()[miss] + 0.5, np.full(len(miss), 0.5)])
+    Q = np.column_stack([tgt[miss, 0], tgt[miss, 1], np.full(len(miss), 0.5)])
     shq = np.ones(len(miss)); ts = np.full(len(miss), 1.0)
     for _ in range(36):
         d = M.sdf(Q + np.outer(ts, KEY))
@@ -419,7 +422,7 @@ def chain_points(info):
 def proj(wp):
     """Bod ze světa do px spritu (stejná perspektiva jako render)."""
     k = 460.0 / (460.0 - wp[2])
-    return (CX + (wp[0] - CX) * k, 150 + (wp[1] - 150) * k)
+    return (OFFX + K * (CX + (wp[0] - CX) * k), OFFY + K * (150 + (wp[1] - 150) * k))
 
 
 _I0 = build(0)[1]

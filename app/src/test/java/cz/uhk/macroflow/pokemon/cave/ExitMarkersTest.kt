@@ -7,7 +7,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Šipky východů: každý východ je uzel své mapy, šipka sedí uvnitř mapy a míří ke správnému okraji. */
+/** Šipky východů: každý východ je uzel své mapy a šipka sedí uvnitř mapy, mimo lištu a spodní okraj. */
 class ExitMarkersTest {
     @Test fun everyExitIsANodeOfItsMap() {
         for ((biome, exits) in ExitMarkers.EXITS) {
@@ -16,19 +16,16 @@ class ExitMarkersTest {
             for (e in exits) {
                 val n = cave!!.node(e.node)
                 assertNotNull("$biome/${e.node}", n)
-                val d = ExitMarkers.dir(n!!.x, n.y, cave.artW, cave.artH)
-                val (ax, ay) = ExitMarkers.anchor(n.x, n.y, d, cave.artW, cave.artH)
+                val (ax, ay) = ExitMarkers.anchor(n!!.x, n.y, e.dir, cave.artW, cave.artH)
                 assertTrue("$biome/${e.node} uvnitř", ax in 8..cave.artW - 8 && ay in 30..cave.artH - 30)
             }
         }
     }
 
-    @Test fun arrowPointsToTheEdge() {
-        assertEquals(ExitMarkers.Dir.UP, ExitMarkers.dir(88, 20, 176, 560))
-        assertEquals(ExitMarkers.Dir.DOWN, ExitMarkers.dir(88, 550, 176, 560))
-        assertEquals(ExitMarkers.Dir.LEFT, ExitMarkers.dir(10, 300, 176, 560))
-        assertEquals(ExitMarkers.Dir.RIGHT, ExitMarkers.dir(170, 300, 176, 560))
-        assertEquals(ExitMarkers.Dir.DOWN, ExitMarkers.dir(88, 300, 176, 560))
+    @Test fun arrowPointsWhereYouGo() {
+        assertEquals(88 to 44, ExitMarkers.anchor(88, 20, ExitMarkers.Dir.UP, 176, 560))      // u horního okraje dovnitř
+        assertEquals(88 to 520, ExitMarkers.anchor(88, 550, ExitMarkers.Dir.DOWN, 176, 560))  // u spodního okraje nad uzlem
+        assertEquals(134 to 240, ExitMarkers.anchor(134, 262, ExitMarkers.Dir.UP, 176, 560))  // uvnitř mapy před uzlem
         val px = ExitMarkers.arrowPixels(ExitMarkers.Dir.UP, locked = false)
         assertEquals(ExitMarkers.SIZE * ExitMarkers.SIZE, px.size)
         assertTrue(px[ExitMarkers.SIZE / 2] != 0)                       // špička šipky nahoře uprostřed

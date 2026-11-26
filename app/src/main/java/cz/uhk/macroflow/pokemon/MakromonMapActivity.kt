@@ -2248,8 +2248,8 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     /**
-     * Šipky východů (cave/ExitMarkers): nad každým přechodem v Hlubině se vznáší zlatá pixelová šipka se jménem cíle,
-     * pohupuje se o 2 px (po celých pixelech) a pod ní dýchá slabá záře. Klepnutí na šipku nebo nápis = klepnutí na východ.
+     * Šipky východů (cave/ExitMarkers): u každého přechodu v Hlubině se vznáší zlatá pixelová šipka natočená tam, kam se
+     * jde, pohupuje se o 2 px (po celých pixelech) a pod ní dýchá slabá záře. Klepnutí na šipku nebo záři = na východ.
      */
     private fun placeExitMarkers() {
         val cave = BiomeRegistry.definition(currentBiome)?.cave ?: return
@@ -2259,7 +2259,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val EM = cz.uhk.macroflow.pokemon.cave.ExitMarkers
         exits.forEachIndexed { i, ex ->
             val n = cave.node(ex.node) ?: return@forEachIndexed
-            val d = EM.dir(n.x, n.y, cave.artW, cave.artH)
+            val d = ex.dir
             val (ax, ay) = EM.anchor(n.x, n.y, d, cave.artW, cave.artH)
             val locked = exitLocked(ex.node)
             val size = EM.SIZE * s
@@ -2272,31 +2272,15 @@ class MakromonMapActivity : AppCompatActivity() {
                 x = ax * s - size / 2f; y = ay * s - size / 2f; elevation = 3.2f
                 setOnClickListener(tap); contentDescription = "Východ: ${ex.label}"
             }
-            val label = android.widget.TextView(this).apply {
-                text = (if (locked) "🔒 " else "") + ex.label
-                textSize = 11f
-                setTextColor(if (locked) 0xFFC8C8CE.toInt() else 0xFFFFF0C8.toInt())
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setShadowLayer(4f, 0f, 1.5f, 0xFF000000.toInt())
-                setBackgroundColor(0x88000000.toInt())
-                val pad = (3 * resources.displayMetrics.density).toInt()
-                setPadding(pad * 2, pad / 2, pad * 2, pad / 2)
-                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT)
-                elevation = 3.2f
-                setOnClickListener(tap)
-                measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
-                val lw = measuredWidth.toFloat(); val lh = measuredHeight.toFloat()
-                x = (ax * s - lw / 2f).coerceIn(0f, cave.artW * s - lw)
-                y = if (d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.DOWN) ay * s - size / 2f - lh - 2 * s else ay * s + size / 2f + 2 * s
-            }
-            addDecor(glow); addDecor(arrow); addDecor(label)
+            addDecor(glow); addDecor(arrow)
             crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f, 0f).apply {   // pohupování po celých pixelech
                 duration = 1400; startDelay = i * 230L; repeatCount = android.animation.ValueAnimator.INFINITE
                 val ox = d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.LEFT || d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.RIGHT
                 val sign = if (d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.UP || d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.LEFT) -1 else 1
+                val bx = arrow.translationX; val by = arrow.translationY   // x/y už nastavily translaci – pohupuje se kolem ní
                 addUpdateListener {
                     val off = Math.round((it.animatedValue as Float) * 2f) * s * sign.toFloat()
-                    if (ox) arrow.translationX = off else arrow.translationY = off
+                    if (ox) arrow.translationX = bx + off else arrow.translationY = by + off
                 }
                 start()
             }

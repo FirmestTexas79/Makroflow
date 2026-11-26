@@ -1,47 +1,45 @@
 package cz.uhk.macroflow.pokemon.cave
 
 /**
- * Šipky východů v Hlubině (zóna 3) a na dně Věže: nad každým přechodem do jiné lokace se vznáší malá pixelová šipka
- * se jménem cíle, pohupuje se o 2 px a jde na ni klepnout. Šipka nesedí přímo na uzlu u okraje mapy (tam ji schová
- * horní lišta nebo spodní okraj), ale kus dovnitř a míří ven ke kraji. Zamčený přechod má šedou šipku a zámek.
+ * Šipky východů v Hlubině (zóna 3) a na dně Věže: u každého přechodu do jiné lokace se vznáší malá zlatá pixelová
+ * šipka natočená tam, kam se tudy jde, pohupuje se o 2 px ve směru šipky a jde na ni klepnout. U okraje mapy nesedí
+ * přímo na uzlu (schová ji lišta nebo spodní okraj), ale kus dovnitř. Zamčený přechod má šedou šipku.
  */
 object ExitMarkers {
     enum class Dir { UP, DOWN, LEFT, RIGHT }
 
-    /** Přechod: uzel na mapě a název cíle, který se ukáže pod šipkou. */
-    data class Exit(val node: String, val label: String)
+    /** Přechod: uzel na mapě, název cíle (popis pro čtečku) a kam se tudy jde – tam šipka míří. */
+    data class Exit(val node: String, val label: String, val dir: Dir)
+
+    private val U = Dir.UP
+    private val D = Dir.DOWN
+    private val R = Dir.RIGHT
 
     val EXITS: Map<String, List<Exit>> = mapOf(
-        "TOWER_ABYSS" to listOf(Exit(TowerAbyss.CAGE_NODE, "Stanice 8")),
-        "ROOT_CAMP" to listOf(Exit(RootCamp.CAGE_NODE, "Věž −2"), Exit(RootCamp.DOWN_NODE, "Pozorovatelna B")),
-        "ROOT_WATCH" to listOf(Exit(RootWatch.ENTRY_NODE, "Stanice 8"), Exit(RootWatch.RAVINE_NODE, "Signální útes"),
-            Exit(RootWatch.DOWN_NODE, "Tábor na svahu")),
-        "ROOT_SIGNAL" to listOf(Exit(RootSignal.ENTRY_NODE, "Pozorovatelna B"), Exit("su_lanovka", "Gondola – Kořenový most")),
-        "ROOT_BRIDGE" to listOf(Exit(RootBridge.ENTRY_NODE, "Gondola – Signální útes")),
-        "ROOT_SLOPECAMP" to listOf(Exit(RootSlopeCamp.ENTRY_NODE, "Pozorovatelna B"), Exit(RootSlopeCamp.DOWN_NODE, "Svah bezejmenných")),
-        "ROOT_NAMELESS" to listOf(Exit(RootNameless.ENTRY_NODE, "Tábor na svahu"), Exit("sb_chram", "Chrám Lumenců"),
-            Exit("sb_les", "Les pod korunou")),
-        "ROOT_TEMPLE" to listOf(Exit(RootTemple.ENTRY_NODE, "Svah bezejmenných")),
-        "ROOT_FOREST" to listOf(Exit(RootForest.ENTRY_NODE, "Svah bezejmenných"), Exit(RootForest.THRESHOLD_NODE, "Práh")),
-        "ROOT_THRESHOLD" to listOf(Exit(RootThreshold.ENTRY_NODE, "Les pod korunou"), Exit(RootThreshold.BRANCH_NODE, "Kmen")),
-        "ROOT_TRUNK" to listOf(Exit(RootTrunk.ENTRY_NODE, "Práh"), Exit(RootTrunk.CRACK_NODE, "Střed kořenů"))
+        "TOWER_ABYSS" to listOf(Exit(TowerAbyss.CAGE_NODE, "Stanice 8", D)),
+        "ROOT_CAMP" to listOf(Exit(RootCamp.CAGE_NODE, "Věž −2", U), Exit(RootCamp.DOWN_NODE, "Pozorovatelna B", D)),
+        "ROOT_WATCH" to listOf(Exit(RootWatch.ENTRY_NODE, "Stanice 8", U), Exit(RootWatch.RAVINE_NODE, "Signální útes", R),
+            Exit(RootWatch.DOWN_NODE, "Tábor na svahu", D)),
+        "ROOT_SIGNAL" to listOf(Exit(RootSignal.ENTRY_NODE, "Pozorovatelna B", D), Exit("su_lanovka", "Gondola – Kořenový most", R)),
+        "ROOT_BRIDGE" to listOf(Exit(RootBridge.ENTRY_NODE, "Gondola – Signální útes", D)),
+        "ROOT_SLOPECAMP" to listOf(Exit(RootSlopeCamp.ENTRY_NODE, "Pozorovatelna B", U), Exit(RootSlopeCamp.DOWN_NODE, "Svah bezejmenných", D)),
+        "ROOT_NAMELESS" to listOf(Exit(RootNameless.ENTRY_NODE, "Tábor na svahu", U), Exit("sb_chram", "Chrám Lumenců", D),
+            Exit("sb_les", "Les pod korunou", D)),
+        "ROOT_TEMPLE" to listOf(Exit(RootTemple.ENTRY_NODE, "Svah bezejmenných", D)),
+        "ROOT_FOREST" to listOf(Exit(RootForest.ENTRY_NODE, "Svah bezejmenných", U), Exit(RootForest.THRESHOLD_NODE, "Práh", D)),
+        "ROOT_THRESHOLD" to listOf(Exit(RootThreshold.ENTRY_NODE, "Les pod korunou", D), Exit(RootThreshold.BRANCH_NODE, "Kmen", U)),
+        "ROOT_TRUNK" to listOf(Exit(RootTrunk.ENTRY_NODE, "Práh", D), Exit(RootTrunk.CRACK_NODE, "Střed kořenů", U))
     )
 
-    /** Kam šipka míří: uzel u horního/dolního/bočního okraje → ven tím směrem; uprostřed mapy shora dolů na uzel. */
-    fun dir(x: Int, y: Int, artW: Int, artH: Int): Dir = when {
-        y < artH * 0.15f -> Dir.UP
-        y > artH * 0.85f -> Dir.DOWN
-        x < artW * 0.15f -> Dir.LEFT
-        x > artW * 0.85f -> Dir.RIGHT
-        else -> Dir.DOWN
-    }
-
-    /** Střed šipky v art px: kus od uzlu dovnitř mapy, ať ji nezakryje lišta ani okraj obrazovky. */
+    /**
+     * Střed šipky v art px. U okraje mapy kus dovnitř (ať ji nezakryje lišta ani spodní okraj obrazovky), uvnitř mapy
+     * těsně před uzlem ve směru cesty (šipka nad schody vzhůru, vedle gondoly vpravo…).
+     */
     fun anchor(x: Int, y: Int, d: Dir, artW: Int, artH: Int): Pair<Int, Int> = when (d) {
-        Dir.UP -> x to maxOf(y + 22, 34)
-        Dir.DOWN -> x to minOf(y - 22, artH - 40)
-        Dir.LEFT -> maxOf(x + 18, 12) to y
-        Dir.RIGHT -> minOf(x - 18, artW - 12) to y
+        Dir.UP -> x to (if (y < artH * 0.15f) maxOf(y + 22, 34) else y - 22)
+        Dir.DOWN -> x to (if (y > artH * 0.85f) minOf(y - 22, artH - 40) else y - 22)
+        Dir.LEFT -> (if (x < artW * 0.15f) maxOf(x + 18, 12) else x - 16) to y - 10
+        Dir.RIGHT -> (if (x > artW * 0.85f) minOf(x - 18, artW - 12) else x + 16) to y - 10
     }
 
     const val SIZE = 9

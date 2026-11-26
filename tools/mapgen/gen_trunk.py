@@ -3,7 +3,8 @@ Použití:  python tools/mapgen/gen_trunk.py
 Výstup:   app/src/main/res/drawable-nodpi/root_trunk.png, app/src/main/assets/walk/root_trunk.txt,
           tools/mapgen/root_trunk_debug.png
 
-Zóna 3 (Akt III – Hlubina): KMEN (264 × 560, širší a oddálená kamera jede s hráčem, docs/adr/0106) – 8/8, bůh ve Stromu. Z Prahu se
+Zóna 3 (Akt III – Hlubina): KMEN (432 × 960 – velká mapa, aby kamera byla oddálená (měřítko ~3) a byl vidět celý
+Trpitel i s hlavou nad hráčem; docs/adr/0106) – 8/8, bůh ve Stromu. Z Prahu se
 vystoupá po obří větvi se stupy nad propastí na ocelovou lávku Řádu u kmene Spící. Celou horní půlku mapy vyplní
 kmen – kůra se svislými brázdami, vyrytými znaky Lumenců a šablonovými nápisy Řádu. Uprostřed se kmen rozevírá
 v obrovskou ránu, kterou Řád zalil žlutošedou pěnou (Operace Pečeť) a sešil ocelovými pásy přišroubovanými
@@ -26,14 +27,22 @@ from tree import TreePainter  # noqa: E402
 from signs import plate, painted, tiny  # noqa: E402
 import order as O  # noqa: E402
 
-AW, AH = 264, 560
-OX = 44                                                                   # lokace je širší (oddálená kamera): vše posunuté o OX
-TB = 300                                                                  # pata kmene = horní hrana lávky
-CX = 88 + OX
+AW, AH = 432, 960
+CX = 216
+TB = 520                                                                  # pata kmene = horní hrana lávky
+DECK_B = TB + 130                                                         # spodní hrana lávky
+KS = 1.75                                                                 # měřítko ze starého rozvržení (264 × 560) do kmene
+
+
+def M(x, y):
+    """Bod ze starého rozvržení kmene (264 × 560, střed 132) do této mapy."""
+    return CX + (x - 132) * KS, 20 + (y - 12) * KS
+
+
 NODES = {
-    "kn_vstup": (140, 550), "kn_vetev": (128, 468), "kn_lavka": (132, 404), "kn_sonda": (70, 372),
-    "kn_kotva": (56, 318), "kn_trpitel": (132, 320), "kn_popel": (158, 334), "kn_hadice": (196, 372),
-    "kn_stred": (214, 318),
+    "kn_vstup": (CX + 8, 950), "kn_vetev": (CX - 8, 830), "kn_lavka": (CX, DECK_B - 2), "kn_sonda": (CX - 104, TB + 92),
+    "kn_kotva": (CX - 128, TB + 22), "kn_trpitel": (CX, TB + 24), "kn_popel": (CX + 34, TB + 40), "kn_hadice": (CX + 72, TB + 92),
+    "kn_stred": (CX + 124, TB + 20),
 }
 EDGES = [("kn_vstup", "kn_vetev"), ("kn_vetev", "kn_lavka"), ("kn_lavka", "kn_sonda"), ("kn_lavka", "kn_hadice"),
          ("kn_lavka", "kn_trpitel"), ("kn_sonda", "kn_kotva"), ("kn_kotva", "kn_trpitel"), ("kn_trpitel", "kn_popel"),
@@ -78,15 +87,15 @@ for y in range(AH):
         img[y, x, :3] = np.clip(void(x, y), 0, 255)
 
 far = TreePainter(img, lambda x, y: (np.clip(void(x, y), 0, 255), 0.7), seed=1)
-for i in range(12):                                                       # vzdálené větve koruny v mlze pod námi
-    x0 = -20 + i * 26 + rng.uniform(-8, 8)
+for i in range(17):                                                       # vzdálené větve koruny v mlze pod námi
+    x0 = -20 + i * 28 + rng.uniform(-8, 8)
     far.branch(x0, TB + 10, math.pi / 2 + rng.uniform(-0.5, 0.5), rng.uniform(4, 7), rng.uniform(60, 120), 0, math.pi / 2,
                maxdepth=7, pull=0.03)
 far.composite(dark=(20, 26, 30), light=(90, 110, 110))
 
 # ── kmen: kůra se svislými brázdami, válcové stínování, znaky Lumenců ─────────
 BARKF = [F(v[:3]) for v in BARK]
-WOUND = dict(top=12, bot=266, hw=64)
+WOUND = dict(top=20, bot=468, hw=112)
 
 
 def wound_hw(y):
@@ -98,9 +107,9 @@ def wound_hw(y):
 
 for y in range(TB):
     for x in range(AW):
-        u = (x - CX) / 160                                                # válec: kraje do tmy
-        warp = (_vn(x, y * 0.25, 60, 14) - 0.5) * 14
-        n = _vn(x + warp, y * 0.07, 62, 7)
+        u = (x - CX) / 260                                                # válec: kraje do tmy
+        warp = (_vn(x, y * 0.25, 60, 18) - 0.5) * 20
+        n = _vn(x + warp, y * 0.06, 62, 9)
         ridge = 1 - abs(2 * n - 1)                                        # hřbety desek kůry
         plate_ = _vn(x + warp, y * 0.45, 63, 9)                           # příčné zlomy desek
         v = 0.16 + ridge * 0.42 - abs(u) ** 2 * 0.32 - u * 0.08
@@ -118,17 +127,17 @@ for y in range(TB):
         img[y, x, :3] = ramp(BARKF, v, x, y)
         if _vn(x * 0.5, y * 0.2, 66, 10) > 0.8 and ridge > 0.35:
             img[y, x, :3] = np.clip(img[y, x, :3] * 0.6 + F((54, 72, 58)) * 0.4, 0, 255)   # mech v brázdách
-for (x0, y0) in ((30, 20), (234, 40), (26, 180), (238, 190), (50, 112), (216, 120), (12, 60), (250, 230)):   # svítící jizvy znaků Lumenců
+for (x0, y0) in ((40, 30), (390, 60), (34, 300), (396, 320), (70, 190), (360, 200), (16, 110), (414, 400), (60, 430), (380, 470)):   # svítící jizvy znaků Lumenců
     x, y = x0, y0
-    for i in range(26):
+    for i in range(40):
         y += 1; x += math.sin(i * 0.5 + x0) * 0.6
         if i % 5 != 4:
             put(x, y, (110, 190, 230), 0.8); put(x + 1, y, (40, 80, 110), 0.6)
-for (gx, gy) in ((14, 30), (248, 54), (20, 250), (244, 236), (8, 140), (256, 160), (40, 60), (226, 90)):   # staré vyryté znaky
+for (gx, gy) in ((18, 40), (414, 90), (26, 420), (406, 400), (10, 240), (420, 270), (64, 100), (370, 150)):   # staré vyryté znaky
     for k in range(6):
         put(gx + (k % 2), gy + k * 3, (90, 150, 190) if k % 2 else (60, 100, 140))
-painted(img, 28, 282, "PEČEŤ-04", (200, 168, 60), seed=3, wear=0.3, drips=True)
-painted(img, 170, 282, "NEOTVÍRAT", (180, 60, 40), seed=4, wear=0.3, drips=True)
+painted(img, 40, TB - 20, "PEČEŤ-04", (200, 168, 60), seed=3, wear=0.3, drips=True)
+painted(img, 300, TB - 20, "NEOTVÍRAT", (180, 60, 40), seed=4, wear=0.3, drips=True)
 
 # ── rána: roztržené rty kůry, syrové dřevo, uvnitř pěna ───────────────────────
 FOAM = [F(v) for v in ((50, 46, 34), (86, 80, 58), (122, 114, 84), (156, 146, 108), (188, 178, 136), (214, 206, 166))]
@@ -148,12 +157,12 @@ for y in range(WOUND["top"] + 2, WOUND["bot"] - 1):
         foam[y, x] = True
         img[y, x, :3] = FOAM[1]
 blobs = []
-for _ in range(1500):                                                     # bublinatá pěna: stínované hroudy
+for _ in range(4200):                                                     # bublinatá pěna: stínované hroudy
     y = rng.uniform(WOUND["top"] + 4, WOUND["bot"] - 3)
     hw = wound_hw(int(y)) - 6
     if hw <= 1:
         continue
-    blobs.append((rng.uniform(CX - hw, CX + hw), y, rng.uniform(1.6, 5.5)))
+    blobs.append((rng.uniform(CX - hw, CX + hw), y, rng.uniform(2.0, 8.0)))
 for (bx, by, r) in sorted(blobs, key=lambda b: b[1]):
     for y in range(int(by - r), int(by + r) + 1):
         for x in range(int(bx - r), int(bx + r) + 1):
@@ -167,8 +176,8 @@ for (bx, by, r) in sorted(blobs, key=lambda b: b[1]):
 CRACKS = []
 for (x0, y0, n, a0) in ((104, 40, 30, 1.2), (160, 60, 26, 1.9), (96, 196, 30, 1.4), (164, 214, 28, 1.7), (132, 240, 18, 1.57),
                         (84, 120, 16, 1.0), (178, 140, 18, 2.1)):
-    x, y, a = x0, y0, a0
-    for i in range(n):                                                     # praskliny se studeným světlem zevnitř
+    (x, y), a = M(x0, y0), a0
+    for i in range(int(n * KS)):                                                     # praskliny se studeným světlem zevnitř
         a += rng.uniform(-0.5, 0.5)
         x += math.cos(a); y += math.sin(a)
         if 0 <= int(y) < AH and 0 <= int(x) < AW and foam[int(y), int(x)]:
@@ -178,7 +187,7 @@ for (x0, y0, n, a0) in ((104, 40, 30, 1.2), (160, 60, 26, 1.9), (96, 196, 30, 1.
 import gen_trpitel as TP  # noqa: E402
 TX, TY = TP.MAP_X0 + TP.SPEAR_IN[0], TP.MAP_Y0 + TP.SPEAR_IN[1]       # rána od kopí v hrudi (mapa)
 CLAMP = (TP.MAP_X0 + TP.CLAMP[0], TP.MAP_Y0 + TP.CLAMP[1])            # objímka Řádu na ratišti
-ANCHORS = [(CX - 86, 70), (CX - 92, 150), (CX - 84, 230), (CX + 86, 70), (CX + 92, 150), (CX + 84, 230)]
+ANCHORS = [(CX - 148, 110), (CX - 156, 260), (CX - 144, 410), (CX + 148, 110), (CX + 156, 260), (CX + 144, 410)]
 
 
 def chain(p0, p1, sag=8):
@@ -192,9 +201,9 @@ def chain(p0, p1, sag=8):
 
 chain((TP.MAP_X0 + TP.WRIST_R[0], TP.MAP_Y0 + TP.WRIST_R[1]), (ANCHORS[3][0], ANCHORS[3][1] - 8), 4)   # objímka pravého horního zápěstí
 # ocelové pásy přes ránu (stehy Řádu) nad a pod Trpitelem
-for (yb, x0, x1) in ((240, ANCHORS[2][0], ANCHORS[5][0]),):
+for (yb, x0, x1) in ((440, ANCHORS[2][0], ANCHORS[5][0]),):
     for x in range(x0, x1 + 1):
-        dip = math.sin((x - x0) / (x1 - x0) * math.pi) * 3                # pás se prověsil přes pěnu
+        dip = math.sin((x - x0) / (x1 - x0) * math.pi) * 5                # pás se prověsil přes pěnu
         for k in range(4):
             y = int(yb + dip + k)
             img[y, x, :3] = STEEL[(4, 3, 2, 1)[k]][:3]
@@ -220,13 +229,12 @@ for i, (ax, ay) in enumerate(ANCHORS):
 
 
 # ── lávka Řádu u paty kmene: ocelový rošt nad propastí, zábradlí, nosníky ─────
-DECK_B = 404
 
 
 def deck_x(y):
     """Okraje lávky v řádku y (lichoběžník, dole se zužuje k větvi)."""
     t = (y - TB) / (DECK_B - TB)
-    return OX + t * 20, OX + 176 - t * 20
+    return CX - 160 + t * 36, CX + 160 - t * 36
 
 
 deck = np.zeros((AH, AW), bool)
@@ -255,7 +263,7 @@ for y in range(DECK_B, DECK_B + 8):                                       # tlou
     x0, x1 = deck_x(DECK_B - 1)
     for x in range(int(x0), int(x1) + 1):
         img[y, x, :3] = STEEL[1][:3] if y < DECK_B + 3 else (16, 18, 22)
-for (x0, a) in ((32 + OX, 2.3), (144 + OX, 0.84), (60 + OX, 2.0), (116 + OX, 1.15)):          # vzpěry do tmy
+for (x0, a) in ((CX - 120, 2.3), (CX + 120, 0.84), (CX - 70, 2.0), (CX + 70, 1.15)):          # vzpěry do tmy
     for i in range(60):
         put(x0 + math.cos(a) * i * 0.5, DECK_B + 4 + math.sin(a) * i * 0.5 + i * 0.4, STEEL[2], max(0.0, 1 - i / 60))
 for y in range(TB + 4, DECK_B):                                           # zábradlí po bocích
@@ -268,8 +276,8 @@ for y in range(TB + 4, DECK_B):                                           # záb
         put(x, y - 8, STEEL[4])
 
 # kořenové náběhy kmene se rozlévají na lávku (kmen nekončí rovnou čárou)
-for (x0, dirx, ln, w0) in ((4 + OX, 1, 40, 14), (20 + OX, 1, 26, 9), (172 + OX, -1, 40, 14), (150 + OX, -1, 22, 8), (46 + OX, 1, 14, 6), (128 + OX, -1, 14, 6),
-                          (-6, 1, 50, 22), (270, -1, 50, 22), (16, 1, 30, 10), (248, -1, 30, 10)):
+for (x0, dirx, ln, w0) in ((CX - 176, 1, 56, 20), (CX - 150, 1, 34, 12), (CX + 176, -1, 56, 20), (CX + 150, -1, 30, 11), (CX - 96, 1, 18, 8),
+                          (CX + 96, -1, 18, 8), (-6, 1, 70, 30), (AW + 6, -1, 70, 30), (24, 1, 40, 14), (AW - 24, -1, 40, 14)):
     for i in range(ln):
         t = i / ln
         y = TB - 6 + i
@@ -284,7 +292,7 @@ for (x0, dirx, ln, w0) in ((4 + OX, 1, 40, 14), (20 + OX, 1, 26, 9), (172 + OX, 
             put(x, y + 1, (10, 10, 12), 0.7)
 
 # ── větev z Prahu: obří kůra se stupy, lano na kolících ──────────────────────
-BR = bez((98 + OX, AH + 20), (70 + OX, 480), (88 + OX, DECK_B - 6), 400)
+BR = bez((CX + 14, AH + 20), (CX - 40, 800), (CX, DECK_B - 6), 800)
 
 
 def br_x(y):
@@ -294,7 +302,7 @@ def br_x(y):
 bw = np.zeros((AH, AW), bool)
 for y in range(DECK_B, AH):
     bx = br_x(y)
-    hw = 22 + (y - DECK_B) / (AH - DECK_B) * 10
+    hw = 26 + (y - DECK_B) / (AH - DECK_B) * 12
     for x in range(int(bx - hw - 1), int(bx + hw + 7)):
         if not 0 <= x < AW:
             continue
@@ -308,24 +316,24 @@ for y in range(DECK_B, AH):
             bw[y, x] = abs(u) < 0.8
         elif 1 < u < 1 + 6 / hw:
             img[y, x, :3] = (12, 12, 14)                                  # stinná strana větve
-for y in range(DECK_B + 10, AH, 11):                                      # vyšlapané stupy
+for y in range(DECK_B + 10, AH, 12):                                      # vyšlapané stupy
     bx = br_x(y)
-    for x in range(int(bx - 13), int(bx + 12)):
+    for x in range(int(bx - 15), int(bx + 14)):
         put(x, y, (40, 36, 30), 0.8); put(x, y + 1, (190, 178, 150), 0.35)
 BR = [(br_x(y), y) for y in range(DECK_B, AH)]
-POSTS = [BR[i] for i in range(8, len(BR) - 4, 24)]
+POSTS = [BR[i] for i in range(8, len(BR) - 4, 28)]
 for (bx, by) in POSTS:                                                    # kolíky s lanem po pravé straně
     for k in range(9):
-        put(bx + 18, by - k, (90, 70, 46) if k else (40, 30, 20))
+        put(bx + 21, by - k, (90, 70, 46) if k else (40, 30, 20))
 for (p, q) in zip(POSTS, POSTS[1:]):
-    for (x, y) in bez((p[0] + 18, p[1] - 8), ((p[0] + q[0]) / 2 + 18, (p[1] + q[1]) / 2 - 4), (q[0] + 18, q[1] - 8), 30):
+    for (x, y) in bez((p[0] + 21, p[1] - 8), ((p[0] + q[0]) / 2 + 21, (p[1] + q[1]) / 2 - 4), (q[0] + 21, q[1] - 8), 30):
         put(x, y, (150, 130, 96))
 
 # ── pata kmene: puklina dolů (Střed kořenů), popel, hadice ───────────────────
-CRX = 214
-for y in range(250, TB + 2):                                              # puklina v kůře u paty vpravo
-    t = (y - 250) / (TB - 250)
-    hw = 2 + t * 7
+CRX = CX + 124
+for y in range(TB - 70, TB + 2):                                              # puklina v kůře u paty vpravo
+    t = (y - TB + 70) / 70
+    hw = 2 + t * 9
     for x in range(int(CRX - hw - 2), int(CRX + hw + 3)):
         d = abs(x - CRX) - hw
         if d < 0:
@@ -333,8 +341,8 @@ for y in range(250, TB + 2):                                              # pukl
         elif d < 2:
             img[y, x, :3] = ramp(BARKF, 0.7 - d * 0.2, x, y)              # odštípnutý okraj
 for k in range(4):                                                        # uvnitř hluboko slabě svítí znaky
-    put(CRX + (k % 2) - 1, 270 + k * 7, (70, 120, 160))
-for (ax, ay, rx, ry) in ((120, TB + 10, 16, 6), (148, TB + 14, 14, 6), (134, TB + 22, 10, 4), (166, TB + 28, 8, 3)):
+    put(CRX + (k % 2) - 1, TB - 50 + k * 9, (70, 120, 160))
+for (ax, ay, rx, ry) in ((CX - 14, TB + 12, 20, 7), (CX + 20, TB + 16, 17, 7), (CX + 2, TB + 28, 12, 5), (CX + 42, TB + 34, 9, 3)):
     for y in range(ay - ry, ay + ry + 1):                                 # hromady popela pod Trpitelem
         for x in range(ax - rx, ax + rx + 1):
             d = ((x - ax) / rx) ** 2 + ((y - ay) / ry) ** 2
@@ -343,21 +351,21 @@ for (ax, ay, rx, ry) in ((120, TB + 10, 16, 6), (148, TB + 14, 14, 6), (134, TB 
                 img[y, x, :3] = ramp([F((40, 38, 36)), F((74, 70, 66)), F((112, 108, 102)), F((150, 146, 140)), F((184, 180, 172))], v, x, y)
 ASHFALL = []
 for _ in range(220):                                                      # popel padá z těla dolů na lávku
-    x = CX + rng.normal(0, 26)
-    y = rng.uniform(150, TB + 30)
+    x = CX + rng.normal(0, 40)
+    y = rng.uniform(300, TB + 36)
     if 0 <= x < AW:
         put(x, y, (150, 146, 140) if rng.random() < 0.6 else (96, 92, 88), 0.8)
         ASHFALL.append((int(x), int(y)))
 
 tanks = O.foam_tanks()
-sc.place(tanks, 188, 388)
-HOSE = bez((178, 362), (200, 300), (162, 250), 120)                       # hadice z nádrží do rány
+sc.place(tanks, CX + 92, TB + 112)
+HOSE = bez((CX + 82, TB + 86), (CX + 120, TB), (CX + 60, 440), 160)                       # hadice z nádrží do rány
 for i, (x, y) in enumerate(HOSE):
     for k in (-1, 0, 1):
         put(x + k, y, (20, 20, 22) if k else (56, 56, 60))
     if i % 12 == 0:
         put(x, y, YELLOW[2])
-for (x, y) in ((160, 252), (161, 253), (159, 251)):
+for (x, y) in ((CX + 60, 440), (CX + 61, 441), (CX + 59, 439)):
     put(x, y, (200, 190, 150))
 
 
@@ -379,24 +387,24 @@ def probe():
     return sp_
 
 
-sc.place(probe(), 70, 362)
-sc.place(O.flood_mast(44), 58, 340)
-sc.place(O.flood_mast(44), 206, 336)
+sc.place(probe(), CX - 104, TB + 86)
+sc.place(O.flood_mast(44), CX - 132, TB + 46)
+sc.place(O.flood_mast(44), CX + 132, TB + 42)
 pl = plate("OPERACE PEČEŤ", c(0xDCBE50), c(0x28282C), seed=5, border=c(0xA0281E))
-sc.place(O.mount_plate(pl, posts=7, post_col=[c(0x1C1E22), c(0x2E3238), c(0x4A5058), c(0x6A7078), c(0x8A9098)]), 96, 402)
+sc.place(O.mount_plate(pl, posts=7, post_col=[c(0x1C1E22), c(0x2E3238), c(0x4A5058), c(0x6A7078), c(0x8A9098)]), CX - 74, DECK_B)
 sc.draw_sprites()
 
 # ── světlo: tma, studená záře z prasklin a z rány v hrudi, sodíkové světlomety, oči ──
 cold = [(TX, TY + 20, 40, 70, 0.9)] + [(x, y, 10, 10, 0.35) for (x, y) in CRACKS[::6]]
-warm = [(112, 236, 34, 40, 0.8), (152, 236, 34, 40, 0.8), (58, 300, 14, 10, 0.5), (206, 296, 14, 10, 0.5)]
-sc.light(warm=warm, cold=cold + [(CX, 360, 90, 40, 0.5), (134, 480, 50, 90, 0.35), (CX, 140, 110, 140, 0.4)], dark_k=0.62, warm_k=0.3, cold_k=0.26)
+warm = [(CX - 34, 420, 50, 60, 0.8), (CX + 34, 420, 50, 60, 0.8), (CX - 132, TB, 18, 12, 0.5), (CX + 132, TB - 4, 18, 12, 0.5)]
+sc.light(warm=warm, cold=cold + [(CX, TB + 60, 130, 50, 0.5), (CX, 780, 60, 140, 0.35), (CX, 220, 180, 240, 0.4)], dark_k=0.62, warm_k=0.3, cold_k=0.26)
 L = __import__("light")
 beam = np.zeros((AH, AW))
-for (lx, ly, tx_) in ((56, 298, 110), (208, 294, 150)):                     # kužely světlometů nahoru na ránu
-    for i in range(110):
-        t = i / 110
-        cx_, cy_ = lx + (tx_ - lx) * t, ly - t * 110
-        hw = 3 + t * 22
+for (lx, ly, tx_) in ((CX - 134, TB - 4, CX - 40), (CX + 134, TB - 8, CX + 40)):                     # kužely světlometů nahoru na ránu
+    for i in range(180):
+        t = i / 180
+        cx_, cy_ = lx + (tx_ - lx) * t, ly - t * 180
+        hw = 3 + t * 34
         for x in range(int(cx_ - hw), int(cx_ + hw) + 1):
             if 0 <= x < AW and 0 <= int(cy_) < AH:
                 beam[int(cy_), x] = max(beam[int(cy_), x], (1 - abs(x - cx_) / hw) * (1 - t) * 0.6)
@@ -407,7 +415,7 @@ block[:, :] = True
 for y in range(TB + 8, DECK_B + 1):
     x0, x1 = deck_x(y)
     block[y, int(x0) + 4:int(x1) - 3] = False
-block[TB + 8:TB + 34, 100:166] = False
+block[TB + 8:TB + 40, CX - 50:CX + 60] = False
 for y in range(DECK_B - 4, AH):
     for x in range(AW):
         if bw[y, x]:
