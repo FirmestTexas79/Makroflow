@@ -68,7 +68,8 @@ enum class BiomeType {
     ROOT_NAMELESS,
     ROOT_TEMPLE,
     ROOT_FOREST,
-    ROOT_THRESHOLD
+    ROOT_THRESHOLD,
+    ROOT_TRUNK
 }
 
 object BiomeRegistry {
@@ -208,7 +209,8 @@ object BiomeRegistry {
         BiomeDefinition(BiomeType.ROOT_NAMELESS, R.drawable.root_nameless, graphOf(cz.uhk.macroflow.pokemon.cave.RootNameless.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootNameless.MAP),
         BiomeDefinition(BiomeType.ROOT_TEMPLE, R.drawable.root_temple, graphOf(cz.uhk.macroflow.pokemon.cave.RootTemple.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootTemple.MAP),
         BiomeDefinition(BiomeType.ROOT_FOREST, R.drawable.root_forest, graphOf(cz.uhk.macroflow.pokemon.cave.RootForest.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootForest.MAP),
-        BiomeDefinition(BiomeType.ROOT_THRESHOLD, R.drawable.root_threshold, graphOf(cz.uhk.macroflow.pokemon.cave.RootThreshold.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootThreshold.MAP)
+        BiomeDefinition(BiomeType.ROOT_THRESHOLD, R.drawable.root_threshold, graphOf(cz.uhk.macroflow.pokemon.cave.RootThreshold.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootThreshold.MAP),
+        BiomeDefinition(BiomeType.ROOT_TRUNK, R.drawable.root_trunk, graphOf(cz.uhk.macroflow.pokemon.cave.RootTrunk.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.RootTrunk.MAP)
         ).associateBy { it.type }
     }
 

@@ -212,6 +212,7 @@ object LocationIntros {
         "ROOT_TEMPLE" -> LocationIntro("root_temple", argb(200, 228, 255)) { m, w, h -> TempleIntro(m, w, h) }
         "ROOT_FOREST" -> LocationIntro("root_forest", argb(190, 255, 225)) { m, w, h -> ForestIntro3(m, w, h) }
         "ROOT_THRESHOLD" -> LocationIntro("root_threshold", argb(236, 244, 236)) { m, w, h -> ThresholdIntro(m, w, h) }
+        "ROOT_TRUNK" -> LocationIntro("root_trunk", argb(200, 255, 245)) { m, w, h -> TrunkIntro(m, w, h) }
         else -> null
     }
 }

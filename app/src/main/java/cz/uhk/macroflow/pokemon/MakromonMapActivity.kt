@@ -154,7 +154,7 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootBridge.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootNameless.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTemple.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootThreshold.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootBridge.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootNameless.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTemple.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootThreshold.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTrunk.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
@@ -337,7 +337,7 @@ class MakromonMapActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnStartTutorial).setOnClickListener { questDialogManager.startTutorial() }
         findViewById<View>(R.id.btnExitMap).setOnClickListener { finish() }
         hudViews.forEach { it.alpha = HUD_ALPHA }
-        findViewById<android.view.ViewGroup>(R.id.mapRootContainer).setOnHierarchyChangeListener(object : android.view.ViewGroup.OnHierarchyChangeListener {
+        findViewById<FrameLayout>(R.id.mapRootContainer).setOnHierarchyChangeListener(object : android.view.ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View?, child: View?) { syncHud() }
             override fun onChildViewRemoved(parent: View?, child: View?) { syncHud() }
         })
@@ -995,8 +995,16 @@ class MakromonMapActivity : AppCompatActivity() {
                 // Práh (docs/adr/0106): aréna posledního souboje s Drakirrou
                 cz.uhk.macroflow.pokemon.cave.RootThreshold.ENTRY_NODE -> walkInto(BiomeType.ROOT_FOREST, cz.uhk.macroflow.pokemon.cave.RootForest.THRESHOLD_NODE)
                 cz.uhk.macroflow.pokemon.cave.RootThreshold.DRAKIRRA_NODE -> onDrakirraFinal()
-                cz.uhk.macroflow.pokemon.cave.RootThreshold.BRANCH_NODE -> showMapToast(cz.uhk.macroflow.pokemon.story.DrakirraFinal.trunkText(
-                    StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.DrakirraFinal.DEFEATED_KEY)))
+                cz.uhk.macroflow.pokemon.cave.RootThreshold.BRANCH_NODE ->
+                    if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.DrakirraFinal.DEFEATED_KEY) || devKeycard()) {
+                        StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootTrunk.VISITED_KEY)
+                        walkInto(BiomeType.ROOT_TRUNK, cz.uhk.macroflow.pokemon.cave.RootTrunk.ENTRY_NODE)
+                    } else showMapToast(cz.uhk.macroflow.pokemon.story.DrakirraFinal.trunkText(false))
+                // Kmen (docs/adr/0106): Trpitel ve Stromu, volba konce
+                cz.uhk.macroflow.pokemon.cave.RootTrunk.ENTRY_NODE -> walkInto(BiomeType.ROOT_THRESHOLD, cz.uhk.macroflow.pokemon.cave.RootThreshold.BRANCH_NODE)
+                cz.uhk.macroflow.pokemon.cave.RootTrunk.TRPITEL_NODE -> onTrpitel()
+                cz.uhk.macroflow.pokemon.cave.RootTrunk.CRACK_NODE -> showMapToast(cz.uhk.macroflow.pokemon.story.Trpitel.crack(trpitelEnding() != null))
+                in cz.uhk.macroflow.pokemon.cave.RootTrunk.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootTrunk.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS.getValue(nodeName))
                 "sb_chram" -> {
@@ -1566,6 +1574,10 @@ class MakromonMapActivity : AppCompatActivity() {
                         }
                     }, 700)
                 }
+                currentBiome == BiomeType.ROOT_TRUNK -> if (worldScale > 0) {
+                    addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_TRUNK)
+                    if (trpitelEnding() != cz.uhk.macroflow.pokemon.story.Trpitel.Ending.BLOOM) placeTrpitel()
+                }
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP.artH * worldScale)
@@ -2007,6 +2019,83 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
             })
             body.addView(ui.button(D.LEAVE) { close(); showMapToast(D.LEAVE_TEXT) })
+        }
+    }
+
+    private fun trpitelEnding() = cz.uhk.macroflow.pokemon.story.Trpitel.ending { StoryFlags.isSet(this, it) }
+
+    /** Trpitel v ráně kmene: pás snímků (dech, ruce) přes mapu, 1 px spritu = 1 px mapy. */
+    private fun placeTrpitel() {
+        val K = cz.uhk.macroflow.pokemon.cave.RootTrunk
+        val s = worldScale
+        val sheet = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.trpitel_sheet, android.graphics.BitmapFactory.Options().apply { inScaled = false })
+        val fw = sheet.width / K.TRPITEL_FRAMES
+        val anim = android.graphics.drawable.AnimationDrawable().apply {
+            for (i in 0 until K.TRPITEL_FRAMES) addFrame(android.graphics.drawable.BitmapDrawable(resources,
+                android.graphics.Bitmap.createBitmap(sheet, i * fw, 0, fw, sheet.height)).apply { isFilterBitmap = false }, K.TRPITEL_FRAME_MS)
+            isOneShot = false
+        }
+        val v = ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(fw * s, sheet.height * s)
+            scaleType = ImageView.ScaleType.FIT_XY
+            setImageDrawable(anim)
+            x = K.TRPITEL_X0 * s.toFloat(); y = K.TRPITEL_Y0 * s.toFloat(); elevation = 1f
+            contentDescription = "Trpitel"
+        }
+        addDecor(v)
+        anim.start()
+        trpitelView = v
+    }
+    private var trpitelView: ImageView? = null
+
+    /** Kmen: Trpitel se probudí jen nádobě v rovnováze (dnes 90–110 % cíle energie), pak volba konce – nevratně. */
+    private fun onTrpitel() {
+        val T = cz.uhk.macroflow.pokemon.story.Trpitel
+        trpitelEnding()?.let { showMapToast(T.after(it)); return }
+        lifecycleScope.launch {
+            val pct = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                runCatching {
+                    val today = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())
+                    val meals = AppDatabase.getDatabase(applicationContext).consumedSnackDao().getConsumedByDateSync(today)
+                    val t = cz.uhk.macroflow.dashboard.MacroCalculator.calculate(applicationContext)
+                    cz.uhk.macroflow.energy.Adherence.percent(cz.uhk.macroflow.energy.Adherence.Nutrient.KCAL,
+                        cz.uhk.macroflow.energy.Adherence.Eaten(meals.sumOf { it.calories.toDouble() }, meals.sumOf { it.p.toDouble() },
+                            meals.sumOf { it.s.toDouble() }, meals.sumOf { it.t.toDouble() }),
+                        cz.uhk.macroflow.energy.Adherence.Targets(t.calories, t.protein, t.carbs, t.fat))
+                }.getOrDefault(0)
+            }
+            if (isFinishing) return@launch
+            val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+            if (!T.balanced(pct) && !devKeycard()) {
+                cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, T.TITLE, T.SUBTITLE) { ui, body, _ -> body.addView(ui.text(T.asleep(pct), 15f)) }
+                return@launch
+            }
+            StoryFlags.set(this@MakromonMapActivity, T.MET_KEY)
+            cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, T.TITLE, T.SUBTITLE) { ui, body, close ->
+                body.addView(ui.text(T.WAKE, 15f))
+                body.addView(ui.spacer(10f))
+                body.addView(ui.text(T.SEPT, 15f))
+                body.addView(ui.spacer(14f))
+                body.addView(ui.text(T.CHOOSE, 15f))
+                for (e in cz.uhk.macroflow.pokemon.story.Trpitel.Ending.entries) body.addView(ui.button(T.label(e)) { close(); confirmEnding(e) })
+                body.addView(ui.button(T.LEAVE) { close(); showMapToast(T.LEAVE_TEXT) })
+            }
+        }
+    }
+
+    private fun confirmEnding(e: cz.uhk.macroflow.pokemon.story.Trpitel.Ending) {
+        val T = cz.uhk.macroflow.pokemon.story.Trpitel
+        val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, T.label(e), T.SUBTITLE) { ui, body, close ->
+            body.addView(ui.text(T.confirm(e), 15f))
+            body.addView(ui.spacer(14f))
+            body.addView(ui.button(T.CONFIRM) {
+                close()
+                StoryFlags.set(this, e.key)
+                if (e == T.Ending.BLOOM) trpitelView?.animate()?.alpha(0f)?.setDuration(2600)?.start()   // rozpadne se v popel
+                cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, T.TITLE, T.SUBTITLE) { ui2, body2, _ -> body2.addView(ui2.text(T.chosen(e), 15f)) }
+            })
+            body.addView(ui.button(T.NOT_YET) { close(); showMapToast(T.LEAVE_TEXT) })
         }
     }
 

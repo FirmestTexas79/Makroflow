@@ -42,6 +42,6 @@ object DrakirraFinal {
 
     fun trunkText(defeated: Boolean) = if (defeated)
         "⬆️ Za trůnem stoupá větev se stupy vzhůru do tmy – ke kmeni. Drakirra už cestu nehlídá.\n" +
-            "Nahoře čeká Trpitel.\nZATÍM NEPŘÍSTUPNÉ – Kmen se staví."
+            "Nahoře čeká Trpitel."
     else "⬆️ Za trůnem stoupá větev se stupy vzhůru do tmy – ke kmeni. Cestu k ní hlídá Drakirra."
 }
