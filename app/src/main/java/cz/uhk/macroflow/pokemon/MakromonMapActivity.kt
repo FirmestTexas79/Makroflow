@@ -154,7 +154,7 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootBridge.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootNameless.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTemple.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootBridge.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootNameless.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTemple.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootThreshold.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
@@ -988,9 +988,16 @@ class MakromonMapActivity : AppCompatActivity() {
                     walkInto(BiomeType.ROOT_FOREST, cz.uhk.macroflow.pokemon.cave.RootForest.ENTRY_NODE)
                 }
                 cz.uhk.macroflow.pokemon.cave.RootForest.ENTRY_NODE -> walkInto(BiomeType.ROOT_NAMELESS, "sb_les")
-                cz.uhk.macroflow.pokemon.cave.RootForest.DRAKIRRA_NODE -> onDrakirraFinal()
-                cz.uhk.macroflow.pokemon.cave.RootForest.TRUNK_NODE -> showMapToast(cz.uhk.macroflow.pokemon.story.DrakirraFinal.trunkText(
+                cz.uhk.macroflow.pokemon.cave.RootForest.THRESHOLD_NODE -> {
+                    StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootThreshold.VISITED_KEY)
+                    walkInto(BiomeType.ROOT_THRESHOLD, cz.uhk.macroflow.pokemon.cave.RootThreshold.ENTRY_NODE)
+                }
+                // Práh (docs/adr/0106): aréna posledního souboje s Drakirrou
+                cz.uhk.macroflow.pokemon.cave.RootThreshold.ENTRY_NODE -> walkInto(BiomeType.ROOT_FOREST, cz.uhk.macroflow.pokemon.cave.RootForest.THRESHOLD_NODE)
+                cz.uhk.macroflow.pokemon.cave.RootThreshold.DRAKIRRA_NODE -> onDrakirraFinal()
+                cz.uhk.macroflow.pokemon.cave.RootThreshold.BRANCH_NODE -> showMapToast(cz.uhk.macroflow.pokemon.story.DrakirraFinal.trunkText(
                     StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.DrakirraFinal.DEFEATED_KEY)))
+                in cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootThreshold.TEXTS.getValue(nodeName))
                 in cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS.getValue(nodeName))
                 "sb_chram" -> {
                     StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootTemple.VISITED_KEY)
@@ -1544,11 +1551,12 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.ROOT_BRIDGE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_BRIDGE)
                 currentBiome == BiomeType.ROOT_NAMELESS -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_NAMELESS)
                 currentBiome == BiomeType.ROOT_TEMPLE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_TEMPLE)
-                currentBiome == BiomeType.ROOT_FOREST -> if (worldScale > 0) {
-                    addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_FOREST)
+                currentBiome == BiomeType.ROOT_FOREST -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_FOREST)
+                currentBiome == BiomeType.ROOT_THRESHOLD -> if (worldScale > 0) {
+                    addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_THRESHOLD)
                     val D = cz.uhk.macroflow.pokemon.story.DrakirraFinal
                     val beaten = StoryFlags.isSet(this@MakromonMapActivity, D.DEFEATED_KEY)
-                    placeMakromonNpc(R.drawable.makromon_19_drakirra, cz.uhk.macroflow.pokemon.cave.RootForest.DRAKIRRA_X, cz.uhk.macroflow.pokemon.cave.RootForest.DRAKIRRA_Y, "Drakirra")
+                    placeMakromonNpc(R.drawable.makromon_19_drakirra, cz.uhk.macroflow.pokemon.cave.RootThreshold.DRAKIRRA_X, cz.uhk.macroflow.pokemon.cave.RootThreshold.DRAKIRRA_Y, "Drakirra")
                         .apply { if (beaten) { rotation = -84f; translationX += layoutParams.width * 0.3f } }
                     if (beaten && !StoryFlags.isSet(this@MakromonMapActivity, D.AFTER_SEEN_KEY)) mapWorld.postDelayed({
                         if (isFinishing) return@postDelayed
@@ -1995,7 +2003,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     val team = kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { db.capturedMakromonDao().getAllCaught().size }.getOrDefault(1) }
                     if (team == 0) showMapToast(D.NO_TEAM)
-                    else startSpecialBattle(SpecialBattle.DRAKIRRA_FINAL, BiomeType.ROOT_FOREST)
+                    else startSpecialBattle(SpecialBattle.DRAKIRRA_FINAL, BiomeType.ROOT_THRESHOLD)
                 }
             })
             body.addView(ui.button(D.LEAVE) { close(); showMapToast(D.LEAVE_TEXT) })

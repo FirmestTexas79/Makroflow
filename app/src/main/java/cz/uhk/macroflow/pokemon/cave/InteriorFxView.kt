@@ -1562,7 +1562,7 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             blinks = listOf(FxBlink(FxBox(124, 218, 124, 218), 0xFFFF3030.toInt())),
             falls = listOf(FxBox(0, 0, 176, 300), FxBox(0, 200, 176, 520)),
             fallColor = 0x3A372F,
-            fog = listOf(FxBox(0, 160, 176, 230), FxBox(40, 310, 176, 380), FxBox(0, 520, 176, 560)),
+            fog = listOf(FxBox(0, 160, 176, 230), FxBox(40, 340, 176, 440), FxBox(0, 480, 176, 560)),
             fogColor = 0x5CB496,
             motes = listOf(FxBox(0, 0, 176, 560)),
             moteColor = 0x9AF0C8,
@@ -1570,10 +1570,22 @@ class InteriorFxView(context: Context, private val scale: Int, private val fx: I
             glows = listOf(FxGlow(143, 14, 3, 3, 0xAAF0DC, 2.1f), FxGlow(33, 64, 3, 3, 0xAAF0DC, 3.3f), FxGlow(107, 108, 3, 3, 0xAAF0DC, 2.7f),
                 FxGlow(7, 174, 3, 3, 0xAAF0DC, 3.9f), FxGlow(58, 253, 3, 3, 0xAAF0DC, 2.4f), FxGlow(15, 333, 3, 3, 0xAAF0DC, 3.1f),
                 FxGlow(127, 346, 3, 3, 0xAAF0DC, 2.9f), FxGlow(162, 311, 3, 3, 0xAAF0DC, 3.6f),
-                FxGlow(118, 352, 40, 24, 0x7AD8B0, 6.5f), FxGlow(88, 440, 30, 18, 0xFF8A3A, 2.6f), FxGlow(88, 420, 18, 40, 0xC8F0DC, 5.5f),
-                FxGlow(14, 450, 60, 4, 0xFF6A2A, 1.7f), FxGlow(162, 450, 60, 4, 0xFF6A2A, 2.1f), FxGlow(88, 396, 70, 3, 0xFF7A30, 1.9f),
-                FxGlow(88, 505, 70, 3, 0xFF7A30, 2.4f)),
-            ash = listOf(FxBox(14, 390, 162, 510))
+                FxGlow(112, 392, 40, 26, 0x7AD8B0, 6.5f), FxGlow(88, 530, 18, 30, 0xC8F0DC, 5.5f))
+        )
+
+        /** Zóna 3, Práh: sloup světla z rány dýchá, ze stěny větví pomalu padají světélkující šupinky kůry, hladina se vlní
+         *  a třpytí, modré plameny na sloupech podél cesty plápolají, kruh znaků na ostrově pulzuje, nad vodou leží mlha. */
+        val ROOT_THRESHOLD = InteriorFx(
+            falls = listOf(FxBox(20, 0, 156, 300), FxBox(20, 100, 156, 520), FxBox(30, 0, 146, 420)),
+            fallColor = 0xEAE6C8,
+            ripples = listOf(FxBox(20, 250, 70, 330), FxBox(106, 250, 156, 330), FxBox(20, 380, 60, 520), FxBox(116, 380, 156, 520)),
+            sparkles = listOf(FxBox(30, 240, 146, 300), FxBox(24, 330, 152, 540)),
+            fog = listOf(FxBox(0, 220, 176, 262), FxBox(0, 250, 176, 290)),
+            fogColor = 0xB8CCC8,
+            motes = listOf(FxBox(16, 0, 160, 560)),
+            moteColor = 0xF0ECD0,
+            glows = listOf(FxGlow(90, 160, 30, 110, 0xE8F4EC, 7f), FxGlow(88, 352, 30, 12, 0x8AC8FF, 4.6f), FxGlow(88, 136, 8, 3, 0x8AC8FF, 5.4f),
+                FxGlow(58, 380, 6, 6, 0x9AD0FF, 1.3f), FxGlow(118, 424, 6, 6, 0x9AD0FF, 1.7f), FxGlow(58, 470, 6, 6, 0x9AD0FF, 1.5f))
         )
 
         val ABYSS = InteriorFx(

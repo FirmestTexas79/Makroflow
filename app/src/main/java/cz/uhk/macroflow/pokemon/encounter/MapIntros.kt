@@ -1092,3 +1092,32 @@ class ForestIntro3(m: Img, w: Int, h: Int) : MapScene(m, w, h, 82, 300, 31) {
         if (s > 0f) for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -16f, s); puff(x, y, 2.2f, mist, 0.7f * (1f - s)) }
     }
 }
+
+
+/** Práh (zóna 3): sloup světla z rány se rozzáří, jezero se zachvěje a nad ostrovem se v páře otevřou oči Drakirry –
+ *  při výpadu se zvedne pára a žhavé jiskry. */
+class ThresholdIntro(m: Img, w: Int, h: Int) : MapScene(m, w, h, 88, 352, 37) {
+    override val shade = hex(0x030608)
+    override val accent = hex(0xFFD8A0)
+    override val dimMax = 0.6f
+    private val steam = ramp(0x6A7A7A, 0xB8C8C4, 0xF0F4EE)
+    private val embers = ramp(0x8A2A10, 0xE0702A, 0xFFD08A)
+    private val wisps = spray(22, 15f, 50f, 20f)
+    private val sparks = spray(16, 10f, 40f, 10f)
+
+    override fun before(t: Long) {
+        val glow = (0.7f + 0.3f * sinf(t * 0.02f)) * (1f - 0.6f * p(t, TELL2, CLIMAX)) + pulse(t, TELL1, 260)
+        if (glow > 0f) tintWhere(sx(64f), sy(220f), sx(112f), sy(370f), hex(0xE8F4EC), glow.coerceAtMost(1f) * 0.32f) { bright(it, 90) }
+    }
+
+    override fun act(t: Long) {
+        val q = p(t, TELL1, CLIMAX)
+        if (q > 0f) wobble(sx(20f), sy(380f), sx(156f), sy(460f), 1.2f * q, t, 0.02f)
+        mapEyes(cx, cy - 12, 2.6f, hex(0xFFD8A0), eyeAlpha(t))
+        val s = since(t)
+        if (s > 0f) {
+            for (b in wisps) { val (x, y) = ballistic(cx, cy, b[0], b[1], -16f, s); puff(x, y, 2.4f, steam, 0.75f * (1f - s)) }
+            for (b in sparks) { val (x, y) = ballistic(cx, cy - 10, b[0], b[1], -30f, s); puff(x, y, 1.2f, embers, 0.9f * (1f - s)) }
+        }
+    }
+}

@@ -100,11 +100,18 @@ Stav: návrh (2026-11-25), první krok implementován. Celý návrh zóny: proje
   přes ni leží **Drakirra** (NPC `makromon_19_drakirra`; vidí, neodletí, souboj přijde s kapitolou VI). Setkání PŘÍRODA
   a JED lv 34–38, intro ForestIntro3, živé detaily `InteriorFxView.ROOT_FOREST` (padající kůra, žár u Drakirry).
   Mapa zóny 3 se protáhla dolů (Les pod Svahem).
-- **Práh – poslední souboj s Drakirrou** (Les pod korunou, dolní část přepracovaná): vypálená mýtina, kterou Drakirra
-  kolem sebe vypálila do kruhu – popelové hnízdo uprostřed, žhnoucí okraj, ohořelé pahýly visících větví, rýhy po drápech,
-  mlha je z mýtiny vypálená a shora do středu padá sloup zelenobílého světla z rány; za mýtinou nejtlustší větev ke kmeni.
-  Hráč má vidět, že se blíží konec. `story/DrakirraFinal.kt`: dialog před soubojem (bez řetězů, dívá se na Spirru,
-  „Tu první skořápku už jednou ztratili. Druhou jim nedá.“), volba Postavit se / Ještě ne; `SpecialBattle.DRAKIRRA_FINAL`
-  (lv 42, statistiky Drakirry bez řetězů, nejde chytit ani utéct). Po výhře příznak `drakirra_prah_porazena`, na mapě
-  Drakirra leží na boku, jednou se ukáže dohra (Spirra si k ní lehne, ze ztracené sondy promluví Sept: „Test síly
-  nádoby: úspěšný. Podruhé… Sestup je schválen.“). Cesta ke kmeni je pak volná – Kmen a Trpitel jsou další krok.
+- **Práh** (`ROOT_THRESHOLD`, `RootThreshold.kt`, `gen_threshold.py`) – samostatná aréna posledního souboje s Drakirrou
+  u paty koruny (podle arén Elden Ringu: kořeny stromu, zatopená síň s trůnem). Z Lesa pod korunou branou dvou
+  zkřížených větví (`lp_brana`, `lp_prah`; vypálený kruh v lese zrušen). Vysoká mapa 176 × 560: vzadu se hlavní větve
+  koruny spouštějí do vody a splétají v bledou stěnu jako žebra katedrály (`tree.py`, tři vrstvy hloubky), uprostřed
+  trůn Lumenců se sochou ženy v kápi (Lumira; obličej nevytesaný, ruce sepjaté), za trůnem větev se stupy ke kmeni.
+  Shora do středu padá sloup bledého světla z rány, mělké černé jezero zrcadlí stěnu, nad hladinou mlha, padají
+  světélkující šupinky kůry. V mělčině klečí kamenní Lumenci čelem k trůnu (někteří bez hlav), dva obří ulomené sloupy,
+  procesní cesta z kamenných desek (místy pod vodou) lemovaná sloupy s modrými plameny vede k ostrovu s kruhem znaků
+  a obrácenou korunou – tam leží Drakirra. Rám tvoří obří tmavé větve v popředí. Bez divokých setkání, intro
+  ThresholdIntro (světlo, chvění hladiny, oči v páře, jiskry), živé detaily `InteriorFxView.ROOT_THRESHOLD`.
+  `story/DrakirraFinal.kt`: dialog před soubojem (Drakirra vstane z ostrova, voda syčí, dívá se na Spirru, „Tu první
+  skořápku už jednou ztratili. Druhou jim nedá.“), volba Postavit se / Ještě ne; `SpecialBattle.DRAKIRRA_FINAL` (lv 42,
+  bez řetězů, nejde chytit ani utéct, souboj na pozadí Prahu). Po výhře příznak `drakirra_prah_porazena`, Drakirra
+  leží na boku v mělčině, jednou se ukáže dohra (Spirra si k ní lehne, ze sondy za branou Sept: „Test síly nádoby:
+  úspěšný. Podruhé… Sestup je schválen.“). Větev za trůnem pak vede ke Kmeni (Trpitel – další krok).

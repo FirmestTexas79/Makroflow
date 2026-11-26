@@ -39,7 +39,7 @@ object StoryProgress {
         // Akt II (docs/adr/0088)
         cz.uhk.macroflow.pokemon.cave.AshPlain.VISITED_KEY, cz.uhk.macroflow.pokemon.cave.QuietOrchard.VISITED_KEY, cz.uhk.macroflow.pokemon.cave.EchoCanyon.VISITED_KEY, cz.uhk.macroflow.pokemon.cave.OzvenaCity.VISITED_KEY,
         Ozvena.BOOK_KEY
-    ) + SecretGrove.KEYS + Fenn.ALL_KEYS + MemoryBook.KEYS + Masters.KEYS + cz.uhk.macroflow.pokemon.cave.TowerLobby.VISITED_KEY + TowerStory.KEYS + cz.uhk.macroflow.pokemon.cave.RootCamp.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootWatch.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootSignal.VISITED_KEY + Signal.KEYS + cz.uhk.macroflow.pokemon.cave.RootBridge.VISITED_KEY + NightShift.KEYS + cz.uhk.macroflow.pokemon.cave.RootNameless.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootTemple.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootForest.VISITED_KEY + DrakirraFinal.KEYS
+    ) + SecretGrove.KEYS + Fenn.ALL_KEYS + MemoryBook.KEYS + Masters.KEYS + cz.uhk.macroflow.pokemon.cave.TowerLobby.VISITED_KEY + TowerStory.KEYS + cz.uhk.macroflow.pokemon.cave.RootCamp.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootWatch.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootSignal.VISITED_KEY + Signal.KEYS + cz.uhk.macroflow.pokemon.cave.RootBridge.VISITED_KEY + NightShift.KEYS + cz.uhk.macroflow.pokemon.cave.RootNameless.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootTemple.VISITED_KEY + cz.uhk.macroflow.pokemon.cave.RootForest.VISITED_KEY + DrakirraFinal.KEYS + cz.uhk.macroflow.pokemon.cave.RootThreshold.VISITED_KEY
 
     fun isStoryKey(key: String): Boolean =
         key.startsWith("boss_defeated_") || key.startsWith("crystal_") ||
