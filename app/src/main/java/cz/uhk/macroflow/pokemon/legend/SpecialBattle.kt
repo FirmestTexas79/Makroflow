@@ -40,7 +40,10 @@ enum class SpecialBattle(
         winKey = cz.uhk.macroflow.pokemon.story.ForestHeart.ROT_DEFEATED_KEY),
     // Objekt 019 (docs/adr/0104): Řád předvede v Aréně spoutanou Drakirru; jde porazit, ne chytit
     OBJEKT_019("objekt_019", "019", 30, Kind.BOSS, null, "makromon_19_drakirra",
-        winKey = cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY, chained = true);
+        winKey = cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY, chained = true),
+    // Práh v Lese pod korunou (docs/adr/0106): Drakirra bez řetězů zastoupí cestu ke kmeni – poslední souboj před Trpitelem
+    DRAKIRRA_FINAL("drakirra_final", "019", 42, Kind.BOSS, null, "makromon_19_drakirra",
+        winKey = cz.uhk.macroflow.pokemon.story.DrakirraFinal.DEFEATED_KEY);
 
     enum class Kind { BOSS, LEGEND }
 
@@ -54,6 +57,7 @@ enum class SpecialBattle(
     fun appearLines(name: String): Pair<String, String> = when {
         this == FOREST_ROT -> "$name ROSE FROM" to "THE ROTTEN ROOTS!"
         chained -> "$name LIES" to "BOUND IN CHAINS!"
+        this == DRAKIRRA_FINAL -> "$name BARS" to "THE WAY TO THE TREE!"
         kind == Kind.BOSS -> "GUARDIAN $name" to "BLOCKS THE WAY!"
         else -> "LEGENDARY $name" to "HAS AWAKENED!"
     }

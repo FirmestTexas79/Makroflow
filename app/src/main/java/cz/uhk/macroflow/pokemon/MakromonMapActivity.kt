@@ -988,6 +988,9 @@ class MakromonMapActivity : AppCompatActivity() {
                     walkInto(BiomeType.ROOT_FOREST, cz.uhk.macroflow.pokemon.cave.RootForest.ENTRY_NODE)
                 }
                 cz.uhk.macroflow.pokemon.cave.RootForest.ENTRY_NODE -> walkInto(BiomeType.ROOT_NAMELESS, "sb_les")
+                cz.uhk.macroflow.pokemon.cave.RootForest.DRAKIRRA_NODE -> onDrakirraFinal()
+                cz.uhk.macroflow.pokemon.cave.RootForest.TRUNK_NODE -> showMapToast(cz.uhk.macroflow.pokemon.story.DrakirraFinal.trunkText(
+                    StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.DrakirraFinal.DEFEATED_KEY)))
                 in cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS.keys -> showMapToast(cz.uhk.macroflow.pokemon.cave.RootForest.TEXTS.getValue(nodeName))
                 "sb_chram" -> {
                     StoryFlags.set(this, cz.uhk.macroflow.pokemon.cave.RootTemple.VISITED_KEY)
@@ -1543,7 +1546,17 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.ROOT_TEMPLE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_TEMPLE)
                 currentBiome == BiomeType.ROOT_FOREST -> if (worldScale > 0) {
                     addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ROOT_FOREST)
+                    val D = cz.uhk.macroflow.pokemon.story.DrakirraFinal
+                    val beaten = StoryFlags.isSet(this@MakromonMapActivity, D.DEFEATED_KEY)
                     placeMakromonNpc(R.drawable.makromon_19_drakirra, cz.uhk.macroflow.pokemon.cave.RootForest.DRAKIRRA_X, cz.uhk.macroflow.pokemon.cave.RootForest.DRAKIRRA_Y, "Drakirra")
+                        .apply { if (beaten) { rotation = -84f; translationX += layoutParams.width * 0.3f } }
+                    if (beaten && !StoryFlags.isSet(this@MakromonMapActivity, D.AFTER_SEEN_KEY)) mapWorld.postDelayed({
+                        if (isFinishing) return@postDelayed
+                        StoryFlags.set(this@MakromonMapActivity, D.AFTER_SEEN_KEY)
+                        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), D.TITLE, D.SUBTITLE) { ui, body, _ ->
+                            body.addView(ui.text(D.AFTER, 15f))
+                        }
+                    }, 700)
                 }
                 currentBiome == BiomeType.OZVENA -> if (worldScale > 0) placeTownsfolk()
                 currentBiome == BiomeType.ECHO_CANYON -> if (worldScale > 0) addGroundDecor(cz.uhk.macroflow.pokemon.cave.CanyonFxView(this@MakromonMapActivity, worldScale).apply {
@@ -1968,6 +1981,25 @@ class MakromonMapActivity : AppCompatActivity() {
             if (done || stage >= N.FINAL_STAGE) { StoryFlags.set(this, N.VALVE_KEY); showMapToast(N.VALVE_OPEN) }
             else showMapToast(N.VALVE_SHUT)
         }, 200)
+    }
+
+    /** Práh (docs/adr/0106): poslední souboj s Drakirrou před kmenem; po výhře jen text. */
+    private fun onDrakirraFinal() {
+        val D = cz.uhk.macroflow.pokemon.story.DrakirraFinal
+        if (StoryFlags.isSet(this, D.DEFEATED_KEY)) { showMapToast(D.dragonText(true)); return }
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), D.TITLE, D.SUBTITLE) { ui, body, close ->
+            body.addView(ui.text(D.BEFORE, 15f))
+            body.addView(ui.spacer(14f))
+            body.addView(ui.button(D.FIGHT) {
+                close()
+                lifecycleScope.launch {
+                    val team = kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { db.capturedMakromonDao().getAllCaught().size }.getOrDefault(1) }
+                    if (team == 0) showMapToast(D.NO_TEAM)
+                    else startSpecialBattle(SpecialBattle.DRAKIRRA_FINAL, BiomeType.ROOT_FOREST)
+                }
+            })
+            body.addView(ui.button(D.LEAVE) { close(); showMapToast(D.LEAVE_TEXT) })
+        }
     }
 
     /** Spis 212: stránky odkrývají noci spánku; po fázi Spis 212 je odkrytý celý. */

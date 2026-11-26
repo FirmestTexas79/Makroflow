@@ -23,7 +23,7 @@ import order as O, signs as SG  # noqa: E402
 AW, AH = 176, 560
 NODES = {
     "lp_vstup": (90, 22), "lp_cesta1": (70, 96), "lp_znacky1": (124, 140), "lp_kruh": (56, 200), "lp_sonda": (120, 250),
-    "lp_cesta2": (82, 300), "lp_znacky2": (38, 352), "lp_ticho": (112, 392), "lp_cesta3": (70, 440), "lp_drakirra": (88, 492),
+    "lp_cesta2": (82, 300), "lp_znacky2": (38, 340), "lp_ticho": (118, 352), "lp_cesta3": (62, 392), "lp_drakirra": (88, 462),
     "lp_kmen": (88, 548),
 }
 EDGES = [("lp_vstup", "lp_cesta1"), ("lp_cesta1", "lp_znacky1"), ("lp_cesta1", "lp_kruh"), ("lp_kruh", "lp_sonda"),
@@ -66,6 +66,36 @@ for (cx, cy, rx, ry) in ((30, 120, 14, 6), (150, 330, 16, 7), (40, 470, 18, 6), 
                 if (x + 2 * y) % 11 == 0 and d < 0.6:
                     img[y, x, :3] = (70, 140, 120)                        # odraz světel
                 block[y, x] = True
+# PRÁH – vypálená mýtina dole: tady Drakirra čekala a les kolem sebe spálila do kruhu
+PCX, PCY, PRX, PRY = 88, 450, 76, 56
+
+
+def in_clear(x, y, k=1.0):
+    return ((x - PCX) / (PRX * k)) ** 2 + ((y - PCY) / (PRY * k)) ** 2 < 1
+
+
+for y in range(PCY - PRY - 6, min(AH, PCY + PRY + 6)):
+    for x in range(AW):
+        d = math.hypot((x - PCX) / PRX, (y - PCY) / PRY)
+        if d < 1.08:
+            ang = math.atan2(y - PCY, x - PCX)
+            streak = abs(math.sin(ang * 9 + _vn(x, y, 15, 6) * 2))           # paprsky spáleniště od středu
+            v = 0.16 + (_vn(x * 1.4, y * 1.4, 16, 3) - 0.5) * 0.14 + streak * 0.08 * d
+            if d < 0.38:
+                v = 0.32 + (_vn(x, y, 17, 2) - 0.5) * 0.12                   # popelové hnízdo uprostřed
+            col = np.array(_pick(GROUND, max(0.0, min(1.0, v)), x, y)[:3], float) * np.array([1.05, 0.95, 0.9])
+            if 0.9 < d < 1.04 and _h(x, y, 18) % 3:
+                col = np.array([60, 22, 10], float) if _h(x, y, 19) % 5 else np.array([200, 90, 30], float)   # žhnoucí okraj
+            if d >= 1.0:
+                col = col * 0.6 + img[y, x, :3] * 0.4
+            img[y, x, :3] = np.clip(col, 0, 255)
+for (x0, y0, a0) in ((54, 446, 0.4), (128, 494, -0.5), (104, 432, 0.9)):    # rýhy po drápech
+    for k in range(3):
+        for t in range(14):
+            X = int(x0 + k * 3 + math.cos(a0) * t); Y = int(y0 + math.sin(a0) * t)
+            img[Y, X, :3] = (12, 10, 9)
+TRAIL[:] = np.where(np.fromfunction(lambda yy, xx: ((xx - PCX) / (PRX * 0.86)) ** 2 + ((yy - PCY) / (PRY * 0.86)) ** 2 < 1,
+                                    (AH, AW)), 0, TRAIL)                    # mýtina je celá pochozí
 # kruh stop: chodily tu dokola
 for a in range(0, 360, 9):
     x, y = 56 + math.cos(math.radians(a)) * 20, 200 + math.sin(math.radians(a)) * 11
@@ -74,7 +104,7 @@ for a in range(0, 360, 9):
 
 
 # ── visící větve koruny (obrácený les) ──────────────────────────────────────
-def hanging(fx, fy, h, w, seed, glyphs=False):
+def hanging(fx, fy, h, w, seed, glyphs=False, burnt=False):
     """Větev visící shora až k zemi (pata fx, fy): nahoře tlustá a mizí do tmy, dolů se tenčí, kroutí, má boční
     výhonky a dole se rozpadá na záclonu větviček, které se dotknou země; na konečcích svítí. Kreslí se rovnou do
     mapy s průhledností (vrchol plynule zmizí). glyphs = vyryté značky na kůře nad zemí."""
@@ -105,7 +135,8 @@ def hanging(fx, fy, h, w, seed, glyphs=False):
                 v = 0.1
             if abs(_vn((x + k) * 0.7, y * 0.1, seed + 1, 2) - 0.5) < 0.04:
                 v -= 0.25
-            put(x + k, y, _pick(BARK, max(0.0, min(1.0, v * 0.7)), int(x + k), int(y)), alpha)
+            col = _pick(BARK, max(0.0, min(1.0, v * (0.35 if burnt and t > 0.55 else 0.7))), int(x + k), int(y))
+            put(x + k, y, col, alpha)
     for k in range(int(r.integers(1, 3))):                                # boční výhonky
         i0 = int(r.integers(len(spine) // 3, len(spine) - 20))
         x, y, t = spine[i0]
@@ -120,6 +151,11 @@ def hanging(fx, fy, h, w, seed, glyphs=False):
             ww = max(0.5, ww * 0.95)
         tips.append((x, y))
     bx, by, _ = spine[-1]
+    if burnt:                                                             # ohořelý pahýl: žádná záclona, žhavý konec
+        for k in range(-int(w * 0.4) - 1, int(w * 0.4) + 2):
+            put(bx + k, by, (255, 120, 40) if k % 2 == 0 else (150, 50, 20))
+            put(bx + k, by - 1, (90, 30, 14))
+        return []
     for k in range(int(r.integers(6, 11))):                               # záclona větviček k zemi
         x, y = bx + r.uniform(-1.5, 1.5), by
         a = math.pi / 2 + r.uniform(-1.0, 1.0)
@@ -167,16 +203,26 @@ for (yy, dx) in ((6, 1), (13, -1), (20, 1)):
 SG.tiny(post, 17, 7, "VEN", c(0x2A2418)); SG.tiny(post, 1, 14, "VEN", c(0x2A2418)); SG.tiny(post, 17, 21, "VEN", c(0x2A2418))
 sc.place(post, 86, 206, foot=(4, 3))
 
+BR = [b for b in BR if not in_clear(b[0], b[1], 1.12) and not (b[1] > PCY - PRY * 0.6 and abs(b[0] - PCX) < PRX * 1.15)]
+STUMPS = []
+for k in range(11):                                                       # ohořelé pahýly po obvodu mýtiny
+    a = math.pi * (1.15 + k / 10 * 0.95) if k < 6 else math.pi * (0.05 + (k - 6) / 5 * 0.6)
+    a = -math.pi + k * (2 * math.pi / 11) + 0.2
+    x, y = PCX + math.cos(a) * PRX * 1.02, PCY + math.sin(a) * PRY * 1.02
+    if 4 < x < AW - 4 and y < PCY - 8 and abs(x - PCX) > 18:
+        STUMPS.append((int(x), int(y), int(70 + (_h(k, 3, 4) % 40)), 5 + k % 4))
 sc.shadows(np.ones((AH, AW), bool), k=0.35)
 tips_all = []
 for i, (x, y, h, w) in sorted(enumerate(BR), key=lambda e: e[1][1]):
     if TRAIL[min(AH - 1, y), x] < 9:
         continue
     tips_all += hanging(x, y, h + 40, w, i * 7 + 3, glyphs=i in (1, 10))
+for i, (x, y, h, w) in sorted(enumerate(STUMPS), key=lambda e: e[1][1]):
+    hanging(x, y - 20, h, w, 500 + i, burnt=True)
 sc.draw_sprites()
 
 # větev, po které se dá vylézt ke kmeni: nejtlustší ze všech, sklání se až k zemi dole uprostřed
-hanging(92, AH + 6, 150, 15, 999)
+hanging(92, AH + 64, 124, 17, 999)
 for y in range(AH - 40, AH):                                              # zářezy po stoupání (stupy)
     if y % 7 == 0:
         for x in range(84, 98):
@@ -193,20 +239,37 @@ for o in sc.placed:                                                       # paty
 for (x, y, h, w) in BR:                                                   # paty větví
     if TRAIL[min(AH - 1, y), x] >= 9:
         block[max(0, y - 4):y, max(0, x - 4):x + 4] = True
+for y in range(AH):                                                       # mýtina pochozí, mimo kruh les
+    for x in range(6, AW - 6):
+        if in_clear(x, y, 0.9):
+            block[y, x] = False
 
 # vrstvy zelené mlhy zapomnění (nejhustší na mýtině ticha)
 for y in range(AH):
     for x in range(AW):
         m = _vn(x * 0.6 + 7, y * 1.4, 41, 22) * 0.7 + _vn(x, y * 1.1, 42, 7) * 0.3
-        dense = 0.18 + 0.4 * max(0.0, 1 - math.hypot((x - 112) / 60, (y - 392) / 50))
+        dense = 0.18 + 0.4 * max(0.0, 1 - math.hypot((x - 118) / 60, (y - 352) / 40))
+        if in_clear(x, y, 0.95):
+            dense *= 0.15                                                 # žár mlhu z mýtiny vypálil
         a = math.floor(max(0.0, (m - 0.5) * 1.6) * dense * 4 * 4) / 4 / 4 * 4 * 0.5
         if a > 0:
             img[y, x, :3] = np.clip(img[y, x, :3] * (1 - a) + np.array([70, 150, 120]) * a, 0, 255)
 
 sc.light(
     warm=[(124, 238, 10, 8, 0.3)],
-    ember=[(88, 476, 34, 22, 0.8)],
-    cold=[(x, y, 9, 7, 0.55) for (x, y) in tips_all if 0 <= y < AH][:90] + [(112, 392, 50, 36, 0.6), (88, 22, 30, 16, 0.5)],
+    ember=[(PCX, PCY, PRX * 1.05, PRY * 1.05, 0.55), (PCX, PCY - 6, 30, 20, 0.7)] + [(x, y - 20, 10, 8, 0.8) for (x, y, h, w) in STUMPS],
+    cold=[(x, y, 9, 7, 0.55) for (x, y) in tips_all if 0 <= y < AH][:90] + [(118, 352, 50, 32, 0.6), (88, 22, 30, 16, 0.5),
+          (PCX, PCY - 10, 40, 34, 0.75)],
     dark_k=0.42, warm_k=0.25, cold_k=0.22)
+# sloup zelenobílého světla z rány vysoko nahoře padá přímo do středu Prahu
+L = __import__("light")
+beam = np.zeros((AH, AW))
+for y in range(PCY - 200, PCY + 30):
+    t = (y - (PCY - 200)) / 230
+    cx_, hw = PCX + 6 - t * 6, 6 + t * 30
+    for x in range(int(cx_ - hw), int(cx_ + hw) + 1):
+        if 0 <= x < AW and 0 <= y < AH:
+            beam[y, x] = max(beam[y, x], (1 - abs(x - cx_) / hw) * (0.2 + 0.6 * t) * max(0.0, 1 - max(0, y - PCY + 10) / 40))
+L.lighten(img, beam, 0.2, (190, 240, 210), steps=6)
 sc.export("root_forest", "gen_crown_forest.py")
 print("TIPS", len(tips_all), [(int(x), int(y)) for (x, y) in tips_all if 0 <= y < AH][::14][:12])
