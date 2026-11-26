@@ -2287,13 +2287,13 @@ class MakromonMapActivity : AppCompatActivity() {
                 measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
                 val lw = measuredWidth.toFloat(); val lh = measuredHeight.toFloat()
                 x = (ax * s - lw / 2f).coerceIn(0f, cave.artW * s - lw)
-                y = if (d == EM.Dir.DOWN) ay * s - size / 2f - lh - 2 * s else ay * s + size / 2f + 2 * s
+                y = if (d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.DOWN) ay * s - size / 2f - lh - 2 * s else ay * s + size / 2f + 2 * s
             }
             addDecor(glow); addDecor(arrow); addDecor(label)
             crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f, 0f).apply {   // pohupování po celých pixelech
                 duration = 1400; startDelay = i * 230L; repeatCount = android.animation.ValueAnimator.INFINITE
-                val ox = d == EM.Dir.LEFT || d == EM.Dir.RIGHT
-                val sign = if (d == EM.Dir.UP || d == EM.Dir.LEFT) -1 else 1
+                val ox = d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.LEFT || d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.RIGHT
+                val sign = if (d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.UP || d == cz.uhk.macroflow.pokemon.cave.ExitMarkers.Dir.LEFT) -1 else 1
                 addUpdateListener {
                     val off = Math.round((it.animatedValue as Float) * 2f) * s * sign.toFloat()
                     if (ox) arrow.translationX = off else arrow.translationY = off
