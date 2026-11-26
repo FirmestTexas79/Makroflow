@@ -24,7 +24,8 @@ enum class GearSlot(val id: String, val label: String, val tab: GearTab, val loc
     AXE("axe", "Sekera", GearTab.TOOLS),
     PICKAXE("pickaxe", "Krumpáč", GearTab.TOOLS),
     NET("net", "Síťka", GearTab.TOOLS),
-    MYSTERY("mystery", "Přijde později…", GearTab.TOOLS, locked = true);
+    /** Signální lucerna od Keshe za úkol Cesta zpátky (docs/adr/0115). */
+    LANTERN("lantern", "Lucerna", GearTab.TOOLS);
 
     /** user_items „equip_<slot>“ = kód nasazeného předmětu (0 = prázdno). */
     val itemId: String get() = "equip_$id"
@@ -158,7 +159,12 @@ enum class Gear(
     MAGMA_BOOTS("gear_magma_boots", 31, GearSlot.BOOTS, "Magmové boty",
         "Černý krunýř magmových mušek se zlatým lemem, pod ním pořád prosvítá oheň. +450 k efektivitě těžby, kácení i chytání hmyzu, +45 % XP za všechny tři a kořist z Makromonů padá o 30 % častěji.", 0,
         xpBonus = mapOf(Skill.MINING to 0.45, Skill.LOGGING to 0.45, Skill.BUG_CATCHING to 0.45),
-        efficiencyBonus = mapOf(Skill.MINING to 450, Skill.LOGGING to 450, Skill.BUG_CATCHING to 450), dropRate = 0.30);
+        efficiencyBonus = mapOf(Skill.MINING to 450, Skill.LOGGING to 450, Skill.BUG_CATCHING to 450), dropRate = 0.30),
+
+    // ── Odměna od signalisty Keshe za úkol Cesta zpátky (docs/adr/0115) ──
+    SIGNAL_LANTERN("tool_lantern_signal", 32, GearSlot.LANTERN, "Signální lucerna",
+        "Kesh ti ji dal, abys vždycky trefil cestu zpátky. +10 % XP za chytání, kořist z Makromonů padá o 10 % častěji a o 10 % menší šance na útěk z ballu.", 0,
+        xpBonus = mapOf(Skill.CATCHING to 0.10), dropRate = 0.10, catchBonus = 0.10);
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null

@@ -61,5 +61,7 @@ object Lanterns {
         "jedno u kotvy, jedno u bunkru a jedno úplně nahoře, u schodů ke Stanici 8. Tečkovaná čára od stromu nahoru.\n\n" +
         "„Cesta zpátky,“ řekne Kesh. „Dřív jsem si myslel, že svítím pro ně. Teď to vidím líp. Svítí se pro toho, kdo ještě jde.“\n\n" +
         "Vezme si od tebe lucernu výpravy 7 a pověsí ji na stožár nad lavičkou. „Až půjdete dolů ke kmeni, otočte se. A pak se vraťte nahoru spát.“"
+    const val LANTERN_GIFT = "🏮 Než odejdeš, vtiskne ti Kesh do ruky malou signální lucernu s rudým sklíčkem. „Abys vždycky trefil zpátky.“ " +
+        "(Nasaď si ji v deníku mezi nástroji.)"
     const val FAREWELL = "Kesh sedí na lavičce pod lucernou výpravy 7 a dívá se na tečkovanou čáru světel. Občas na tebe kývne: nahoru, spát."
 }

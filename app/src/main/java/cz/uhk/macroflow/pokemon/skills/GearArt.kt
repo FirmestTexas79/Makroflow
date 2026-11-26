@@ -106,6 +106,7 @@ object GearArt {
         Gear.GOLD_AXE -> axe(false, GOLD); Gear.GOLD_PICKAXE -> pickaxe(false, GOLD)
         Gear.OLD_NET -> net()
         Gear.MINER_LAMP -> minerLamp()
+        Gear.SIGNAL_LANTERN -> signalLantern()
         Gear.COPPER_NET -> net(false, COPPER); Gear.SILVER_NET -> net(false, SILVER); Gear.GOLD_NET -> net(false, GOLD)
         Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL -> MaterialArt.accessory(g)!!
         Gear.SPARK_HELM, Gear.SPARK_CUIRASS, Gear.SPARK_GREAVES, Gear.SPARK_BOOTS,
@@ -139,6 +140,26 @@ object GearArt {
         p[8, 6] = c(0xFFFFFFFF)
         for (x in 4..11) p[x, 12] = brass
         for (x in 5..10) p[x, 13] = brassD
+        p.outline(K)
+        return p.data
+    }
+
+    /** Signální lucerna od Keshe: černé železo Řádu, rudé sklo nahoře, teplý plamen a štítek V7 (docs/adr/0115). */
+    fun signalLantern(): IntArray {
+        val p = px(ICON, ICON)
+        val iron = c(0xFF4A4A52); val ironD = c(0xFF26262C); val ironL = c(0xFF7A7A86)
+        val glass = c(0xFF5A2A16); val flame = c(0xFFFFD86A); val flame2 = c(0xFFFF9A3A); val red = c(0xFFC8362E)
+        for (x in 6..9) p[x, 0] = ironD                           // kruh na zavěšení
+        p[5, 1] = ironD; p[10, 1] = ironD
+        for (x in 6..9) p[x, 2] = red                             // rudé signální sklo
+        for (x in 4..11) p[x, 3] = ironL
+        for (y in 4..11) for (x in 4..11) p[x, y] = if (x == 4 || x == 11 || y == 4) iron else glass
+        for (y in 5..10) { p[7, y] = ironD }                      // mřížka
+        for ((x, y) in listOf(8 to 6, 8 to 7, 9 to 7, 8 to 8, 9 to 8, 6 to 8, 6 to 9, 8 to 9, 9 to 9, 10 to 9)) p[x, y] = flame2
+        p[8, 7] = flame; p[9, 8] = flame; p[8, 8] = flame; p[6, 9] = flame
+        for (x in 3..12) p[x, 12] = iron
+        for (x in 4..11) p[x, 13] = ironD
+        p[6, 13] = ironL; p[7, 13] = ironL                        // štítek V7
         p.outline(K)
         return p.data
     }
@@ -393,10 +414,7 @@ object GearArt {
             ".......##.......", "......####......", ".....######.....", ".....######.....", "......####......", ".......##......."),
         GearSlot.RING_1 to listOf(
             "................", "................", "......###.......", ".....#####......", "......###.......", "....#######.....",
-            "...##.....##....", "..##.......##...", "..#.........#...", "..#.........#...", "..##.......##...", "...##.....##....", "....#######....."),
-        GearSlot.MYSTERY to listOf(
-            "................", "................", ".....######.....", "....##....##....", "....##....##....", "..........##....",
-            ".........##.....", "........##......", ".......##.......", ".......##.......", "................", ".......##.......", ".......##.......")
+            "...##.....##....", "..##.......##...", "..#.........#...", "..#.........#...", "..##.......##...", "...##.....##....", "....#######.....")
     )
 
     /** Silueta prázdného slotu (poloprůhledná světlá). */
@@ -406,6 +424,7 @@ object GearArt {
             GearSlot.AXE -> silhouette(axe(), tint)
             GearSlot.PICKAXE -> silhouette(pickaxe(), tint)
             GearSlot.NET -> silhouette(net(), tint)
+            GearSlot.LANTERN -> silhouette(signalLantern(), tint)
             else -> {
                 val rows = GHOSTS[if (slot == GearSlot.RING_2) GearSlot.RING_1 else slot].orEmpty()
                 val p = px(ICON, ICON)

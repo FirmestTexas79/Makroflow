@@ -71,7 +71,7 @@ class GatheringTest {
         assertEquals(4, GearSlot.of(GearTab.EQUIPS).size)
         assertEquals(4, GearSlot.of(GearTab.ACCESS).size)
         assertEquals(4, GearSlot.of(GearTab.TOOLS).size)
-        assertTrue(GearSlot.MYSTERY.locked)
+        assertEquals(listOf(Gear.SIGNAL_LANTERN), Gear.fitting(GearSlot.LANTERN))
         assertEquals(listOf(Gear.OLD_AXE, Gear.MAKRO_AXE, Gear.COPPER_AXE, Gear.SILVER_AXE, Gear.GOLD_AXE), Gear.fitting(GearSlot.AXE))
         assertEquals(Gear.OLD_PICKAXE, Gear.fromCode(2))
         val codes = Gear.entries.map { it.code }

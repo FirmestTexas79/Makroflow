@@ -907,6 +907,8 @@ class MakromonMapActivity : AppCompatActivity() {
             // Stará jabloň po konci B/C v noci svítí a dává Zlaté jablko
             if (currentBiome == BiomeType.QUIET_ORCHARD && nodeName == "stara_jablon" && orchardNight() &&
                 cz.uhk.macroflow.pokemon.story.Fenn.inTree { StoryFlags.isSet(this, it) }) { giveDailyApple(cz.uhk.macroflow.pokemon.story.Fenn.APPLE_FROM_TREE, cz.uhk.macroflow.pokemon.story.Fenn.TREE_AFTER); return@action }
+            // Následky konců (docs/adr/0115): postavy s hotovým příběhem mluví po konci jinak
+            aftermathNpc(nodeName)?.let { showMapToast(it); return@action }
 
             when (nodeName) {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
@@ -1038,6 +1040,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 cz.uhk.macroflow.pokemon.cave.RootTemple.ENTRY_NODE -> walkInto(BiomeType.ROOT_NAMELESS, "sb_chram")
                 in cz.uhk.macroflow.pokemon.cave.RootTemple.TEXTS.keys -> onInspectTap()
+                // Kořeny, které pijí (docs/adr/0115): lať začíná úkol, u devíti z V7 se čtou jména
+                cz.uhk.macroflow.pokemon.story.SlopeWater.WATER_NODE -> onSlopeWater()
+                cz.uhk.macroflow.pokemon.story.SlopeWater.V7_NODE -> onSlopeV7()
                 in cz.uhk.macroflow.pokemon.cave.RootNameless.TEXTS.keys -> onInspectTap()
                 in cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.TEXTS.keys -> onInspectTap()
                 in cz.uhk.macroflow.pokemon.cave.RootWatch.TEXTS.keys -> onInspectTap()
@@ -1536,8 +1541,26 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     /** Dekorace mapy podle stavu příběhu – po změně biomu i po návratu ze souboje. */
+    /** Věta postavy po dohraném konci (story/Aftermath), nebo null. */
+    private fun aftermathNpc(node: String): String? {
+        val end = cz.uhk.macroflow.pokemon.story.Finale.played { StoryFlags.isSet(this, it) } ?: return null
+        return cz.uhk.macroflow.pokemon.story.Aftermath.npc(end, currentBiome.name, node) { StoryFlags.isSet(this, it) }
+    }
+
+    /** Po dohraném konci: při prvním příchodu na místo jednou řekne, co je jinak. */
+    private fun showAftermathArrival() {
+        val A = cz.uhk.macroflow.pokemon.story.Aftermath
+        val end = cz.uhk.macroflow.pokemon.story.Finale.played { StoryFlags.isSet(this, it) } ?: return
+        val seen = gamePrefs.getStringSet(A.SEEN_KEY, emptySet()).orEmpty()
+        val line = A.arrival(end, currentBiome.name, seen) ?: return
+        gamePrefs.edit().putStringSet(A.SEEN_KEY, seen + currentBiome.name).apply()
+        val biome = currentBiome
+        mapWorld.postDelayed({ if (!isFinishing && currentBiome == biome) showMapToast(line) }, 900)
+    }
+
     private fun refreshStoryDecor() {
         lifecycleScope.launch {
+            showAftermathArrival()
             val progress = loadLegend()
             clearDecor()
             val cave = BiomeRegistry.definition(currentBiome)?.cave
@@ -2011,14 +2034,23 @@ class MakromonMapActivity : AppCompatActivity() {
                     stage == L.FINAL_STAGE && L.ALL.all { StoryFlags.isSet(this, it.key) } && !StoryFlags.isSet(this, L.FINAL_KEY) -> {
                         cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Cesta zpátky", L.NAME) { ui, body, _ ->
                             body.addView(ui.text(L.FINAL, 15f))
+                            body.addView(ui.spacer(10f))
+                            body.addView(ui.text(L.LANTERN_GIFT, 14f, ui.inkSoft))
                         }
                         StoryFlags.set(this, L.FINAL_KEY)
+                        lifecycleScope.launch(Dispatchers.IO) { giveSignalLantern() }
                         questManager.recheck()
                     }
                     else -> questManager.checkNpcInteraction()
                 }
             }, 250)
         }, 150)
+    }
+
+    /** Signální lucerna za Cestu zpátky (jednou; dostanou ji i ti, kdo úkol dokončili dřív – viz deník). */
+    private fun giveSignalLantern() {
+        val id = cz.uhk.macroflow.pokemon.skills.Gear.SIGNAL_LANTERN.id
+        if (cz.uhk.macroflow.pokemon.skills.SkillStore.count(this, id) <= 0) cz.uhk.macroflow.pokemon.skills.SkillStore.add(this, id, 1)
     }
 
     /** Signální lampa: ve fázi „Odpověď“ pošle hráč poslední signál a kmen odpoví šesti světly. */
@@ -2076,6 +2108,39 @@ class MakromonMapActivity : AppCompatActivity() {
             } else if (done) showMapToast(N.TAPE_IDLE)
             else questManager.checkNpcInteraction()
         }, 200)
+    }
+
+    // ── Svah bezejmenných: Kořeny, které pijí (story/SlopeWater, docs/adr/0115) ──
+
+    /** Vodočetná lať: začne a vede úkol (voda → jídlo → docházka); po dokončení jen text místa. */
+    private fun onSlopeWater() {
+        val W = cz.uhk.macroflow.pokemon.story.SlopeWater
+        if (StoryFlags.isSet(this, W.NAMES_KEY)) { onInspectTap(); return }
+        StoryFlags.set(this, W.STARTED_KEY)
+        questManager.loadQuest(W.QUEST_ID)
+        mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 200)
+    }
+
+    /** Devět z výpravy 7: ve fázi docházky hráč přečte jejich jména nahlas. */
+    private fun onSlopeV7() {
+        val W = cz.uhk.macroflow.pokemon.story.SlopeWater
+        lifecycleScope.launch {
+            val p = questProgress(W.QUEST_ID)
+            if (p == null || p.second || p.first != W.NAMES_STAGE || StoryFlags.isSet(this@MakromonMapActivity, W.NAMES_KEY)) { onInspectTap(); return@launch }
+            cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), W.READ_TITLE, "Docházka") { ui, body, close ->
+                body.addView(ui.text(W.V7.joinToString("\n"), 16f))
+                body.addView(ui.spacer(14f))
+                body.addView(ui.button(W.READ_BUTTON) {
+                    close()
+                    StoryFlags.set(this@MakromonMapActivity, W.NAMES_KEY)
+                    cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), W.READ_TITLE, W.NAME) { ui2, body2, _ ->
+                        body2.addView(ui2.text(W.READ, 15f))
+                    }
+                    questManager.loadQuest(W.QUEST_ID)
+                    mapWorld.postDelayed({ if (!isFinishing) questManager.recheck() }, 200)
+                })
+            }
+        }
     }
 
     /** Schované pásky (svatyňka, lešení): dokud úkol běží, najde hráč cívku; jinak jen text místa. */
@@ -2474,6 +2539,8 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun inspectText(node: String): String? = when (currentBiome) {
         BiomeType.TOWER_OFFICE -> cz.uhk.macroflow.pokemon.cave.TowerOffice.textFor(node, StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY))
         BiomeType.ROOT_FOREST -> cz.uhk.macroflow.pokemon.cave.RootForest.textFor(node, forestRested)
+        BiomeType.ROOT_NAMELESS -> cz.uhk.macroflow.pokemon.story.SlopeWater.textFor(node,
+            StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.SlopeWater.NAMES_KEY)) ?: inspectMaps[currentBiome]?.get(node)
         else -> inspectMaps[currentBiome]?.get(node) ?: inspectExtra[currentBiome]?.get(node)?.invoke()
     }
 

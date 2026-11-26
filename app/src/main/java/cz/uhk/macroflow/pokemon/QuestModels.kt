@@ -737,6 +737,20 @@ object QuestRegistry {
         )
     )
 
+    val SLOPE_WATER_QUEST = cz.uhk.macroflow.pokemon.story.SlopeWater.let { W ->
+        QuestDefinition(
+            id = W.QUEST_ID, chapter = "💧 KOŘENY, KTERÉ PIJÍ", side = true, farewell = W.FAREWELL,
+            stages = listOf(
+                QuestStage("Vypitá tůňka", W.INTRO, R.drawable.npc_lat, RequirementType.WATER_DAYS, W.WATER_DAYS,
+                    null, W.NAME, hint = W.INTRO_HINT),
+                QuestStage("Pouzdro pod hladinou", W.RISEN, R.drawable.npc_lat, RequirementType.MEAL_STREAK, W.MEAL_DAYS,
+                    null, W.NAME, hint = W.RISEN_HINT),
+                QuestStage("Docházka výpravy 7", W.opened(), R.drawable.npc_lat, RequirementType.STORY_FLAG, 1,
+                    W.NAMES_KEY, W.NAME, hint = W.OPENED_HINT)
+            )
+        )
+    }
+
     val FOREST_NAMES_QUEST = QuestDefinition(
         id = cz.uhk.macroflow.pokemon.story.ForestNames.QUEST_ID,
         chapter = "🏷️ JMÉNA V MLZE",
@@ -833,7 +847,7 @@ object QuestRegistry {
         )
     }
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST, NIGHT_SHIFT_QUEST, FOREST_NAMES_QUEST, LANTERNS_QUEST, COOKBOOK_QUEST, LETTERS_QUEST, LOGS_QUEST) }
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST, NIGHT_SHIFT_QUEST, SLOPE_WATER_QUEST, FOREST_NAMES_QUEST, LANTERNS_QUEST, COOKBOOK_QUEST, LETTERS_QUEST, LOGS_QUEST) }
 
     /** Pořadí kapitoly v deníku (neznámé na konec). */
     fun journalOrder(id: String): Int {

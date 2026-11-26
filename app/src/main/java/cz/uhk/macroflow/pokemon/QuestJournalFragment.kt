@@ -478,11 +478,12 @@ class QuestJournalFragment : Fragment() {
     private fun openSlot(slot: cz.uhk.macroflow.pokemon.skills.GearSlot) {
         val ctx = context?.applicationContext ?: return
         val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
-        if (slot.locked) {
-            android.widget.Toast.makeText(ctx, "❔ Tenhle nástroj přijde do hry později.", android.widget.Toast.LENGTH_SHORT).show(); return
-        }
         viewLifecycleOwner.lifecycleScope.launch {
             val (current, owned) = withContext(Dispatchers.IO) {
+                // Signální lucerna: dostane ji i ten, kdo Cestu zpátky dokončil dřív, než lucerna byla ve hře
+                val lantern = cz.uhk.macroflow.pokemon.skills.Gear.SIGNAL_LANTERN
+                if (slot == lantern.slot && cz.uhk.macroflow.pokemon.story.StoryFlags.isSet(ctx, cz.uhk.macroflow.pokemon.story.Lanterns.FINAL_KEY) &&
+                    SS.count(ctx, lantern.id) <= 0) SS.add(ctx, lantern.id, 1)
                 SS.equipped(ctx, slot) to cz.uhk.macroflow.pokemon.skills.Gear.fitting(slot).filter { SS.count(ctx, it.id) > 0 }
             }
             if (!isAdded) return@launch
