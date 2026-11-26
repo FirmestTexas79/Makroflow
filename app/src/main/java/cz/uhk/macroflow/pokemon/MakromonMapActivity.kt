@@ -2092,7 +2092,7 @@ class MakromonMapActivity : AppCompatActivity() {
             body.addView(ui.button(T.CONFIRM) {
                 close()
                 StoryFlags.set(this, e.key)
-                if (e == T.Ending.BLOOM) trpitelView?.animate()?.alpha(0f)?.setDuration(2600)?.start()   // rozpadne se v popel
+                if (e == cz.uhk.macroflow.pokemon.story.Trpitel.Ending.BLOOM) trpitelView?.animate()?.alpha(0f)?.setDuration(2600)?.start()   // rozpadne se v popel
                 cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(root, T.TITLE, T.SUBTITLE) { ui2, body2, _ -> body2.addView(ui2.text(T.chosen(e), 15f)) }
             })
             body.addView(ui.button(T.NOT_YET) { close(); showMapToast(T.LEAVE_TEXT) })
