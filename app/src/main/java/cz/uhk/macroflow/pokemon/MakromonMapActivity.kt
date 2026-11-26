@@ -159,6 +159,7 @@ class MakromonMapActivity : AppCompatActivity() {
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
         private const val DEBUG_LIFT_KEY = "DEBUG_FREE_ELEVATOR"
+        private const val DEBUG_COUPON_KEY = "DEBUG_GOLDEN_COUPON"
         private const val DEBUG_KEYCARD_KEY = "DEBUG_KEYCARD"
         // Mydrus zapomíná (docs/adr/0057)
         private const val MYDRUS_REMEMBERED = "mydrus_remembered_day"
@@ -942,7 +943,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_TEXT)
                 cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_NODE -> showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.FOUNTAIN_TEXT)
                 // Věž Řádu Váhy (docs/adr/0103): s Pozvánkou se otevře (poprvé cutscéna dveří)
-                cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY)) enterTower()
+                cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_NODE -> if (StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY) || coupon()) enterTower()
                     else showMapToast(cz.uhk.macroflow.pokemon.cave.OzvenaCity.TOWER_TEXT)
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.SEPT_NODE -> onSept()
                 cz.uhk.macroflow.pokemon.cave.TowerLobby.ELEVATOR_NODE -> onElevator()
@@ -1191,7 +1192,7 @@ class MakromonMapActivity : AppCompatActivity() {
     /** Vstup do biomu se zámkem (dnes nachozené kroky). Kontroluje se jen při vstupu. */
     private fun tryEnterBiome(target: BiomeType, entryNode: String) {
         // Debug: sedmimílové boty přeskočí denní krokový zámek (jen v debug buildu)
-        val boots = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false)
+        val boots = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false) || coupon()
         if (boots || BiomeAccess.canEnter(target, currentDailySteps)) {
             walkInto(target, entryNode)
         } else {
@@ -1229,6 +1230,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val st = cz.uhk.macroflow.pokemon.stamina.Stamina
         val store = cz.uhk.macroflow.pokemon.stamina.StaminaStore
         val now = System.currentTimeMillis()
+        if (coupon()) { go(); return }                                       // Zlatý kupón: přechody bez výdrže
         val cost = st.transitionCost(store.load(this), target.name, now)
         if (!payStamina(cost, "přechod")) return
         store.save(this, st.moved(store.load(this), from = currentBiome.name, cost = cost, now = now))
@@ -1519,6 +1521,7 @@ class MakromonMapActivity : AppCompatActivity() {
             val progress = loadLegend()
             clearDecor()
             val cave = BiomeRegistry.definition(currentBiome)?.cave
+            placeExitMarkers()
             when {
                 currentBiome == BiomeType.SKY_PASS -> { placeSkyPassDecor(); placeHunfrey() }
                 currentBiome == BiomeType.FOREST -> { placeGatherSpots(); placeForestStory(progress.legendFaced) }
@@ -1818,7 +1821,7 @@ class MakromonMapActivity : AppCompatActivity() {
         questManager.loadQuest(cz.uhk.macroflow.pokemon.story.Ozvena.QUEST_ID)
         mapWorld.postDelayed({
             if (isFinishing) return@postDelayed
-            val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false)
+            val free = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false) || coupon()
             val (idx, done) = ozvenaStage() ?: (0 to false)
             val open = towerFloors.filter { (f, _, _) -> free || cz.uhk.macroflow.pokemon.story.TowerStory.approved(f, idx, done) }
             val floors = open.map { (_, label, target) ->
@@ -2234,6 +2237,74 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     private fun addDecor(v: View) { mapWorld.addView(v); decorViews += v }
+
+    /** Je přechod z [node] zatím zavřený příběhem? (šedá šipka se zámkem) */
+    private fun exitLocked(node: String): Boolean = when (node) {
+        cz.uhk.macroflow.pokemon.cave.RootCamp.DOWN_NODE -> !(BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_LIFT_KEY, false) || devKeycard())
+        "su_lanovka" -> !StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.Signal.ANSWER_KEY) && !devKeycard()
+        cz.uhk.macroflow.pokemon.cave.RootThreshold.BRANCH_NODE -> !StoryFlags.isSet(this, cz.uhk.macroflow.pokemon.story.DrakirraFinal.DEFEATED_KEY) && !devKeycard()
+        cz.uhk.macroflow.pokemon.cave.RootTrunk.CRACK_NODE -> true            // Střed kořenů se teprve staví
+        else -> false
+    }
+
+    /**
+     * Šipky východů (cave/ExitMarkers): nad každým přechodem v Hlubině se vznáší zlatá pixelová šipka se jménem cíle,
+     * pohupuje se o 2 px (po celých pixelech) a pod ní dýchá slabá záře. Klepnutí na šipku nebo nápis = klepnutí na východ.
+     */
+    private fun placeExitMarkers() {
+        val cave = BiomeRegistry.definition(currentBiome)?.cave ?: return
+        val exits = cz.uhk.macroflow.pokemon.cave.ExitMarkers.EXITS[currentBiome.name] ?: return
+        val s = worldScale
+        if (s <= 0) return
+        val EM = cz.uhk.macroflow.pokemon.cave.ExitMarkers
+        exits.forEachIndexed { i, ex ->
+            val n = cave.node(ex.node) ?: return@forEachIndexed
+            val d = EM.dir(n.x, n.y, cave.artW, cave.artH)
+            val (ax, ay) = EM.anchor(n.x, n.y, d, cave.artW, cave.artH)
+            val locked = exitLocked(ex.node)
+            val size = EM.SIZE * s
+            val tap = View.OnClickListener { triggerHotspotAction(ex.node) }
+            val glow = glowView(size * 3, if (locked) 0xFFB0B0B8.toInt() else 0xFFFFE08A.toInt(), if (locked) 0x55 else 0x99).apply {
+                x = ax * s - size * 1.5f; y = ay * s - size * 1.5f; elevation = 3f
+                setOnClickListener(tap)
+            }
+            val arrow = pixelView(EM.arrowPixels(d, locked), EM.SIZE, EM.SIZE, size, size).apply {
+                x = ax * s - size / 2f; y = ay * s - size / 2f; elevation = 3.2f
+                setOnClickListener(tap); contentDescription = "Východ: ${ex.label}"
+            }
+            val label = android.widget.TextView(this).apply {
+                text = (if (locked) "🔒 " else "") + ex.label
+                textSize = 11f
+                setTextColor(if (locked) 0xFFC8C8CE.toInt() else 0xFFFFF0C8.toInt())
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setShadowLayer(4f, 0f, 1.5f, 0xFF000000.toInt())
+                setBackgroundColor(0x88000000.toInt())
+                val pad = (3 * resources.displayMetrics.density).toInt()
+                setPadding(pad * 2, pad / 2, pad * 2, pad / 2)
+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT)
+                elevation = 3.2f
+                setOnClickListener(tap)
+                measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+                val lw = measuredWidth.toFloat(); val lh = measuredHeight.toFloat()
+                x = (ax * s - lw / 2f).coerceIn(0f, cave.artW * s - lw)
+                y = if (d == EM.Dir.DOWN) ay * s - size / 2f - lh - 2 * s else ay * s + size / 2f + 2 * s
+            }
+            addDecor(glow); addDecor(arrow); addDecor(label)
+            crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f, 0f).apply {   // pohupování po celých pixelech
+                duration = 1400; startDelay = i * 230L; repeatCount = android.animation.ValueAnimator.INFINITE
+                val ox = d == EM.Dir.LEFT || d == EM.Dir.RIGHT
+                val sign = if (d == EM.Dir.UP || d == EM.Dir.LEFT) -1 else 1
+                addUpdateListener {
+                    val off = Math.round((it.animatedValue as Float) * 2f) * s * sign.toFloat()
+                    if (ox) arrow.translationX = off else arrow.translationY = off
+                }
+                start()
+            }
+            if (!locked) crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.35f, 0.9f, 0.35f).apply {
+                duration = 1800; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+            }
+        }
+    }
 
     /** Krystal lehce nad oltářem; dokud stojí strážce, je vidět, ale nejde vzít. */
     private fun placeCrystal(cave: CaveMap, progress: LegendProgress) {
@@ -3074,8 +3145,11 @@ class MakromonMapActivity : AppCompatActivity() {
 
     // ── Ladění příběhu (jen debug build) ──
 
-    /** Dev keycard (jen debug build): otevře zámky zóny 3, které jinak hlídá příběh. */
-    private fun devKeycard() = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_KEYCARD_KEY, false)
+    /** Dev keycard (jen debug build): otevře zámky zóny 3, které jinak hlídá příběh. Zlatý kupón ji zahrnuje. */
+    private fun devKeycard() = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_KEYCARD_KEY, false) || coupon()
+
+    /** Zlatý kupón (jen debug build, zapínatelný): otevře každou lokaci zamčenou postupem, kroky i výdrží. */
+    private fun coupon() = BuildConfig.DEBUG && gamePrefs.getBoolean(DEBUG_COUPON_KEY, false)
 
     private fun showDebugMenu() {
         val boots = gamePrefs.getBoolean(DEBUG_BOOTS_KEY, false)
@@ -3099,9 +3173,10 @@ class MakromonMapActivity : AppCompatActivity() {
             "🍫 +5× Proteinová tyčinka (+250 XP)",
             "💪 +5× Preworkout (+1 level)",
             "🥫 +5× Bílý Monster (+3 levely)",
-            "🎟️ Zlatý kupón (vstup do Věže)",
+            if (coupon()) "🎟️ Zlatý kupón: ZAPNUTO – vše odemčeno (vypnout)" else "🎟️ Zlatý kupón (odemkne všechny lokace)",
             if (lift) "🛗 Výtah volně: ZAPNUTO (vypnout)" else "🛗 Výtah volně (všechna patra)",
-            if (devKeycard()) "🪪 Dev keycard: ZAPNUTO (vypnout)" else "🪪 Dev keycard (otevře závory a gondolu v Hlubině)"
+            if (gamePrefs.getBoolean(DEBUG_KEYCARD_KEY, false)) "🪪 Dev keycard: ZAPNUTO (vypnout)" else "🪪 Dev keycard (otevře závory a gondolu v Hlubině)",
+            "🐉 Drakirra na Prahu poražena (otevře Kmen)"
         )
         android.app.AlertDialog.Builder(this)
             .setTitle("Debug – Makrosvět")
@@ -3166,18 +3241,27 @@ class MakromonMapActivity : AppCompatActivity() {
                     14 -> debugFennFinale()
                     15, 16, 17 -> debugGiveBoost(cz.uhk.macroflow.pokemon.boost.RareBoost.entries[which - 15])
                     18 -> {
-                        StoryFlags.set(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.Masters.INVITE_KEY)
-                        showMapToast("🎟️ Zlatý kupón! Dveře Věže Řádu Váhy se ti otevřou.")
+                        val on = coupon()
+                        gamePrefs.edit().putBoolean(DEBUG_COUPON_KEY, !on).apply()
+                        showMapToast(if (on) "🎟️ Zlatý kupón uschován – lokace zase podle postupu."
+                            else "🎟️ Zlatý kupón! Otevře každou zamčenou lokaci: Věž, výtah, Hlubinu, gondolu, Kmen, kroky i výdrž.")
+                        refreshStoryDecor()
                     }
                     19 -> {
                         gamePrefs.edit().putBoolean(DEBUG_LIFT_KEY, !lift).apply()
                         showMapToast(if (lift) "🛗 Výtah zase jen po kalibraci." else "🛗 Výtah jezdí volně do všech hotových pater.")
                     }
                     20 -> {
-                        val on = devKeycard()
+                        val on = gamePrefs.getBoolean(DEBUG_KEYCARD_KEY, false)
                         gamePrefs.edit().putBoolean(DEBUG_KEYCARD_KEY, !on).apply()
                         showMapToast(if (on) "🪪 Keycard odevzdána – Hlubina zase podle příběhu."
                             else "🪪 Keycard Řádu: klec na −2, závora UZÁVĚRA i gondola ke Kořenovému mostu se otevřou.")
+                        refreshStoryDecor()
+                    }
+                    21 -> {
+                        StoryFlags.set(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.DrakirraFinal.DEFEATED_KEY)
+                        showMapToast("🐉 Debug: Drakirra na Prahu poražena – větev ke Kmeni je volná.")
+                        refreshStoryDecor()
                     }
                 }
             }
@@ -3315,7 +3399,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     Triple(total, p.currentStageIndex, p.isCompleted)
                 })
             }
-            if (cz.uhk.macroflow.pokemon.cave.ForestMap.canEnter(done)) {
+            if (cz.uhk.macroflow.pokemon.cave.ForestMap.canEnter(done) || coupon()) {
                 val entry = cz.uhk.macroflow.pokemon.cave.ForestMap.MAP.exitNode
                 walkInto(BiomeType.FOREST, entry, MapTransition.FADE)
             } else {
@@ -3552,7 +3636,7 @@ class MakromonMapActivity : AppCompatActivity() {
 
     /** Trní na západě Hvozdu: po vyhnání Soulorda vede mezerou do Zapomenutého háje. */
     private fun onHiddenThorns() {
-        val open = SecretGrove.canEnter(StoryFlags.isSet(this, ForestHeart.ROT_DEFEATED_KEY))
+        val open = SecretGrove.canEnter(StoryFlags.isSet(this, ForestHeart.ROT_DEFEATED_KEY)) || coupon()
         showMapToast("🍄 " + SecretGrove.thornText(open))
         if (open) mapWorld.postDelayed({
             if (!isFinishing && currentBiome == BiomeType.FOREST)
@@ -3869,7 +3953,7 @@ class MakromonMapActivity : AppCompatActivity() {
             if (StoryFlags.isSet(this, SecretGrove.RELEASED_KEY))
                 body.addView(ui.text(SecretGrove.GATE_RUNES_LINE, 17f, ui.olive).apply { setPadding(0, ui.px(2f), 0, ui.px(6f)) })
             board.missing?.let { body.addView(ui.text("Chybí: $it 🍃", 19f, ui.rust).apply { setPadding(0, ui.px(4f), 0, ui.px(6f)) }) }
-            val open = StoryFlags.isSet(this, SkyPass.HEART_PLACED_KEY)
+            val open = StoryFlags.isSet(this, SkyPass.HEART_PLACED_KEY) || coupon()
             body.addView(ui.button(if (open) "Projít branou" else "Rozumím") {
                 close()
                 if (open) walkInto(BiomeType.ASH_PLAIN, cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE, MapTransition.FADE) else afterGateBoard()
@@ -3901,6 +3985,10 @@ class MakromonMapActivity : AppCompatActivity() {
     private fun onShrine() {
         lifecycleScope.launch {
             val p = loadLegend()
+            if (coupon() && p.shrine !is LegendProgress.Shrine.GateOpen) {
+                showMapToast("🎟️ Zlatý kupón: brána za svatyní se otevře i bez krystalů.")
+                walkInto(BiomeType.SKY_PASS, SkyPass.MAP.exitNode, MapTransition.FADE); return@launch
+            }
             when (val st = p.shrine) {
                 is LegendProgress.Shrine.NeedCrystals -> showMapToast(
                     "⛩ Svatyně má dvě prázdná lůžka – modré a červené.\n" +
