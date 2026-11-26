@@ -795,7 +795,45 @@ object QuestRegistry {
         )
     )
 
-    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST, NIGHT_SHIFT_QUEST, FOREST_NAMES_QUEST, LANTERNS_QUEST) }
+    val COOKBOOK_QUEST = cz.uhk.macroflow.pokemon.story.Collectibles.let { C ->
+        QuestDefinition(
+            id = C.COOKBOOK, chapter = "📜 KUCHAŘKA KRÁLE MLSÁKA", side = true, farewell = C.COOKBOOK_FAREWELL,
+            farewellSpeakerResId = R.drawable.kral_mlsak, farewellSpeakerName = C.COOKBOOK_NAME,
+            stages = listOf(
+                QuestStage("Rozfoukaná kuchařka", C.COOKBOOK_INTRO, R.drawable.kral_mlsak, RequirementType.FLAGS_COUNT, C.COOKBOOK_SET.items.size,
+                    C.COOKBOOK_SET.keysCsv, C.COOKBOOK_NAME, hint = C.COOKBOOK_INTRO_HINT),
+                QuestStage("Královská snídaně", C.COOKBOOK_BREAKFAST, R.drawable.kral_mlsak, RequirementType.BREAKFAST_DAYS, 2,
+                    null, C.COOKBOOK_NAME, hint = C.COOKBOOK_BREAKFAST_HINT)
+            )
+        )
+    }
+
+    val LETTERS_QUEST = cz.uhk.macroflow.pokemon.story.Collectibles.let { C ->
+        QuestDefinition(
+            id = C.LETTERS, chapter = "✉️ NEDORUČENÉ DOPISY", side = true, farewell = C.LETTERS_FAREWELL,
+            farewellSpeakerResId = R.drawable.makromon_39_grifben, farewellSpeakerName = C.LETTERS_NAME,
+            stages = listOf(
+                QuestStage("Roztržená brašna", C.LETTERS_LOST, R.drawable.makromon_39_grifben, RequirementType.FLAGS_COUNT, C.LETTERS_SET.items.size,
+                    C.LETTERS_SET.keysCsv, C.LETTERS_NAME, hint = C.LETTERS_LOST_HINT),
+                QuestStage("Dopisy bez adres", C.LETTERS_ALL, R.drawable.makromon_39_grifben, RequirementType.STORY_FLAG, 1,
+                    C.LETTERS_FINAL_KEY, C.LETTERS_NAME, hint = C.LETTERS_ALL_HINT)
+            )
+        )
+    }
+
+    val LOGS_QUEST = cz.uhk.macroflow.pokemon.story.Collectibles.let { C ->
+        QuestDefinition(
+            id = C.LOGS, chapter = "📘 SPÁNKOVÉ DENÍKY", side = true, farewell = C.LOGS_FAREWELL,
+            stages = listOf(
+                QuestStage("Deníky okruhů", C.LOGS_FOUND, R.drawable.npc_hunfrey, RequirementType.FLAGS_COUNT, C.LOGS_SET.items.size,
+                    C.LOGS_SET.keysCsv, C.LOGS_NAME, hint = C.LOGS_FOUND_HINT),
+                QuestStage("Řádek, který jim nepatří", C.LOGS_SLEEP, R.drawable.npc_hunfrey, RequirementType.SLEEP_NIGHTS, 1,
+                    "7", C.LOGS_NAME, hint = C.LOGS_SLEEP_HINT)
+            )
+        )
+    }
+
+    val ALL: List<QuestDefinition> by lazy { listOf(TOWN_INTRO_QUEST, MEADOW_QUEST, MOUNTAINS_QUEST, FOREST_QUEST, OZVENA_QUEST, MINES_QUEST, HUNFREY_QUEST, FENN_QUEST, SECRET_GROVE_QUEST, SIGNAL_QUEST, NIGHT_SHIFT_QUEST, FOREST_NAMES_QUEST, LANTERNS_QUEST, COOKBOOK_QUEST, LETTERS_QUEST, LOGS_QUEST) }
 
     /** Pořadí kapitoly v deníku (neznámé na konec). */
     fun journalOrder(id: String): Int {

@@ -882,6 +882,12 @@ class MakromonMapActivity : AppCompatActivity() {
             }
             Insight.pageAt(currentBiome.name, nodeName, StoryFlags.all(this))?.let { findTornPage(it); return@action }
             // Cesta zpátky (docs/adr/0108): klepnutí na lucernu u uzlu ji zapálí místo běžné akce místa
+            if (pendingCollect == nodeName) { pendingCollect = null
+                cz.uhk.macroflow.pokemon.story.Collectibles.at(currentBiome.name, nodeName)?.let { onCollect(it); return@action } }
+            if (currentBiome == BiomeType.OZVENA && (nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIO_NODE &&
+                    !cz.uhk.macroflow.pokemon.story.MemoryBookStore.isGone(this, nodeName) || nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_NODE &&
+                    cz.uhk.macroflow.pokemon.story.MemoryBookStore.isGone(this, cz.uhk.macroflow.pokemon.cave.OzvenaCity.LIO_NODE)) &&
+                onLetters(atBoard = nodeName == cz.uhk.macroflow.pokemon.cave.OzvenaCity.BOARD_NODE)) return@action
             if (pendingLantern == nodeName) { pendingLantern = null
                 cz.uhk.macroflow.pokemon.story.Lanterns.at(currentBiome.name, nodeName)?.let { onLantern(it); return@action } }
             // Zahradník Fenn (docs/adr/0096): stopy ke jménům stromů – úly a jezírko mají přednost před setkáním
@@ -1077,7 +1083,7 @@ class MakromonMapActivity : AppCompatActivity() {
                     mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150)
                 }
                 "camp" -> restAtCamp()
-                "rozcesti_hory" -> showMapToast("🪧 ↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku")
+                "rozcesti_hory" -> onInspectTap()
                 "starter_bush" -> {
                     // Úvodní keřík je „vynucené“ setkání jen do konce úvodního úkolu; potom je to
                     // obyčejné městské křoví (se shiny šancí) – dřív zůstal vynucený navždy a shiny
@@ -1607,7 +1613,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 else -> {}
             }
             placePageSparkles()
-            if (currentBiome.name.startsWith("ROOT_") && worldScale > 0) { placeLanterns(); cave?.let { placeEncounterEyes(it) } }
+            if (currentBiome.name.startsWith("ROOT_") && worldScale > 0) placeLanterns()
+            placeEncounterMarks()
+            placeCollectibles()
         }
     }
 
@@ -2344,6 +2352,7 @@ class MakromonMapActivity : AppCompatActivity() {
         val TL = cz.uhk.macroflow.pokemon.cave.TowerLobby; val EC = cz.uhk.macroflow.pokemon.cave.EchoCanyon
         val insight = { Insight.level(StoryFlags.all(this)) >= 3 }
         mapOf(
+            BiomeType.MOUNTAINS to mapOf("rozcesti_hory" to { "🪧 Rozcestník z ohlazených prken:\n↑ Socha krále Mlsáka · ↖ Důl a horní stezka\n← Tábor · ↓ Zpět na louku" }),
             BiomeType.SKY_PASS to mapOf(
                 SkyPass.CLAWS_NODE to { "🐉 Do skály jsou vyryté hluboké rýhy po drápech a leží tu šupina rudá jako žhavé uhlí.\n" +
                     "Drakirra tudy odletěla – stopy míří dolů, nad korunami Hvozdu." },
@@ -2525,28 +2534,166 @@ class MakromonMapActivity : AppCompatActivity() {
         }
     }
 
+    /** Pixelová mřížka aktuální mapy: násobek, rozměr v art px a poloha uzlu (jeskyně i grafové mapy na celou obrazovku). */
+    private class ArtFrame(val s: Int, val artW: Int, val artH: Int, val pos: (String) -> Pair<Int, Int>?)
+
+    private fun artFrame(): ArtFrame? {
+        val def = BiomeRegistry.definition(currentBiome) ?: return null
+        val cave = def.cave
+        if (cave != null) return if (worldScale > 0) ArtFrame(worldScale, cave.artW, cave.artH) { id -> cave.node(id)?.let { it.x to it.y } } else null
+        if (mapWorld.width <= 0) return null
+        val s = (mapWorld.width / 160).coerceAtLeast(2)
+        val w = mapWorld.width / s; val h = mapWorld.height / s
+        return ArtFrame(s, w, h) { id -> BiomeRegistry.nodePos(def.graph, id)?.let { (it.x * w).toInt() to (it.y * h).toInt() } }
+    }
+
     /**
-     * Setkání v Hlubině jsou vidět: u každého místa setkání se ve tmě občas rozsvítí pár očí a zase zhasne – tam něco je.
-     * Barva podle lokace (duchové bledě zelené, jed fialové, příroda jantarové…).
+     * Setkání jsou vidět ve všech lokacích: ve tmě (Hlubina, Dormitoř, Krystalová jeskyně, Jedová laboratoř) se u místa
+     * občas rozsvítí pár očí, venku a v zarostlých patrech se tráva či kamení „zašustí“ (dvě čárky a poskočení).
+     * Jeskyně a doly mají vlastní záři (placeEncounterGlows), vodu je vidět sama.
      */
-    private fun placeEncounterEyes(cave: CaveMap) {
-        val s = worldScale
-        val col = when (currentBiome) {
-            BiomeType.ROOT_FOREST -> 0xFFE8B84A.toInt(); BiomeType.ROOT_TEMPLE -> 0xFFC8A8FF.toInt()
-            BiomeType.ROOT_BRIDGE -> 0xFFB8F070.toInt(); else -> 0xFFCFF2C0.toInt()
-        }
-        cave.encounterNodes.forEachIndexed { i, id ->
-            val n = cave.node(id) ?: return@forEachIndexed
-            val v = pixelView(intArrayOf(col, 0, 0, col), 4, 1, 4 * s, s).apply {
-                x = (n.x - 2 + (i % 3) - 1) * s.toFloat(); y = (n.y - 12 - (i % 2) * 3) * s.toFloat(); elevation = 2.7f; alpha = 0f
-                isClickable = false
+    private fun placeEncounterMarks() {
+        val def = BiomeRegistry.definition(currentBiome) ?: return
+        val cave = def.cave
+        if (cave?.isCave == true || currentBiome == BiomeType.MINES) return
+        val f = artFrame() ?: return
+        val nodes = (cave?.encounterNodes ?: def.graph.map { it.id }.filter { it in encounterNodes })
+            .filterNot { it == "voda" || it.startsWith("jezirko") }
+        val dark = currentBiome.name.startsWith("ROOT_") || currentBiome in setOf(BiomeType.TOWER_DORM, BiomeType.TOWER_CAVE, BiomeType.TOWER_POISON)
+        val s = f.s
+        nodes.forEachIndexed { i, id ->
+            val (nx, ny) = f.pos(id) ?: return@forEachIndexed
+            if (dark) {
+                val col = when (currentBiome) {
+                    BiomeType.ROOT_FOREST -> 0xFFE8B84A.toInt(); BiomeType.ROOT_TEMPLE, BiomeType.TOWER_POISON -> 0xFFC8A8FF.toInt()
+                    BiomeType.ROOT_BRIDGE -> 0xFFB8F070.toInt(); else -> 0xFFCFF2C0.toInt()
+                }
+                val v = pixelView(intArrayOf(col, 0, 0, col), 4, 1, 4 * s, s).apply {
+                    x = (nx - 2 + (i % 3) - 1) * s.toFloat(); y = (ny - 12 - (i % 2) * 3) * s.toFloat(); elevation = 2.7f; alpha = 0f
+                }
+                addDecor(v)
+                crystalAnimators += android.animation.ObjectAnimator.ofFloat(v, "alpha", 0f, 0f, 0f, 1f, 1f, 0f, 1f, 1f, 1f, 0f, 0f, 0f).apply {
+                    duration = 4200L + (i * 977L) % 2600; startDelay = (i * 1311L) % 3000
+                    repeatCount = android.animation.ValueAnimator.INFINITE; start()
+                }
+            } else {
+                val c = 0xFFF4F8E8.toInt()                                   // „šust“: dvě čárky nad místem, poskočí a zmizí
+                val v = pixelView(intArrayOf(c, 0, 0, 0, 0, c, 0, c, 0, 0, c, 0), 6, 2, 6 * s, 2 * s).apply {
+                    x = (nx - 3) * s.toFloat(); y = (ny - 10) * s.toFloat(); elevation = 2.7f; alpha = 0f
+                }
+                addDecor(v)
+                val by = v.translationY
+                crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = 3600L + (i * 733L) % 2200; startDelay = (i * 911L) % 2500
+                    repeatCount = android.animation.ValueAnimator.INFINITE
+                    addUpdateListener {
+                        val t = it.animatedValue as Float
+                        val on = t in 0.0f..0.18f || t in 0.26f..0.4f            // dvakrát krátce zašustí
+                        v.alpha = if (on) 1f else 0f
+                        v.translationY = by - (if (on && (t < 0.09f || t in 0.26f..0.33f)) s else 0)
+                    }
+                    start()
+                }
             }
-            addDecor(v)
-            crystalAnimators += android.animation.ObjectAnimator.ofFloat(v, "alpha", 0f, 0f, 0f, 1f, 1f, 0f, 1f, 1f, 1f, 0f, 0f, 0f).apply {
-                duration = 4200L + (i * 977L) % 2600; startDelay = (i * 1311L) % 3000
-                repeatCount = android.animation.ValueAnimator.INFINITE; start()
+        }
+    }
+
+    // ── Sběratelské předměty zón 1, 2 a Věže (story/Collectibles, docs/adr/0109) ──
+
+    private var pendingCollect: String? = null
+
+    private fun collectiblePixels(kind: cz.uhk.macroflow.pokemon.story.Collectibles.Kind): Pair<IntArray, Int> {
+        val K = cz.uhk.macroflow.pokemon.story.Collectibles.Kind
+        val (rows, pal) = when (kind) {
+            K.PAGE -> listOf("ooooooo.", "oPPPPPoo", "oPllllPo", "oPPPPPPo", "oPllllPo", "oPPPPPPo", "oPlllPPo", "oooooooo") to
+                mapOf('P' to 0xFFF2E6C4, 'l' to 0xFFA08A60)
+            K.LETTER -> listOf("oooooooo", "oEEEEEEo", "oeEEEEeo", "oEeEEeEo", "oEEeeEEo", "oEEErEEo", "oEEEEEEo", "oooooooo") to
+                mapOf('E' to 0xFFE8DCC0, 'e' to 0xFF9C8A6A, 'r' to 0xFFB8342C)
+            K.LOG -> listOf(".ooooooo", "obBBBBBo", "obBBmBBo", "obBmBBBo", "obBBmBBo", "obBBBBBo", "obBBBBBo", ".ooooooo") to
+                mapOf('b' to 0xFF20305A, 'B' to 0xFF3A5A9A, 'm' to 0xFFF2E6A0)
+        }
+        return IntArray(8 * 8) { i -> when (val ch = rows[i / 8][i % 8]) { 'o' -> 0xFF1A1410.toInt(); '.' -> 0; else -> pal.getValue(ch).toInt() } } to 8
+    }
+
+    /** Nesebrané předměty v této lokaci: malý sprite se zářičkou, pomalu se pohupuje; klepnutí = dojít a sebrat. */
+    private fun placeCollectibles() {
+        val C = cz.uhk.macroflow.pokemon.story.Collectibles
+        val items = C.inBiome(currentBiome.name).filterNot { StoryFlags.isSet(this, it.key) }
+        if (items.isEmpty()) return
+        val f = artFrame() ?: return
+        val s = f.s
+        collectViews.clear()
+        items.forEachIndexed { i, item ->
+            val (nx, ny) = f.pos(item.node) ?: return@forEachIndexed
+            val set = C.set(item.set)
+            val cx = nx + item.dx; val cy = ny + item.dy - 4                  // střed spritu 8 × 8
+            val glow = glowView(14 * s, set.glow.toInt(), 0x99).apply { x = cx * s - 7f * s; y = cy * s - 7f * s; elevation = 2.9f }
+            val (px, w) = collectiblePixels(set.kind)
+            val v = pixelView(px, w, w, w * s, w * s).apply {
+                x = cx * s - 4f * s; y = cy * s - 4f * s; elevation = 3f; rotation = if (set.kind == C.Kind.PAGE) -8f else 0f
+                contentDescription = set.label
+                setOnClickListener { pendingCollect = item.node; triggerHotspotAction(item.node) }
+            }
+            addDecor(glow); addDecor(v)
+            bob(v, s.toFloat(), 2100L + i * 170)
+            crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.3f, 0.9f, 0.3f).apply {
+                duration = 1700L + i * 130; repeatCount = android.animation.ValueAnimator.INFINITE; start()
+            }
+            collectViews[item.node] = listOf(glow, v)
+        }
+    }
+
+    private val collectViews = mutableMapOf<String, List<View>>()
+
+    /** Sebrání předmětu: animace, panel s textem a počtem; první předmět spustí úkol a ukáže jeho úvod. */
+    private fun onCollect(item: cz.uhk.macroflow.pokemon.story.Collectibles.Item) {
+        val C = cz.uhk.macroflow.pokemon.story.Collectibles
+        if (StoryFlags.isSet(this, item.key)) return
+        StoryFlags.set(this, item.key)
+        val set = C.set(item.set)
+        val count = set.items.count { StoryFlags.isSet(this, it.key) }
+        val views = collectViews.remove(item.node).orEmpty()
+        views.firstOrNull()?.animate()?.alpha(0f)?.setDuration(300)?.start()
+        val f = artFrame()
+        val (nx, ny) = f?.pos(item.node) ?: (0 to 0)
+        val s = (f?.s ?: 1).toFloat()
+        cz.uhk.macroflow.pokemon.inspect.PickupFx.play(mapWorld, (nx + item.dx) * s, (ny + item.dy - 4) * s, s, set.glow.toInt(),
+            "${set.icon} $count/${set.items.size}", views.getOrNull(1)) {
+            if (isFinishing) return@play
+            cz.uhk.macroflow.pokemon.inspect.InspectPanel.show(findViewById(R.id.mapRootContainer), set.label,
+                "${set.icon} ${item.text}\n\n${set.label} $count ze ${set.items.size}.") {
+                questManager.loadQuest(set.questId)
+                mapWorld.postDelayed({
+                    if (isFinishing) return@postDelayed
+                    if (count == 1) questManager.checkNpcInteraction() else questManager.recheck()   // první kus = úvod úkolu
+                }, 250)
             }
         }
+    }
+
+    /** Pošťák Lio (úkol Nedoručené dopisy): vypráví o brašně, se všemi dopisy je doručí. Po úkolu běžné repliky. */
+    private fun onLetters(atBoard: Boolean): Boolean {
+        val C = cz.uhk.macroflow.pokemon.story.Collectibles
+        if (StoryFlags.isSet(this, C.LETTERS_FINAL_KEY)) return false
+        val all = C.LETTERS_SET.items.all { StoryFlags.isSet(this, it.key) }
+        if (atBoard && !all) return false
+        questManager.loadQuest(C.LETTERS)
+        mapWorld.postDelayed({
+            if (isFinishing) return@postDelayed
+            questManager.recheck()
+            mapWorld.postDelayed({
+                if (isFinishing) return@postDelayed
+                val p = questManager.getCurrentProgress()?.takeIf { questManager.getActiveQuestId() == C.LETTERS }
+                if (all && (p?.currentStageIndex ?: 0) >= C.LETTERS_FINAL_STAGE) {
+                    cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), "Dopisy bez adres", if (atBoard) null else C.LETTERS_NAME) { ui, body, _ ->
+                        body.addView(ui.text(if (atBoard) C.LETTERS_BOARD else C.LETTERS_DELIVER, 15f))
+                    }
+                    StoryFlags.set(this, C.LETTERS_FINAL_KEY)
+                    questManager.recheck()
+                } else questManager.checkNpcInteraction()
+            }, 250)
+        }, 150)
+        return true
     }
 
     /** Střed místa na mapě ve světových souřadnicích (oblast klepnutí, uzel nebo bod grafu). */
@@ -2571,7 +2718,8 @@ class MakromonMapActivity : AppCompatActivity() {
 
     /** Místa s příběhovým textem v aktuální lokaci (bez východů – ty mají šipky). */
     private fun inspectNodes(): Set<String> {
-        val cave = BiomeRegistry.definition(currentBiome)?.cave ?: return emptySet()
+        val cave = BiomeRegistry.definition(currentBiome)?.cave
+            ?: return inspectExtra[currentBiome]?.keys.orEmpty() - cz.uhk.macroflow.pokemon.cave.ExitMarkers.EXITS[currentBiome.name].orEmpty().map { it.node }.toSet()
         val exits = cz.uhk.macroflow.pokemon.cave.ExitMarkers.EXITS[currentBiome.name].orEmpty().map { it.node }.toSet()
         // místo s čekajícím roztrženým listem má vlastní třpytky – druhý třpyt vedle by vypadal jako další předmět
         val flags = StoryFlags.all(this)
@@ -2593,16 +2741,16 @@ class MakromonMapActivity : AppCompatActivity() {
     private var glitterView: View? = null
 
     private fun placeInspectGlitter() {
-        val cave = BiomeRegistry.definition(currentBiome)?.cave ?: return
-        if (worldScale <= 0) return
+        val f = artFrame() ?: return
+        val cave = BiomeRegistry.definition(currentBiome)?.cave
         val spots = inspectNodes().mapNotNull { id ->
-            val (x, y) = cave.tapAreas[id]?.let { (x, y, _) -> x.toFloat() to y.toFloat() }
-                ?: cave.node(id)?.let { it.x.toFloat() to it.y - 10f } ?: return@mapNotNull null
+            val (x, y) = cave?.tapAreas?.get(id)?.let { (x, y, _) -> x.toFloat() to y.toFloat() }
+                ?: f.pos(id)?.let { (x, y) -> x.toFloat() to y - 10f } ?: return@mapNotNull null
             cz.uhk.macroflow.pokemon.inspect.InspectGlitterView.Spot(x, y, gamePrefs.getBoolean(inspectReadKey(id), false))
         }
         if (spots.isEmpty()) return
-        val v = cz.uhk.macroflow.pokemon.inspect.InspectGlitterView(this, worldScale, spots).apply {
-            layoutParams = FrameLayout.LayoutParams(cave.artW * worldScale, cave.artH * worldScale)
+        val v = cz.uhk.macroflow.pokemon.inspect.InspectGlitterView(this, f.s, spots).apply {
+            layoutParams = FrameLayout.LayoutParams(f.artW * f.s, f.artH * f.s)
             elevation = 2.8f
         }
         glitterView = v
@@ -2611,16 +2759,16 @@ class MakromonMapActivity : AppCompatActivity() {
 
     /** Místo k prozkoumání pod prstem (oblast klepnutí nebo nejbližší uzel v dosahu). */
     private fun inspectableAt(rawX: Float, rawY: Float): String? {
-        val cave = BiomeRegistry.definition(currentBiome)?.cave ?: return null
+        val cave = BiomeRegistry.definition(currentBiome)?.cave
         val nodes = inspectNodes().takeIf { it.isNotEmpty() } ?: return null
         if (mapWorld.width <= 0) return null
         val loc = IntArray(2); mapWorld.getLocationOnScreen(loc)
         val relX = (rawX - loc[0]) / mapWorld.width; val relY = (rawY - loc[1]) / mapWorld.height
-        cave.tapAreaAt(relX * cave.artW, relY * cave.artH)?.takeIf { it in nodes }?.let { return it }
+        cave?.tapAreaAt(relX * cave.artW, relY * cave.artH)?.takeIf { it in nodes }?.let { return it }
         val viewport = findViewById<View>(R.id.mapMainContent)
         return movementEngine.navigationGraph.filter { it.id in nodes }
             .map { it to MapCamera.tapDistance(it.pos.x, it.pos.y, relX, relY, mapWorld.width, mapWorld.height, viewport.width, viewport.height) }
-            .filter { it.second < CAVE_TAP_RADIUS }.minByOrNull { it.second }?.first?.id
+            .filter { it.second < (if (cave != null) CAVE_TAP_RADIUS else TAP_RADIUS) }.minByOrNull { it.second }?.first?.id
     }
 
     private var holdRing: cz.uhk.macroflow.pokemon.inspect.HoldRingView? = null
