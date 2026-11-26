@@ -139,55 +139,82 @@ for y in range(TH["top"] + 26, TH["seat"] - 10, 6):
 FIG = np.zeros((AH, AW), bool)
 
 
-def fig_hw(y):
-    """Poloviční šířka siluety sochy v řádku y (kápě → ramena → široký plášť dolů)."""
-    if y < 126:
+def fig_hw(y, u=0.0):
+    """Poloviční šířka siluety sochy v řádku y: kápě se špičkou → ramena → paže → klín a kolena → plášť přes stupně."""
+    if y < 124:
         return 0
     if y < 154:
-        return 10.5 * math.sqrt(max(0.0, 1 - ((y - 141) / 15) ** 2)) * (0.8 + 0.2 * min(1.0, (y - 126) / 5))
-    if y < 168:
-        return 9.5 + (y - 154) * 0.95
-    return 22.8 + (y - 168) * 0.06
+        return 10.5 * math.sqrt(max(0.0, 1 - ((y - 140) / 16) ** 2)) * (0.55 + 0.45 * min(1.0, (y - 124) / 8))
+    if y < 170:
+        return 9.5 + math.sqrt((y - 154) / 16) * 12.5
+    if y < 192:
+        return 22.0
+    if y < 206:
+        return 22.0 + (y - 192) * 0.15
+    return 24.0 + (y - 206) * 0.25 + math.sin(u * 0.5 + y * 0.3) * 1.2       # zvlněný lem pláště
 
 
-SLEEVES = [bez((CX + sd * 17, 166), (CX + sd * 15, 186), (CX + sd * 3, 195), 30) for sd in (-1, 1)]
-for y in range(126, 230):
-    hw = fig_hw(y)
-    for x in range(int(CX - hw) - 1, int(CX + hw) + 2):
+for y in range(122, 234):
+    for x in range(CX - 34, CX + 35):
         u = x - CX
+        hw = fig_hw(y, u)
         if abs(u) > hw:
             continue
         FIG[y, x] = True
         q = u / max(1.0, hw)
-        v = 0.8 - q * 0.36 - 0.12 * abs(q) ** 4 - (y - 126) * 0.0015
-        if y > 172 and math.sin(u * 1.25 + (y - 150) * 0.05) > 0.86:
-            v -= 0.13                                                     # svislé záhyby pláště
-        if y < 154 and (u / 5.5) ** 2 + ((y - 148) / 6.5) ** 2 < 1:
-            v = 0.05 + max(0.0, (y - 146) / 60)                            # tma v kápi – obličej skloněný
-        if 197 <= y < 205 and abs(u) < 19:
-            v += 0.08                                                     # kolena pod látkou
-        img[y, x, :3] = st(v + (_vn(x, y, 8, 3) - 0.5) * 0.07, x, y)
-for pts in SLEEVES:                                                       # rukávy: švy od ramen k sepjatým dlaním
-    for (x, y) in pts:
-        img[int(y), int(x), :3] = st(0.18, int(x), int(y))
-        img[int(y) - 1, int(x) + (1 if x < CX else -1), :3] = st(0.88, int(x), int(y))
-for y in range(191, 199):                                                 # sepjaté dlaně v klíně
+        v = 0.76 - q * 0.5 - 0.16 * abs(q) ** 4                           # světlo zleva shora, pravý bok ve stínu
+        if y < 154:                                                       # kápě
+            v += 0.04
+            if (u / 5.6) ** 2 + ((y - 146) / 6.8) ** 2 < 1:
+                v = 0.04 + max(0.0, (y - 144) / 70)                        # tma v kápi – obličej nevytesaný
+                if (u + 6) ** 2 / 2 + ((y - 145) / 6) ** 2 < 1:
+                    v = 0.5                                                # osvětlený okraj kápě vlevo
+        elif y < 192:                                                     # ramena a paže v rukávech
+            ac = 16 - (y - 166) / 26 * 9 if y >= 166 else 16
+            d = abs(abs(u) - ac)
+            if y >= 166 and d < 1.0:
+                v = 0.2                                                    # šev rukávu
+            elif y >= 166 and abs(u) < ac and abs(u) > ac - 3:
+                v -= 0.22                                                  # stín mezi paží a tělem
+            elif y >= 166 and abs(u) > ac:
+                v += 0.05 - (abs(u) - ac) * 0.015                          # rukáv
+        elif y < 206:                                                     # klín a kolena
+            for kx in (-9, 9):
+                if ((u - kx) / 7.5) ** 2 + ((y - 197) / 4.5) ** 2 < 1:
+                    v += 0.14
+            if y >= 203:
+                v -= 0.22                                                  # stín pod koleny
+        else:                                                             # plášť padá přes stupně v záhybech
+            f = math.sin(u * 0.95 + (y - 206) * 0.12)
+            v += f * 0.12
+            if abs(f) > 0.94:
+                v -= 0.15
+            if y > 228:
+                v -= 0.2                                                   # lem ve stínu
+        img[y, x, :3] = st(v + (_vn(x, y, 8, 3) - 0.5) * 0.06, x, y)
+for (fx_, fy_) in ((CX - 9, 230), (CX + 9, 230)):                         # špičky chodidel zpod lemu
+    for y in range(fy_, fy_ + 3):
+        for x in range(fx_ - 3, fx_ + 3):
+            img[y, x, :3] = st(0.78 - (x - fx_) * 0.06, x, y)
+for y in range(189, 198):                                                 # sepjaté dlaně a v nich semínko (Srdce)
     for x in range(CX - 6, CX + 7):
-        if ((x - CX) / 5.5) ** 2 + ((y - 195) / 3.4) ** 2 < 1:
-            img[y, x, :3] = st(0.92 - (x - CX) * 0.03 - (y - 192) * 0.04, x, y)
-for y in range(150, 168):                                                 # okraj kápě přes ramena
-    hw = fig_hw(y)
-    for sd in (-1, 1):
-        x = int(CX + sd * (hw - 2))
-        img[y, x, :3] = st(0.3, x, y)
-for y in range(126, 230):                                                 # obrys sochy proti trůnu
-    for x in range(CX - 30, CX + 31):
+        if ((x - CX) / 6) ** 2 + ((y - 193) / 3.6) ** 2 < 1:
+            img[y, x, :3] = st(0.92 - (x - CX) * 0.035 - (y - 190) * 0.03, x, y)
+for (x, y, col) in ((CX, 192, (170, 255, 210)), (CX - 1, 192, (120, 220, 170)), (CX, 191, (120, 220, 170)), (CX + 1, 192, (90, 180, 140))):
+    img[y, x, :3] = col
+for y in range(122, 234):                                                 # obrys sochy proti trůnu
+    for x in range(CX - 35, CX + 36):
         if not FIG[y, x] and (FIG[y, x - 1] or FIG[y, x + 1] or FIG[y - 1, x]):
             img[y, x, :3] = st(0.1, x, y)
-for y in range(198, 230):                                                 # mech v záhybech dole
-    for x in range(CX - 30, CX + 30):
-        if FIG[y, x] and _vn(x * 1.6, y * 1.6, 9, 3) > 0.78:
+for y in range(200, 234):                                                 # mech v záhybech dole
+    for x in range(CX - 34, CX + 34):
+        if FIG[y, x] and _vn(x * 1.6, y * 1.6, 9, 3) > 0.8:
             img[y, x, :3] = np.clip(img[y, x, :3] * 0.55 + F([60, 96, 70]) * 0.45, 0, 255)
+# koruna z větviček, která jí vyrostla kolem kápě (je to strom)
+crown = TreePainter(img, lambda x, y: (np.clip(void(x, y), 0, 255), 0.0), seed=11)
+for a_ in (-2.5, -2.05, -1.57, -1.1, -0.65):
+    crown.branch(CX + math.cos(a_) * 9, 134 + math.sin(a_) * 8, a_, 1.1, 9, 3, a_, spread=(0.4, 0.8), maxdepth=6, pull=0.0)
+crown.composite(dark=(120, 116, 106), light=(236, 230, 214))
 over = TreePainter(img, lambda x, y: (np.clip(void(x, y), 0, 255), 0.05), seed=3)
 bough(over, chain((CX - 40, 120), (CX - 24, 150), (CX - 14, 176), (CX - 30, WB)), 3.4, 2.4, twigs=2)
 bough(over, chain((CX + 44, 160), (CX + 30, 200), (CX + 40, WB + 2)), 3.0, 2.2, twigs=1)
@@ -333,31 +360,56 @@ for _ in range(90):
 
 
 def kneeler(headless=False, seed=0):
-    """Klečící Lumenec zezadu (čelem k trůnu): malá hlava, ramena, záda se zužují do pasu, plášť se rozkládá kolem kolen."""
-    s = Spr(18, 26)
-    for y in range(26):
-        for x in range(18):
-            u = x - 9
-            v = None
-            if y < 7:
-                if not headless and (u / 2.8) ** 2 + ((y - 3.5) / 3.2) ** 2 < 1:
-                    v = 0.55 - u * 0.05 - (0.15 if y > 4 else 0)
-            elif y == 7:
-                if abs(u) < (1.5 if not headless else 2.5):
-                    v = 0.3 if not headless else 0.85                      # krk / hladký řez
-            elif y < 17:
-                hw = 6.2 - (y - 8) * 0.25
-                if abs(u) < hw:
-                    v = 0.56 - u / (hw * 2) * 0.4 - (0.2 if abs(u) > hw - 1.2 else 0)
-                    if abs(u) < 0.8 and y > 9:
-                        v -= 0.12                                          # páteř
-            else:
-                hw = 4 + (y - 17) * 0.6
-                if abs(u) < hw:
-                    v = 0.46 - u / (hw * 2) * 0.35 + 0.06 * math.sin(u * 1.4)
-            if v is not None:
-                col = st(v + (_vn(x, y, seed, 3) - 0.5) * 0.1, x, y)
-                s.px(x, y, (int(col[0]), int(col[1]), int(col[2]), 255))
+    """Klečící Lumenec zezadu (čelem k trůnu): hlava v kápi skloněná mezi zaoblená ramena, záda ohnutá v modlitbě,
+    lokty do stran (ruce sepjaté vpředu), sedí na patách – zpod pláště koukají chodidla, plášť se rozlévá do vody."""
+    s = Spr(22, 28)
+    cx_ = 11
+    E = [(cx_, 6.5, 3.0, 3.3, 'h'), (cx_, 13.5, 7.2, 6.2, 't'), (cx_, 20.5, 8.2, 4.6, 'p'), (cx_, 24.5, 10.2, 2.6, 'c'),
+         (cx_ - 7.6, 14.5, 2.0, 2.4, 'e'), (cx_ + 7.6, 14.5, 2.0, 2.4, 'e')]
+    for y in range(28):
+        for x in range(22):
+            part = None
+            for (ex, ey, rx, ry, k) in E:
+                if ((x - ex) / rx) ** 2 + ((y - ey) / ry) ** 2 < 1:
+                    part = k
+                    break
+            if part is None or (headless and part == 'h'):
+                continue
+            ex, ey, rx, ry, _ = next(e for e in E if e[4] == part)
+            q = (x - ex) / rx
+            r_ = (y - ey) / ry
+            v = 0.46 - q * 0.34 - r_ * 0.08 - 0.12 * max(0.0, (q * q + r_ * r_) - 0.6)   # objem: světlo zleva shora
+            if part == 't' and abs(x - cx_) < 0.8 and y > 10:
+                v -= 0.12                                                  # páteř pod látkou
+            if part == 'h':
+                v += 0.05
+            if part in 'pc' and abs(math.sin((x - cx_) * 1.2 + y * 0.25)) > 0.9:
+                v -= 0.1                                                   # záhyby pláště
+            col = st(v + (_vn(x, y, seed, 3) - 0.5) * 0.07, x, y)
+            s.px(x, y, (int(col[0]), int(col[1]), int(col[2]), 255))
+    for (fx_, fy_) in ((cx_ - 4, 25), (cx_ + 4, 25)):                     # chodidla (paty nahoru) – klečí
+        for y in range(fy_ - 1, fy_ + 2):
+            for x in range(fx_ - 1, fx_ + 2):
+                if abs(x - fx_) + abs(y - fy_) < 2:
+                    col = st(0.66 if y < fy_ + 1 else 0.4, x, y)
+                    s.px(x, y, (int(col[0]), int(col[1]), int(col[2]), 255))
+    if headless:
+        for x in range(cx_ - 2, cx_ + 3):                                  # hladký řez krku
+            col = st(0.82, x, 8)
+            s.px(x, 8, (int(col[0]), int(col[1]), int(col[2]), 255))
+    for x in range(cx_ - 6, cx_ + 7):                                      # stín mezi hlavou a rameny
+        if s.a[9, x, 3] and not headless and abs(x - cx_) > 2:
+            s.a[9, x, :3] = (s.a[9, x, :3] * 0.7).astype(s.a.dtype)
+    return selout_k(s)
+
+
+def selout_k(s):
+    """Tmavý obrys podle sousedství (sochy se nesmí slít s vodou)."""
+    a = s.a.copy()
+    for y in range(s.h):
+        for x in range(s.w):
+            if not a[y, x, 3] and any(0 <= y + dy < s.h and 0 <= x + dx < s.w and a[y + dy, x + dx, 3] for dy, dx in ((0, 1), (0, -1), (-1, 0))):
+                s.a[y, x] = (24, 26, 30, 255)
     return s
 
 
@@ -368,11 +420,11 @@ for i, (x, y, hl) in enumerate(KNEEL):
     for yy in range(k.h):
         for xx in range(k.w):
             if k.a[yy, xx, 3]:
-                X, Y = x - 9 + xx, y - 26 + yy
-                sub = max(0.0, (yy - 19) / 7)                              # spodek pod hladinou
+                X, Y = x - 11 + xx, y - 28 + yy
+                sub = max(0.0, (yy - 21) / 7)                              # spodek pod hladinou
                 img[Y, X, :3] = np.clip(k.a[yy, xx, :3] * (1 - sub * 0.75) + img[Y, X, :3] * sub * 0.75, 0, 255)
                 Ym = y + (y - Y) - 2                                       # odraz postavy ve vodě
-                if 0 <= Ym < AH and yy < 19:
+                if 0 <= Ym < AH and yy < 21:
                     img[Ym, X, :3] = np.clip(img[Ym, X, :3] * 0.7 + k.a[yy, xx, :3] * 0.15, 0, 255)
     ring(x, y - 1, 9, 0.3)
     block[y - 4:y, x - 6:x + 6] = True
