@@ -23,3 +23,6 @@ __pycache__/
 # pomocnÃ© soubory buildu Claude a pracovnÃ­ stromy agentÅ¯
 /_claude_tmp/
 /.claude/worktrees/
+
+# ladicí obrázky generátorù map
+tools/mapgen/*_debug.png
