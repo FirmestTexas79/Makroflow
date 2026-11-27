@@ -108,6 +108,10 @@ sealed interface Exercise {
     /** [jumps] = celkový počet přeskoků; když je známá i délka, určí se z nich kadence. */
     data class JumpRope(val jumps: Int, override val minutes: Double) : Exercise
     data class Stairs(override val minutes: Double) : Exercise
+    /** Aktivita s kcal z hodinek ([grossKcal] včetně klidového výdeje – ten se odečte, už je v BMR). */
+    data class Measured(val grossKcal: Double, override val minutes: Double) : Exercise
+    /** Aktivita jen s typem a délkou – MET z Compendia. */
+    data class Met(val met: Double, override val minutes: Double) : Exercise
 }
 
 /** Rozpad denního výdeje – každá položka v kcal. */
@@ -231,6 +235,9 @@ object EnergyModel {
                 netMet(jumpRopeMet(cadence), minutes)
             }
             is Exercise.Stairs -> netMet(9.0, e.minutes) // Compendium 02065, stair-treadmill ergometer
+            // 1 MET ≈ 1 kcal/kg/h – klidová část za dobu aktivity
+            is Exercise.Measured -> (e.grossKcal - weightKg * (e.minutes / 60.0)).coerceAtLeast(0.0)
+            is Exercise.Met -> netMet(e.met, e.minutes)
         }
     }
 

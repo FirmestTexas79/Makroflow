@@ -13,7 +13,6 @@ import cz.uhk.macroflow.training.log.WorkoutRepository
 import cz.uhk.macroflow.wearable.ActivityGroups
 import cz.uhk.macroflow.wearable.SleepInsights
 import cz.uhk.macroflow.wearable.SportGroup
-import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.TextStyle
@@ -41,7 +40,7 @@ object WeeklyReportData {
         val closedUntil = minOf(sunday, today.minusDays(1))     // dny, které už skončily
         fun days(from: LocalDate, to: LocalDate) = generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.toList()
         val closed = if (closedUntil.isBefore(monday)) emptyList() else days(monday, closedUntil)
-        val profile = runBlocking { db.userProfileDao().getProfileSync() }
+        val profile = db.userProfileDao().getProfileSync()
 
         // Osobní cíle uzavřených dnů (stejný model jako Dashboard a Historie)
         val targets: Map<LocalDate, MacroResult> = closed.mapNotNull { d ->

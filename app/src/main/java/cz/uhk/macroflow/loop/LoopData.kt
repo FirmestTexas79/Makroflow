@@ -6,7 +6,6 @@ import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.energy.Goal
 import cz.uhk.macroflow.dashboard.MacroResult
 import cz.uhk.macroflow.wearable.SleepInsights
-import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -49,7 +48,7 @@ object LoopData {
             )
         }.reversed()
 
-        val profile = runBlocking { db.userProfileDao().getProfileSync() }
+        val profile = db.userProfileDao().getProfileSync()
         val adaptive = db.adaptiveTdeeDao().getLatestSync()?.takeIf { it.status == "OK" }
         val loss = adaptive?.let { a -> a.weightChangeKgPerWeek?.let { w -> a.trendWeightKg?.takeIf { it > 0 }?.let { t -> -w / t * 100 } } }
         val bedtimes = wear.values.sortedBy { it.date }.takeLast(14).mapNotNull { SleepInsights.bedtimeMin(it) }.sorted()

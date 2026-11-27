@@ -74,7 +74,8 @@ class WaterDialog : DialogFragment() {
             val currentMl = withContext(Dispatchers.IO) {
                 db.waterDao().getTotalMlForDateSync(today)
             }
-            val target = MacroCalculator.calculate(requireContext())
+            val app = requireContext().applicationContext
+            val target = withContext(Dispatchers.IO) { MacroCalculator.calculate(app) }
             val goalMl = (target.water * 1000).toInt()
 
             glassView.goalMl    = goalMl

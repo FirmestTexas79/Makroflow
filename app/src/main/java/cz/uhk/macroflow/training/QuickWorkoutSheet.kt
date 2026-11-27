@@ -155,7 +155,7 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
     private fun hhmm(t: LocalTime) = String.format(Locale.US, "%02d:%02d", t.hour, t.minute)
 
     private fun label(k: String, v: Char?) = when {
-        k == QuickWorkout.CARDIO -> "Kardio"
+        k == QuickWorkout.CARDIO -> QuickWorkout.CardioType.of(v)?.let { "Kardio · ${it.label}" } ?: "Kardio"
         k == QuickWorkout.OTHER -> "Jiný trénink"
         else -> strengthOf(k)!!.let { s -> v?.let { WorkoutTemplates.label(WorkoutTemplates.key(s, it)) } ?: s.label }
     }
@@ -173,6 +173,7 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
         v.findViewById<TextView>(R.id.tvQwTitle).text = kind?.let { label(it, variant) } ?: "Co dnes procvičíš?"
         v.findViewById<TextView>(R.id.tvQwSub).text = when {
             kind == null -> "Klepni na partie, podle nich vyberu trénink."
+            kind == QuickWorkout.CARDIO && variant == null -> "Vyber druh kardia – podle něj spočítám dnešní výdej."
             kind == QuickWorkout.OTHER && selected.isNotEmpty() ->
                 "Nesedí do žádné šablony, složím ti ${QuickWorkout.exercisesFor(selected).size} cviků na vybrané partie."
             kind == QuickWorkout.OTHER -> "Klepni na partie a složím ti cviky na míru."
@@ -204,6 +205,19 @@ class QuickWorkoutSheet : BottomSheetDialogFragment() {
             WorkoutTemplates.VARIANTS.forEachIndexed { i, vv ->
                 box.addView(pill(vv.toString(), vv == variant, dark = false) { variant = vv; render() },
                     LinearLayout.LayoutParams((48 * dp).toInt(), (36 * dp).toInt()).apply { if (i > 0) marginStart = (6 * dp).toInt() })
+            }
+        }
+
+        // druh kardia – podle něj se spočítá výdej dne
+        val cardioRow = v.findViewById<View>(R.id.hsQwCardio)
+        cardioRow.visibility = if (kind == QuickWorkout.CARDIO) View.VISIBLE else View.GONE
+        if (kind == QuickWorkout.CARDIO) {
+            val box = v.findViewById<LinearLayout>(R.id.llQwCardio)
+            box.removeAllViews()
+            QuickWorkout.CardioType.entries.forEachIndexed { i, t ->
+                box.addView(pill(t.label.uppercase(), t.code == variant, dark = false) { variant = t.code; render() }.apply {
+                    setPadding((14 * dp).toInt(), 0, (14 * dp).toInt(), 0)
+                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, (36 * dp).toInt()).apply { if (i > 0) marginStart = (6 * dp).toInt() })
             }
         }
 

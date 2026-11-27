@@ -48,7 +48,7 @@ object QuickWorkout {
     ) {
         val strength: WorkoutTemplates.Kind? get() = WorkoutTemplates.Kind.entries.firstOrNull { it.name == kind }
         val label: String get() = when {
-            kind == CARDIO -> "Kardio"
+            kind == CARDIO -> CardioType.of(variant)?.let { "Kardio · ${it.label}" } ?: "Kardio"
             strength != null && variant != null -> WorkoutTemplates.label(WorkoutTemplates.key(strength!!, variant))
             else -> "Jiný trénink"
         }
@@ -130,18 +130,31 @@ object QuickWorkout {
 
     fun active(ctx: Context): Entry? = today(ctx)?.takeIf { it.running() }
 
-    /**
-     * Silový trénink „Jdu na trénink“ pro energetický model dneška – jen když týdenní plán na dnešek silový trénink nemá
-     * (jinak by se počítal dvakrát). Hotový trénink jeho skutečnou délkou, naplánovaný / běžící výchozí délkou.
-     * „Jiný“ trénink = MET 3,5 (spodní odhad posilování). Kardio se nepočítá – nevíme jaké.
-     */
-    // ponytail: kardio z rychlého zápisu chybí v cíli dne, doplní ho adaptivní výdej; přidat typ kardia do zápisu, když bude potřeba
-    fun strengthForModel(e: Entry?, plannedStrength: Boolean): cz.uhk.macroflow.energy.Exercise.Strength? {
-        if (e == null || plannedStrength || e.kind == CARDIO) return null
+    /** Druh kardia v rychlém zápisu (kód se ukládá místo varianty A/B); MET z Compendia of Physical Activities. */
+    enum class CardioType(val code: Char, val label: String, val met: Double) {
+        RUN('R', "Běh", 8.0), BIKE('B', "Kolo", 7.5), ROPE('J', "Švihadlo", 11.8), STAIRS('S', "Schody", 9.0),
+        SWIM('P', "Plavání", 6.0), OTHER('O', "Jiné", 6.0);
+        companion object { fun of(code: Char?) = entries.firstOrNull { it.code == code } }
+    }
+
+    /** Délka pro energetický model: hotový trénink skutečnou délkou (10–180 min), naplánovaný / běžící [planned] min. */
+    private fun modelMinutes(e: Entry, planned: Double) =
+        if (e.finishedAt > 0 && e.startedAt > 0) ((e.finishedAt - e.startedAt) / 60_000.0).coerceIn(10.0, 180.0) else planned
+
+    /** Silový rychlý trénink pro energetický model („Jiný“ = MET 3,5, spodní odhad posilování); co přebíjí plán řeší ActualTraining. */
+    fun strengthForModel(e: Entry?): cz.uhk.macroflow.energy.Exercise.Strength? {
+        if (e == null || e.kind == CARDIO) return null
         val kind = e.strength?.let { cz.uhk.macroflow.energy.StrengthKind.from(it.planType) } ?: cz.uhk.macroflow.energy.StrengthKind.PUSH
-        val minutes = if (e.finishedAt > 0 && e.startedAt > 0) ((e.finishedAt - e.startedAt) / 60_000.0).coerceIn(10.0, 180.0)
-            else cz.uhk.macroflow.energy.EnergyModel.DEFAULT_STRENGTH_MINUTES
-        return cz.uhk.macroflow.energy.Exercise.Strength(kind, minutes)
+        return cz.uhk.macroflow.energy.Exercise.Strength(kind, modelMinutes(e, cz.uhk.macroflow.energy.EnergyModel.DEFAULT_STRENGTH_MINUTES))
+    }
+
+    const val CARDIO_PLANNED_MIN = 30.0
+
+    /** Rychlé kardio pro energetický model podle druhu (bez druhu = „Jiné“). */
+    fun cardioForModel(e: Entry?): cz.uhk.macroflow.energy.Exercise? {
+        if (e == null || e.kind != CARDIO) return null
+        val type = CardioType.of(e.variant) ?: CardioType.OTHER
+        return cz.uhk.macroflow.energy.Exercise.Met(type.met, modelMinutes(e, CARDIO_PLANNED_MIN))
     }
 
     private fun save(ctx: Context, kind: String, variant: Char?, time: String, startedAt: Long, muscles: Set<Muscle>) =

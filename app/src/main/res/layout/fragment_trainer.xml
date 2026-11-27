@@ -35,7 +35,7 @@
         android:background="@drawable/bg_gradient_top_shadow"
         app:layout_constraintTop_toTopOf="parent">
 
-        <ImageButton
+        <ImageButton android:contentDescription="Zpět"
             android:id="@+id/btnBack"
             android:layout_width="48dp"
             android:layout_height="48dp"

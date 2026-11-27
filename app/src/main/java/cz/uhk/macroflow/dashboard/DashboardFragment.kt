@@ -193,7 +193,8 @@ class DashboardFragment : Fragment() {
                 db.checkInDao().getCheckInByDateSync(today)
             }
 
-            val status = MacroFlowEngine.calculateDailyStatus(context, consumedList)
+            val app = context.applicationContext
+            val status = withContext(Dispatchers.IO) { MacroFlowEngine.calculateDailyStatus(app, consumedList) }
             val advice = MacroFlowEngine.getCoachAdvice(status, checkIn)
 
             updateCoachUI(advice)

@@ -30,7 +30,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageView
+        <ImageView android:importantForAccessibility="no"
             android:id="@+id/ivPokedexSprite"
             android:layout_width="60dp"
             android:layout_height="60dp"

@@ -65,7 +65,7 @@
                     android:background="@drawable/bg_status_pill"
                     android:backgroundTint="#08283618" />
 
-                <ImageView
+                <ImageView android:importantForAccessibility="no"
                     android:id="@+id/ivFoodImage"
                     android:layout_width="80dp"
                     android:layout_height="80dp"

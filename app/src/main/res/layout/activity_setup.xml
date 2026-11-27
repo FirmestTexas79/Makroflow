@@ -10,7 +10,7 @@
     android:layout_height="match_parent"
     android:background="@color/brand_cream">
 
-    <ImageView
+    <ImageView android:importantForAccessibility="no"
         android:layout_width="220dp"
         android:layout_height="220dp"
         android:layout_gravity="top|end"
@@ -321,7 +321,7 @@
                         <TextView style="@style/ProfileOptionTitle" android:text="Co se aplikace naučila" />
                         <TextView android:id="@+id/tvLearningSub" style="@style/ProfileOptionSub" android:text="Poznatky z tvých dat" />
                     </LinearLayout>
-                    <ImageView style="@style/ProfRowChevron" />
+                    <ImageView android:importantForAccessibility="no" style="@style/ProfRowChevron" />
                 </LinearLayout>
                 <View style="@style/ProfDivider" />
 
@@ -331,7 +331,7 @@
                         <TextView style="@style/ProfileOptionTitle" android:text="Týdenní report" />
                         <TextView style="@style/ProfileOptionSub" android:text="Jak se ti tenhle týden dařilo" />
                     </LinearLayout>
-                    <ImageView style="@style/ProfRowChevron" />
+                    <ImageView android:importantForAccessibility="no" style="@style/ProfRowChevron" />
                 </LinearLayout>
 
                 <View style="@style/ProfDivider" />
@@ -342,7 +342,7 @@
                         <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_metrics_title" />
                         <TextView style="@style/ProfileOptionSub" android:text="@string/profile_metrics_sub" />
                     </LinearLayout>
-                    <ImageView style="@style/ProfRowChevron" />
+                    <ImageView android:importantForAccessibility="no" style="@style/ProfRowChevron" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -380,30 +380,30 @@
                 <TextView style="@style/DashMetricLabel" android:layout_marginStart="4dp" android:layout_marginBottom="6dp" android:text="@string/setup_section_lifestyle" />
 
                 <LinearLayout android:id="@+id/clickLezerni" style="@style/ProfileOptionRow">
-                    <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_desk" />
+                    <ImageView android:importantForAccessibility="no" style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_desk" />
                     <LinearLayout style="@style/ProfileOptionTexts">
                         <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_low" />
                         <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_low_sub" />
                     </LinearLayout>
-                    <ImageView android:id="@+id/checkLezerni" style="@style/ProfileOptionCheck" />
+                    <ImageView android:importantForAccessibility="no" android:id="@+id/checkLezerni" style="@style/ProfileOptionCheck" />
                 </LinearLayout>
 
                 <LinearLayout android:id="@+id/clickAktivni" style="@style/ProfileOptionRow">
-                    <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_walk" />
+                    <ImageView android:importantForAccessibility="no" style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_walk" />
                     <LinearLayout style="@style/ProfileOptionTexts">
                         <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_mid" />
                         <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_mid_sub" />
                     </LinearLayout>
-                    <ImageView android:id="@+id/checkAktivni" style="@style/ProfileOptionCheck" />
+                    <ImageView android:importantForAccessibility="no" android:id="@+id/checkAktivni" style="@style/ProfileOptionCheck" />
                 </LinearLayout>
 
                 <LinearLayout android:id="@+id/clickSportovec" style="@style/ProfileOptionRow">
-                    <ImageView style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_lift" />
+                    <ImageView android:importantForAccessibility="no" style="@style/ProfileOptionIcon" android:src="@drawable/ic_ls_lift" />
                     <LinearLayout style="@style/ProfileOptionTexts">
                         <TextView style="@style/ProfileOptionTitle" android:text="@string/profile_ls_high" />
                         <TextView style="@style/ProfileOptionSub" android:text="@string/profile_ls_high_sub" />
                     </LinearLayout>
-                    <ImageView android:id="@+id/checkSportovec" style="@style/ProfileOptionCheck" />
+                    <ImageView android:importantForAccessibility="no" android:id="@+id/checkSportovec" style="@style/ProfileOptionCheck" />
                 </LinearLayout>
 
                 <View style="@style/ProfDivider" />
@@ -479,13 +479,13 @@
                 <View style="@style/ProfDivider" android:layout_marginVertical="4dp" />
 
                 <LinearLayout android:id="@+id/btnSignOut" style="@style/ProfRow">
-                    <ImageView style="@style/ProfRowIconImg" android:src="@drawable/ic_nav_logout" />
+                    <ImageView android:importantForAccessibility="no" style="@style/ProfRowIconImg" android:src="@drawable/ic_nav_logout" />
                     <TextView android:id="@+id/tvSignOut" style="@style/ProfRowTitle" android:text="@string/setup_btn_login" />
-                    <ImageView style="@style/ProfRowChevron" />
+                    <ImageView android:importantForAccessibility="no" style="@style/ProfRowChevron" />
                 </LinearLayout>
 
                 <LinearLayout android:id="@+id/btnDeleteAccount" style="@style/ProfRow">
-                    <ImageView style="@style/ProfRowIconImg" android:backgroundTint="#1AB3261E" android:src="@drawable/ic_delete" app:tint="?attr/colorError" />
+                    <ImageView android:importantForAccessibility="no" style="@style/ProfRowIconImg" android:backgroundTint="#1AB3261E" android:src="@drawable/ic_delete" app:tint="?attr/colorError" />
                     <TextView style="@style/ProfRowTitle" android:text="@string/profile_delete_account" android:textColor="?attr/colorError" />
                 </LinearLayout>
             </LinearLayout>

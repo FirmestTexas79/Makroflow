@@ -1,7 +1,7 @@
 """
 Malý „střihový stůl“ pro cutscény konců (docs/adr/0111): záběry jsou funkce času → pixelový obraz 360 × 780 (1 px =
 1 px mapy), obraz se zvětší ×2 bez vyhlazení na 720 × 1560 (telefon na výšku) a přes něj se vysází titulky
-s psacím strojem (DejaVu Serif – česká diakritika). Výstup přes ffmpeg do MP4 (H.264, -preset veryfast), náhled GIF.
+s psacím strojem (DejaVu Serif – česká diakritika). Výstup přes ffmpeg do MP4 (H.264, -preset slow, CRF 32 – videa jsou v APK, docs/adr/0117), náhled GIF.
 """
 import math, os, subprocess
 import numpy as np
@@ -172,8 +172,8 @@ def render(shots, caps, out_mp4, gif=None, gif_every=3, audio=None, start=0.0, e
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W * SCALE}x{H * SCALE}",
            "-r", str(FPS), "-i", "-"]
     if audio:
-        cmd += ["-i", audio, "-c:a", "aac", "-b:a", "160k", "-shortest"]
-    cmd += ["-c:v", "libx264", "-preset", "veryfast", "-crf", "27", "-tune", "animation", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out_mp4]
+        cmd += ["-i", audio, "-c:a", "aac", "-b:a", "128k", "-shortest"]
+    cmd += ["-c:v", "libx264", "-preset", "slow", "-crf", "32", "-tune", "animation", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out_mp4]
     ff = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     gif_frames = []
     for i in range(n):

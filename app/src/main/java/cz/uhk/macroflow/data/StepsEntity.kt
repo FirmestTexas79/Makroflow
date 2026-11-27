@@ -30,4 +30,7 @@ interface StepsDao {
 
     @Query("SELECT * FROM steps")
     fun getAllStepsSync(): List<StepsEntity>
+
+    @Query("SELECT * FROM steps WHERE date >= :from AND date <= :to")
+    fun getStepsBetweenSync(from: String, to: String): List<StepsEntity>
 }

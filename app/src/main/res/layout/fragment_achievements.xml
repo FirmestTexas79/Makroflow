@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/brand_cream">
 
-    <ImageView
+    <ImageView android:importantForAccessibility="no"
         android:layout_width="260dp"
         android:layout_height="260dp"
         android:layout_gravity="top|end"

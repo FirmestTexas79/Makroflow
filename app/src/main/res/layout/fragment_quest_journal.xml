@@ -229,7 +229,7 @@
                     android:textColor="@color/journal_chapter_title_ink"
                     android:textSize="25sp" />
 
-                <ImageView
+                <ImageView android:importantForAccessibility="no"
                     android:id="@+id/npcPortrait"
                     android:layout_width="64dp"
                     android:layout_height="64dp"
@@ -593,7 +593,7 @@
             android:background="#BC6C25"
             android:elevation="2dp" />
 
-        <ImageButton
+        <ImageButton android:contentDescription="Zavřít deník"
             android:id="@+id/btnCloseJournal"
             android:layout_width="36dp"
             android:layout_height="36dp"

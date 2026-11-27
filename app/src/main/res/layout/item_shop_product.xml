@@ -19,7 +19,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <ImageView
+        <ImageView android:importantForAccessibility="no"
             android:id="@+id/ivProductIcon"
             android:layout_width="64dp"
             android:layout_height="64dp"

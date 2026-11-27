@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/brand_cream">
 
-    <ImageView
+    <ImageView android:importantForAccessibility="no"
         android:layout_width="200dp"
         android:layout_height="200dp"
         android:layout_gravity="top|end"
@@ -17,7 +17,7 @@
         android:rotation="-15"
         app:tint="@color/brand_dark" />
 
-    <ImageView
+    <ImageView android:importantForAccessibility="no"
         android:layout_width="120dp"
         android:layout_height="120dp"
         android:layout_gravity="bottom|start"
@@ -114,7 +114,7 @@
                         android:paddingTop="12dp"
                         android:paddingBottom="4dp">
 
-                        <ImageButton
+                        <ImageButton android:contentDescription="Předchozí měsíc"
                             android:id="@+id/btnPrevMonth"
                             android:layout_width="36dp"
                             android:layout_height="36dp"
@@ -137,7 +137,7 @@
                             android:textStyle="bold"
                             android:fontFamily="sans-serif-black" />
 
-                        <ImageButton
+                        <ImageButton android:contentDescription="Další měsíc"
                             android:id="@+id/btnNextMonth"
                             android:layout_width="36dp"
                             android:layout_height="36dp"

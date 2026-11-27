@@ -91,7 +91,7 @@
                         android:layout_height="match_parent"
                         android:background="@drawable/bg_status_pill"
                         android:backgroundTint="@color/brand_cream_alpha10" />
-                    <ImageView
+                    <ImageView android:importantForAccessibility="no"
                         android:id="@+id/ivDetailSprite"
                         android:layout_width="110dp"
                         android:layout_height="110dp"

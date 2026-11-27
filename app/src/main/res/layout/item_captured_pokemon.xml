@@ -23,7 +23,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <ImageView
+            <ImageView android:importantForAccessibility="no"
                 android:id="@+id/ivPokemonSprite"
                 android:layout_width="120dp"
                 android:layout_height="120dp"
@@ -84,7 +84,7 @@
                 android:gravity="center"
                 android:orientation="horizontal">
 
-                <ImageButton
+                <ImageButton android:contentDescription="Připnout do lišty"
                     android:id="@+id/btnPinToBar"
                     android:layout_width="38dp"
                     android:layout_height="38dp"
@@ -96,7 +96,7 @@
                     android:src="@android:drawable/ic_menu_send"
                     app:tint="@color/brand_primary" />
 
-                <ImageButton
+                <ImageButton android:contentDescription="Odepnout z lišty"
                     android:id="@+id/btnUnpinFromBar"
                     android:layout_width="38dp"
                     android:layout_height="38dp"
@@ -121,7 +121,7 @@
                     android:src="@android:drawable/ic_input_add"
                     app:tint="@color/brand_primary" />
 
-                <ImageButton
+                <ImageButton android:contentDescription="Smazat Makromona"
                     android:id="@+id/btnDeletePokemon"
                     android:layout_width="38dp"
                     android:layout_height="38dp"
@@ -152,7 +152,7 @@
             android:textSize="15sp"
             android:visibility="gone" />
 
-        <ImageButton
+        <ImageButton android:contentDescription="Zamknout"
             android:id="@+id/btnLock"
             android:layout_width="36dp"
             android:layout_height="36dp"

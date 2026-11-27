@@ -19,7 +19,6 @@ import cz.uhk.macroflow.R
 import cz.uhk.macroflow.common.MakroflowNotifications.CHANNEL_STICKY
 import cz.uhk.macroflow.common.MakroflowNotifications.ID_STICKY_SERVICE
 import cz.uhk.macroflow.training.TrainingTimeManager
-import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
 import java.util.*
 

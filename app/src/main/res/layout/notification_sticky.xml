@@ -9,7 +9,7 @@
     android:paddingHorizontal="8dp"
     android:layout_marginLeft="-10dp">
 
-    <ImageView
+    <ImageView android:importantForAccessibility="no"
         android:id="@+id/ivNotificationPokemon"
         android:layout_width="56dp"
         android:layout_height="56dp"

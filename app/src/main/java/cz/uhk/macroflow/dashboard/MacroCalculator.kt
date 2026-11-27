@@ -5,6 +5,7 @@ import cz.uhk.macroflow.data.AppDatabase
 import cz.uhk.macroflow.data.UserProfileEntity
 import cz.uhk.macroflow.energy.AdaptiveExpenditure
 import cz.uhk.macroflow.energy.Diet
+import cz.uhk.macroflow.energy.ActualTraining
 import cz.uhk.macroflow.energy.EnergyModel
 import cz.uhk.macroflow.energy.Exercise
 import cz.uhk.macroflow.energy.Goal
@@ -13,7 +14,6 @@ import cz.uhk.macroflow.energy.MacroPlanner
 import cz.uhk.macroflow.energy.Person
 import cz.uhk.macroflow.energy.Sex
 import cz.uhk.macroflow.energy.StrengthKind
-import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -33,10 +33,10 @@ object    MacroCalculator {
      */
     fun calculateForDate(context: Context, date: Date, applyAdaptive: Boolean = true): MacroResult {
         val db = AppDatabase.getDatabase(context)
-        val profile: UserProfileEntity? = runBlocking { db.userProfileDao().getProfileSync() }
+        val profile: UserProfileEntity? = db.userProfileDao().getProfileSync()
         val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date)
         val isToday = dateKey == SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val recordedSteps = runBlocking { db.stepsDao().getStepsForDateSync(dateKey)?.count }
+        val recordedSteps = db.stepsDao().getStepsForDateSync(dateKey)?.count
 
         // Adaptivní odhad platný k tomuto dni (max. 14 dní starý)
         val adaptive = db.adaptiveTdeeDao().getLatestOnOrBeforeSync(dateKey)
@@ -46,7 +46,7 @@ object    MacroCalculator {
 
         return cz.uhk.macroflow.loop.LoopData.applyTo(context, if (applyAdaptive) dateKey else "-", calculateFor(
             profile = profile,
-            exercises = plannedExercises(context, date),
+            exercises = actualExercises(context, db, date, dateKey, isToday),
             strengthLabel = strengthLabel(context, date),
             steps = if (isToday) EnergyModel.stepsForDay(recordedSteps, true, baselineSteps(db, dateKey), minuteNow())
                 else EnergyModel.stepsForDay(recordedSteps, false),
@@ -58,7 +58,7 @@ object    MacroCalculator {
     /** Medián kroků posledních 14 uzavřených dní – „obvyklý den“ pro predikci dneška. */
     private fun baselineSteps(db: AppDatabase, todayKey: String): Int {
         val from = java.time.LocalDate.parse(todayKey).minusDays(14).toString()
-        return EnergyModel.baselineSteps(db.stepsDao().getAllStepsSync().filter { it.date in from..todayKey && it.date != todayKey }.map { it.count })
+        return EnergyModel.baselineSteps(db.stepsDao().getStepsBetweenSync(from, todayKey).filter { it.date != todayKey }.map { it.count })
     }
 
     private fun minuteNow(): Int = java.time.LocalTime.now().let { it.hour * 60 + it.minute }
@@ -68,7 +68,7 @@ object    MacroCalculator {
 
     /** Náhled pro jiný typ diety (výběr diety v Elite módu) – bez ukládání. */
     fun previewForDiet(context: Context, dietLabel: String): MacroResult {
-        val profile = runBlocking { AppDatabase.getDatabase(context).userProfileDao().getProfileSync() }
+        val profile = AppDatabase.getDatabase(context).userProfileDao().getProfileSync()
         return calculateFor(
             profile = profile?.copy(dietType = dietLabel) ?: UserProfileEntity(dietType = dietLabel),
             exercises = plannedExercises(context, Date()),
@@ -132,6 +132,36 @@ object    MacroCalculator {
         (context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
             .getString("type_${dayName(date)}", "rest") ?: "rest").uppercase()
 
+    /**
+     * Trénink dne pro model: plán, který přebije skutečnost – hodinky, deník sérií, rychlý zápis
+     * (energy/ActualTraining, docs/adr/0117).
+     */
+    private fun actualExercises(context: Context, db: AppDatabase, date: Date, dateKey: String, isToday: Boolean): List<Exercise> {
+        val quick = if (isToday) cz.uhk.macroflow.training.QuickWorkout.today(context) else null
+        val day = db.wearableDao().getDaySync(dateKey)
+        val sets = db.workoutDao().betweenSync(dateKey, dateKey)
+        val from14 = java.time.LocalDate.parse(dateKey).minusDays(14).toString()
+        val yesterday = java.time.LocalDate.parse(dateKey).minusDays(1).toString()
+        val ev = ActualTraining.Evidence(
+            watchSynced = day != null && (day.steps != null || day.totalKcal != null),
+            watch = db.wearableDao().getActivitiesSync(dateKey).map {
+                ActualTraining.WatchActivity(groupOf(it.typeKey), it.durationSec / 60.0, it.kcal)
+            },
+            loggedStrengthMinutes = ActualTraining.minutesFromSets(sets.map { it.createdAt }),
+            logsSets = db.workoutDao().betweenSync(from14, yesterday).map { it.date }.toSet().size >= 2,
+            quickStrength = cz.uhk.macroflow.training.QuickWorkout.strengthForModel(quick),
+            quickCardio = cz.uhk.macroflow.training.QuickWorkout.cardioForModel(quick)
+        )
+        return ActualTraining.resolve(plannedExercises(context, date), ev, dayOver = dateKey < java.time.LocalDate.now().toString())
+    }
+
+    private fun groupOf(typeKey: String) = when (cz.uhk.macroflow.wearable.ActivityGroups.of(typeKey)) {
+        cz.uhk.macroflow.wearable.SportGroup.STRENGTH -> ActualTraining.Group.STRENGTH
+        cz.uhk.macroflow.wearable.SportGroup.CARDIO -> ActualTraining.Group.CARDIO
+        cz.uhk.macroflow.wearable.SportGroup.WALK -> ActualTraining.Group.WALK
+        cz.uhk.macroflow.wearable.SportGroup.OTHER -> ActualTraining.Group.OTHER
+    }
+
     /** Převod týdenního plánu (TrainingPrefs) na seznam aktivit pro model. */
     private fun plannedExercises(context: Context, date: Date): List<Exercise> {
         val prefs = context.getSharedPreferences("TrainingPrefs", Context.MODE_PRIVATE)
@@ -140,14 +170,10 @@ object    MacroCalculator {
 
         val list = mutableListOf<Exercise>()
 
-        val planned = StrengthKind.from(prefs.getString("type_$day", "rest"))
-        planned?.let { kind ->
+        StrengthKind.from(prefs.getString("type_$day", "rest"))?.let { kind ->
             // Délka silového tréninku zatím v UI není → výchozí 60 min
             list += Exercise.Strength(kind, num("strength_duration_$day", EnergyModel.DEFAULT_STRENGTH_MINUTES))
         }
-        // Rychlý zápis „Jdu na trénink“ mimo plán (platí jen pro dnešek)
-        if (SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date) == java.time.LocalDate.now().toString())
-            cz.uhk.macroflow.training.QuickWorkout.strengthForModel(cz.uhk.macroflow.training.QuickWorkout.today(context), planned != null)?.let { list += it }
 
         val minutes = num("kardio_duration_$day", 0.0)
         when (prefs.getString("kardio_type_$day", "rest")?.lowercase()) {

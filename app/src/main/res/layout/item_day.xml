@@ -223,7 +223,7 @@
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
-                <ImageView
+                <ImageView android:contentDescription="Smazat data dne"
                     android:id="@+id/btnDeleteDayData"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"

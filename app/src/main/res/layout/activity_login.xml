@@ -7,7 +7,7 @@
     android:background="@color/brand_cream"
     android:padding="32dp">
 
-    <ImageView
+    <ImageView android:importantForAccessibility="no"
         android:id="@+id/ivLogo"
         android:layout_width="140dp"
         android:layout_height="140dp"
