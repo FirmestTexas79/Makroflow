@@ -162,6 +162,22 @@
                         android:orientation="horizontal" />
                 </LinearLayout>
 
+                <!-- druh kardia (jen u KARDIO) – podle něj se počítá výdej dne -->
+                <HorizontalScrollView
+                    android:id="@+id/hsQwCardio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:scrollbars="none"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/llQwCardio"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+
                 <TextView
                     style="@style/QwSection"
                     android:layout_width="wrap_content"
