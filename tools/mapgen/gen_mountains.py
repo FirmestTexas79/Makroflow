@@ -29,10 +29,12 @@ N = {
     "skaly1":         (0.270, 0.300),
     "cave":           (0.790, 0.345),
     "peak":           (0.500, 0.150),
+    "kovarna":        (0.663, 0.852),   # dveře Staré kovárny (region 1, docs/adr/0118)
 }
 EDGES = [("vstup_z_meadow", "rozcesti_hory"), ("rozcesti_hory", "camp"), ("rozcesti_hory", "kral_mlsak"),
          ("kral_mlsak", "zapadni_stezka"), ("zapadni_stezka", "mine"), ("zapadni_stezka", "horni_stezka"),
-         ("kral_mlsak", "skaly2"), ("horni_stezka", "skaly1"), ("horni_stezka", "cave"), ("horni_stezka", "peak")]
+         ("kral_mlsak", "skaly2"), ("horni_stezka", "skaly1"), ("horni_stezka", "cave"), ("horni_stezka", "peak"),
+         ("rozcesti_hory", "kovarna")]
 
 def A(n):  # uzel -> art pixel
     x, y = N[n]; return (x * AW, y * AH)
@@ -437,6 +439,86 @@ for _ in range(150):
     if rnd.random() < 0.45: tuft(x, y)
     else:
         px[x, y] = FACE[2]; px[x + 1, y] = FACE[1]; px[x + 1, y + 1] = SHADOW
+
+# Stará kovárna (docs/adr/0118): kamenná pata, hrázděná stěna, šindelová střecha s mechem, kamenný komín s kouřem,
+# v okně a pootevřených dveřích žár výhně, vedle dveří vývěsní kovadlina. Dveře = uzel „kovarna“.
+def smithy():
+    dx, dy = P("kovarna")
+    x0, x1 = dx - 17, dx + 17            # stěna
+    yb = dy - 6                          # pata stěny (dveře kousek nad uzlem, cesta k nim zespodu)
+    ROOF = [(70, 42, 30), (92, 58, 40), (112, 72, 48), (134, 90, 60)]
+    MOSS = [(84, 104, 52), (110, 132, 64)]
+    PLASTER = [(168, 146, 112), (196, 176, 138)]
+    BEAM = (92, 60, 38)
+    GLOW = [(255, 214, 120), (250, 150, 60), (190, 80, 36)]
+    for x in range(x0 + 2, x1 + 5):                                       # stín na písku
+        for y in range(yb - 12, yb + 3):
+            if x > x1 or y > yb:
+                px[x, y] = SHADOW
+    for y in range(yb - 12, yb + 1):                                      # přední stěna
+        for x in range(x0, x1 + 1):
+            if y > yb - 5:                                                # kamenná pata
+                c = STONE[2] if ((x // 4) + (y // 2)) % 2 else STONE[1]
+                if (x - x0) % 4 == 0 or y == yb - 4: c = STONE[3]
+            else:
+                c = PLASTER[1] if x < (x0 + x1) // 2 else PLASTER[0]
+                if (x - x0) in (0, 9, 25, 34) or y == yb - 12: c = BEAM
+                if (x - x0) in (1, 8) and (y - (yb - 12)) % 3 == 0: c = BEAM   # šikmé vzpěry naznačené
+            if x in (x0, x1) or y == yb: c = OUT
+            px[x, y] = c
+    for y in range(yb - 9, yb + 1):                                       # dveře, pootevřené, žár uvnitř
+        for x in range(dx - 4, dx + 4):
+            c = (110, 70, 44) if x < dx else ((70, 44, 28) if (y + x) % 3 else (58, 36, 24))
+            if x == dx - 4 or y == yb - 9: c = OUT
+            if dx + 1 <= x <= dx + 2 and y > yb - 8: c = GLOW[1] if y > yb - 4 else GLOW[0]
+            px[x, y] = c
+    for x in (dx - 3, dx - 2, dx - 1):
+        px[x, yb - 6] = (40, 38, 42)                                       # železné kování
+    for y in range(yb - 10, yb - 5):                                      # okno se žárem
+        for x in range(x0 + 3, x0 + 8):
+            c = GLOW[0] if (y - (yb - 10) + x) % 4 else GLOW[1]
+            if x in (x0 + 3, x0 + 7) or y in (yb - 10, yb - 6): c = OUT
+            if x == x0 + 5: c = BEAM
+            px[x, y] = c
+    for y in range(yb - 30, yb - 11):                                     # střecha (sedlová, štítem dopředu)
+        t = (y - (yb - 30)) / 19
+        half = 6 + t * 15
+        for x in range(int(dx - half), int(dx + half) + 1):
+            row = (y - (yb - 30)) // 3
+            c = ROOF[2] if (x + row * 2) % 5 else ROOF[1]
+            if (y - (yb - 30)) % 3 == 2: c = ROOF[1]
+            if x > dx: c = ROOF[1] if c == ROOF[2] else ROOF[0]           # stinná strana
+            if abs(x - dx) <= 0: c = ROOF[3]                               # hřeben
+            if ((x * 7 + y * 3) % 23 == 0) and t > 0.4: c = MOSS[0] if x > dx else MOSS[1]
+            if abs(abs(x - dx) - half) < 1 or y == yb - 30: c = OUT
+            px[x, y] = c
+    for x in range(int(dx - 21), int(dx + 22)):                           # okap
+        px[x, yb - 11] = OUT
+    for y in range(yb - 37, yb - 20):                                     # komín
+        for x in range(x0 + 5, x0 + 11):
+            c = STONE[2] if x < x0 + 8 else STONE[0]
+            if (y // 2) % 2 and x == x0 + 7: c = STONE[3]
+            if x in (x0 + 5, x0 + 10): c = OUT
+            px[x, y] = c
+    for x in range(x0 + 4, x0 + 12):
+        px[x, yb - 38] = OUT; px[x, yb - 37] = STONE[1]
+    for x in range(x0 + 6, x0 + 10):
+        px[x, yb - 37] = (40, 26, 22)
+    for (cx, cy, r, col) in ((x0 + 8, yb - 42, 2, (196, 190, 182)), (x0 + 6, yb - 46, 2, (214, 208, 200)), (x0 + 9, yb - 50, 1, (226, 222, 216))):
+        for y in range(cy - r, cy + r + 1):
+            for x in range(cx - r, cx + r + 1):
+                if (x - cx) ** 2 + (y - cy) ** 2 <= r * r:
+                    px[x, y] = col
+    sx = dx + 7                                                           # vývěsní kovadlina na rameni
+    for x in range(sx, sx + 6): px[x, yb - 11] = OUT
+    for x in range(sx + 1, sx + 6): px[x, yb - 9] = (70, 72, 80); px[x, yb - 8] = (110, 112, 120)
+    px[sx + 1, yb - 10] = OUT; px[sx + 5, yb - 10] = OUT
+    px[sx + 2, yb - 7] = (70, 72, 80); px[sx + 3, yb - 7] = (70, 72, 80)
+    for (ox, oy) in ((x1 + 2, yb), (x1 + 3, yb - 1), (x1 + 4, yb), (x1 + 3, yb), (x1 + 2, yb - 1)):   # hromádka uhlí
+        px[ox, oy] = (40, 36, 44)
+
+
+smithy()
 
 big = img.resize((AW * S, AH * S), Image.NEAREST)
 big.save(OUT_PNG, optimize=True)

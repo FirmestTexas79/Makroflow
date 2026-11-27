@@ -99,6 +99,8 @@ class PokemonBattleView @JvmOverloads constructor(
     internal var partyMenu = false
     /** Pasivní bonus Chytání (snižuje šanci na útěk po vyskočení z ballu). */
     internal var catchingPassive = 0.0
+    /** Pasivní bonusy z Výhně (obrana, HP, odolnosti; docs/adr/0118). */
+    internal var forge: cz.uhk.macroflow.pokemon.forge.Forge.Bonuses? = null
     internal var enemyCond = cz.uhk.macroflow.pokemon.status.Condition()
     /** Tým trenéra (Makromon, shiny) a kdo z něj právě bojuje. */
     internal val enemyTeam = mutableListOf<Pair<Makromon, Boolean>>()
@@ -141,8 +143,9 @@ class PokemonBattleView @JvmOverloads constructor(
             val caughtEntity = if (activeCapturedId != -1) {
                 db.capturedMakromonDao().getMakromonById(activeCapturedId)
             } else null
+            forge = runCatching { cz.uhk.macroflow.pokemon.forge.ForgeStore.bonuses(context) }.getOrNull()
             catchingPassive = runCatching {
-                cz.uhk.macroflow.pokemon.skills.SkillStore.state(context).catchReduction
+                (cz.uhk.macroflow.pokemon.skills.SkillStore.state(context).catchReduction + (forge?.escape ?: 0.0)).coerceAtMost(0.9)
             }.getOrDefault(0.0)
             // Ostatní členové týmu (první = aktivní parťák, ten je už načtený výš)
             val teamRest = runCatching { cz.uhk.macroflow.pokemon.skills.SkillStore.team(context) }.getOrDefault(emptyList())
@@ -156,7 +159,12 @@ class PokemonBattleView @JvmOverloads constructor(
             // Útoky chyceného Makromona (uložená sada), jinak základní útoky druhu; typ = typ druhu
             val playerBase = BattleFactory.createById(mId)
             val tb = TrainingBonus.current(context)
-            fun boosted(m: Makromon) = m.copy(attack = (m.attack * tb.attackMultiplier).toInt())
+            val fb = forge
+            fun boosted(m: Makromon): Makromon {
+                val hp = (m.maxHp * (fb?.hpMult ?: 1.0)).toInt()
+                return m.copy(attack = (m.attack * tb.attackMultiplier).toInt(), defense = (m.defense * (fb?.defenseMult ?: 1.0)).toInt(),
+                    maxHp = hp, currentHp = (m.currentHp * (fb?.hpMult ?: 1.0)).toInt().coerceAtMost(hp))
+            }
             val playerWithStats = boosted(createPlayerMakromon(mId, playerLevel).copy(
                 moves = cz.uhk.macroflow.pokemon.wild.MovePool.resolve(caughtEntity?.moveListStr.orEmpty(), playerBase.moves),
                 type = playerBase.speciesType

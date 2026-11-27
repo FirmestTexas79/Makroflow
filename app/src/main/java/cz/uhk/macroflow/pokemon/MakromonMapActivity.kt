@@ -154,7 +154,8 @@ class MakromonMapActivity : AppCompatActivity() {
             cz.uhk.macroflow.pokemon.cave.GroveMap.ACTION_NODES + "skryta_stezka" +
             cz.uhk.macroflow.pokemon.cave.MinesMap.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.MinesMap.MAZE_NODE +
             cz.uhk.macroflow.pokemon.cave.TowerLobby.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.AshPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.QuietOrchard.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.EchoCanyon.ACTION_NODES +
-            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootBridge.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootNameless.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTemple.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootThreshold.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTrunk.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootHeart.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES
+            cz.uhk.macroflow.pokemon.cave.OzvenaCity.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.ArenaHall.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootWatch.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSlopeCamp.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootSignal.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootBridge.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootNameless.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTemple.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootThreshold.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootTrunk.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.RootHeart.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerArchive.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerMeasure.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPlain.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerForest.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerRock.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerCave.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerWater.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerDorm.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerIce.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFire.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerOffice.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerFairy.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerPoison.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerHideout.ACTION_NODES + cz.uhk.macroflow.pokemon.cave.TowerAbyss.ACTION_NODES +
+            cz.uhk.macroflow.pokemon.cave.Smithy.ACTION_NODES
         private const val TAG_JOURNAL = "QUEST_JOURNAL"
         private const val DEBUG_BOOTS_KEY = "DEBUG_SEVEN_LEAGUE_BOOTS"
         /** Debug: výtah ve Věži jezdí do všech hotových pater bez kalibrace. */
@@ -912,6 +913,11 @@ class MakromonMapActivity : AppCompatActivity() {
 
             when (nodeName) {
                 "gudwin", "meadow_npc", "kral_mlsak" -> questManager.checkNpcInteraction()
+                // Stará kovárna (docs/adr/0118): dveře v Horách, uvnitř kovář Magmor a výheň
+                cz.uhk.macroflow.pokemon.cave.Smithy.DOOR_NODE -> walkInto(BiomeType.SMITHY, cz.uhk.macroflow.pokemon.cave.Smithy.ENTRY_NODE, MapTransition.FADE)
+                cz.uhk.macroflow.pokemon.cave.Smithy.MAGMOR_NODE -> onMagmor(openAfter = false)
+                cz.uhk.macroflow.pokemon.cave.Smithy.FORGE_NODE -> onMagmor(openAfter = true)
+                in cz.uhk.macroflow.pokemon.cave.Smithy.TEXTS.keys -> onInspectTap()
                 "cave", "mine" -> BiomeRegistry.caveBehind(nodeName)?.let { cave ->
                     val entry = BiomeRegistry.definition(cave)?.cave?.exitNode ?: return@let
                     walkInto(cave, entry, MapTransition.CAVE_IN)
@@ -923,7 +929,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 MinesMap.DOOR_NODE -> onInspectTap()
                 Vendelin.NODE -> { questManager.loadQuest(Vendelin.QUEST_ID); mapWorld.postDelayed({ if (!isFinishing) questManager.checkNpcInteraction() }, 150) }
                 Vendelin.BOOK_NODE -> onMinerBook()
-                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu", cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.EchoCanyon.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.OzvenaCity.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.ArenaHall.ENTRY_NODE -> BiomeRegistry.definition(currentBiome)?.cave?.let {
+                "vychod_jeskyne", "vychod_dolu", "vstup_z_louky", "vstup_ze_svatyne", "vstup_z_hvozdu", cz.uhk.macroflow.pokemon.cave.AshPlain.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.QuietOrchard.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.EchoCanyon.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.OzvenaCity.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.ArenaHall.ENTRY_NODE, cz.uhk.macroflow.pokemon.cave.Smithy.ENTRY_NODE -> BiomeRegistry.definition(currentBiome)?.cave?.let {
                     walkInto(BiomeType.valueOf(it.parentBiome), it.mountainNode,
                         if (it.isCave) MapTransition.CAVE_OUT else MapTransition.FADE)
                 }
@@ -2110,6 +2116,24 @@ class MakromonMapActivity : AppCompatActivity() {
         }, 200)
     }
 
+    // ── Stará kovárna a Výheň (docs/adr/0118) ──
+
+    /** Kovář Magmor: poprvé seznámí s výhní, pak už jen pozdraví; u výhně (nebo tlačítkem) otevře minihru. */
+    private fun onMagmor(openAfter: Boolean) {
+        val S = cz.uhk.macroflow.pokemon.cave.Smithy
+        val first = !StoryFlags.isSet(this, S.MET_KEY)
+        if (!first && openAfter) { openForge(); return }
+        cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.show(findViewById(R.id.mapRootContainer), S.NAME, if (first) "Stará kovárna" else null) { ui, body, close ->
+            body.addView(ui.text(if (first) S.INTRO else S.GREETING, 15f))
+            body.addView(ui.spacer(14f))
+            body.addView(ui.button(S.OPEN) { close(); StoryFlags.set(this, S.MET_KEY); openForge() })
+        }
+    }
+
+    private fun openForge() {
+        startActivity(android.content.Intent(this, cz.uhk.macroflow.pokemon.forge.ForgeActivity::class.java))
+    }
+
     // ── Svah bezejmenných: Kořeny, které pijí (story/SlopeWater, docs/adr/0115) ──
 
     /** Vodočetná lať: začne a vede úkol (voda → jídlo → docházka); po dokončení jen text místa. */
@@ -2494,6 +2518,7 @@ class MakromonMapActivity : AppCompatActivity() {
             BiomeType.TOWER_HIDEOUT to cz.uhk.macroflow.pokemon.cave.TowerHideout.TEXTS,
             BiomeType.TOWER_ABYSS to cz.uhk.macroflow.pokemon.cave.TowerAbyss.TEXTS,
             BiomeType.TOWER_DORM to cz.uhk.macroflow.pokemon.cave.TowerDorm.TEXTS,
+            BiomeType.SMITHY to cz.uhk.macroflow.pokemon.cave.Smithy.TEXTS,
             BiomeType.TOWER_ICE to cz.uhk.macroflow.pokemon.cave.TowerIce.TEXTS,
             BiomeType.TOWER_FIRE to cz.uhk.macroflow.pokemon.cave.TowerFire.TEXTS,
             BiomeType.TOWER_OFFICE to cz.uhk.macroflow.pokemon.cave.TowerOffice.TEXTS,

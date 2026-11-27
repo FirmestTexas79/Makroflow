@@ -29,6 +29,8 @@ enum class BiomeType {
     OZVENA,
     /** Vstupní hala Arény v Ozvěně (docs/adr/0092). */
     ARENA_HALL,
+    /** Stará kovárna v Horách – minihra Výheň (docs/adr/0118). */
+    SMITHY,
     /** Vestibul Věže Řádu Váhy v Ozvěně (docs/adr/0103). */
     TOWER_LOBBY,
     /** Archiv okruhů – 1. patro Věže (Spis 212). */
@@ -129,7 +131,9 @@ object BiomeRegistry {
     // souřadnice níže jsou ZDROJ PRAVDY i pro skript (slovník N). Při změně upravit obojí.
     val MOUNTAINS_GRAPH = listOf(
         MovementEngine.Waypoint("vstup_z_meadow", PointF(0.500f, 0.960f), listOf("rozcesti_hory")),
-        MovementEngine.Waypoint("rozcesti_hory",  PointF(0.500f, 0.820f), listOf("vstup_z_meadow", "camp", "kral_mlsak")),
+        MovementEngine.Waypoint("rozcesti_hory",  PointF(0.500f, 0.820f), listOf("vstup_z_meadow", "camp", "kral_mlsak", "kovarna")),
+        // Stará kovárna (docs/adr/0118): dveře domku vpravo od rozcestí
+        MovementEngine.Waypoint("kovarna",        PointF(0.663f, 0.852f), listOf("rozcesti_hory")),
         MovementEngine.Waypoint("camp",           PointF(0.300f, 0.780f), listOf("rozcesti_hory")),
         // Hráč stojí na plošině před sochou krále
         MovementEngine.Waypoint("kral_mlsak",     PointF(0.500f, 0.625f), listOf("rozcesti_hory", "zapadni_stezka", "skaly2")),
@@ -186,6 +190,7 @@ object BiomeRegistry {
             BiomeDefinition(BiomeType.ECHO_CANYON, R.drawable.echo_canyon, graphOf(cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP), questId = null,
                 cave = cz.uhk.macroflow.pokemon.cave.EchoCanyon.MAP),
             BiomeDefinition(BiomeType.OZVENA, R.drawable.ozvena, graphOf(cz.uhk.macroflow.pokemon.cave.OzvenaCity.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.OzvenaCity.MAP),
+            BiomeDefinition(BiomeType.SMITHY, R.drawable.smithy, graphOf(cz.uhk.macroflow.pokemon.cave.Smithy.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.Smithy.MAP),
             BiomeDefinition(BiomeType.ARENA_HALL, R.drawable.arena_hall, graphOf(cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.ArenaHall.MAP),
             BiomeDefinition(BiomeType.TOWER_LOBBY, R.drawable.tower_lobby, graphOf(cz.uhk.macroflow.pokemon.cave.TowerLobby.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerLobby.MAP),
         BiomeDefinition(BiomeType.TOWER_ARCHIVE, R.drawable.tower_archive, graphOf(cz.uhk.macroflow.pokemon.cave.TowerArchive.MAP), questId = null, cave = cz.uhk.macroflow.pokemon.cave.TowerArchive.MAP),

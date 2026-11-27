@@ -29,8 +29,9 @@ object ExitMarkers {
         // zóna 1 (grafové mapy na celou obrazovku)
         "TOWN" to listOf(Exit("les", "Louka", U)),
         "MEADOW" to listOf(Exit("vstup_z_town", "Město", D), Exit("hory", "Hory", R), Exit("les_sever", "Hvozd", U)),
+        "SMITHY" to listOf(Exit(Smithy.ENTRY_NODE, "Hory", D)),
         "MOUNTAINS" to listOf(Exit("vstup_z_meadow", "Louka", D), Exit("mine", "Starý důl", L), Exit("cave", "Jeskyně", R),
-            Exit("peak", "Svatyně", U)),
+            Exit("peak", "Svatyně", U), Exit(Smithy.DOOR_NODE, "Kovárna", U)),
         "CAVE_OPEN" to listOf(Exit("vychod_jeskyne", "Hory", D)),
         "CAVE_MAZE" to listOf(Exit("vychod_dolu", "Hory", D), Exit(MinesMap.MAZE_NODE, "Doly", L)),
         "MINES" to listOf(Exit(MinesMap.EXIT_NODE, "Starý důl", D)),

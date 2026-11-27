@@ -1,0 +1,75 @@
+package cz.uhk.macroflow.pokemon.forge
+
+import cz.uhk.macroflow.pokemon.MakromonType
+import cz.uhk.macroflow.pokemon.forge.Forge.Up
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ForgeTest {
+    private fun st(vararg l: Pair<Up, Int>, coals: Double = 0.0, reborns: Int = 0) =
+        Forge.State(coals, Up.entries.map { u -> l.firstOrNull { it.first == u }?.second ?: 0 }, reborns)
+
+    @Test fun `sleva podle vzorce s klesajicim ucinkem`() {
+        assertEquals(0.9091, Forge.discountMult(1), 1e-4)
+        assertEquals(0.5, Forge.discountMult(10), 1e-9)
+        assertEquals(33.33, Forge.discountPct(5), 0.01)
+        val base = Forge.cost(st(), Up.AUTO)
+        assertEquals(base * 0.5, Forge.cost(st(Up.DISCOUNT to 10), Up.AUTO), 1e-9)
+    }
+
+    @Test fun `kupovani a nekonecne urovne`() {
+        val s = Forge.buy(st(coals = 100.0), Up.BELLOWS)!!
+        assertEquals(1, s.lvl(Up.BELLOWS)); assertEquals(90.0, s.coals, 1e-9)
+        assertNull(Forge.buy(st(coals = 5.0), Up.BELLOWS))
+        val (m, n) = Forge.buyMax(st(coals = 1e6), Up.BELLOWS)
+        assertTrue(n > 40); assertTrue(m.coals < Forge.cost(m, Up.BELLOWS))
+    }
+
+    @Test fun `vydelek, jiskra, kroky a spanek`() {
+        val life = Forge.Life(steps = 10_000, sleepHours = 8.0)
+        assertEquals(1.0, Forge.perTap(st(), Forge.Life()), 1e-9)
+        assertEquals(2.0, Forge.stepsMult(Int.MAX_VALUE / 2, 10_000), 1e-6)
+        assertEquals(1.0, Forge.stepsMult(0, 10_000), 1e-9)
+        assertEquals(Forge.stepsMult(10, 20_000), Forge.stepsMult(10, 50_000), 1e-9)          // strop 20 000 kroků
+        assertEquals(1.5, Forge.sleepMult(10, 8.0), 1e-9)
+        assertEquals(9.0, Forge.perSecond(st(Up.AUTO to 1, Up.HEARTH to 1), Forge.Life()), 1e-9)
+        assertTrue(Forge.perTap(st(Up.STEPS to 5, Up.SLEEP to 5), life) > Forge.perTap(st(Up.STEPS to 5, Up.SLEEP to 5), Forge.Life()))
+        assertTrue(Forge.critChance(1000) < 1.0)
+        assertEquals(0.1, Forge.offlineFraction(0), 1e-9)
+        val day = 24 * 3_600_000L
+        assertEquals(Forge.offlineGain(st(Up.AUTO to 1), Forge.Life(), day), Forge.offlineGain(st(Up.AUTO to 1), Forge.Life(), 3 * day), 1e-9)
+    }
+
+    @Test fun `pretaveni a artefakty`() {
+        val s = st(Up.BELLOWS to 50, coals = 1e7)
+        val r = Forge.reborn(s.copy(passives = mapOf("pas" to 1)))!!
+        assertEquals(1, r.reborns); assertEquals(0.0, r.coals, 0.0); assertEquals(0, r.lvl(Up.BELLOWS))
+        assertEquals(mapOf("pas" to 1), r.passives)                                   // pasivní bonusy zůstávají
+        assertNull(Forge.reborn(st(coals = 9e6)))
+        assertEquals(10.0, Forge.perTap(r, Forge.Life()), 1e-9)                       // Srdce výhně ×10
+        assertEquals(1e9, Forge.rebornCost(r)!!, 0.0)
+        assertNull(Forge.rebornCost(st(reborns = 3)))
+        val hammer = st(Up.BELLOWS to 10, reborns = 3)
+        assertEquals(Forge.cost(st(Up.BELLOWS to 10), Up.AUTO) * Math.pow(0.99, 10.0), Forge.cost(hammer, Up.AUTO), 1e-9)
+    }
+
+    @Test fun `pasivni bonusy, kovadlina a stropy`() {
+        val p = Forge.State(passives = mapOf("pas" to 1, "kaleni" to 5, "magma" to 1, "sit" to 1))
+        val b = Forge.bonuses(p)
+        assertEquals(0.15, b.defense, 1e-9); assertEquals(0.05, b.escape, 1e-9)
+        assertEquals(0.85, b.damageMult(MakromonType.FIRE), 1e-9); assertEquals(1.0, b.damageMult(MakromonType.WATER), 1e-9)
+        val b2 = Forge.bonuses(p.copy(reborns = 2))
+        assertEquals(0.30, b2.defense, 1e-9); assertEquals(0.70, b2.damageMult(MakromonType.FIRE), 1e-9)
+        assertEquals(50_000.0 * 4 * 4, Forge.passiveCoals(Forge.State(passives = mapOf("kaleni" to 2)), Forge.Passive.TEMPER), 1e-6)
+    }
+
+    @Test fun `meny – stribrne a zlate uhliky`() {
+        assertEquals("12 345 uhlíků", Forge.format(12_345.9))
+        assertEquals("99 999 999 uhlíků", Forge.format(99_999_999.0))
+        assertEquals(Forge.Coin.SILVER to "100", Forge.amount(1e8))
+        assertEquals("1 500 stříbrných", Forge.format(1.5005e9)); assertEquals("150,5 stříbrných", Forge.format(1.5055e8))
+        assertEquals(Forge.Coin.GOLD to "100", Forge.amount(1e14))
+    }
+}

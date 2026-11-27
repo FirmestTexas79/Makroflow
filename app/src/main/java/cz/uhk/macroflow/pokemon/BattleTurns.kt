@@ -179,7 +179,10 @@ internal fun PokemonBattleView.useMove(isPlayer: Boolean, mv: Move) {
                 val atkStat = (atk.attack * cz.uhk.macroflow.pokemon.status.StatStages.multiplier(condOf(isPlayer).atkStage) *
                     cz.uhk.macroflow.pokemon.status.StatusRules.attackMultiplier(condOf(isPlayer))).toInt().coerceAtLeast(1)
                 val defStat = (def.defense * cz.uhk.macroflow.pokemon.status.StatStages.multiplier(defCond.defStage)).toInt().coerceAtLeast(1)
-                val dmg = BattleEngine.calcDamage(atk.level, power, atkStat, defStat, mv.type, typeOf(def))
+                // odolnost z Výhně: snižuje poškození, které dostává hráčův Makromon (docs/adr/0118)
+                val resist = if (isPlayer) 1.0 else forge?.damageMult(mv.type) ?: 1.0
+                val raw = BattleEngine.calcDamage(atk.level, power, atkStat, defStat, mv.type, typeOf(def))
+                val dmg = if (raw > 0) (raw * resist).toInt().coerceAtLeast(1) else raw
                 playMoveAnim(isPlayer, mv) {
                     hurt(!isPlayer, dmg); invalidate()
                     handler.postDelayed({
