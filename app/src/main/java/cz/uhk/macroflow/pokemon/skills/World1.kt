@@ -56,6 +56,11 @@ enum class Resource(val itemId: String, val label: String, val description: Stri
     BUG_SPARK("bug_spark", "Jiskřivka", "Drobná muška se žhnoucím zadečkem. Žije ze světla starých luceren v Dolech."),
     BUG_CRYSTAL("bug_crystal", "Krystalová muška", "Průsvitná křídla lámou světlo krystalů do duhy. Chce jemnější síťku."),
     BUG_MAGMA("bug_magma", "Magmová muška", "Tančí v žáru nad lávovým vodopádem. Pod černým krunýřem jí prosvítá oheň."),
+    // Ovoce ze Ztichlého sadu – česá se česákem (docs/adr/0119)
+    FRUIT_APPLE("fruit_apple", "Jablko", "Červené a křupavé, se žíhanou slupkou. Roste na staré jabloni u vchodu do sadu."),
+    FRUIT_PEAR("fruit_pear", "Hruška", "Šťavnatá hruška s rezavými tečkami a červeným líčkem. Hrušeň chce lepší česák."),
+    FRUIT_ORANGE("fruit_orange", "Pomeranč", "Voní ještě dřív, než ho utrhneš. Pomerančovník v sadu je vybíravý – jen pro zkušené sadaře."),
+    FRUIT_BANANA("fruit_banana", "Banán", "Kdo ví, jak se banánovník do sadu dostal. Trsy visí vysoko – utrhne je jen mistr s nejlepším česákem."),
 
     // Materiály z Makromonů (docs/adr/0040)
     LEAF_DRY("mat_leaf_dry", "Suchý list", "Šustivý list z listových Makromonů (Flori, Verdirra)."),
@@ -79,6 +84,8 @@ enum class Resource(val itemId: String, val label: String, val description: Stri
     val isMonsterMaterial: Boolean get() = itemId.startsWith("mat_")
     /** Hmyz chycený síťkou. */
     val isBug: Boolean get() = itemId.startsWith("bug_")
+    /** Ovoce ze sadu. */
+    val isFruit: Boolean get() = itemId.startsWith("fruit_")
 
     companion object {
         fun from(itemId: String?): Resource? = entries.firstOrNull { it.itemId == itemId }

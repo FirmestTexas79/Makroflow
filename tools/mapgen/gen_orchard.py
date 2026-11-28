@@ -39,12 +39,17 @@ NODES = {
     "jezirko_sad": (64, 214), "ule": (120, 216), "studna": (96, 232),
     "s5": (80, 238), "stara_jablon": (52, 292), "trava_sad": (28, 270), "bouda": (124, 300),
     "fenn": (94, 306),                                       # zahradník Fenn v noci (story/Fenn.kt, ADR 0096)
+    # Sadařství (ADR 0119): pod korunami ovocných stromů
+    "sad_jablon": (32, 96), "sad_hrusen": (60, 98), "sad_pomerancovnik": (104, 148), "sad_bananovnik": (130, 152),
 }
 EDGES = [
     ("vstup_ze_plane", "s1"), ("s1", "s2"), ("s2", "s3"), ("s2", "s4"), ("s3", "jezirko_sad"),
     ("s4", "ule"), ("s2", "studna"), ("s2", "s5"), ("s5", "stara_jablon"), ("s5", "trava_sad"), ("s5", "bouda"),
     ("s5", "fenn"),
+    ("s1", "sad_jablon"), ("s1", "sad_hrusen"), ("s4", "sad_pomerancovnik"), ("s4", "sad_bananovnik"),
 ]
+# Stromy Sadařství (ADR 0119) – v mapě bez ovoce, ovoce na nich kreslí aplikace (OrchardFruitView); = GatherLayout.PLACES
+GATHER_TREES = {(26, 92), (52, 96), (108, 136), (134, 140)}
 
 G = [c(0x3E5A2E), c(0x527438), c(0x648A44), c(0x7AA052), c(0xA6C67C)]
 TG = [c(0x14200E), c(0x2A4220), c(0x406432), c(0x5E8A48), c(0x86B266)]
@@ -98,7 +103,7 @@ place(S.gate_leaf(True), 140, 62, (8, 3), False)
 place(S.gate_leaf(True), 140, 108, (8, 3), False)
 # ovocné stromy ve dvou řadách podél cesty
 for i, (x, y) in enumerate(((26, 92), (52, 96), (26, 136), (52, 140), (108, 136), (134, 140))):
-    place(S.fruit_tree(i), x, y, (8, 5))
+    place(S.fruit_tree(i, None if (x, y) in GATHER_TREES else S.APPLE), x, y, (8, 5))
 place(S.ladder(), 40, 136, (4, 2))
 place(S.basket(), 62, 146, (8, 3))
 place(S.basket(), 116, 112, (8, 3))

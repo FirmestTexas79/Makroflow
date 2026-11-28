@@ -247,6 +247,11 @@ object JournalPages {
                 if (state.efficiencyBonus(s) > 0) stat("Efektivita síťky", "+" + pct(state.efficiencyBonus(s)))
                 stat("AFK nejvýš", "${state.afkCapHours(s)} h")
             }
+            Skill.ORCHARD -> {
+                stat("Dvojitý kus ovoce", pct(state.multiChance(s)))
+                if (state.efficiencyBonus(s) > 0) stat("Efektivita česáku", "+" + pct(state.efficiencyBonus(s)))
+                stat("AFK nejvýš", "${state.afkCapHours(s)} h")
+            }
             Skill.LOGGING -> {
                 stat("Dvojité poleno", pct(passive))
                 if (state.efficiencyBonus(s) > 0) stat("Efektivita sekery", "+" + pct(state.efficiencyBonus(s)))
@@ -331,6 +336,7 @@ object JournalPages {
             Section("Z dolů", "#5A5F6B", res(Resource.ORE_SILVER), listOf(res(Resource.ORE_COPPER), res(Resource.ORE_SILVER), res(Resource.ORE_GOLD))),
             Section("Ze stromů", "#7A5428", res(Resource.LOG_OAK), listOf(res(Resource.LOG_OAK), res(Resource.LOG_BIRCH), res(Resource.LOG_MAPLE))),
             Section("Hmyz z Dolů", "#2E5A8A", res(Resource.BUG_CRYSTAL), listOf(res(Resource.BUG_SPARK), res(Resource.BUG_CRYSTAL), res(Resource.BUG_MAGMA))),
+            Section("Ze sadu", "#8A3A2A", res(Resource.FRUIT_APPLE), listOf(res(Resource.FRUIT_APPLE), res(Resource.FRUIT_PEAR), res(Resource.FRUIT_ORANGE), res(Resource.FRUIT_BANANA))),
             Section("Vyrobené", "#6B4A8A", Makroball.entries.first().let { Entry(it.id, it.label, it.description, it.pixels, Makroball.SIZE) },
                 Makroball.entries.map { Entry(it.id, it.label, it.description, it.pixels, Makroball.SIZE) })
         )

@@ -34,6 +34,7 @@ object HeroAnims {
         "logging" -> "axe"
         "mining" -> "mining"
         "bugcatching" -> "casting"
+        "orchard" -> "casting"                       // zvednutý česák ke koruně stromu
         else -> "doing"
     }
 

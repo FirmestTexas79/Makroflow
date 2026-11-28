@@ -17,7 +17,9 @@ enum class Skill(val id: String, val label: String, val verb: String) {
     MINING("mining", "Těžba", "těžbou rud krumpáčem"),
     LOGGING("logging", "Kácení", "kácením stromů sekerou"),
     /** docs/adr/0049 – chytá se síťkou v Dolech, i když jsi pryč (AFK). */
-    BUG_CATCHING("bugcatching", "Chytání hmyzu", "chytáním hmyzu síťkou v Dolech");
+    BUG_CATCHING("bugcatching", "Chytání hmyzu", "chytáním hmyzu síťkou v Dolech"),
+    /** Region 2 (docs/adr/0119) – česákem ze stromů ve Ztichlém sadu, ovoce na stromech roste, i když jsi pryč (AFK). */
+    ORCHARD("orchard", "Sadařství", "sklizní ovoce česákem ve Ztichlém sadu");
 
     /** Předmět v user_items, jehož množství = celkové nasbírané XP (synchronizuje se s Firebase). */
     val xpItemId: String get() = "skill_xp_$id"
@@ -202,7 +204,7 @@ object SkillTree {
         Node("basic_gear", Skill.CRAFTING, "Základní vybavení", "Můžeš vyrábět dobrodruhův set u pracovního stolu na louce.", 1, effect = Effect.BasicEquipment),
         Node("craft_multi", Skill.CRAFTING, "Dvojitá výroba", "Šance, že vyrobíš kus navíc.", 1, "basic_gear", Effect.MultiChance(0.03), maxRank = 5, minLevel = 4),
         Node("craft_multi2", Skill.CRAFTING, "Mistrovská dílna", "Šance, že vyrobíš kus navíc.", 2, "craft_multi", Effect.MultiChance(0.05), maxRank = 5, minLevel = 25),
-        Node("craft_tools", Skill.CRAFTING, "Nástrojář", "Efektivita krumpáče, sekery i síťky.", 1, "basic_gear", Effect.EfficiencyAll(0.04), maxRank = 5, minLevel = 10),
+        Node("craft_tools", Skill.CRAFTING, "Nástrojář", "Efektivita krumpáče, sekery, síťky i česáku.", 1, "basic_gear", Effect.EfficiencyAll(0.04), maxRank = 5, minLevel = 10),
         Node("craft_teach", Skill.CRAFTING, "Učitel", "XP všech ostatních dovedností.", 1, "craft_tools", Effect.XpOthers(0.02), maxRank = 5, minLevel = 18),
         Node("craft_master", Skill.CRAFTING, "Velmistr dílny", "Vrchol stromu: dvojitá výroba +10 % a XP ostatních dovedností +10 %.", 5, "craft_multi2",
             Effect.Many(listOf(Effect.MultiChance(0.10), Effect.XpOthers(0.10))), minLevel = 50, needs = 1)
@@ -235,7 +237,13 @@ object SkillTree {
             Triple("Entomolog I", "Entomolog II", "Entomolog III"),
             "Lehká ruka" to "Bleskový švih", "Plná síťka" to "Roj v síťce", "Noční lov" to "Lov do rána",
             Node("net_bait", Skill.BUG_CATCHING, "Návnada", "Hmyz láká Makromony – XP za chytání.", 1, "net_xp", Effect.XpFor(Skill.CATCHING, 0.05), maxRank = 3, minLevel = 12, needs = 3),
-            "Mistr entomolog")
+            "Mistr entomolog") +
+        // Sadařství ve Ztichlém sadu (docs/adr/0119)
+        gathering(Skill.ORCHARD, "orch", "česáku", "sadařství",
+            Triple("Sadař I", "Sadař II", "Sadař III"),
+            "Jistá ruka" to "Dlouhá tyč", "Plný koš" to "Obtěžkané větve", "Zralé do rána" to "Sad bez dozoru",
+            Node("orch_juice", Skill.ORCHARD, "Ovocná šťáva", "Šťáva z padavek na záhony – XP za sklizeň.", 1, "orch_xp", Effect.XpFor(Skill.HARVESTING, 0.05), maxRank = 3, minLevel = 12, needs = 3),
+            "Mistr sadař")
 
     fun node(id: String): Node? = NODES.firstOrNull { it.id == id }
     fun of(skill: Skill): List<Node> = NODES.filter { it.skill == skill }
@@ -379,6 +387,6 @@ data class SkillState(
     fun withNode(id: String): SkillState = copy(ranks = ranks + (id to rank(id) + 1))
 
     private companion object {
-        val GATHERING = setOf(Skill.MINING, Skill.LOGGING, Skill.BUG_CATCHING)
+        val GATHERING = setOf(Skill.MINING, Skill.LOGGING, Skill.BUG_CATCHING, Skill.ORCHARD)
     }
 }

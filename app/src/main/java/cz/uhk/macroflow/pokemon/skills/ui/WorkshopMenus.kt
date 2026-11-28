@@ -143,6 +143,7 @@ object WorkshopMenus {
             val sections = listOf("Dobrodruhův set" to cz.uhk.macroflow.pokemon.skills.GearCrafting.SET,
                 "Jiskřivý set" to cz.uhk.macroflow.pokemon.skills.GearCrafting.SPARK_SET,
                 "Duhový set" to cz.uhk.macroflow.pokemon.skills.GearCrafting.PRISM_SET,
+                "Sadařův set" to cz.uhk.macroflow.pokemon.skills.GearCrafting.ORCHARD_SET,
                 "Doplňky" to cz.uhk.macroflow.pokemon.skills.GearCrafting.ACCESSORIES,
                 "Nástroje" to cz.uhk.macroflow.pokemon.skills.GearCrafting.TOOLS)
             for ((title, items) in sections) {

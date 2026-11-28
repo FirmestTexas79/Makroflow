@@ -10,7 +10,7 @@ import kotlin.random.Random
  */
 
 /** Záložky vybavení v okně postavy – každá ukáže jeden sloupec čtyř slotů. */
-enum class GearTab(val label: String) { EQUIPS("EQUIPS"), ACCESS("ACCESS"), TOOLS("TOOLS") }
+enum class GearTab(val label: String) { EQUIPS("EQUIPS"), ACCESS("ACCESS"), TOOLS("TOOLS"), TOOLS2("TOOLS 2") }
 
 enum class GearSlot(val id: String, val label: String, val tab: GearTab, val locked: Boolean = false) {
     HELMET("helmet", "Přilba", GearTab.EQUIPS),
@@ -25,7 +25,12 @@ enum class GearSlot(val id: String, val label: String, val tab: GearTab, val loc
     PICKAXE("pickaxe", "Krumpáč", GearTab.TOOLS),
     NET("net", "Síťka", GearTab.TOOLS),
     /** Signální lucerna od Keshe za úkol Cesta zpátky (docs/adr/0115). */
-    LANTERN("lantern", "Lucerna", GearTab.TOOLS);
+    LANTERN("lantern", "Lucerna", GearTab.TOOLS),
+    // Nástroje regionu 2 (docs/adr/0119): česák na Sadařství; prut a lopatka se štětcem pro Rybaření a Archeologii
+    PICKER("picker", "Česák", GearTab.TOOLS2),
+    ROD("rod", "Prut", GearTab.TOOLS2, locked = true),
+    TROWEL("trowel", "Lopatka", GearTab.TOOLS2, locked = true),
+    BRUSH("brush", "Štětec", GearTab.TOOLS2, locked = true);
 
     /** user_items „equip_<slot>“ = kód nasazeného předmětu (0 = prázdno). */
     val itemId: String get() = "equip_$id"
@@ -164,7 +169,33 @@ enum class Gear(
     // ── Odměna od signalisty Keshe za úkol Cesta zpátky (docs/adr/0115) ──
     SIGNAL_LANTERN("tool_lantern_signal", 32, GearSlot.LANTERN, "Signální lucerna",
         "Kesh ti ji dal, abys vždycky trefil cestu zpátky. +10 % XP za chytání, kořist z Makromonů padá o 10 % častěji a o 10 % menší šance na útěk z ballu.", 0,
-        xpBonus = mapOf(Skill.CATCHING to 0.10), dropRate = 0.10, catchBonus = 0.10);
+        xpBonus = mapOf(Skill.CATCHING to 0.10), dropRate = 0.10, catchBonus = 0.10),
+
+    // ── Česáky na ovoce ve Ztichlém sadu (docs/adr/0119): starý + tři kovové stupně jako ostatní nástroje ──
+    OLD_PICKER("tool_picker_old", 33, GearSlot.PICKER, "Starý česák",
+        "Visel na žebříku u jabloní. Drátěný koš je pokroucený a pytlík prodřený, ale jablko utrhne. Síla 10.", 10),
+    COPPER_PICKER("tool_picker_copper", 34, GearSlot.PICKER, "Měděný česák",
+        "Měděné prsty a lněný pytlík na dubové tyči. Síla 25, +5 % XP za sadařství.", 25, xpBonus = mapOf(Skill.ORCHARD to 0.05)),
+    SILVER_PICKER("tool_picker_silver", 35, GearSlot.PICKER, "Stříbrný česák",
+        "Jemné stříbrné prsty, které ovoce ani neodřou. Síla 60, +10 % XP za sadařství, +5 % šance na dvojitý kus.", 60,
+        xpBonus = mapOf(Skill.ORCHARD to 0.10), multiBonus = mapOf(Skill.ORCHARD to 0.05)),
+    GOLD_PICKER("tool_picker_gold", 36, GearSlot.PICKER, "Zlatý česák",
+        "Zlatý koš na javorové tyči s hedvábným pytlíkem. Síla 150, +20 % XP a +8 % dvojitý kus, sklízí o 4 h déle bez tebe.", 150,
+        xpBonus = mapOf(Skill.ORCHARD to 0.20), multiBonus = mapOf(Skill.ORCHARD to 0.08), afkHours = mapOf(Skill.ORCHARD to 4)),
+
+    // ── Sadařův set (docs/adr/0119): ovoce ze sadu a suroviny z regionu 1 ──
+    ORCHARD_HAT("gear_orchard_hat", 37, GearSlot.HELMET, "Slaměný klobouk",
+        "Široká krempa proti slunci, červená stuha a jabloňový květ. +25 % XP za sadařství, +60 k efektivitě česáku.", 0,
+        xpBonus = mapOf(Skill.ORCHARD to 0.25), efficiencyBonus = mapOf(Skill.ORCHARD to 60)),
+    ORCHARD_APRON("gear_orchard_apron", 38, GearSlot.CHEST, "Sadařova zástěra",
+        "Zelená zástěra s velkou kapsou a vyšitou hruškou. +25 % XP za sadařství, +8 % šance na dvojitý kus.", 0,
+        xpBonus = mapOf(Skill.ORCHARD to 0.25), multiBonus = mapOf(Skill.ORCHARD to 0.08)),
+    ORCHARD_PANTS("gear_orchard_pants", 39, GearSlot.LEGS, "Plátěné kalhoty",
+        "Lněné kalhoty s pomerančovými záplatami na kolenou. +25 % XP za sadařství, sklízí o 3 h déle bez tebe.", 0,
+        xpBonus = mapOf(Skill.ORCHARD to 0.25), afkHours = mapOf(Skill.ORCHARD to 3)),
+    ORCHARD_BOOTS("gear_orchard_boots", 40, GearSlot.BOOTS, "Sadařovy holínky",
+        "Zelené holínky se žlutým lemem – v mokré trávě pod stromy k nezaplacení. +200 k efektivitě česáku a +30 % XP za sadařství.", 0,
+        xpBonus = mapOf(Skill.ORCHARD to 0.30), efficiencyBonus = mapOf(Skill.ORCHARD to 200));
 
     /** Dá se vyrobit u pracovního stolu. */
     val craftable: Boolean get() = GearCrafting.recipe(this) != null
@@ -200,18 +231,24 @@ enum class GatherSpot(
     // Chytání hmyzu síťkou v Dolech (docs/adr/0049) – mušky poletující ve vzduchu
     SPARK_FLIES(7, "hmyz_jiskrivky", Skill.BUG_CATCHING, "Jiskřivky u lucerny", Resource.BUG_SPARK, 10, 180, 10, "MINES"),
     CRYSTAL_FLIES(8, "hmyz_krystal", Skill.BUG_CATCHING, "Krystalové mušky", Resource.BUG_CRYSTAL, 30, 360, 25, "MINES"),
-    MAGMA_FLIES(9, "hmyz_magma", Skill.BUG_CATCHING, "Magmové mušky", Resource.BUG_MAGMA, 70, 720, 60, "MINES");
+    MAGMA_FLIES(9, "hmyz_magma", Skill.BUG_CATCHING, "Magmové mušky", Resource.BUG_MAGMA, 70, 720, 60, "MINES"),
+    // Sadařství ve Ztichlém sadu (docs/adr/0119) – na stromech je vidět, jak ovoce roste
+    APPLE_TREE(10, "sad_jablon", Skill.ORCHARD, "Jabloň", Resource.FRUIT_APPLE, 10, 180, 10, "QUIET_ORCHARD"),
+    PEAR_TREE(11, "sad_hrusen", Skill.ORCHARD, "Hrušeň", Resource.FRUIT_PEAR, 30, 360, 25, "QUIET_ORCHARD"),
+    ORANGE_TREE(12, "sad_pomerancovnik", Skill.ORCHARD, "Pomerančovník", Resource.FRUIT_ORANGE, 70, 720, 60, "QUIET_ORCHARD"),
+    BANANA_TREE(13, "sad_bananovnik", Skill.ORCHARD, "Banánovník", Resource.FRUIT_BANANA, 120, 1080, 110, "QUIET_ORCHARD");
 
     /** Nástroj, bez kterého to nejde. */
     val toolSlot: GearSlot get() = when (skill) {
         Skill.MINING -> GearSlot.PICKAXE
         Skill.BUG_CATCHING -> GearSlot.NET
+        Skill.ORCHARD -> GearSlot.PICKER
         else -> GearSlot.AXE
     }
-    val verb: String get() = when (skill) { Skill.MINING -> "Těžit"; Skill.BUG_CATCHING -> "Chytat"; else -> "Kácet" }
+    val verb: String get() = when (skill) { Skill.MINING -> "Těžit"; Skill.BUG_CATCHING -> "Chytat"; Skill.ORCHARD -> "Česat"; else -> "Kácet" }
     /** „Právě tu …“ */
-    val doing: String get() = when (skill) { Skill.MINING -> "těžíš"; Skill.BUG_CATCHING -> "chytáš"; else -> "kácíš" }
-    val emoji: String get() = when (skill) { Skill.MINING -> "⛏️"; Skill.BUG_CATCHING -> "🪰"; else -> "🪓" }
+    val doing: String get() = when (skill) { Skill.MINING -> "těžíš"; Skill.BUG_CATCHING -> "chytáš"; Skill.ORCHARD -> "češeš"; else -> "kácíš" }
+    val emoji: String get() = when (skill) { Skill.MINING -> "⛏️"; Skill.BUG_CATCHING -> "🪰"; Skill.ORCHARD -> "🍎"; else -> "🪓" }
 
     /** Kde to na mapě je (pro cedule a deník). */
     val placeLabel: String get() = when (biome) {
@@ -221,6 +258,7 @@ enum class GatherSpot(
         "CAVE_OPEN" -> "Mechová jeskyně (pravá jeskyně v horách)"
         "FOREST" -> "Hvozd nad loukou"
         "MINES" -> "Doly (za Starým dolem v horách)"
+        "QUIET_ORCHARD" -> "Ztichlý sad (vlevo od Popelavé pláně)"
         else -> biome
     }
 
@@ -334,13 +372,15 @@ enum class GearSet(
         afkHours = mapOf(Skill.MINING to 1, Skill.LOGGING to 1, Skill.BUG_CATCHING to 1)),
     PRISM("Duhový set", listOf(Gear.PRISM_HELM, Gear.PRISM_CUIRASS, Gear.PRISM_GREAVES, Gear.MAGMA_BOOTS),
         xp = mapOf(Skill.MINING to 0.10, Skill.LOGGING to 0.10, Skill.BUG_CATCHING to 0.10),
-        multi = mapOf(Skill.MINING to 0.05, Skill.LOGGING to 0.05, Skill.BUG_CATCHING to 0.05));
+        multi = mapOf(Skill.MINING to 0.05, Skill.LOGGING to 0.05, Skill.BUG_CATCHING to 0.05)),
+    ORCHARD("Sadařův set", listOf(Gear.ORCHARD_HAT, Gear.ORCHARD_APRON, Gear.ORCHARD_PANTS, Gear.ORCHARD_BOOTS),
+        xp = mapOf(Skill.ORCHARD to 0.10), multi = mapOf(Skill.ORCHARD to 0.05), afkHours = mapOf(Skill.ORCHARD to 2));
 
     val hasBonus: Boolean get() = xp.isNotEmpty() || multi.isNotEmpty() || afkHours.isNotEmpty()
 
     /** Bonus sady jednou větou (do dílny). */
     val bonusText: String get() = buildList {
-        xp.values.firstOrNull()?.let { add("+${Math.round(it * 100)} % XP za těžbu, kácení i chytání hmyzu") }
+        xp.values.firstOrNull()?.let { add("+${Math.round(it * 100)} % XP za " + if (Skill.ORCHARD in xp) "sadařství" else "těžbu, kácení i chytání hmyzu") }
         multi.values.firstOrNull()?.let { add("+${Math.round(it * 100)} % dvojitý kus") }
         afkHours.values.firstOrNull()?.let { add("všechno běží o $it h déle bez tebe") }
     }.joinToString(", ")
@@ -357,9 +397,10 @@ object GearCrafting {
     val SET = GearSet.ADVENTURER.pieces
     val SPARK_SET = GearSet.SPARK.pieces
     val PRISM_SET = GearSet.PRISM.pieces
+    val ORCHARD_SET = GearSet.ORCHARD.pieces
     val ACCESSORIES = listOf(Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL)
     val TOOLS = listOf(Gear.COPPER_AXE, Gear.COPPER_PICKAXE, Gear.COPPER_NET, Gear.SILVER_AXE, Gear.SILVER_PICKAXE, Gear.SILVER_NET,
-        Gear.GOLD_AXE, Gear.GOLD_PICKAXE, Gear.GOLD_NET)
+        Gear.GOLD_AXE, Gear.GOLD_PICKAXE, Gear.GOLD_NET, Gear.COPPER_PICKER, Gear.SILVER_PICKER, Gear.GOLD_PICKER)
 
     fun recipe(g: Gear): Map<String, Int>? = when (g) {
         Gear.ADV_CAP -> linkedMapOf(Resource.ENERGY.itemId to 5, Resource.BERRY_BLUE.itemId to 3)
@@ -383,6 +424,15 @@ object GearCrafting {
         Gear.COPPER_NET -> linkedMapOf(Resource.ORE_COPPER.itemId to 12, Resource.LOG_OAK.itemId to 15, Resource.BUG_SPARK.itemId to 8, Resource.BERRY_GREEN.itemId to 5)
         Gear.SILVER_NET -> linkedMapOf(Resource.ORE_SILVER.itemId to 18, Resource.LOG_BIRCH.itemId to 18, Resource.BUG_CRYSTAL.itemId to 10, Resource.BERRY_BLUE.itemId to 5)
         Gear.GOLD_NET -> linkedMapOf(Resource.ORE_GOLD.itemId to 22, Resource.LOG_MAPLE.itemId to 22, Resource.BUG_MAGMA.itemId to 10, Resource.BERRY_BLACK.itemId to 3)
+        // Česáky (docs/adr/0119): kovový koš, dřevěná tyč a ovoce, které jde utrhnout česákem o stupeň horším
+        Gear.COPPER_PICKER -> linkedMapOf(Resource.ORE_COPPER.itemId to 12, Resource.LOG_OAK.itemId to 15, Resource.FRUIT_APPLE.itemId to 10, Resource.BERRY_GREEN.itemId to 5)
+        Gear.SILVER_PICKER -> linkedMapOf(Resource.ORE_SILVER.itemId to 18, Resource.LOG_BIRCH.itemId to 18, Resource.FRUIT_PEAR.itemId to 12, Resource.BERRY_BLUE.itemId to 5)
+        Gear.GOLD_PICKER -> linkedMapOf(Resource.ORE_GOLD.itemId to 22, Resource.LOG_MAPLE.itemId to 22, Resource.FRUIT_ORANGE.itemId to 14, Resource.BERRY_BLACK.itemId to 3)
+        // Sadařův set: každý kus z jednoho druhu ovoce + suroviny z regionu 1
+        Gear.ORCHARD_HAT -> linkedMapOf(Resource.FRUIT_APPLE.itemId to 40, Resource.LOG_OAK.itemId to 30, Resource.LEAF_DRY.itemId to 8)
+        Gear.ORCHARD_APRON -> linkedMapOf(Resource.FRUIT_PEAR.itemId to 40, Resource.LOG_BIRCH.itemId to 30, Resource.BUG_SPARK.itemId to 20)
+        Gear.ORCHARD_PANTS -> linkedMapOf(Resource.FRUIT_ORANGE.itemId to 40, Resource.ORE_SILVER.itemId to 30, Resource.LEAF_LIVING.itemId to 6)
+        Gear.ORCHARD_BOOTS -> linkedMapOf(Resource.FRUIT_BANANA.itemId to 40, Resource.ORE_GOLD.itemId to 30, Resource.BUG_CRYSTAL.itemId to 24, Resource.WATER_PEARL.itemId to 8)
         // Jiskřivý set (docs/adr/0053): stříbro + jiskřivky + kořist z Makromonů, boty i krystalové mušky.
         // Ceny ×2 proti prvnímu návrhu, u bot ×3 – jen kořist z Makromonů (vzácné dropy) zůstává na ×2.
         Gear.SPARK_HELM -> linkedMapOf(Resource.ORE_SILVER.itemId to 40, Resource.BUG_SPARK.itemId to 24, Resource.EMBER.itemId to 8)
@@ -406,6 +456,8 @@ object GearCrafting {
         Gear.GOLD_AXE, Gear.GOLD_PICKAXE, Gear.GOLD_NET -> 360
         Gear.SPARK_HELM, Gear.SPARK_GREAVES -> 220; Gear.SPARK_CUIRASS -> 260; Gear.SPARK_BOOTS -> 300
         Gear.PRISM_HELM, Gear.PRISM_GREAVES -> 420; Gear.PRISM_CUIRASS -> 480; Gear.MAGMA_BOOTS -> 560
+        Gear.COPPER_PICKER -> 80; Gear.SILVER_PICKER -> 180; Gear.GOLD_PICKER -> 360
+        Gear.ORCHARD_HAT -> 260; Gear.ORCHARD_APRON -> 300; Gear.ORCHARD_PANTS -> 380; Gear.ORCHARD_BOOTS -> 480
         else -> 0
     }
 

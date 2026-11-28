@@ -20,7 +20,12 @@ object GatherLayout {
         // Doly (docs/adr/0049): střed hejna mušek
         GatherSpot.SPARK_FLIES to Place(cz.uhk.macroflow.pokemon.cave.MinesMap.SPARK_X, cz.uhk.macroflow.pokemon.cave.MinesMap.SPARK_Y, 1f),
         GatherSpot.CRYSTAL_FLIES to Place(cz.uhk.macroflow.pokemon.cave.MinesMap.CRYSTAL_X, cz.uhk.macroflow.pokemon.cave.MinesMap.CRYSTAL_Y, 1f),
-        GatherSpot.MAGMA_FLIES to Place(cz.uhk.macroflow.pokemon.cave.MinesMap.MAGMA_X, cz.uhk.macroflow.pokemon.cave.MinesMap.MAGMA_Y, 1f)
+        GatherSpot.MAGMA_FLIES to Place(cz.uhk.macroflow.pokemon.cave.MinesMap.MAGMA_X, cz.uhk.macroflow.pokemon.cave.MinesMap.MAGMA_Y, 1f),
+        // Ztichlý sad (docs/adr/0119): paty ovocných stromů – musí sedět s tools/mapgen/gen_orchard.py (GATHER_TREES)
+        GatherSpot.APPLE_TREE to Place(26, 92, 1f),
+        GatherSpot.PEAR_TREE to Place(52, 96, 1f),
+        GatherSpot.ORANGE_TREE to Place(108, 136, 1f),
+        GatherSpot.BANANA_TREE to Place(134, 140, 1f)
     )
 
     /** Rozměr obrázku mapy lokace, ve kterém jsou souřadnice [PLACES]. */
@@ -29,6 +34,7 @@ object GatherLayout {
         "CAVE_OPEN" -> 150 to 440
         "FOREST" -> ForestSpots.W to ForestSpots.H
         "MINES" -> cz.uhk.macroflow.pokemon.cave.MinesMap.W to cz.uhk.macroflow.pokemon.cave.MinesMap.H
+        "QUIET_ORCHARD" -> cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artW to cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artH
         else -> 688 to 1536
     }
 }

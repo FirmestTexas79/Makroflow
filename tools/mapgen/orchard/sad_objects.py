@@ -27,6 +27,8 @@ def fruit_tree(seed=0, fruit=APPLE):
     blobs(s, [(j(9), 20, 7.5), (j(23), 20, 7.5), (16, j(21), 8), (j(11), 12, 7), (j(21), 12, 7), (16, j(9), 7)], LEAF)
     outline(s, OUT)
     spots = [(8, 18), (22, 14), (14, 24), (25, 22), (11, 10), (19, 19), (6, 23), (17, 7)]
+    if fruit is None:                                               # strom Sadařství: ovoce dokreslí aplikace
+        return s
     for (x, y) in spots[: 5 + seed % 4]:
         s.px(x, y, fruit[1]); s.px(x + 1, y, fruit[1]); s.px(x, y + 1, fruit[0]); s.px(x + 1, y + 1, fruit[0]); s.px(x, y, fruit[2])
     return s

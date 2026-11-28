@@ -111,6 +111,8 @@ object GearArt {
         Gear.GRASS_RING, Gear.FIRE_RING, Gear.ADV_NECKLACE, Gear.FIRE_SOUL -> MaterialArt.accessory(g)!!
         Gear.SPARK_HELM, Gear.SPARK_CUIRASS, Gear.SPARK_GREAVES, Gear.SPARK_BOOTS,
         Gear.PRISM_HELM, Gear.PRISM_CUIRASS, Gear.PRISM_GREAVES, Gear.MAGMA_BOOTS -> fromRows(ARMOR.getValue(g), ARMOR_COLORS)
+        Gear.OLD_PICKER, Gear.COPPER_PICKER, Gear.SILVER_PICKER, Gear.GOLD_PICKER,
+        Gear.ORCHARD_HAT, Gear.ORCHARD_APRON, Gear.ORCHARD_PANTS, Gear.ORCHARD_BOOTS -> FruitArt.picker(g)!!
     }
 
     /** Šichtovní kniha 12 × 12: okované tmavé desky s razítkem (docs/adr/0050). */
@@ -388,6 +390,7 @@ object GearArt {
         Skill.MINING -> pickaxe(rusty = false)
         Skill.LOGGING -> axe(rusty = false)
         Skill.BUG_CATCHING -> net(old = false)
+        Skill.ORCHARD -> FruitArt.skillIcon()
         else -> null
     }
 
@@ -425,6 +428,7 @@ object GearArt {
             GearSlot.PICKAXE -> silhouette(pickaxe(), tint)
             GearSlot.NET -> silhouette(net(), tint)
             GearSlot.LANTERN -> silhouette(signalLantern(), tint)
+            GearSlot.PICKER -> silhouette(FruitArt.oldPicker(), tint)
             else -> {
                 val rows = GHOSTS[if (slot == GearSlot.RING_2) GearSlot.RING_1 else slot].orEmpty()
                 val p = px(ICON, ICON)
@@ -504,6 +508,7 @@ object GearArt {
         Resource.BUG_SPARK, Resource.BUG_CRYSTAL, Resource.BUG_MAGMA -> bug(r)
         Resource.ORE_COPPER, Resource.ORE_SILVER, Resource.ORE_GOLD -> ore(r)
         Resource.LOG_OAK, Resource.LOG_BIRCH, Resource.LOG_MAPLE -> log(r)
+        Resource.FRUIT_APPLE, Resource.FRUIT_PEAR, Resource.FRUIT_ORANGE, Resource.FRUIT_BANANA -> FruitArt.fruit(r)
         else -> MaterialArt.icon(r)
     }
 
@@ -562,7 +567,7 @@ object GearArt {
     /** Obrázek místa na mapě; mušky (Chytání) žádný nemají – poletují živě (MinesFxView). */
     fun spot(spot: GatherSpot): Triple<IntArray, Int, Int>? = when (spot.skill) {
         Skill.MINING -> Triple(rock(spot), ROCK_W, ROCK_H)
-        Skill.BUG_CATCHING -> null
+        Skill.BUG_CATCHING, Skill.ORCHARD -> null                  // hmyz kreslí FX, ovocné stromy jsou v mapě a ovoce na nich překryv
         else -> Triple(tree(spot), TREE_W, TREE_H)
     }
 }

@@ -25,12 +25,15 @@ object QuietOrchard {
             CaveNode("s1", 80, 80), CaveNode("s2", 80, 160), CaveNode("s3", 40, 160), CaveNode("s4", 120, 160),
             CaveNode("jezirko_sad", 64, 214), CaveNode("ule", 120, 216), CaveNode(WELL_NODE, 96, 232),
             CaveNode("s5", 80, 238), CaveNode("stara_jablon", 52, 292), CaveNode("trava_sad", 28, 270), CaveNode(HUT_NODE, 124, 300),
-            CaveNode(cz.uhk.macroflow.pokemon.story.Fenn.NODE, 94, 306)
+            CaveNode(cz.uhk.macroflow.pokemon.story.Fenn.NODE, 94, 306),
+            // Sadařství (docs/adr/0119): stojí se pod korunou ovocného stromu
+            CaveNode("sad_jablon", 32, 96), CaveNode("sad_hrusen", 60, 98), CaveNode("sad_pomerancovnik", 104, 148), CaveNode("sad_bananovnik", 130, 152)
         ),
         edges = listOf(
             ENTRY_NODE to "s1", "s1" to "s2", "s2" to "s3", "s2" to "s4", "s3" to "jezirko_sad",
             "s4" to "ule", "s2" to WELL_NODE, "s2" to "s5", "s5" to "stara_jablon", "s5" to "trava_sad", "s5" to HUT_NODE,
-            "s5" to cz.uhk.macroflow.pokemon.story.Fenn.NODE
+            "s5" to cz.uhk.macroflow.pokemon.story.Fenn.NODE,
+            "s1" to "sad_jablon", "s1" to "sad_hrusen", "s4" to "sad_pomerancovnik", "s4" to "sad_bananovnik"
         ),
         exitNode = ENTRY_NODE,
         mountainNode = PLAIN_NODE,
@@ -40,6 +43,8 @@ object QuietOrchard {
         parentBiome = "ASH_PLAIN",
         isCave = false,
         tapAreas = mapOf(
+            "sad_jablon" to Triple(26, 70, 13), "sad_hrusen" to Triple(52, 74, 13),
+            "sad_pomerancovnik" to Triple(108, 114, 13), "sad_bananovnik" to Triple(134, 118, 13),
             ENTRY_NODE to Triple(136, 80, 20),
             "jezirko_sad" to Triple(34, 210, 22),
             "ule" to Triple(126, 202, 18),
@@ -51,7 +56,8 @@ object QuietOrchard {
         )
     )
 
-    val ACTION_NODES = setOf(ENTRY_NODE, WELL_NODE, HUT_NODE, cz.uhk.macroflow.pokemon.story.Fenn.NODE)
+    val ACTION_NODES = setOf(ENTRY_NODE, WELL_NODE, HUT_NODE, cz.uhk.macroflow.pokemon.story.Fenn.NODE,
+        "sad_jablon", "sad_hrusen", "sad_pomerancovnik", "sad_bananovnik")
 
     const val WELL_TEXT = "🪣 Studna je hluboká a voda v ní stojí bez jediné vlnky. Když se nakloníš, odraz se pohne o chvilku později než ty."
     const val HUT_TEXT = "🏚 Zahradníkova chalupa. Na stole leží seznam stromů a u každého je škrtnuté jméno.\n" +

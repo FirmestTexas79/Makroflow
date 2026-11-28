@@ -229,7 +229,7 @@ class MakromonMapActivity : AppCompatActivity() {
             val ctx = applicationContext
             lifecycleScope.launch(Dispatchers.IO) {
                 val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
-                (cz.uhk.macroflow.pokemon.skills.GearCrafting.SET + cz.uhk.macroflow.pokemon.skills.GearCrafting.SPARK_SET + cz.uhk.macroflow.pokemon.skills.GearCrafting.PRISM_SET +
+                (cz.uhk.macroflow.pokemon.skills.GearCrafting.SET + cz.uhk.macroflow.pokemon.skills.GearCrafting.SPARK_SET + cz.uhk.macroflow.pokemon.skills.GearCrafting.PRISM_SET + cz.uhk.macroflow.pokemon.skills.GearCrafting.ORCHARD_SET +
                     cz.uhk.macroflow.pokemon.skills.GearCrafting.ACCESSORIES + cz.uhk.macroflow.pokemon.skills.GearCrafting.TOOLS).forEach { g ->
                     cz.uhk.macroflow.pokemon.skills.GearCrafting.recipe(g)?.forEach { (id, n) -> SS.add(ctx, id, n) }
                 }
@@ -1033,7 +1033,8 @@ class MakromonMapActivity : AppCompatActivity() {
                 "tezba" -> scanInMine()
                 cz.uhk.macroflow.pokemon.skills.MeadowLayout.TABLE_NODE -> openCraftingTable()
                 "strom_dub", "strom_briza", "strom_javor", "zila_med", "zila_stribro", "zila_zlato",
-                MinesMap.SPARK_NODE, MinesMap.CRYSTAL_NODE, MinesMap.MAGMA_NODE ->
+                MinesMap.SPARK_NODE, MinesMap.CRYSTAL_NODE, MinesMap.MAGMA_NODE,
+                "sad_jablon", "sad_hrusen", "sad_pomerancovnik", "sad_bananovnik" ->
                     cz.uhk.macroflow.pokemon.skills.GatherSpot.fromNode(nodeName)?.let { openGatherSpot(it) }
                 "zahon_1", "zahon_2", "zahon_3", "zahon_4" ->
                     cz.uhk.macroflow.pokemon.skills.MeadowLayout.plotIndex(nodeName)?.let { onPlot(it) }
@@ -1677,7 +1678,7 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.ASH_PLAIN -> if (worldScale > 0) placeAshGateVeil().also { addGroundDecor(cz.uhk.macroflow.pokemon.cave.AshFxView(this@MakromonMapActivity, worldScale).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.AshPlain.MAP.artH * worldScale)
                 }) }
-                currentBiome == BiomeType.QUIET_ORCHARD -> if (worldScale > 0) placeFenn().also { addGroundDecor(cz.uhk.macroflow.pokemon.cave.OrchardFxView(this@MakromonMapActivity, worldScale,
+                currentBiome == BiomeType.QUIET_ORCHARD -> if (worldScale > 0) placeFenn().also { placeGatherSpots(); addGroundDecor(cz.uhk.macroflow.pokemon.cave.OrchardFxView(this@MakromonMapActivity, worldScale,
                     cz.uhk.macroflow.pokemon.cave.QuietOrchard.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))).apply {
                     layoutParams = FrameLayout.LayoutParams(cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artW * worldScale, cz.uhk.macroflow.pokemon.cave.QuietOrchard.MAP.artH * worldScale)
                 }) }
@@ -3838,6 +3839,7 @@ class MakromonMapActivity : AppCompatActivity() {
     // ─────────────────────────────────────────────────────────────────────────
 
     private val gatherPlaques = HashMap<cz.uhk.macroflow.pokemon.skills.GatherSpot, cz.uhk.macroflow.pokemon.skills.ui.GatherPlaqueView>()
+    private val orchardFruit = HashMap<cz.uhk.macroflow.pokemon.skills.GatherSpot, cz.uhk.macroflow.pokemon.skills.ui.OrchardFruitView>()
 
     private fun placeGatherSpots() {
         if (mapWorld.width == 0) return
@@ -3848,7 +3850,19 @@ class MakromonMapActivity : AppCompatActivity() {
             val art = cz.uhk.macroflow.pokemon.skills.GearArt.spot(spot)
             val base = geo.toWorld(cz.uhk.macroflow.pokemon.walk.Pt(place.baseX.toFloat(), place.baseY.toFloat()))
             // mušky (Chytání) nemají obrázek – poletují v MinesFxView; cedulka visí nad hejnem
-            val vh = if (art == null) (10 * geo.scale).toInt() else (art.third * place.artScale * geo.scale).toInt()
+            var vh = if (art == null) (10 * geo.scale).toInt() else (art.third * place.artScale * geo.scale).toInt()
+            // ovocný strom (Sadařství, docs/adr/0119): strom je v mapě, ovoce na něm roste jako překryv
+            if (spot.skill == cz.uhk.macroflow.pokemon.skills.Skill.ORCHARD) {
+                val fv = cz.uhk.macroflow.pokemon.skills.ui.OrchardFruitView(this, place.artScale * geo.scale, spot.resource,
+                    cz.uhk.macroflow.pokemon.cave.QuietOrchard.isNight(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))).apply {
+                    layoutParams = FrameLayout.LayoutParams(wantedWidth, wantedHeight)
+                    x = base.x - wantedWidth / 2f; y = base.y - wantedHeight
+                    elevation = 2.2f
+                }
+                addDecor(fv)
+                orchardFruit[spot] = fv
+                vh = fv.wantedHeight
+            }
             if (art != null) {
                 val (px, w, h) = art
                 val vw = (w * place.artScale * geo.scale).toInt()
@@ -3882,6 +3896,12 @@ class MakromonMapActivity : AppCompatActivity() {
                 v.visibility = if (on) View.VISIBLE else View.GONE
                 if (on) { v.secPerUnit = info!!.second!!; v.capHours = info.third; v.activity = info.first }
             }
+            // ovoce na stromech v sadu roste jen na stromě, kde se zrovna češe
+            orchardFruit.forEach { (spot, v) ->
+                val on = info != null && info.first.spot == spot && info.second != null
+                v.secPerUnit = if (on) info!!.second!! else 0
+                v.activity = if (on) info!!.first else null
+            }
             // stojí u místa, kde pracuje → seká / kope / chytá čelem k němu (docs/adr/0051)
             var working = false
             if (info != null && info.second != null && info.first.spot.biome == currentBiome.name) {
@@ -3908,6 +3928,11 @@ class MakromonMapActivity : AppCompatActivity() {
         val ctx = applicationContext
         val SS = cz.uhk.macroflow.pokemon.skills.SkillStore
         lifecycleScope.launch {
+            // první ovocný strom: starý česák visí na žebříku u jabloní (docs/adr/0119)
+            val pickerFound = spot.skill == cz.uhk.macroflow.pokemon.skills.Skill.ORCHARD && kotlinx.coroutines.withContext(Dispatchers.IO) {
+                SS.grantItemOnce(ctx, cz.uhk.macroflow.pokemon.skills.Gear.OLD_PICKER.id)
+            }
+            if (pickerFound) showMapToast("🧺 Na žebříku u jabloní visí starý česák. Drátěný koš je pokroucený, ale jablko utrhne – bereš si ho.")
             val info = kotlinx.coroutines.withContext(Dispatchers.IO) {
                 val st = SS.state(ctx)
                 val eff = SS.efficiency(ctx, spot, st)
