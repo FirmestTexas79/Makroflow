@@ -803,10 +803,28 @@ class MakromonMapActivity : AppCompatActivity() {
                 if (holdDone) { holdDone = false; return true }           // podržení otevřelo panel – žádná chůze
                 cancelHold()
                 if (hudFocus != null) mapWorld.postDelayed({ if (!isFinishing) syncHud() }, 700)   // nic se neotevřelo → zpět do průsvitu
+                // klikací dekorace na mapě (sběratelské předměty, roztržené listy, šipky východů) mají přednost před mapou –
+                // dřív klepnutí spolkla obsluha mapy a jejich posluchači se nikdy nezavolali
+                if (!touchDownOnUi && tapDecorAt(event.rawX, event.rawY)) return true
                 if (!touchDownOnUi && handleMapTap(event)) return true
             }
         }
         return super.dispatchTouchEvent(event)
+    }
+
+    /** Klepnutí na klikací dekoraci pod prstem (nejvýš ležící vyhrává); vrací true, když nějakou spustilo. */
+    private fun tapDecorAt(rawX: Float, rawY: Float): Boolean {
+        val root = findViewById<FrameLayout>(R.id.mapRootContainer)
+        if (questDialogManager.isVisible() || cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus.isOpen(root) ||
+            cz.uhk.macroflow.pokemon.inspect.InspectPanel.isOpen(root)) return false
+        val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
+        if (kotlin.math.hypot(rawX - touchDownX, rawY - touchDownY) > slop * 2) return false     // tažení není klepnutí
+        val r = android.graphics.Rect()
+        val hit = decorViews.withIndex()
+            .filter { (_, v) -> v.isShown && v.hasOnClickListeners() && v.alpha > 0.05f && v.getGlobalVisibleRect(r) && r.contains(rawX.toInt(), rawY.toInt()) }
+            .maxWithOrNull(compareBy({ it.value.elevation }, { it.index }))?.value ?: return false
+        hit.performClick()
+        return true
     }
 
     /** Tlačítka, parťák, ukazatel kroků – klepnutí na ně nesmí poslat postavu na procházku. */

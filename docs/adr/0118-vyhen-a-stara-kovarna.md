@@ -78,3 +78,8 @@ ingoty, sudy, bedny. Magmor už není zapečený do obrázku (Lanczos ho rozmaza
 ze stejných spritů jako Výheň (`placeSmithyRelics`, celočíselný násobek, vznášejí se a pod nimi dýchá záře v barvě relikvie);
 obnoví se i po návratu z Výhně. Na mapě zóny je u kovárny v Horách ikona pece (`forge_furnace_icon.png` = `furnace_mini(24, 28)`).
 Výheň už při nedostatku uhlíků nic nehlásí (cena je červená).
+
+**Oprava: klikací dekorace na mapě.** `MakromonMapActivity.dispatchTouchEvent` při zvednutí prstu nejdřív volal `handleMapTap`,
+který dotyk spotřeboval (chůze / akce uzlu), takže posluchači klepnutí na dekoracích (sběratelské předměty – např. stránka
+kuchařky u západní stezky v Horách –, roztržené listy, šipky) se nikdy nezavolali. Teď má přednost `tapDecorAt`: klikací
+dekorace pod prstem (nejvyšší elevace) se spustí, jinak se pokračuje mapou.
