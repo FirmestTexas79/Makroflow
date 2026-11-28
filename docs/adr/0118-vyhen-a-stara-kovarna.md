@@ -29,3 +29,10 @@ zůstávají pro povolání.
 `gen_mountains.py`), interiér 176 × 240: výheň s komínovým pláštěm, měch na kozlíku, kovadlina na pařezu, kalicí káď,
 brus, stojan se zbraněmi, regál s lahvičkami, ponk, uhlí, ruda, ingoty, sudy, bedny. Kovář Magmor (Makromon 047)
 hráče poprvé seznámí s výhní (příznak `kovarna_magmor`), pak minihru otevírá on nebo klepnutí na výheň.
+
+**Oprava vstupu do kovárny.** Domek v Horách původně ležel přes rozcestník u vstupu (levá stěna na jeho sloupku) a uzel
+`kovarna` nebyl mezi klikatelnými uzly mapy (`MakromonMapActivity.clickableNodes`), takže klepnutí na dveře nic nespustilo.
+- Rozcestník se v `gen_mountains.py` přesunul vlevo od cesty (`cx − 13, cy + 11`), domek má volné okolí.
+- `Smithy.DOOR_NODE` je v `clickableNodes`; šipka u dveří i klepnutí na dveře vedou do `walkInto(SMITHY, kv_vstup)`.
+- Maska chůze Hor se přegenerovala (`tools/walkmask/gen_walkmask.py`): domek je pevný, před dveřmi zůstává průchod
+  a z rozcestí se k nim dojde (ověřeno prohledáváním masky; ostatní uzly Hor zůstaly dosažitelné).

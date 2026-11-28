@@ -385,9 +385,10 @@ for sx in (-4, 4):                                             # lůžka pro kry
 for yy in (4, 5, 6): px[cx, SH - yy] = (150, 110, 190)         # runa mezi lůžky
 print("PEAK", cx, cy, "gate", GATE_TOP, GATE_BOTTOM, "shrine base", SH, "sockets y", SH - 8, SH - 3)
 
-# rozcestník u vstupu
+# rozcestník u vstupu – vlevo od cesty, pod stezkou k táboru; vpravo od rozcestí stojí Stará kovárna (docs/adr/0118)
+# a rozcestník, který tam býval (cx + 11), by jí ležel v levé stěně
 cx, cy = P("rozcesti_hory")
-sx, sy = cx + 11, cy + 2
+sx, sy = cx - 13, cy + 11
 for yy in range(8): px[sx, sy - yy] = WOOD_D
 for xx in range(-1, 6): px[sx + xx, sy - 8] = WOOD; px[sx + xx, sy - 7] = WOOD; px[sx + xx, sy - 9] = OUT
 px[sx + 6, sy - 8] = WOOD; px[sx + 6, sy - 7] = OUT

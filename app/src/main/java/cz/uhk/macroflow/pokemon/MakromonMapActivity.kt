@@ -102,6 +102,8 @@ class MakromonMapActivity : AppCompatActivity() {
         "vstup_z_town", "krovi1", "krovi2", "voda", "gudwin", "starter_bush",
         "meadow_npc", "les_sever",
         "vstup_z_meadow", "rozcesti_hory", "kral_mlsak", "camp", "mine", "cave", "peak", "skaly1", "skaly2",
+        // Stará kovárna (docs/adr/0118): dveře domku v Horách – bez toho klepnutí na dveře nic nespustilo
+        cz.uhk.macroflow.pokemon.cave.Smithy.DOOR_NODE,
         // Dílna na louce (docs/adr/0034)
         "vyrobna", "zahon_1", "zahon_2", "zahon_3", "zahon_4",
         // Těžba a kácení (docs/adr/0035)
