@@ -1597,6 +1597,9 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.TOWER_CAVE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.CAVE)
                 currentBiome == BiomeType.TOWER_WATER -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.WATER)
                 currentBiome == BiomeType.TOWER_DORM -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.DORM)
+                // Stará kovárna (docs/adr/0118): kovář Magmor ostře z originálu (jako ostatní Makromoni na mapách), dívá se ke kovadlině
+                currentBiome == BiomeType.SMITHY -> if (worldScale > 0) placeMakromonNpc(R.drawable.makromon_47_magmor,
+                    cz.uhk.macroflow.pokemon.cave.Smithy.MAGMOR_X, cz.uhk.macroflow.pokemon.cave.Smithy.MAGMOR_Y, cz.uhk.macroflow.pokemon.cave.Smithy.NAME).apply { scaleX = -1f }
                 currentBiome == BiomeType.TOWER_ICE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ICE)
                 currentBiome == BiomeType.TOWER_FIRE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.FIRE)
                 currentBiome == BiomeType.TOWER_OFFICE -> if (worldScale > 0) addInteriorFx(if (StoryFlags.isSet(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY)) cz.uhk.macroflow.pokemon.cave.InteriorFxView.OFFICE_BURNED else cz.uhk.macroflow.pokemon.cave.InteriorFxView.OFFICE)

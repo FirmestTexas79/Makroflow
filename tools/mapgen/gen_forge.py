@@ -269,6 +269,126 @@ def furnace():
     return outline(img)
 
 
+def furnace_mini(W=40, H=48, fire=True):
+    """Stejná pec jako v minihře, zmenšená pro interiér Staré kovárny (gen_smithy.py): úlová kopule z cihel
+    (řady po 3 px, zhuštěné k okrajům), kamenný sokl, klenuté ústí s klenáky a žárem, železná obruč, komín, mech."""
+    img = rgba(H, W)
+    cx = W / 2 - 0.5
+    base = H - 9                      # pata kopule
+    top = round(H * 0.22)
+    half = W / 2 - 3
+    r = np.random.default_rng(4747)
+
+    def dh(y):
+        if y > base or y < top: return -1
+        if y >= base - 5: return half + (y - (base - 5)) * 0.15
+        t = (base - 5 - y) / (base - 5 - top)
+        return half * math.sqrt(max(0.0, 1 - t ** 2.2))
+    # sokl ze dvou řad kamenů
+    for (y0, hh, off) in ((base - 1, 5, 0), (base + 4, 5, 3)):
+        x = 1 - off
+        while x < W - 1:
+            w_ = int(r.integers(6, 10))
+            tint = r.uniform(0.86, 1.12)
+            for y in range(y0, min(H, y0 + hh)):
+                for xx in range(max(1, x), min(W - 1, x + w_)):
+                    edge = xx == x or y == y0 + hh - 1
+                    c = np.array([104, 96, 86]) * tint * (1.18 if y == y0 else 1.0) * (1.06 - 0.25 * xx / W)
+                    if edge: c = np.array([52, 46, 42])
+                    img[y, xx, :3] = np.clip(c, 0, 255); img[y, xx, 3] = 255
+            x += w_
+    for xx in range(3, W - 3):
+        for y in range(base - 1, base + 1):
+            if img[y, xx, 3]: img[y, xx, :3] *= 0.6
+    # kopule
+    L_ = np.array([-0.55, -0.6, 0.58]); L_ /= np.linalg.norm(L_)
+    mouth_w, mouth_h, mouth_y = round(W * 0.31), round(W * 0.29), base - 1
+    spring = mouth_y - 6
+    def in_mouth(x, y):
+        if abs(x - cx) > mouth_w / 2 or y > mouth_y: return False
+        if y >= spring: return True
+        return (x - cx) ** 2 + ((y - spring) * (mouth_w / 2) / (spring - (mouth_y - mouth_h))) ** 2 <= (mouth_w / 2) ** 2
+    for y in range(top, base + 1):
+        hw = dh(y)
+        if hw <= 0: continue
+        course = (base - y) // 3; yin = (base - y) % 3
+        for x in range(int(round(cx - hw)), int(round(cx + hw)) + 1):
+            dx = max(-1.0, min(1.0, (x - cx) / max(hw, 1)))
+            ang = math.asin(dx)
+            u = (ang / math.pi + 0.5) * (11 - course // 4) + (0.5 if course % 2 else 0)
+            bi = int(math.floor(u)); fu = u - bi
+            seed = (bi * 73 + course * 131) % 997
+            col = np.array(BRICK_PAL[seed % len(BRICK_PAL)], np.float32)
+            mortar = yin == 0 or fu < 0.09 * (1 + abs(dx) * 2.5)
+            ty = (base - 5 - y) / (base - 5 - top) if y < base - 5 else 0.0
+            nx, ny = dx * math.sqrt(max(0.0, 1 - ty * ty * 0.6)), -ty
+            nz = math.sqrt(max(0.05, 1 - nx * nx - ny * ny))
+            lam = max(0.0, nx * L_[0] + ny * L_[1] + nz * L_[2])
+            c = (np.array([86, 74, 66], np.float32) if mortar else col * (1.1 if yin == 2 else 1.0)) * (0.42 + 0.72 * lam)
+            soot = max(0.0, 1 - abs(x - cx) / 9) * max(0.0, 1 - abs(y - (mouth_y - mouth_h - 2)) / 10)
+            c = mix(c, (34, 26, 24), min(0.85, soot * 1.1))
+            heat = max(0.0, 1 - math.hypot((x - cx) / 16, (y - mouth_y) / 8))
+            c = c + np.array([90, 40, 6]) * heat * 0.55
+            c = c * (0.72 + 0.28 * nz)
+            img[y, x, :3] = np.clip(c, 0, 255); img[y, x, 3] = 255
+    # železná obruč
+    yb = int(top + (base - top) * 0.45)
+    for x in range(W):
+        hw = dh(yb)
+        if abs(x - cx) <= hw - 0.5:
+            sh = 0.55 + 0.55 * (1 - (x - cx + hw) / (2 * hw))
+            img[yb, x, :3] = np.array([96, 90, 88]) * sh; img[yb + 1, x, :3] = np.array([50, 44, 44]) * sh
+    for k in (-2, 0, 2):
+        img[yb, int(cx + k * half / 3), :3] = (190, 180, 160)
+    # ústí: tma, žár a polena, kolem klenáky
+    for y in range(mouth_y - mouth_h - 3, mouth_y + 1):
+        for x in range(int(cx - mouth_w / 2 - 3), int(cx + mouth_w / 2 + 4)):
+            if in_mouth(x, y):
+                d = (mouth_y - y) / mouth_h
+                img[y, x, :3] = mix((70, 20, 8), (16, 6, 6), d ** 0.6); img[y, x, 3] = 255
+    hwm = mouth_w / 2; sy = (spring - (mouth_y - mouth_h)) / hwm
+    for y in range(mouth_y - mouth_h - 3, spring + 1):
+        for x in range(int(cx - hwm - 3), int(cx + hwm + 4)):
+            dx, dy = x - cx, (spring - y) / sy
+            rr_ = math.hypot(dx, dy)
+            if hwm < rr_ <= hwm + 2.4:
+                a = math.atan2(dy, dx); k = a / math.pi * 7
+                c = np.array([176, 150, 120]) * (1.08 - 0.35 * (dx + hwm) / (2 * hwm + 4))
+                if abs(k - round(k)) < 0.12: c = np.array([64, 52, 46])
+                put(img, x, y, np.clip(c, 0, 255))
+    for y in range(spring, mouth_y + 1):
+        for side in (-1, 1):
+            x = int(round(cx + side * (hwm + 1)))
+            put(img, x, y, (176, 160, 132) if side < 0 else (122, 110, 92))
+            put(img, int(round(cx + side * (hwm + 2))), y, (70, 58, 52))
+    if fire:
+        for x in range(int(cx - hwm + 1), int(cx + hwm)):
+            hgt = 3 + 6 * math.exp(-((x - cx) / 4.5) ** 2) + r.uniform(-1, 1)
+            for k in range(int(hgt)):
+                t = k / hgt
+                put(img, x, mouth_y - 1 - k, (255, 240, 170) if t < 0.3 and abs(x - cx) < 3 else (255, 170, 40) if t < 0.65 else (210, 70, 20))
+    for x in range(int(cx - hwm + 1), int(cx + hwm)):
+        put(img, x, mouth_y, (96, 62, 36) if x % 3 else (150, 110, 70))
+    # komín (vpravo od vrcholu, jako u velké pece)
+    c0, c1 = int(cx + 3), int(cx + 9)
+    for y in range(0, top + 6):
+        for x in range(c0, c1):
+            if img[y, x, 3] and y > top: continue
+            row = (top + 6 - y) // 3; yin = (top + 6 - y) % 3
+            col = np.array(BRICK_PAL[((x - c0) // 3 * 3 + row * 5) % len(BRICK_PAL)], np.float32)
+            c = np.array([80, 70, 64]) if yin == 0 or (x - c0 + (1 if row % 2 else 0)) % 3 == 0 else col
+            c = c * (1.15 - 0.55 * (x - c0) / (c1 - c0))
+            img[y, x, :3] = np.clip(c, 0, 255); img[y, x, 3] = 255
+    # mech u paty
+    for _ in range(26):
+        side = -1 if r.uniform() < 0.65 else 1
+        y = int(r.integers(base - 8, base)); hw = dh(y)
+        x = int(round(cx + side * (hw - r.uniform(0, 3))))
+        if 0 <= x < W and img[y, x, 3] and not in_mouth(x, y):
+            img[y, x, :3] = mix(img[y, x, :3], (80 + r.integers(0, 30), 112 + r.integers(0, 30), 48), 0.8)
+    return outline(img)
+
+
 def fire_frames():
     frames = []
     w, h = 40, 30

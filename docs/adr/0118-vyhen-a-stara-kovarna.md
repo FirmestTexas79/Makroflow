@@ -62,3 +62,13 @@ rozpraskané magmatem se zlatou korunkou a plamínky, Kovadlina předků z temn�
 Kladivo mistra se zlatými objímkami, rubínem a koženým toporem; každá má vlastní barvu záře. Pec a bublina s uhlíky jsou
 uprostřed, relikvie ve velkých slotech v pravé polovině vedle pece (měřítko se volí tak, aby se vešly); klepnutí ukáže panel s názvem a bonusem (u neukované řekne, při kterém přetavení se ukove), druhé klepnutí
 ho schová. Generátor: `tools/mapgen/gen_forge.py`.
+
+**Interiér kovárny v měřítku postavy.** Místnost byla 176 × 240, a protože kamera volí měřítko tak, aby místnost pokryla
+výšku displeje, kreslila se zhruba ve 12násobku (místnosti Věže 176 × 352 v ~9násobku) a předměty byly navíc kreslené velké
+(výheň 100 px) – hráč vedle nich vypadal jako trpaslík. Teď má kovárna 176 × 352 jako Věž a předměty jsou v měřítku postavy:
+vzadu stejná kulatá cihlová pec jako v minihře (`gen_forge.furnace_mini`, 46 × 56) s komínovým tahem po zdi, měch, police,
+polena; uprostřed kovadlina, kalicí káď, brus, Magmor; dál ponk a stojan se zbraněmi; u dveří kamenná cestička, uhlí, ruda,
+ingoty, sudy, bedny. Magmor už není zapečený do obrázku (Lanczos ho rozmazal): aplikace ho kreslí ostře z originálu
+(`placeMakromonNpc`, jako Gudwin nebo Drakirra), pata v `Smithy.MAGMOR_X/Y`.
+- Výheň: tlačítko přetavení je jen pod pecí (šířka pece, popisek se zmenší, když se nevejde), relikvie nad ním; panel
+  relikvie roste podle délky textu.

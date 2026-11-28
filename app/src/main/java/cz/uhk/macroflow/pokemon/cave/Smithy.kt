@@ -15,12 +15,16 @@ object Smithy {
     const val MET_KEY = "kovarna_magmor"
     val KEYS = setOf(MET_KEY)
 
+    /** Pata spritu kováře Magmora v místnosti (kreslí ho aplikace přes mapu – placeMakromonNpc; gen_smithy.py: MAGMOR_X/Y). */
+    const val MAGMOR_X = 116
+    const val MAGMOR_Y = 172
+
     val MAP = CaveMap(
-        artW = 176, artH = 240,
+        artW = 176, artH = 352,
         nodes = listOf(
-            CaveNode(ENTRY_NODE, 88, 230), CaveNode("kv_stred", 88, 190), CaveNode(MAGMOR_NODE, 106, 164), CaveNode(FORGE_NODE, 46, 126),
-            CaveNode("kv_kovadlina", 66, 166), CaveNode("kv_brus", 146, 182), CaveNode("kv_stojan", 138, 210), CaveNode("kv_ponk", 40, 208),
-            CaveNode("kv_police", 150, 128)
+            CaveNode(ENTRY_NODE, 88, 342), CaveNode("kv_stred", 88, 238), CaveNode(MAGMOR_NODE, 114, 190), CaveNode(FORGE_NODE, 40, 124),
+            CaveNode("kv_kovadlina", 76, 188), CaveNode("kv_brus", 150, 200), CaveNode("kv_stojan", 144, 268), CaveNode("kv_ponk", 40, 258),
+            CaveNode("kv_police", 152, 122)
         ),
         edges = listOf(ENTRY_NODE to "kv_stred", "kv_stred" to MAGMOR_NODE, "kv_stred" to "kv_kovadlina", "kv_kovadlina" to FORGE_NODE,
             "kv_stred" to "kv_brus", "kv_stred" to "kv_stojan", "kv_stred" to "kv_ponk", MAGMOR_NODE to "kv_police",
@@ -33,9 +37,9 @@ object Smithy {
         parentBiome = "MOUNTAINS",
         isCave = false,
         tapAreas = mapOf(
-            ENTRY_NODE to Triple(88, 234, 12), MAGMOR_NODE to Triple(104, 142, 16), FORGE_NODE to Triple(46, 88, 26),
-            "kv_kovadlina" to Triple(68, 140, 14), "kv_brus" to Triple(150, 158, 14), "kv_stojan" to Triple(146, 188, 18),
-            "kv_ponk" to Triple(38, 186, 20), "kv_police" to Triple(152, 92, 16)
+            ENTRY_NODE to Triple(88, 346, 12), MAGMOR_NODE to Triple(116, 160, 14), FORGE_NODE to Triple(40, 84, 26),
+            "kv_kovadlina" to Triple(76, 166, 12), "kv_brus" to Triple(150, 173, 12), "kv_stojan" to Triple(144, 240, 18),
+            "kv_ponk" to Triple(40, 235, 20), "kv_police" to Triple(152, 88, 16)
         )
     )
 

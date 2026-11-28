@@ -2,10 +2,13 @@
 Použití:  python tools/mapgen/gen_smithy.py
 Výstup:   app/src/main/res/drawable-nodpi/smithy.png, app/src/main/assets/walk/smithy.txt, tools/mapgen/smithy_debug.png
 
-Stará kovárna v Horách – region 1, domov minihry Výheň (docs/adr/0118). 176 × 240, pohled 3/4 shora.
-Zeď z lomového kamene s trámem, vlevo zděná výheň s komínovým pláštěm a žhavým uhlím, vedle velký měch na kozlíku,
+Stará kovárna v Horách – region 1, domov minihry Výheň (docs/adr/0118). 176 × 352 (jako místnosti Věže – stejné měřítko
+na obrazovce; při 240 px výšky se místnost zvětšovala, aby pokryla displej), pohled 3/4 shora.
+Předměty jsou v měřítku postavy (jako ve Věži) – dřív byly zhruba dvakrát větší a hráč vedle nich vypadal jako trpaslík.
+Zeď z lomového kamene s trámem, vlevo stejná kulatá cihlová pec jako v minihře (gen_forge.furnace_mini) s komínovým
+tahem po zdi, vedle měch na kozlíku,
 nářadí na liště, štít se sekerami, okno s denním světlem, regál s lahvičkami. Uprostřed kovadlina na pařezu a kalicí
-káď, u ní kovář Magmor (Makromon), vpravo brus a stojan se zbraněmi, vlevo dole ponk, u dveří uhlí, ruda, ingoty,
+káď, u ní kovář Magmor (Makromon – kreslí ho aplikace ostře z originálu, placeMakromonNpc), vpravo brus a stojan se zbraněmi, vlevo dole ponk, u dveří uhlí, ruda, ingoty,
 sudy, bedny a polena. Světlo: žár výhně, šikmý pruh z okna, denní světlo ze dveří.
 NODES / EDGES jsou ZDROJ PRAVDY i pro cave/Smithy.kt (MAP).
 """
@@ -16,20 +19,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "smithy")); sys.path.insert(0, os.path.join(HERE, "tower"))
 sys.path.insert(0, os.path.join(HERE, "ashplain"))
 import walkmask  # noqa: E402
+import gen_forge  # noqa: E402  (stejná pec jako v minihře)
 import smithy_parts as P  # noqa: E402
 import light as L  # noqa: E402
 from pix import Spr  # noqa: E402
 from figures import selout  # noqa: E402
 
 ROOT = os.path.join(HERE, "..", "..")
-AW, AH = 176, 240
-WALL_H = 92
+AW, AH = 176, 352
+WALL_H = 80
 SIDE = 8
 FRONT_Y = AH - 9
 NODES = {
-    "kv_vstup": (88, 230), "kv_stred": (88, 190), "kv_magmor": (106, 164), "kv_vyhen": (46, 126),
-    "kv_kovadlina": (66, 166), "kv_brus": (146, 182), "kv_stojan": (138, 210), "kv_ponk": (40, 208), "kv_police": (150, 128),
+    "kv_vstup": (88, 342), "kv_stred": (88, 238), "kv_magmor": (114, 190), "kv_vyhen": (40, 124),
+    "kv_kovadlina": (76, 188), "kv_brus": (150, 200), "kv_stojan": (144, 268), "kv_ponk": (40, 258), "kv_police": (152, 122),
 }
+# Kovář Magmor: pata spritu (aplikace ho kreslí přes mapu, tady se jen blokuje místo pod ním)
+MAGMOR_X, MAGMOR_Y = 116, 172
 EDGES = [("kv_vstup", "kv_stred"), ("kv_stred", "kv_magmor"), ("kv_stred", "kv_kovadlina"), ("kv_kovadlina", "kv_vyhen"),
          ("kv_stred", "kv_brus"), ("kv_stred", "kv_stojan"), ("kv_stred", "kv_ponk"), ("kv_magmor", "kv_police"),
          ("kv_brus", "kv_police"), ("kv_magmor", "kv_vyhen")]
@@ -39,7 +45,8 @@ block = np.zeros((AH, AW), bool)
 floor_px = np.zeros((AH, AW), bool); floor_px[WALL_H:FRONT_Y, SIDE:AW - SIDE] = True
 
 P.floor(img, 0, WALL_H, AW, AH)
-P.flagstones(img, SIDE, WALL_H, 92, 142)
+P.flagstones(img, SIDE, WALL_H, 74, 132)
+P.flagstones(img, 70, 280, 106, FRONT_Y)                                   # kamenná cestička ode dveří
 
 placed = []
 def place(spr, cx, by, collide=True, pad=2, foot=None):
@@ -53,33 +60,31 @@ def place(spr, cx, by, collide=True, pad=2, foot=None):
             walkmask.silhouette(block, spr.a[:, :, 3], o["x"], o["y"], pad)
     return o
 
-forge = place(P.forge(60, 100), 46, 116, foot=(60, 26))
-place(P.bellows(36, 30), 94, 114, foot=(34, 10))
-place(P.potion_shelf(34, 40), 152, 112, foot=(34, 10))
-anvil = place(P.anvil_stump(30, 30), 68, 156, foot=(24, 10))
-place(P.quench_tub(24, 18), 36, 156, foot=(22, 8))
+def from_forge(a):
+    s = Spr(a.shape[1], a.shape[0]); s.a = np.clip(a, 0, 255).astype(np.uint8)
+    return s
 
 
-def magmor_sprite(h=30):
-    im = Image.open(os.path.join(ROOT, "app", "src", "main", "res", "drawable", "makromon_47_magmor.png")).convert("RGBA")
-    im = im.crop(im.getbbox()).transpose(Image.FLIP_LEFT_RIGHT)            # dívá se doleva ke kovadlině
-    w = round(im.width * h / im.height)
-    a = np.array(im.resize((w, h), Image.LANCZOS)).astype(np.float32)
-    a[:, :, 3] = np.where(a[:, :, 3] > 120, 255, 0)
-    s = Spr(w, h); s.a = a.astype(np.uint8)
-    return selout(s, 0.55, 0.85)
-
-
-magmor = place(magmor_sprite(30), 104, 156, foot=(20, 8))
-place(P.grindstone(26, 28), 150, 172, foot=(22, 8))
-place(P.weapon_rack(42, 34), 146, 204, foot=(42, 8))
-place(P.workbench(50, 24), 38, 198, foot=(50, 10))
-place(P.heap(30, 14, P.COALR, 3), 24, 226, foot=(28, 8))
-place(P.heap(24, 13, P.ORE, 5), 122, 226, foot=(22, 7))
-place(P.ingots(18, 10), 140, 228, foot=(16, 5))
-place(P.barrel(14, 18), 160, 226, foot=(14, 6))
-place(P.crate(16, 16), 52, 228, foot=(16, 6))
-place(P.log_pile(30, 16), 152, 146, foot=(28, 6))
+FURNACE = from_forge(gen_forge.furnace_mini(46, 56))
+forge = place(FURNACE, 40, 110, foot=(42, 16))
+place(P.bellows(26, 22), 80, 108, foot=(24, 7))
+place(P.potion_shelf(26, 32), 152, 104, foot=(26, 7))
+place(P.log_pile(24, 13), 120, 108, foot=(22, 6))
+anvil = place(P.anvil_stump(20, 20), 76, 176, foot=(16, 7))
+place(P.quench_tub(18, 13), 48, 178, foot=(16, 6))
+block[MAGMOR_Y - 7:MAGMOR_Y, MAGMOR_X - 10:MAGMOR_X + 10] = True
+place(P.grindstone(20, 22), 150, 184, foot=(18, 7))
+place(P.weapon_rack(34, 28), 144, 254, foot=(34, 7))
+place(P.workbench(40, 18), 40, 244, foot=(40, 8))
+place(P.heap(26, 12, P.COALR, 3), 26, 312, foot=(24, 7))
+place(P.crate(14, 14), 52, 300, foot=(14, 6))
+place(P.crate(14, 14), 22, 336, foot=(14, 6))
+place(P.crate(12, 12), 40, 338, foot=(12, 5))
+place(P.heap(22, 12, P.ORE, 5), 128, 312, foot=(20, 7))
+place(P.ingots(14, 8), 148, 316, foot=(12, 5))
+place(P.barrel(12, 16), 162, 300, foot=(12, 6))
+place(P.barrel(12, 16), 160, 338, foot=(12, 6))
+place(P.log_pile(22, 12), 128, 338, foot=(20, 6))
 
 # ── světlo ─────────────────────────────────────────────────────────────────
 def ring_pool(mask, cx, cy, rx, ry, k=1.0):
@@ -92,10 +97,10 @@ def ring_pool(mask, cx, cy, rx, ry, k=1.0):
 
 
 warm = np.zeros((AH, AW))
-ring_pool(warm, 46, 104, 62, 44, 1.0)
-ring_pool(warm, 46, 60, 30, 40, 0.5)
+ring_pool(warm, 40, 114, 52, 36, 1.0)
+ring_pool(warm, 40, 78, 26, 30, 0.5)
 day = np.zeros((AH, AW))
-L.light_shaft(day, (140, WALL_H), (160, WALL_H), -0.55, 110)
+L.light_shaft(day, (140, WALL_H), (158, WALL_H), -0.55, 100)
 for y in range(FRONT_Y - 40, AH):                                            # světlo ze dveří
     for x in range(70, 107):
         t = (AH - y) / 40
@@ -123,9 +128,21 @@ def wall_put(spr, x, y):
                 img[y + yy, x + xx] = spr.a[yy, xx]
 
 
-wall_put(P.window(22, 28), 139, 16)
-wall_put(P.tool_rack(40, 24), 92, 40)
-wall_put(P.shield_axes(26, 24), 99, 13)
+wall_put(P.window(20, 26), 139, 18)
+wall_put(P.tool_rack(36, 22), 94, 40)
+wall_put(P.shield_axes(22, 20), 101, 14)
+# komínový tah po zdi až ke stropu – navazuje na komín pece
+fx0 = forge["x"] + int(FURNACE.w / 2 - 0.5) + 3; fx1 = fx0 + 6
+for y in range(0, forge["y"] + 2):
+    for x in range(fx0, fx1):
+        row = (forge["y"] + 2 - y) // 3; yin = (forge["y"] + 2 - y) % 3
+        col = np.array(gen_forge.BRICK_PAL[((x - fx0) // 3 * 3 + row * 5) % len(gen_forge.BRICK_PAL)], np.float32)
+        c = np.array([80, 70, 64]) if yin == 0 or (x - fx0 + (1 if row % 2 else 0)) % 3 == 0 else col
+        c = c * (1.15 - 0.55 * (x - fx0) / (fx1 - fx0)) * (0.55 + 0.45 * y / max(1, forge["y"]))
+        img[y, x, :3] = np.clip(c, 0, 255)
+    img[y, fx0 - 1, :3] = (28, 18, 16); img[y, fx1, :3] = (28, 18, 16)
+for x in range(fx0 - 1, fx1 + 1):
+    img[14, x, :3] = (110, 104, 100); img[15, x, :3] = (52, 48, 48)
 for y in range(WALL_H - 4, AH):                                              # boční stěny
     for x in range(SIDE):
         for (X, inner) in ((x, x), (AW - 1 - x, x)):
@@ -157,7 +174,7 @@ dark = np.clip(1.0 - np.maximum(warm, day * 0.8), 0, 1); dark[:WALL_H] *= 0.6
 L.darken(img, dark, 0.42, (10, 6, 10), dither=True, steps=10)
 L.lighten(img, warm, 0.24, (255, 150, 70), steps=10)
 L.lighten(img, day, 0.16, (255, 240, 210), steps=8)
-vg = np.zeros((AH, AW)); L.vignette(vg, AW / 2, AH * 0.55, AW * 0.62, AH * 0.62, k=0.45)
+vg = np.zeros((AH, AW)); L.vignette(vg, AW / 2, AH * 0.5, AW * 0.66, AH * 0.6, k=0.4)
 L.darken(img, vg, 0.7, (8, 4, 8), dither=True, steps=10)
 
 Image.fromarray(img[:, :, :3]).save(os.path.join(ROOT, "app", "src", "main", "res", "drawable-nodpi", "smithy.png"))
@@ -180,4 +197,4 @@ for (a, b) in EDGES:
 for n, (x, y) in NODES.items():
     dr.ellipse([x * 3 - 5, y * 3 - 5, x * 3 + 5, y * 3 + 5], fill=(0, 120, 255, 230))
 Image.alpha_composite(dbg, ov).save(os.path.join(HERE, "smithy_debug.png"))
-print("ok forge", (forge["x"], forge["y"]), "anvil", (anvil["x"], anvil["y"]), "magmor", (magmor["x"], magmor["y"], magmor["spr"].w))
+print("ok forge", (forge["x"], forge["y"], FURNACE.w, FURNACE.h), "anvil", (anvil["x"], anvil["y"]))

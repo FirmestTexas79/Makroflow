@@ -275,12 +275,12 @@ class FurnaceView(ctx: Context) : View(ctx) {
         // relikvie: svislý sloupec vpravo od pece, vystředěný na výšku pece; v pravé polovině vystředěný mezi pecí a okrajem
         val freeL = furnaceRect.right; val freeR = w.toFloat()
         val sx = max(freeL + gap, (freeL + freeR) / 2f - slot / 2f).coerceAtMost(w - gap - slot)
+        // přetavení: jen pod pecí (stejná šířka jako pec), aby nezasahovalo pod sloupec relikvií
+        rebornRect.set(furnaceRect.left, h - below + 4 * dp, furnaceRect.right, h - 10 * dp)
         val vgap = 8 * dp
         val totalH = slotRects.size * slot + (slotRects.size - 1) * vgap
-        val sy0 = max(topPad - 10 * dp, furnaceRect.top + (fh - totalH) / 2f)
+        val sy0 = max(topPad - 10 * dp, min(furnaceRect.top + (fh - totalH) / 2f, rebornRect.top - 6 * dp - totalH))
         slotRects.forEachIndexed { i, r -> r.set(sx, sy0 + i * (slot + vgap), sx + slot, sy0 + i * (slot + vgap) + slot) }
-        val bw = min(w - 2 * gap, 340 * dp)
-        rebornRect.set(w / 2f - bw / 2, h - below + 2 * dp, w / 2f + bw / 2, h - 8 * dp)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -402,8 +402,10 @@ class FurnaceView(ctx: Context) : View(ctx) {
         c.drawRoundRect(rebornRect, 8 * dp, 8 * dp, paint)
         paint.style = Paint.Style.STROKE; paint.strokeWidth = 3 * dp; paint.color = Color.parseColor("#2A120A")
         c.drawRoundRect(rebornRect, 8 * dp, 8 * dp, paint); paint.style = Paint.Style.FILL
-        text.textSize = 19 * dp; text.color = if (rebornReady) Color.parseColor("#FFF2D8") else Color.parseColor("#C8A890")
-        c.drawText(rebornLabel, rebornRect.centerX(), rebornRect.centerY() + 6 * dp, text)
+        text.textSize = 18 * dp; text.color = if (rebornReady) Color.parseColor("#FFF2D8") else Color.parseColor("#C8A890")
+        val fit = rebornRect.width() - 16 * dp
+        if (text.measureText(rebornLabel) > fit) text.textSize *= fit / text.measureText(rebornLabel)   // dlouhý popisek se zmenší
+        c.drawText(rebornLabel, rebornRect.centerX(), rebornRect.centerY() + text.textSize * 0.34f, text)
         heat = max(0f, heat - 0.02f)
         postInvalidateOnAnimation()
     }
@@ -414,20 +416,26 @@ class FurnaceView(ctx: Context) : View(ctx) {
         text.color = col; c.drawText(s, x, y, text)
     }
 
-    /** Dřevěný panel pod pecí: název relikvie a její bonus (u neukované řekne, kdy se ukove). */
+    /** Dřevěný panel nad tlačítkem přetavení: název relikvie a její bonus (u neukované řekne, kdy se ukove); výška podle textu. */
     private fun drawRelicInfo(c: Canvas, a: Forge.Artifact, owned: Boolean) {
         val pad = 12 * dp
-        val box = RectF(8 * dp, furnaceRect.bottom - 86 * dp, width - 8 * dp, furnaceRect.bottom - 6 * dp)
+        val boxL = 8 * dp; val boxR = width - 8 * dp
+        text.textAlign = Paint.Align.LEFT
+        text.textSize = 17 * dp
+        val body = if (owned) a.text else "${a.text}\nUkove se při ${a.ordinal + 1}. přetavení výhně."
+        val lines = body.split("\n").flatMap { wrap(it, boxR - boxL - 2 * pad) }
+        val lineH = 20 * dp
+        val boxH = pad + 24 * dp + 6 * dp + lines.size * lineH + pad * 0.6f
+        val bottom = rebornRect.top - 6 * dp
+        val box = RectF(boxL, bottom - boxH, boxR, bottom)
         paint.color = Color.parseColor("#F2341A0E"); c.drawRoundRect(box, 10 * dp, 10 * dp, paint)
         paint.style = Paint.Style.STROKE; paint.strokeWidth = 3 * dp; paint.color = Color.parseColor("#F0C050")
         c.drawRoundRect(box, 10 * dp, 10 * dp, paint); paint.style = Paint.Style.FILL
-        text.textAlign = Paint.Align.LEFT
         text.textSize = 22 * dp; text.color = if (owned) Color.parseColor("#FFE08A") else Color.parseColor("#B8A890")
-        drawLeft(c, a.label.uppercase(), box.left + pad, box.top + 26 * dp)
+        drawLeft(c, a.label.uppercase(), box.left + pad, box.top + pad + 18 * dp)
         text.textSize = 17 * dp; text.color = Color.parseColor("#FFF2D8")
-        var y = box.top + 26 * dp + 22 * dp
-        val body = if (owned) a.text else "${a.text}\nUkove se při ${a.ordinal + 1}. přetavení výhně."
-        for (para in body.split("\n")) for (l in wrap(para, box.width() - 2 * pad)) { drawLeft(c, l, box.left + pad, y); y += 19 * dp }
+        var y = box.top + pad + 24 * dp + 6 * dp + 14 * dp
+        for (l in lines) { drawLeft(c, l, box.left + pad, y); y += lineH }
         text.textAlign = Paint.Align.CENTER
     }
 
