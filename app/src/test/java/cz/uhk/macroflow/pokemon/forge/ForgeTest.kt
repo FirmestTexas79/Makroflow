@@ -71,7 +71,8 @@ class ForgeTest {
         Up.entries.drop(1).forEach { assertTrue(!Forge.unlocked(earned(0.0), it)) }           // na začátku jen Silnější měch
         assertTrue(!Forge.unlocked(earned(99.0), Up.SPARK)); assertTrue(Forge.unlocked(earned(100.0), Up.SPARK))
         assertTrue(!Forge.unlocked(earned(999.0), Up.DISCOUNT)); assertTrue(Forge.unlocked(earned(1_000.0), Up.DISCOUNT))
-        assertTrue(Forge.unlocked(earned(500_000.0), Up.ASH)); assertTrue(!Forge.unlocked(earned(500_000.0), Up.STEPS))
+        assertTrue(Forge.unlocked(earned(100_000.0), Up.ASH)); assertTrue(!Forge.unlocked(earned(499_999.0), Up.STEPS))
+        assertTrue(Forge.unlocked(earned(500_000.0), Up.STEPS)); assertTrue(!Forge.unlocked(earned(1_999_999.0), Up.SLEEP))
         assertTrue(Up.entries.all { Forge.unlocked(earned(2_000_000.0), it) })
         assertEquals(Up.SPARK to 100.0, Forge.nextUnlock(earned(0.0)))
         assertEquals(Up.DISCOUNT to 1_000.0, Forge.nextUnlock(earned(100.0)))
