@@ -28,6 +28,7 @@ object ForgeArt {
     private var furnace: Bitmap? = null
     private var fire: List<Bitmap>? = null
     private var bg: Bitmap? = null
+    private var relics: List<Bitmap>? = null
 
     private fun decode(ctx: Context, id: Int) = BitmapFactory.decodeResource(ctx.resources, id, BitmapFactory.Options().apply { inScaled = false })
 
@@ -41,6 +42,15 @@ object ForgeArt {
         (0 until 4).map { Bitmap.createBitmap(a, it * 40, 0, 40, 30) }
     }.also { fire = it }
     fun bg(ctx: Context) = bg ?: decode(ctx, R.drawable.forge_bg).also { bg = it }
+
+    /** Relikvie z přetavení 32 × 32 (Srdce výhně, Kovadlina předků, Kladivo mistra) – větší a detailnější než ikony. */
+    const val RELIC = 32
+    const val BG_FURNACE_X = 136          // kam v pozadí padne levý horní roh pece (tools/mapgen/gen_forge.py)
+    const val BG_FURNACE_Y = 138
+    const val BG_FLOOR_ROW = 276          // řádek pozadí, na kterém stojí sokl pece
+    fun relic(ctx: Context, i: Int): Bitmap = (relics ?: decode(ctx, R.drawable.forge_relics).let { a ->
+        (0 until a.width / RELIC).map { Bitmap.createBitmap(a, it * RELIC, 0, RELIC, RELIC) }
+    }.also { relics = it })[i]
 
     /** Pixel art bez vyhlazení. */
     val pixel = Paint().apply { isFilterBitmap = false; isAntiAlias = false }
@@ -212,8 +222,8 @@ class ForgeProgressView(ctx: Context) : View(ctx) {
 }
 
 /**
- * Horní polovina Výhně: dílna, stará pec s plamenem v ústí, záře a jiskry při šlápnutí na měch, kouř z komína,
- * bublina s uhlíky, tabulka přetavení a artefakty pod pecí (jako peříčka v předloze).
+ * Horní polovina Výhně: dílna (pozadí ve stejném měřítku pixelů jako pec), stará pec s plamenem v ústí, záře a jiskry při
+ * šlápnutí na měch, kouř z komína, bublina s uhlíky, tlačítko přetavení a velké relikvie vpravo od pece (klepnutí ukáže bonus).
  */
 class FurnaceView(ctx: Context) : View(ctx) {
     var amount = ""
@@ -224,7 +234,6 @@ class FurnaceView(ctx: Context) : View(ctx) {
     var artifacts: List<Forge.Artifact> = emptyList()
     var onTap: (x: Float, y: Float) -> Double = { _, _ -> 0.0 }
     var onReborn: () -> Unit = {}
-    var onArtifact: (Forge.Artifact?) -> Unit = {}
 
     private val dp = resources.displayMetrics.density
     private val font: Typeface? = ResourcesCompat.getFont(ctx, R.font.jersey_15)
@@ -232,9 +241,11 @@ class FurnaceView(ctx: Context) : View(ctx) {
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; textAlign = Paint.Align.CENTER }
     private val furnaceRect = RectF()
     private val rebornRect = RectF()
-    private val slotRects = List(3) { RectF() }
+    private val bgRect = RectF()
+    private val slotRects = List(Forge.Artifact.entries.size) { RectF() }
     private var scale = 1f
     private var heat = 0f                                  // záře po šlápnutí (0..1, opadá)
+    private var selected = -1                              // vybraná relikvie (panel s bonusem), -1 = žádná
     private val start = System.currentTimeMillis()
 
     private class Particle(var x: Float, var y: Float, var vx: Float, var vy: Float, var life: Float, val size: Float, val color: Int, val text: String? = null)
@@ -242,20 +253,30 @@ class FurnaceView(ctx: Context) : View(ctx) {
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
         val f = ForgeArt.furnace(context)
-        val topPad = 82 * dp                                 // bublina s uhlíky a řádek s výnosy nad pecí
-        val slot = 26 * dp
-        val gap = 8 * dp
-        val below = 6 * dp + slot + 6 * dp + 34 * dp + 6 * dp  // artefakty a tlačítko přetavení pod pecí
-        scale = max(1, min((h - topPad - below) / f.height, (w * 0.86f) / f.width).toInt()).toFloat()
+        val topPad = 84 * dp                                 // bublina s uhlíky a řádek s výnosy nad pecí
+        val below = 6 * dp + 40 * dp + 8 * dp                // tlačítko přetavení pod pecí
+        val gap = 10 * dp
+        // sloupec relikvií vpravo od pece: čtvercové sloty, ikona 32 px v celočíselném měřítku
+        // (dvě třetiny šířky patří peci – měřítko pixelů je pro pec, pozadí i relikvie společné)
+        scale = max(1, min((h - topPad - below) / f.height, (w * 0.62f) / f.width).toInt()).toFloat()
+        val slot = ForgeArt.RELIC * scale + 10 * dp
+        val colW = slot + 2 * gap
         val fw = f.width * scale; val fh = f.height * scale
-        val left = (w - fw) / 2
-        val top = topPad + max(0f, h - topPad - below - fh) / 2   // zbylé místo se rozdělí nad a pod pec
+        val left = Math.round((w - colW - fw) / 2f + (gap / 2f)).toFloat()
+        val top = Math.round(topPad + max(0f, h - topPad - below - fh) / 2).toFloat()
         furnaceRect.set(left, top, left + fw, top + fh)
-        val sy = furnaceRect.bottom + 6 * dp
-        val sx0 = w / 2f - (3 * slot + 2 * gap) / 2
-        slotRects.forEachIndexed { i, r -> r.set(sx0 + i * (slot + gap), sy, sx0 + i * (slot + gap) + slot, sy + slot) }
-        val bw = min(w * 0.9f, 300 * dp)
-        rebornRect.set(w / 2f - bw / 2, sy + slot + 6 * dp, w / 2f + bw / 2, sy + slot + 40 * dp)
+        // pozadí: stejné celočíselné měřítko, sokl pece přesně na řádku podlahy
+        val k = scale
+        val bgLeft = left - ForgeArt.BG_FURNACE_X * k
+        val bgTop = top - ForgeArt.BG_FURNACE_Y * k
+        bgRect.set(bgLeft, bgTop, bgLeft + 400 * k, bgTop + 400 * k)
+        // relikvie: svislý sloupec vpravo od pece, vystředěný na pec
+        val sx = furnaceRect.right + gap
+        val totalH = slotRects.size * slot + (slotRects.size - 1) * gap
+        val sy0 = furnaceRect.top + (fh - totalH) / 2f
+        slotRects.forEachIndexed { i, r -> r.set(sx, sy0 + i * (slot + gap), sx + slot, sy0 + i * (slot + gap) + slot) }
+        val bw = min(w - 2 * gap, 340 * dp)
+        rebornRect.set(w / 2f - bw / 2, h - below + 2 * dp, w / 2f + bw / 2, h - 8 * dp)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -264,8 +285,13 @@ class FurnaceView(ctx: Context) : View(ctx) {
         val x = e.x; val y = e.y
         when {
             rebornRect.contains(x, y) -> onReborn()
-            slotRects.any { it.contains(x, y) } -> onArtifact(artifacts.getOrNull(slotRects.indexOfFirst { it.contains(x, y) }))
+            slotRects.any { it.contains(x, y) } -> {                       // relikvie: klepnutí ukáže její bonus, druhé ho schová
+                val i = slotRects.indexOfFirst { it.contains(x, y) }
+                selected = if (selected == i) -1 else i
+                performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            }
             furnaceRect.contains(x, y) || y > height * 0.1f -> {
+                selected = -1
                 val gain = onTap(x, y)
                 heat = min(1f, heat + 0.35f)
                 performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
@@ -282,26 +308,26 @@ class FurnaceView(ctx: Context) : View(ctx) {
         val (mx, my) = mouth()
         repeat(10) {
             parts += Particle(mx + Random.nextFloat() * 30 * dp - 15 * dp, my, Random.nextFloat() * 4 - 2, -(3 + Random.nextFloat() * 5), 1f,
-                (1.5f + Random.nextFloat() * 2f) * dp, if (Random.nextBoolean()) Color.parseColor("#FFD254") else Color.parseColor("#FF8A2A"))
+                scale * (1 + Random.nextInt(2)), if (Random.nextBoolean()) Color.parseColor("#FFD254") else Color.parseColor("#FF8A2A"))
         }
         val (cx, cy) = chimney()
-        parts += Particle(cx, cy, Random.nextFloat() - 0.5f, -1.2f, 1.6f, 6 * dp, Color.parseColor("#B8B0A8"))
+        parts += Particle(cx, cy, Random.nextFloat() - 0.5f, -1.2f, 1.6f, scale * 3, Color.parseColor("#B8B0A8"))
         if (gain > 0) parts += Particle(x, y - 10 * dp, 0f, -2.2f, 1.2f, 0f, Color.WHITE, "+" + Forge.amount(gain).second)
     }
 
     override fun onDraw(c: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
         val t = (System.currentTimeMillis() - start) / 1000f
-        // dílna: pozadí přes celou plochu, ztmavené
+        // dílna: pozadí ve stejném měřítku pixelů jako pec; co pozadí nepokryje, je ve stejné barvě jako jeho okraj
         val bg = ForgeArt.bg(context)
-        val k = max(w / bg.width, h / bg.height)
-        val bw = bg.width * k; val bh = bg.height * k
-        c.drawBitmap(bg, Rect(0, 0, bg.width, bg.height), RectF((w - bw) / 2, (h - bh) / 2, (w + bw) / 2, (h + bh) / 2), ForgeArt.pixel)
-        paint.shader = null; paint.color = Color.argb(120, 12, 6, 6); c.drawRect(0f, 0f, w, h, paint)
-        // záře výhně kolem pece
+        paint.shader = null; paint.color = Color.parseColor("#17100E"); c.drawRect(0f, 0f, w, h, paint)
+        c.save(); c.clipRect(0f, 0f, w, h)
+        c.drawBitmap(bg, Rect(0, 0, bg.width, bg.height), bgRect, ForgeArt.pixel)
+        c.restore()
+        // záře výhně kolem ústí (mění se s oheň a šlápnutím)
         val (mx, my) = mouth()
-        val glow = 0.45f + 0.08f * kotlin.math.sin(t * 6f) + heat * 0.55f
-        paint.shader = RadialGradient(mx, my, furnaceRect.width() * 0.9f, Color.argb((150 * glow).toInt().coerceIn(0, 255), 255, 140, 50), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+        val glow = 0.35f + 0.07f * kotlin.math.sin(t * 6f) + heat * 0.5f
+        paint.shader = RadialGradient(mx, my, furnaceRect.width() * 0.95f, Color.argb((120 * glow).toInt().coerceIn(0, 255), 255, 140, 50), Color.TRANSPARENT, Shader.TileMode.CLAMP)
         c.drawRect(0f, 0f, w, h, paint); paint.shader = null
         // pec + plamen
         val f = ForgeArt.furnace(context)
@@ -310,21 +336,24 @@ class FurnaceView(ctx: Context) : View(ctx) {
         val fr = fires[((t * (8 + heat * 10)).toInt()) % fires.size]
         val fx = furnaceRect.left + 44 * scale; val fy = furnaceRect.top + 82 * scale
         c.drawBitmap(fr, Rect(0, 0, fr.width, fr.height), RectF(fx, fy, fx + 40 * scale, fy + 30 * scale), ForgeArt.pixel)
-        // kouř z komína (pomalé obláčky)
+        // kouř z komína: hranaté obláčky po celých pixelech pece
         val (cx, cy) = chimney()
         for (i in 0 until 4) {
             val p = ((t * 0.35f + i / 4f) % 1f)
+            val s = Math.round(1 + p * 3) * scale
+            val px = Math.round((cx + kotlin.math.sin(t + i) * 6 * dp) / scale) * scale
+            val py = Math.round((cy - p * 60 * dp) / scale) * scale
             paint.color = Color.argb((110 * (1 - p)).toInt(), 190, 184, 176)
-            c.drawCircle(cx + kotlin.math.sin(t + i) * 6 * dp, cy - p * 60 * dp, (4 + p * 10) * dp, paint)
+            c.drawRect(px - s / 2, py - s / 2, px + s / 2, py + s / 2, paint)
         }
         // částice
         val it = parts.iterator()
         while (it.hasNext()) {
             val p = it.next()
-            p.x += p.vx * dp * 0.6f; p.y += p.vy * dp * 0.6f; p.vy += if (p.text == null && p.size < 5 * dp) 0.12f else 0f; p.life -= 0.025f
+            p.x += p.vx * dp * 0.6f; p.y += p.vy * dp * 0.6f; p.vy += if (p.text == null && p.size < 5 * scale) 0.12f else 0f; p.life -= 0.025f
             if (p.life <= 0) { it.remove(); continue }
             if (p.text != null) {
-                text.textSize = 22 * dp; text.color = Color.argb((255 * min(1f, p.life)).toInt(), 255, 240, 200)
+                text.textSize = 26 * dp; text.color = Color.argb((255 * min(1f, p.life)).toInt(), 255, 240, 200)
                 c.drawText(p.text, p.x, p.y, text)
             } else {
                 paint.color = p.color; paint.alpha = (255 * min(1f, p.life)).toInt()
@@ -334,25 +363,36 @@ class FurnaceView(ctx: Context) : View(ctx) {
         // bublina s uhlíky (jako sova v předloze)
         text.textSize = 30 * dp
         val tw = text.measureText(amount) + 46 * dp
-        val br = RectF(w / 2 - tw / 2, 10 * dp, w / 2 + tw / 2, 10 * dp + 44 * dp)
-        paint.color = Color.parseColor("#6E3418"); c.drawRoundRect(br, 20 * dp, 20 * dp, paint)
+        val bx = furnaceRect.centerX()
+        val br = RectF(bx - tw / 2, 10 * dp, bx + tw / 2, 10 * dp + 44 * dp)
+        paint.color = Color.parseColor("#6E3418"); c.drawRoundRect(br, 22 * dp, 22 * dp, paint)
         paint.style = Paint.Style.STROKE; paint.strokeWidth = 3 * dp; paint.color = Color.parseColor("#2A120A")
-        c.drawRoundRect(br, 20 * dp, 20 * dp, paint); paint.style = Paint.Style.FILL
+        c.drawRoundRect(br, 22 * dp, 22 * dp, paint); paint.style = Paint.Style.FILL
         amountIcon?.let { c.drawBitmap(it, Rect(0, 0, it.width, it.height), RectF(br.right - 38 * dp, br.top + 7 * dp, br.right - 8 * dp, br.top + 37 * dp), ForgeArt.pixel) }
         text.color = Color.parseColor("#FFF2D8"); text.textAlign = Paint.Align.CENTER
         c.drawText(amount, br.centerX() - 15 * dp, br.bottom - 12 * dp, text)
         text.textSize = 18 * dp; text.color = Color.parseColor("#F4DEC0")
-        c.drawText(rates, w / 2, br.bottom + 21 * dp, text)
-        // artefakty pod pecí
+        drawOutlined(c, rates, bx, br.bottom + 21 * dp)
+        // relikvie vpravo od pece (jako peříčka v předloze): velké sloty, ukované svítí, ostatní jsou stíny
         Forge.Artifact.entries.forEachIndexed { i, a ->
             val r = slotRects[i]
-            paint.color = Color.parseColor("#3A1C10"); c.drawRoundRect(r, 4 * dp, 4 * dp, paint)
-            paint.style = Paint.Style.STROKE; paint.strokeWidth = 2 * dp; paint.color = if (a in artifacts) Color.parseColor("#F0C050") else Color.parseColor("#7A4A2A")
-            c.drawRoundRect(r, 4 * dp, 4 * dp, paint); paint.style = Paint.Style.FILL
-            val ic = ForgeArt.icon(context, a.icon)
-            val p = Paint(ForgeArt.pixel).apply { alpha = if (a in artifacts) 255 else 60 }
-            c.drawBitmap(ic, Rect(0, 0, ic.width, ic.height), RectF(r.left + 3 * dp, r.top + 3 * dp, r.right - 3 * dp, r.bottom - 3 * dp), p)
+            val own = a in artifacts
+            paint.color = Color.parseColor(if (own) "#3A1C10" else "#241008"); c.drawRoundRect(r, 8 * dp, 8 * dp, paint)
+            paint.style = Paint.Style.STROKE; paint.strokeWidth = 3 * dp
+            paint.color = if (i == selected) Color.parseColor("#FFE08A") else if (own) Color.parseColor("#F0C050") else Color.parseColor("#7A4A2A")
+            c.drawRoundRect(r, 8 * dp, 8 * dp, paint); paint.style = Paint.Style.FILL
+            val ic = ForgeArt.relic(context, i)
+            val pp = Paint(ForgeArt.pixel).apply {
+                if (!own) colorFilter = android.graphics.PorterDuffColorFilter(Color.parseColor("#120804"), android.graphics.PorterDuff.Mode.SRC_ATOP)
+                alpha = if (own) 255 else 150
+            }
+            val isz = ForgeArt.RELIC * scale
+            val ix = r.centerX() - isz / 2; val iy = r.centerY() - isz / 2
+            c.drawBitmap(ic, Rect(0, 0, ic.width, ic.height), RectF(ix, iy, ix + isz, iy + isz), pp)
+            if (!own) { text.textSize = 28 * dp; text.color = Color.parseColor("#B8845A"); text.textAlign = Paint.Align.CENTER; c.drawText("?", r.centerX(), r.centerY() + 10 * dp, text) }
         }
+        // panel s bonusem vybrané relikvie
+        if (selected in slotRects.indices) drawRelicInfo(c, Forge.Artifact.entries[selected], selected < artifacts.size)
         // přetavení
         paint.color = if (rebornReady) Color.parseColor("#C0601E") else Color.parseColor("#5A3020")
         c.drawRoundRect(rebornRect, 8 * dp, 8 * dp, paint)
@@ -362,5 +402,44 @@ class FurnaceView(ctx: Context) : View(ctx) {
         c.drawText(rebornLabel, rebornRect.centerX(), rebornRect.centerY() + 6 * dp, text)
         heat = max(0f, heat - 0.02f)
         postInvalidateOnAnimation()
+    }
+
+    private fun drawOutlined(c: Canvas, s: String, x: Float, y: Float) {
+        val col = text.color
+        text.color = Color.parseColor("#1A0E0A"); c.drawText(s, x + dp, y + dp, text)
+        text.color = col; c.drawText(s, x, y, text)
+    }
+
+    /** Dřevěný panel pod pecí: název relikvie a její bonus (u neukované řekne, kdy se ukove). */
+    private fun drawRelicInfo(c: Canvas, a: Forge.Artifact, owned: Boolean) {
+        val pad = 12 * dp
+        val box = RectF(8 * dp, furnaceRect.bottom - 86 * dp, width - 8 * dp, furnaceRect.bottom - 6 * dp)
+        paint.color = Color.parseColor("#F2341A0E"); c.drawRoundRect(box, 10 * dp, 10 * dp, paint)
+        paint.style = Paint.Style.STROKE; paint.strokeWidth = 3 * dp; paint.color = Color.parseColor("#F0C050")
+        c.drawRoundRect(box, 10 * dp, 10 * dp, paint); paint.style = Paint.Style.FILL
+        text.textAlign = Paint.Align.LEFT
+        text.textSize = 22 * dp; text.color = if (owned) Color.parseColor("#FFE08A") else Color.parseColor("#B8A890")
+        drawLeft(c, a.label.uppercase(), box.left + pad, box.top + 26 * dp)
+        text.textSize = 17 * dp; text.color = Color.parseColor("#FFF2D8")
+        var y = box.top + 26 * dp + 22 * dp
+        val body = if (owned) a.text else "${a.text}\nUkove se při ${a.ordinal + 1}. přetavení výhně."
+        for (para in body.split("\n")) for (l in wrap(para, box.width() - 2 * pad)) { drawLeft(c, l, box.left + pad, y); y += 19 * dp }
+        text.textAlign = Paint.Align.CENTER
+    }
+
+    private fun drawLeft(c: Canvas, s: String, x: Float, y: Float) {
+        val col = text.color
+        text.color = Color.parseColor("#1A0E0A"); c.drawText(s, x + dp, y + dp, text)
+        text.color = col; c.drawText(s, x, y, text)
+    }
+
+    private fun wrap(s: String, maxW: Float): List<String> {
+        val out = mutableListOf<String>(); var cur = ""
+        for (word in s.split(" ")) {
+            val t = if (cur.isEmpty()) word else "$cur $word"
+            if (text.measureText(t) <= maxW) cur = t else { if (cur.isNotEmpty()) out += cur; cur = word }
+        }
+        if (cur.isNotEmpty()) out += cur
+        return out
     }
 }

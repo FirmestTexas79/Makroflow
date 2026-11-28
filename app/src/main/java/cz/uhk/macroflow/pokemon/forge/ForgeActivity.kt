@@ -112,7 +112,6 @@ class ForgeActivity : AppCompatActivity() {
         furnace = FurnaceView(this).apply {
             onTap = { _, _ -> tap() }
             onReborn = { askReborn() }
-            onArtifact = { a -> Toast.makeText(this@ForgeActivity, a?.let { "${it.label}: ${it.text}" } ?: "Artefakt se ukove při přetavení výhně.", Toast.LENGTH_LONG).show() }
         }
         col.addView(furnace, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.42f))
         unlockBar = ForgeProgressView(this)

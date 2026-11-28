@@ -5,7 +5,8 @@ bez vyhlazení.
                                  = hloubka), světlo zleva shora + žár zespodu, saze nad ústím, praskliny, mech, železná obruč,
                                  komín, kamenný sokl, polena v ústí
   forge_fire.png     4 × (40 × 30)  snímky ohně do ústí
-  forge_bg.png       200 × 120   pozadí dílny (kamenná zeď, trámy, nářadí, podlaha)
+  forge_bg.png       400 × 400   pozadí dílny ve stejném měřítku pixelů jako pec (kvádry, trám, komínový tah, dlažba, stín)
+  forge_relics.png   3 × (32 × 32)  relikvie z přetavení: Srdce výhně, Kovadlina předků, Kladivo mistra
   forge_icons.png    20 × 20 v řádku, pořadí forge_icons.ICONS
 """
 import math, os, sys
@@ -292,47 +293,321 @@ def fire_frames():
     return np.concatenate(frames, axis=1)
 
 
+# ════════════════════════════════════════════════════════════════════════════
+#  DÍLNA (pozadí ve stejném měřítku pixelů jako pec)
+# ════════════════════════════════════════════════════════════════════════════
+BW, BH = 400, 400                 # pozadí: 1 pixel = 1 pixel pece (v aplikaci stejné celočíselné měřítko)
+BFX, BFY = 136, 138               # kam v pozadí padne levý horní roh pece (pec je uprostřed: 200 − 64)
+WALL_END = 262                    # spodek zdi (patní lišta)
+FLOOR_CONTACT = BFY + 138         # řádek, na kterém stojí sokl pece (276)
+FIRE_X, FIRE_Y = BFX + 64, BFY + 96
+
+
+def _smooth(t):
+    t = np.clip(t, 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def _bevel_block(img, x0, y0, w, h, base, rr, lift=1.0):
+    """Kámen/dlaždice s hranami: světlá horní a levá hrana, tmavá spodní a pravá, šum a skvrny."""
+    for y in range(max(0, y0), min(BH, y0 + h)):
+        for x in range(max(0, x0), min(BW, x0 + w)):
+            ex, ey = x - x0, y - y0
+            c = np.array(base, np.float32)
+            if ey == 0: c = c * 1.22
+            elif ex == 0: c = c * 1.12
+            elif ey >= h - 2: c = c * 0.70
+            elif ex >= w - 1: c = c * 0.80
+            else:
+                # jemné zrno a pozvolné ztmavení ke spodku kamene
+                c = c * (1.04 - 0.14 * ey / max(h, 1))
+            c = c + rr.normal(0, 2.6, 3)
+            img[y, x, :3] = np.clip(c * lift, 0, 255); img[y, x, 3] = 255
+
+
 def background():
-    w, h = 200, 120
-    img = rgba(h, w)
-    # kamenná zeď
-    for y in range(h):
-        for x in range(w):
-            row = y // 9; off = (row % 2) * 7
-            bx = (x + off) // 15
-            seed = (bx * 31 + row * 17) % 23
-            c = np.array([58, 50, 48]) + seed * 0.9
-            if y % 9 == 0 or (x + off) % 15 == 0:
-                c = np.array([34, 28, 28])
-            img[y, x, :3] = c; img[y, x, 3] = 255
-    # trámy
-    for x in range(w):
-        for y in range(4, 11):
-            img[y, x, :3] = (74, 48, 30) if y not in (4, 10) else (40, 26, 18)
-    for x0 in (20, 178):
-        for y in range(10, 96):
-            for x in range(x0, x0 + 8):
-                img[y, x, :3] = (82, 54, 34) if x not in (x0, x0 + 7) else (42, 28, 18)
-    # nářadí na zdi: kleště, kladivo, podkova
-    for y in range(22, 46):
-        put(img, 40, y, (110, 106, 104)); put(img, 44, y, (110, 106, 104))
-    for x in range(36, 49):
-        put(img, x, 46, (90, 86, 84))
-    for y in range(24, 44):
-        put(img, 160, y, (120, 82, 50))
-    for x in range(154, 167):
-        for y in range(20, 25):
-            put(img, x, y, (120, 118, 116) if y > 20 else (160, 158, 154))
-    for a in np.linspace(0.2, math.pi - 0.2, 20):
-        put(img, 140 + math.cos(a) * 6, 34 - math.sin(a) * 7, (150, 146, 140))
-    # podlaha
-    for y in range(96, h):
-        for x in range(w):
-            c = np.array([70, 58, 50]) * (0.8 + 0.2 * ((x // 12 + y // 6) % 2))
-            if y == 96:
-                c = np.array([40, 32, 28])
-            img[y, x, :3] = c
-    return img
+    rr = np.random.default_rng(2118)
+    img = rgba(BH, BW)
+    MORT_W = np.array([30, 25, 27], np.float32)
+
+    # ── zeď: kamenné kvádry nestejné velikosti, každý jiný odstín ──
+    y = 0
+    while y < WALL_END:
+        h = int(rr.integers(13, 19))
+        h = min(h, WALL_END - y)
+        x = -int(rr.integers(0, 30))
+        while x < BW:
+            w = int(rr.integers(24, 46))
+            tint = rr.uniform(0.86, 1.14)
+            cool = rr.uniform(-6, 6)
+            base = (np.array([70, 62, 62]) * tint + np.array([cool, 0, -cool]))
+            _bevel_block(img, x + 1, y + 1, w - 1, h - 1, base, rr)
+            for xx in range(max(0, x), min(BW, x + w + 1)):
+                img[y, xx, :3] = MORT_W; img[y, xx, 3] = 255            # vodorovná spára
+            for yy in range(y, min(BH, y + h)):
+                if 0 <= x < BW: img[yy, x, :3] = MORT_W; img[yy, x, 3] = 255   # svislá spára
+            # odštípnutý roh, drobné praskliny
+            if rr.uniform() < 0.28:
+                cx0 = x + (w - 4 if rr.uniform() < 0.5 else 2); cy0 = y + 2
+                for i in range(3):
+                    for j in range(3 - i):
+                        if 0 <= cx0 + i < BW and 0 <= cy0 + j < BH: img[cy0 + j, cx0 + i, :3] *= 0.55
+            if rr.uniform() < 0.22:
+                px_, py_ = x + int(rr.integers(4, max(5, w - 4))), y + 3
+                for k in range(int(rr.integers(4, 9))):
+                    if 0 <= px_ < BW and 0 <= py_ < BH: img[py_, px_, :3] *= 0.5
+                    py_ += 1; px_ += int(rr.integers(-1, 2))
+            x += w
+        y += h
+
+    # svislé zasmrádlé pruhy od stropu
+    for _ in range(16):
+        x0 = int(rr.integers(0, BW)); wd = int(rr.integers(4, 12)); ln = int(rr.integers(50, 150))
+        for yy in range(0, min(ln, WALL_END)):
+            f = 1.0 - 0.32 * (1 - yy / ln)
+            for xx in range(x0, min(BW, x0 + wd)):
+                img[yy, xx, :3] *= f
+
+    # ── komínový tah z cihel navazující na komín pece (pec: x 72–88, vrchol y 4) ──
+    fx0, fx1 = BFX + 72, BFX + 88
+    for yy in range(0, BFY + 6):
+        for xx in range(fx0, fx1):
+            row = (BFY + 44 - yy) // 5; yin = (BFY + 44 - yy) % 5
+            u = (xx - fx0 + (3 if row % 2 else 0)) // 7
+            col = np.array(BRICK_PAL[(u * 3 + row * 5) % len(BRICK_PAL)], np.float32)
+            sh = 1.15 - 0.55 * (xx - fx0) / (fx1 - fx0)
+            c = np.array([80, 70, 64]) if yin == 0 or (xx - fx0 + (3 if row % 2 else 0)) % 7 == 0 else col
+            c = mix(c * sh, (30, 24, 22), 0.25 + 0.5 * (1 - min(1, yy / 120)) * 0.0)
+            soot = max(0.0, 1 - (BFY + 6 - yy) / 150) * 0.45
+            c = mix(c, (26, 20, 20), soot)
+            img[yy, xx, :3] = np.clip(c + rr.normal(0, 2.5, 3), 0, 255); img[yy, xx, 3] = 255
+        img[yy, fx0 - 1, :3] = (24, 16, 14); img[yy, fx1, :3] = (24, 16, 14)
+    for yy in (40, 96):                                                     # železné objímky
+        for xx in range(fx0 - 2, fx1 + 2):
+            img[yy, xx, :3] = (96, 90, 90); img[yy + 1, xx, :3] = (50, 46, 48); img[yy - 1, xx, :3] = (140, 132, 126)
+        img[yy, fx0 - 2, :3] = (190, 180, 160); img[yy, fx1 + 1, :3] = (190, 180, 160)
+
+    # saze na zdi nad pecí
+    for yy in range(0, BFY + 10):
+        for xx in range(BFX - 20, BFX + 150):
+            d = math.hypot((xx - (BFX + 80)) / 70.0, (yy - (BFY + 30)) / 130.0)
+            k = max(0.0, 1 - d) ** 1.6 * 0.42
+            if k > 0: img[yy, xx, :3] = mix(img[yy, xx, :3], (20, 16, 18), k)
+
+    # ── strop: dubový trám, pod ním stín ──
+    for yy in range(0, 24):
+        for xx in range(BW):
+            g = 0.5 + 0.5 * math.sin(xx * 0.13 + math.sin(yy * 0.9 + xx * 0.02) * 2.0)
+            c = np.array([92, 60, 36]) * (0.78 + 0.22 * g)
+            if yy < 2: c = c * 1.3
+            if yy >= 20: c = c * (0.55 - 0.1 * (yy - 20))
+            img[yy, xx, :3] = np.clip(c + rr.normal(0, 2.4, 3), 0, 255); img[yy, xx, 3] = 255
+    for xx in range(24, BW, 52):                                            # hřeby / kování
+        for dy in range(2):
+            img[10 + dy, xx, :3] = (42, 36, 34); img[9, xx, :3] = (120, 110, 100)
+    for yy in range(24, 44):
+        k = 0.55 * (1 - (yy - 24) / 20)
+        img[yy, :, :3] *= (1 - k)
+
+    # ── nářadí: kleště, kladivo, podkovy (vlevo na zdi, vpravo nahoře) ──
+    def metal(x, y0, y1, c=(120, 116, 114)):
+        for yy in range(y0, y1):
+            img[yy, x, :3] = np.array(c) * 1.1; img[yy, x + 1, :3] = np.array(c) * 0.7
+    for xx in (60, 66):
+        metal(xx, 70, 118)
+    for xx in range(56, 72): img[118, xx, :3] = (90, 84, 82)
+    for yy in range(74, 118): img[yy, 61, :3] = (74, 70, 70)
+    for yy in range(66, 112):                                              # kladivo
+        img[yy, 100, :3] = (130, 88, 54); img[yy, 101, :3] = (88, 58, 36); img[yy, 99, :3] = (160, 112, 70)
+    for yy in range(62, 70):
+        for xx in range(92, 110):
+            img[yy, xx, :3] = (132, 128, 126) if yy > 62 else (172, 168, 162)
+            if yy == 69: img[yy, xx, :3] = (70, 66, 66)
+    for cx_ in (290, 314, 338):                                            # podkovy
+        for a in np.linspace(0.25, math.pi - 0.25, 26):
+            for r_ in (7, 8):
+                xx = int(cx_ + math.cos(a) * r_); yy = int(84 - math.sin(a) * r_ * 1.15)
+                img[yy, xx, :3] = (150, 144, 138) if r_ == 8 else (96, 90, 88)
+        img[78, cx_ - 6, :3] = (24, 18, 16)
+
+    # ── police s lahvičkami vlevo ──
+    for xx in range(76, 140):
+        for yy in range(150, 156):
+            img[yy, xx, :3] = np.array([108, 74, 44]) * (1.15 if yy == 150 else 0.8 if yy >= 154 else 1.0)
+    for i, bx in enumerate((82, 96, 110, 122)):
+        col = ((74, 150, 96), (180, 70, 50), (90, 120, 190), (210, 176, 70))[i]
+        for yy in range(134, 150):
+            for xx in range(bx, bx + 9):
+                edge = xx in (bx, bx + 8) or yy == 149
+                neck = yy < 138 and not (bx + 3 <= xx <= bx + 5)
+                if neck: continue
+                img[yy, xx, :3] = np.array(col) * (0.55 if edge else 1.0 - 0.25 * (xx - bx) / 9)
+        img[141, bx + 2, :3] = (240, 240, 235)
+        img[132, bx + 3:bx + 6, :3] = (110, 80, 50)
+    for xx in range(78, 138, 8):
+        img[155:158, xx, :3] = (40, 28, 20)                                # konzoly
+
+    # ── podlaha: dlažba v perspektivě (řady rostou směrem dolů) ──
+    FLOOR_BASE = np.array([96, 84, 74], np.float32)
+    y = WALL_END; r = 0
+    while y < BH:
+        h = int(round(9 + r * 1.5))
+        x = -int(rr.integers(0, 26)) - (r % 2) * 13
+        while x < BW:
+            w = int(round(rr.integers(24, 40) + r * 3.2))
+            tint = rr.uniform(0.84, 1.12)
+            warm = rr.uniform(-4, 8)
+            base = FLOOR_BASE * tint + np.array([warm, warm * 0.4, -warm * 0.6])
+            _bevel_block(img, x + 1, y + 1, w - 1, min(h - 1, BH - y - 1), base, rr)
+            for xx in range(max(0, x), min(BW, x + w + 1)): img[y, xx, :3] = (38, 31, 28); img[y, xx, 3] = 255
+            for yy in range(y, min(BH, y + h)):
+                if 0 <= x < BW: img[yy, x, :3] = (38, 31, 28); img[yy, x, 3] = 255
+            if rr.uniform() < 0.3:                                          # prasklina na dlaždici
+                px_, py_ = x + int(rr.integers(3, max(4, w - 3))), y + 2
+                for k in range(int(rr.integers(3, h - 2))):
+                    if 0 <= px_ < BW and 0 <= py_ < BH: img[py_, px_, :3] *= 0.5
+                    py_ += 1; px_ += int(rr.integers(-1, 2))
+            x += w
+        y += h; r += 1
+    # patní lišta zdi + stín zdi na podlaze
+    for xx in range(BW):
+        for k in range(4):
+            yy = WALL_END - 4 + k
+            img[yy, xx, :3] = np.array([54, 46, 44]) * (1.25 if k == 0 else 0.8 if k == 3 else 1.0)
+    for yy in range(WALL_END, WALL_END + 14):
+        img[yy, :, :3] *= (0.48 + 0.52 * (yy - WALL_END) / 14)
+    # drobnosti na podlaze: uhlíky, popel, sláma
+    for _ in range(170):
+        xx = int(rr.integers(0, BW)); yy = int(rr.integers(WALL_END + 6, BH))
+        t = rr.uniform()
+        if t < 0.55: img[yy, xx, :3] = (24, 20, 20); img[yy, min(BW - 1, xx + 1), :3] = (34, 28, 28)
+        elif t < 0.75: img[yy, xx, :3] = (168, 156, 140)
+        elif t < 0.9:
+            for k in range(4): img[min(BH - 1, yy + (k > 1)), min(BW - 1, xx + k), :3] = (176, 146, 82)
+        else: img[yy, xx, :3] = (230, 120, 40)
+
+    # ── sud s kalicí vodou vlevo od pece ──
+    bx0, bx1, by0, by1 = 70, 116, 218, 284
+    for yy in range(by0, by1):
+        t = (yy - by0) / (by1 - by0)
+        bulge = 1 + 0.10 * math.sin(math.pi * t)
+        half = (bx1 - bx0) / 2 * bulge
+        for xx in range(int(93 - half), int(93 + half) + 1):
+            u = (xx - (93 - half)) / (2 * half)
+            stave = int(u * 7)
+            c = np.array([112, 76, 46]) * (1.0 - 0.45 * u) * (1.07 if stave % 2 else 0.95)
+            if abs(u * 7 - round(u * 7)) < 0.07: c = c * 0.55
+            img[yy, xx, :3] = np.clip(c + rr.normal(0, 2, 3), 0, 255); img[yy, xx, 3] = 255
+        if yy in (by0 + 12, by0 + 13, by1 - 14, by1 - 13, by0 + 31, by0 + 32):
+            for xx in range(int(93 - half), int(93 + half) + 1):
+                img[yy, xx, :3] = np.array([92, 88, 90]) * (1.2 if yy in (by0 + 12, by1 - 14, by0 + 31) else 0.62)
+    for xx in range(bx0 - 2, bx1 + 3):                                      # horní vodní hladina
+        for yy in range(by0 - 3, by0 + 3):
+            if ((xx - 93) / 25) ** 2 + ((yy - by0) / 3.2) ** 2 <= 1:
+                img[yy, xx, :3] = (46, 78, 108) if yy >= by0 else (150, 112, 70); img[yy, xx, 3] = 255
+    img[by0 - 1, 88:96, :3] = (150, 190, 220)
+
+    # ── světlo: žár z ústí pece, tma v rozích ──
+    yy_, xx_ = np.mgrid[0:BH, 0:BW].astype(np.float32)
+    glow = np.exp(-(((xx_ - FIRE_X) / 120.0) ** 2 + ((yy_ - FIRE_Y) / 105.0) ** 2))
+    vign = 0.68 + 0.32 * _smooth((yy_ + 20) / 120.0)
+    side = 0.80 + 0.20 * np.exp(-((xx_ - 200) / 170.0) ** 2)
+    L = (0.62 + 0.58 * glow) * vign * side
+    L = np.where(yy_ > WALL_END, L * 1.05, L)
+    rgb = img[:, :, :3] * L[:, :, None]
+    rgb += glow[:, :, None] ** 1.4 * np.array([62, 22, 0], np.float32)
+    # světelná kaluž na podlaze před pecí (ve stylu ořezaná, dvě úrovně)
+    pool = np.exp(-(((xx_ - FIRE_X) / 100.0) ** 2 + ((yy_ - (FLOOR_CONTACT + 20)) / 24.0) ** 2))
+    pool = np.where(yy_ > WALL_END, pool, 0)
+    rgb += pool[:, :, None] * np.array([70, 30, 4], np.float32) * 0.9
+    # kontaktní stín pod pecí (tvrdá elipsa se dvěma stupni)
+    sh = ((xx_ - FIRE_X) / 72.0) ** 2 + ((yy_ - FLOOR_CONTACT) / 8.0) ** 2
+    rgb = np.where((sh <= 1.0)[:, :, None], rgb * 0.38, np.where((sh <= 1.55)[:, :, None] & (yy_ >= FLOOR_CONTACT - 3)[:, :, None], rgb * 0.62, rgb))
+    # stín pece na zdi vlevo/vpravo (okluze kolem kopule)
+    d = np.hypot((xx_ - FIRE_X) / 62.0, (yy_ - (BFY + 70)) / 72.0)
+    ao = np.clip((d - 1.0) / 0.35, 0, 1)
+    rgb = np.where((yy_ < FLOOR_CONTACT)[:, :, None], rgb * (0.80 + 0.20 * ao)[:, :, None], rgb)
+    out = np.zeros((BH, BW, 4), np.float32)
+    out[:, :, :3] = (np.clip(rgb, 0, 255) // 3) * 3                           # jemná kvantizace barev (pixelartový vzhled)
+    out[:, :, 3] = 255
+    return out
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  RELIKVIE (artefakty z přetavení) 32 × 32 – větší a detailnější než ikony 20 × 20
+# ════════════════════════════════════════════════════════════════════════════
+RS = 32
+
+
+def _poly(mask, pts):
+    from PIL import ImageDraw
+    im = Image.fromarray((mask * 255).astype(np.uint8)); ImageDraw.Draw(im).polygon(pts, fill=255)
+    return np.asarray(im) > 0
+
+
+def relics():
+    sheet = rgba(RS, RS * 3)
+    r = np.random.default_rng(32)
+    yy, xx = np.mgrid[0:RS, 0:RS].astype(np.float32)
+
+    def paint(i, m, color_fn):
+        for y in range(RS):
+            for x in range(RS):
+                if m[y, x]:
+                    sheet[y, i * RS + x, :3] = np.clip(color_fn(x, y), 0, 255); sheet[y, i * RS + x, 3] = 255
+
+    # 0 · Srdce výhně: srdce z magmatu v železné klícce, žhavé trhliny a jádro
+    heart = ((xx - 16) ** 2 + (yy - 14) ** 2 * 1.0)
+    h1 = ((xx - 11.5) ** 2 + (yy - 11) ** 2) <= 38
+    h2 = ((xx - 20.5) ** 2 + (yy - 11) ** 2) <= 38
+    tri = _poly(np.zeros((RS, RS)), [(4, 14), (28, 14), (16, 29)])
+    m = h1 | h2 | tri
+    paint(0, m, lambda x, y: mix((90, 20, 10), (255, 214, 90), max(0.0, 1 - math.hypot((x - 16) / 11.0, (y - 14) / 11.0)) ** 0.8) * (1.0 - 0.0) + (22 if (x * 3 + y * 5) % 7 == 0 else 0))
+    for (x0, y0, n) in ((12, 7, 9), (20, 9, 8), (16, 16, 9)):                 # trhliny
+        x, y = x0, y0
+        for _ in range(n):
+            sheet[y, x, :3] = (255, 244, 170); y += 1; x += int(r.integers(-1, 2))
+    for k in range(RS):                                                      # železné pruty klícky
+        for (x0) in (8, 24):
+            if m[k, x0]: sheet[k, x0, :3] = (74, 70, 74)
+    for x in range(5, 28):
+        if m[19, x]: sheet[19, x, :3] = (92, 88, 90); sheet[20, x, :3] = (46, 42, 46)
+    sheet[10:13, 11:14, :3] = (255, 250, 200)
+    # 1 · Kovadlina předků: ocelová kovadlina se zářícími runami
+    s1 = rgba(RS, RS)
+    top = _poly(np.zeros((RS, RS)), [(2, 9), (29, 9), (29, 14), (22, 14), (20, 18), (20, 23), (25, 23), (25, 28), (6, 28), (6, 23), (12, 23), (12, 18), (10, 14), (2, 12)])
+    horn = _poly(np.zeros((RS, RS)), [(2, 9), (0, 11), (2, 13)])
+    m1 = top | horn
+    paint(1, m1, lambda x, y: np.array([150, 156, 172]) * (1.18 if y <= 10 else 1.0 - 0.28 * (y - 10) / 18) * (0.82 + 0.18 * (1 - x / 32)))
+    for x in range(3, 29): sheet[9, RS + x, :3] = (214, 222, 238)
+    for (x0, y0) in ((14, 17), (16, 20), (13, 25), (18, 25)):                  # runy
+        for k in range(3): sheet[y0 + k, RS + x0, :3] = (255, 168, 60)
+        sheet[y0 + 1, RS + x0 + 1, :3] = (255, 220, 120)
+    for x in range(7, 25, 3): sheet[27, RS + x, :3] = (70, 76, 90)
+    # 2 · Kladivo mistra: zlatě pevněné ocelové kladivo, žhavá jiskra v hlavě
+    head = _poly(np.zeros((RS, RS)), [(3, 5), (19, 1), (24, 7), (8, 13)])
+    handle = _poly(np.zeros((RS, RS)), [(13, 9), (17, 11), (28, 28), (24, 30)])
+    m2 = head | handle
+    def c2(x, y):
+        if head[y, x]:
+            t = (y - 1) / 12
+            return np.array([156, 160, 176]) * (1.2 - 0.5 * t) + (0 if (x + y) % 5 else 12)
+        return np.array([132, 88, 50]) * (1.15 - 0.4 * (x - 13) / 15)
+    paint(2, m2, c2)
+    for (x0, y0, x1, y1) in ((10, 6, 20, 2), (11, 9, 15, 11)):                  # zlaté objímky
+        n = max(abs(x1 - x0), abs(y1 - y0)) + 1
+        for k in range(n):
+            xx_i = x0 + (x1 - x0) * k // max(n - 1, 1); yy_i = y0 + (y1 - y0) * k // max(n - 1, 1)
+            sheet[yy_i, 2 * RS + xx_i, :3] = (240, 190, 64)
+    for (x0, y0) in ((19, 20), (21, 23), (23, 26)):
+        sheet[y0, 2 * RS + x0, :3] = (96, 62, 34)
+    sheet[3, 2 * RS + 11:15, :3] = (255, 252, 230)
+    sheet[4, 2 * RS + 8:12, :3] = (255, 200, 90)
+    # obrys každé relikvie zvlášť
+    for i in range(3):
+        sub = sheet[:, i * RS:(i + 1) * RS].copy()
+        sheet[:, i * RS:(i + 1) * RS] = outline(sub)
+    return sheet
 
 
 import forge_icons  # noqa: E402  (ikony 20 × 20 ve stylu předloh)
@@ -347,5 +622,6 @@ if __name__ == "__main__":
     save(furnace(), "forge_furnace.png")
     save(fire_frames(), "forge_fire.png")
     save(background(), "forge_bg.png")
+    save(relics(), "forge_relics.png")
     save(forge_icons.atlas(), "forge_icons.png")
     print("ikony:", ", ".join(f"{i}={n}" for i, (n, _) in enumerate(ICONS)))

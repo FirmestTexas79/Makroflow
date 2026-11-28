@@ -52,3 +52,11 @@ a vylepšení, která už mají úroveň, zůstávají odemčená.
   se nezměnily; je to potřeba odzkoušet na telefonu.
 - Pasivní bonusy: u každé suroviny je její ikona (stejná jako ve skladu, `SkillArt.resourceIcon`) a jen potřebné
   množství; stav skladu se neukazuje, jen červená barva, když surovina chybí. Písmo v celé minihře je větší.
+
+**Vzhled dílny a relikvie.** Pozadí (`forge_bg.png`, 400 × 400) je teď ve stejném pixelovém měřítku jako pec: aplikace kreslí
+pec, pozadí, relikvie a oheň ve stejném celočíselném násobku, takže se nemíchají velikosti pixelů. Pozadí má kamenné kvádry
+nestejné velikosti s hranami, prasklinami a sazemi, dubový trám, cihlový komínový tah, který navazuje na komín pece,
+police s lahvičkami, nářadí, sud, dlažbu v perspektivě, světlo z ohně a kontaktní stín pod soklem (sokl stojí přesně na
+řádku podlahy, `ForgeArt.BG_FLOOR_ROW`). Relikvie z přetavení jsou nové sprity 32 × 32 (`forge_relics.png`) ve velkých slotech
+vpravo od pece; klepnutí ukáže panel s názvem a bonusem (u neukované řekne, při kterém přetavení se ukove), druhé klepnutí
+ho schová. Generátor: `tools/mapgen/gen_forge.py`.
