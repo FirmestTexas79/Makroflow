@@ -20,8 +20,9 @@ zůstávají pro povolání.
   Magmový plášť (oheň), Mistrovská výheň ×5. Stropy: odolnost 40 %, obrana 50 %, HP 30 %, únik z ballu (celkem) 90 %.
   Regiony 2 a 3 pokryjí další elementy. V souboji: obrana a HP týmu při startu, odolnost násobí poškození,
   které dostává hráčův Makromon, únik z ballu se sčítá s pasivem Chytání.
-- Obrazovka na šířku (`ForgeActivity`): vlevo 3 × 3 karty (klepnutí = 1, podržení = co jde), vpravo pec,
-  bublina s uhlíky, přetavení, artefakty pod pecí, menu pasivních bonusů.
+- Obrazovka na výšku (`ForgeActivity`): horní polovina je pec s bublinou uhlíků, přetavením a artefakty pod ní, dolní
+  polovina dřevěný panel s 3 × 3 kartami vylepšení (klepnutí = 1, podržení = co jde). Tlačítko „Pasivní bonusy“ nepoužívá
+  popup: přepne spodní panel na scrollovací seznam bonusů (Ukovat u každého), tlačítko „Vylepšení výhně“ nebo Zpět vrátí karty.
 - Grafika: `tools/mapgen/gen_forge.py` (pec 128 × 144 – úlová kopule z cihel zhuštěných k okrajům, saze, obruč,
   mech, komín; oheň 4 snímky; pozadí dílny) a `forge_icons.py` (ikony 20 × 20 ve stylu předloh).
 

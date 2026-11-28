@@ -47,7 +47,7 @@ object ForgeArt {
 }
 
 /**
- * Karta vylepšení (předloha: 3 × 3 dřevěné karty): ikona, název, popis, úroveň a cena s mincí.
+ * Karta vylepšení (předloha: 3 × 3 dřevěné karty): ikona, úroveň, název, popis a cena s mincí.
  * Klepnutí = koupit jednou, podržení = koupit, kolik jde.
  */
 @SuppressLint("ViewConstructor")
@@ -87,6 +87,8 @@ class ForgeCardView(ctx: Context, private val onBuy: (max: Boolean) -> Unit) : V
 
     override fun onDraw(c: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
+        // karta je na výšku úzká (3 vedle sebe): písmo a ikona se škálují podle velikosti karty
+        val k = min(w / (112 * dp), h / (124 * dp)).coerceIn(0.7f, 1.4f)
         val inset = if (pressed) 2 * dp else 0f
         r.set(inset, inset, w - inset, h - inset)
         // dřevěná karta: tmavý okraj, teplý přechod, světlejší vnitřní lem
@@ -98,40 +100,45 @@ class ForgeCardView(ctx: Context, private val onBuy: (max: Boolean) -> Unit) : V
         stroke.strokeWidth = 1.2f * dp; stroke.color = Color.parseColor("#D88A4A")
         r.inset(3.5f * dp, 3.5f * dp)
         c.drawRoundRect(r, 4 * dp, 4 * dp, stroke)
-        // vnitřní pole s popisem
-        val pad = 7 * dp
-        val iconS = min(h * 0.30f, 34 * dp)
+        val pad = 7 * dp * k
+        val left = pad + inset
+        // horní řádek: ikona vlevo, úroveň vpravo
+        val iconS = 26 * dp * k
         icon?.let {
-            val k = max(1, (iconS / it.width).toInt())
-            val s = it.width * k.toFloat()
-            c.drawBitmap(it, Rect(0, 0, it.width, it.height), RectF(pad + inset, pad + inset, pad + inset + s, pad + inset + s), ForgeArt.pixel)
+            val m = max(1, (iconS / it.width).toInt())
+            val s = it.width * m.toFloat()
+            c.drawBitmap(it, Rect(0, 0, it.width, it.height), RectF(left, left, left + s, left + s), ForgeArt.pixel)
         }
         text.color = Color.parseColor("#FFF2D8")
-        text.textSize = min(h * 0.15f, 17 * dp)
-        text.textAlign = Paint.Align.LEFT
-        val tx = pad + iconS + 6 * dp + inset
-        drawShadowed(c, title.uppercase(), tx, pad + inset + text.textSize, w - tx - pad)
-        // popis
-        text.textSize = min(h * 0.12f, 13.5f * dp)
-        text.color = Color.parseColor("#F4DEC0")
-        val lines = wrap(desc, w - 2 * pad - 2 * inset)
-        val top = pad + iconS + 6 * dp + inset
-        lines.take(3).forEachIndexed { i, l ->
-            text.textAlign = Paint.Align.CENTER
-            c.drawText(l, w / 2, top + text.textSize * (i + 0.9f), text)
-        }
-        // úroveň a cena
-        text.textSize = min(h * 0.13f, 15 * dp)
-        text.textAlign = Paint.Align.LEFT
-        text.color = Color.parseColor("#FFF2D8")
-        val by = h - pad - inset
-        drawShadowed(c, "Lv $level", pad + inset, by, w)
+        text.textSize = 14 * dp * k
         text.textAlign = Paint.Align.RIGHT
+        drawShadowed(c, "Lv $level", w - left, left + text.textSize, w)
+        // název pod ikonou
+        text.textSize = 14.5f * dp * k
+        text.textAlign = Paint.Align.CENTER
+        val titleY = left + iconS + 3 * dp * k + text.textSize
+        drawShadowed(c, title.uppercase(), w / 2, titleY, w - 2 * pad)
+        // dole cena s mincí
+        text.textSize = 14 * dp * k
+        text.textAlign = Paint.Align.RIGHT
+        val by = h - pad - inset
         val coinS = text.textSize * 1.1f
         val cx = w - pad - inset
+        val costTop = by - text.textSize
         costIcon?.let { c.drawBitmap(it, Rect(0, 0, it.width, it.height), RectF(cx - coinS, by - coinS * 0.85f, cx, by + coinS * 0.15f), ForgeArt.pixel) }
         text.color = if (affordable) Color.parseColor("#FFF2D8") else Color.parseColor("#FF8A7A")
         drawShadowed(c, cost, cx - coinS - 3 * dp, by, w)
+        // popis mezi názvem a cenou, kolik řádků se vejde
+        text.textSize = 11.5f * dp * k
+        text.color = Color.parseColor("#F4DEC0")
+        text.textAlign = Paint.Align.CENTER
+        val lineH = text.textSize * 1.1f
+        var y = titleY + 4 * dp * k + text.textSize
+        for (l in wrap(desc, w - 2 * pad - 2 * inset)) {
+            if (y > costTop - dp) break
+            c.drawText(l, w / 2, y, text)
+            y += lineH
+        }
     }
 
     private fun drawShadowed(c: Canvas, s: String, x: Float, y: Float, maxW: Float) {
@@ -154,7 +161,7 @@ class ForgeCardView(ctx: Context, private val onBuy: (max: Boolean) -> Unit) : V
 }
 
 /**
- * Pravá strana Výhně: dílna, stará pec s plamenem v ústí, záře a jiskry při šlápnutí na měch, kouř z komína,
+ * Horní polovina Výhně: dílna, stará pec s plamenem v ústí, záře a jiskry při šlápnutí na měch, kouř z komína,
  * bublina s uhlíky, tabulka přetavení a artefakty pod pecí (jako peříčka v předloze).
  */
 class FurnaceView(ctx: Context) : View(ctx) {
@@ -184,17 +191,20 @@ class FurnaceView(ctx: Context) : View(ctx) {
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
         val f = ForgeArt.furnace(context)
-        scale = max(1, min((h * 0.66f) / f.height, (w * 0.86f) / f.width).toInt()).toFloat()
-        val fw = f.width * scale; val fh = f.height * scale
-        val left = (w - fw) / 2; val top = h * 0.13f
-        furnaceRect.set(left, top, left + fw, top + fh)
+        val topPad = 76 * dp                                 // bublina s uhlíky a řádek s výnosy nad pecí
         val slot = 26 * dp
         val gap = 8 * dp
+        val below = 6 * dp + slot + 6 * dp + 34 * dp + 6 * dp  // artefakty a tlačítko přetavení pod pecí
+        scale = max(1, min((h - topPad - below) / f.height, (w * 0.86f) / f.width).toInt()).toFloat()
+        val fw = f.width * scale; val fh = f.height * scale
+        val left = (w - fw) / 2
+        val top = topPad + max(0f, h - topPad - below - fh) / 2   // zbylé místo se rozdělí nad a pod pec
+        furnaceRect.set(left, top, left + fw, top + fh)
         val sy = furnaceRect.bottom + 6 * dp
         val sx0 = w / 2f - (3 * slot + 2 * gap) / 2
         slotRects.forEachIndexed { i, r -> r.set(sx0 + i * (slot + gap), sy, sx0 + i * (slot + gap) + slot, sy + slot) }
-        val bw = min(w * 0.8f, 230 * dp)
-        rebornRect.set(w / 2f - bw / 2, sy + slot + 6 * dp, w / 2f + bw / 2, min(h - 4 * dp, sy + slot + 40 * dp))
+        val bw = min(w * 0.8f, 260 * dp)
+        rebornRect.set(w / 2f - bw / 2, sy + slot + 6 * dp, w / 2f + bw / 2, sy + slot + 40 * dp)
     }
 
     @SuppressLint("ClickableViewAccessibility")

@@ -1,5 +1,6 @@
 package cz.uhk.macroflow.pokemon.forge
 
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -7,11 +8,15 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -30,8 +35,9 @@ import kotlin.math.max
 import kotlin.random.Random
 
 /**
- * Výheň – minihra regionu 1 (docs/adr/0118). Na šířku jako předloha: vlevo 3 × 3 vylepšení za uhlíky,
- * vpravo stará pec (šlápnutí na měch), bublina s uhlíky, přetavení a artefakty. Pasivní bonusy za suroviny v menu.
+ * Výheň – minihra regionu 1 (docs/adr/0118). Na výšku jako zbytek aplikace: nahoře stará pec (šlápnutí na měch),
+ * bublina s uhlíky, přetavení a artefakty; dole panel se 3 × 3 vylepšeními za uhlíky. Tlačítko Pasivní bonusy
+ * přepne spodní panel na scrollovací seznam bonusů za suroviny (bez popupu), druhé klepnutí nebo Zpět vrátí vylepšení.
  */
 class ForgeActivity : AppCompatActivity() {
     private var st = Forge.State()
@@ -42,6 +48,19 @@ class ForgeActivity : AppCompatActivity() {
     private lateinit var root: FrameLayout
     private var loaded = false
 
+    // spodní panel: mřížka vylepšení ⇄ seznam pasivních bonusů
+    private lateinit var panelTitle: TextView
+    private lateinit var panelSub: TextView
+    private lateinit var grid: LinearLayout
+    private lateinit var passiveScroll: ScrollView
+    private lateinit var passiveList: LinearLayout
+    private lateinit var passBtn: TextView
+    private var showingPassives = false
+    private val passiveUpdaters = mutableListOf<() -> Unit>()
+    private val backToUpgrades = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() { showPassives(false) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -51,6 +70,7 @@ class ForgeActivity : AppCompatActivity() {
         }
         root = FrameLayout(this).apply { setBackgroundColor(Color.parseColor("#1A0E0A")) }
         setContentView(root)
+        onBackPressedDispatcher.addCallback(this, backToUpgrades)
         build()
         lifecycleScope.launch {
             val (s, l, off) = withContext(Dispatchers.IO) {
@@ -67,26 +87,56 @@ class ForgeActivity : AppCompatActivity() {
 
     private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
+    private fun woodButton(label: String, size: Float = 17f, onClick: () -> Unit) = TextView(this).apply {
+        text = label; typeface = ResourcesCompat.getFont(this@ForgeActivity, R.font.jersey_15); textSize = size; gravity = Gravity.CENTER
+        setTextColor(Color.parseColor("#FFF2D8"))
+        background = GradientDrawable().apply { setColor(Color.parseColor("#8A4420")); cornerRadius = dp(6f).toFloat(); setStroke(dp(3f), Color.parseColor("#2A120A")) }
+        setPadding(dp(14f), 0, dp(14f), 0)
+        setOnClickListener { onClick() }
+    }
+
     private fun build() {
         val font = ResourcesCompat.getFont(this, R.font.jersey_15)
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        root.addView(row, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(col, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        // výřez displeje (kamera) nesmí zakrýt bublinu s uhlíky
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, ins ->
+            val i = ins.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            col.setPadding(i.left, i.top, i.right, i.bottom); ins
+        }
 
-        // levý panel: rám jako v předloze, nahoře název, mřížka 3 × 3, dole tlačítka
-        val left = LinearLayout(this).apply {
+        // horní polovina: pec
+        furnace = FurnaceView(this).apply {
+            onTap = { _, _ -> tap() }
+            onReborn = { askReborn() }
+            onArtifact = { a -> Toast.makeText(this@ForgeActivity, a?.let { "${it.label}: ${it.text}" } ?: "Artefakt se ukove při přetavení výhně.", Toast.LENGTH_LONG).show() }
+        }
+        col.addView(furnace, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.45f))
+
+        // dolní polovina: dřevěný panel – nahoře název, uprostřed mřížka vylepšení / seznam bonusů, dole tlačítka
+        val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(14f), dp(10f), dp(14f), dp(10f))
+            setPadding(dp(10f), dp(8f), dp(10f), dp(8f))
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#4A2414")); cornerRadius = dp(10f).toFloat(); setStroke(dp(4f), Color.parseColor("#2A120A"))
             }
         }
-        row.addView(left, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.58f).apply { setMargins(dp(10f), dp(10f), dp(4f), dp(10f)) })
-        left.addView(TextView(this).apply {
+        col.addView(panel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.55f).apply { setMargins(dp(8f), dp(2f), dp(8f), dp(8f)) })
+        panelTitle = TextView(this).apply {
             text = "VÝHEŇ KOVÁŘE MAGMORA"; typeface = font; textSize = 20f; gravity = Gravity.CENTER
             setTextColor(Color.parseColor("#FFE2B0")); setShadowLayer(0f, 2f, 2f, Color.parseColor("#2A120A"))
-        })
-        val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        left.addView(grid, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6f) })
+        }
+        panel.addView(panelTitle)
+        panelSub = TextView(this).apply {
+            typeface = font; textSize = 14f; gravity = Gravity.CENTER; visibility = View.GONE
+            setTextColor(Color.parseColor("#F4DEC0"))
+        }
+        panel.addView(panelSub)
+        val content = FrameLayout(this)
+        panel.addView(content, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6f) })
+
+        grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        content.addView(grid, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val list = mutableListOf<ForgeCardView>()
         for (r in 0 until 3) {
             val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -99,25 +149,20 @@ class ForgeActivity : AppCompatActivity() {
             }
         }
         cards = list
-        val bar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        left.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40f)).apply { topMargin = dp(6f) })
-        fun btn(label: String, onClick: () -> Unit) = TextView(this).apply {
-            text = label; typeface = font; textSize = 17f; gravity = Gravity.CENTER
-            setTextColor(Color.parseColor("#FFF2D8"))
-            background = GradientDrawable().apply { setColor(Color.parseColor("#8A4420")); cornerRadius = dp(6f).toFloat(); setStroke(dp(3f), Color.parseColor("#2A120A")) }
-            setPadding(dp(14f), 0, dp(14f), 0)
-            setOnClickListener { onClick() }
-        }
-        bar.addView(btn("← ZPĚT") { finish() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        bar.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
-        bar.addView(btn("⚒ PASIVNÍ BONUSY") { openPassives() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
-        furnace = FurnaceView(this).apply {
-            onTap = { _, _ -> tap() }
-            onReborn = { askReborn() }
-            onArtifact = { a -> Toast.makeText(this@ForgeActivity, a?.let { "${it.label}: ${it.text}" } ?: "Artefakt se ukove při přetavení výhně.", Toast.LENGTH_LONG).show() }
+        passiveList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        passiveScroll = ScrollView(this).apply {
+            visibility = View.GONE; isVerticalScrollBarEnabled = false; overScrollMode = View.OVER_SCROLL_NEVER
+            addView(passiveList, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        row.addView(furnace, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.42f))
+        content.addView(passiveScroll, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
+        val bar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        panel.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40f)).apply { topMargin = dp(6f) })
+        bar.addView(woodButton("← ZPĚT") { finish() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        bar.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        passBtn = woodButton("⚒ PASIVNÍ BONUSY") { showPassives(!showingPassives) }
+        bar.addView(passBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
     // ── hra ──
@@ -153,41 +198,83 @@ class ForgeActivity : AppCompatActivity() {
         }
     }
 
-    private fun openPassives() {
+    /** Přepne spodní panel: mřížka vylepšení výhně ⇄ seznam pasivních bonusů (scrolluje se). */
+    private fun showPassives(on: Boolean) {
+        showingPassives = on
+        grid.visibility = if (on) View.GONE else View.VISIBLE
+        passiveScroll.visibility = if (on) View.VISIBLE else View.GONE
+        panelSub.visibility = if (on) View.VISIBLE else View.GONE
+        panelTitle.text = if (on) "PASIVNÍ BONUSY" else "VÝHEŇ KOVÁŘE MAGMORA"
+        passBtn.text = if (on) "⚒ VYLEPŠENÍ VÝHNĚ" else "⚒ PASIVNÍ BONUSY"
+        backToUpgrades.isEnabled = on
+        if (on) { passiveScroll.scrollTo(0, 0); loadPassives() }
+    }
+
+    /** Postaví seznam bonusů znovu (po otevření a po každém ukování); pozice scrollu zůstane. */
+    private fun loadPassives() {
         lifecycleScope.launch {
             val have = withContext(Dispatchers.IO) { SkillStore.counts(this@ForgeActivity) }
-            val b = Forge.bonuses(st)
-            WorkshopMenus.show(root, "Pasivní bonusy", "Obrana +${pct(b.defense)} · HP +${pct(b.hp)} · únik z ballu −${pct(b.escape)}" +
-                (if (st.reborns >= 2) " · Kovadlina ×2" else "")) { ui, body, close ->
-                Forge.Passive.entries.forEach { p ->
-                    val lvl = Forge.passiveLevel(st, p)
-                    val card = WorkshopMenus.card(ui)
-                    card.addView(ui.icon(bitmapPixels(ForgeArt.icon(this@ForgeActivity, p.icon)), ForgeArt.ICON, ForgeArt.ICON, 40f))
-                    val col = ui.column().apply { setPadding(ui.px(10f), 0, ui.px(6f), 0) }
-                    col.addView(ui.text("${p.label}  ${if (p.maxLevel > 1) "$lvl/${p.maxLevel}" else if (lvl > 0) "✓" else ""}", 17f))
-                    col.addView(ui.text(p.text, 14f, ui.inkSoft))
-                    if (lvl < p.maxLevel) {
-                        val costRow = ui.row().apply { gravity = Gravity.CENTER_VERTICAL }
-                        costRow.addView(ui.icon(bitmapPixels(ForgeArt.icon(this@ForgeActivity, Forge.amount(Forge.passiveCoals(st, p)).first.icon)), ForgeArt.ICON, ForgeArt.ICON, 18f))
-                        costRow.addView(ui.text(" ${Forge.amount(Forge.passiveCoals(st, p)).second}  ", 14f, if (st.coals >= Forge.passiveCoals(st, p)) ui.ink else ui.rust))
-                        p.materials.forEach { (r, n) ->
-                            MaterialArt.icon(r)?.let { costRow.addView(ui.icon(it, SkillArt.ITEM, SkillArt.ITEM, 18f)) }
-                            costRow.addView(ui.text(" ${have[r.itemId] ?: 0}/$n  ", 14f, if ((have[r.itemId] ?: 0) >= n) ui.ink else ui.rust))
-                        }
-                        col.addView(costRow)
-                    }
-                    card.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                    if (lvl < p.maxLevel) card.addView(ui.button("Ukovat") {
-                        lifecycleScope.launch {
-                            val next = withContext(Dispatchers.IO) { ForgeStore.buyPassive(this@ForgeActivity, st, p) }
-                            if (next == null) Toast.makeText(this@ForgeActivity, "Chybí uhlíky nebo suroviny.", Toast.LENGTH_SHORT).show()
-                            else { st = next; saved = next; close(); refresh(); openPassives() }
-                        }
-                    })
-                    body.addView(card)
-                }
-            }
+            if (!showingPassives) return@launch
+            val y = passiveScroll.scrollY
+            passiveList.removeAllViews(); passiveUpdaters.clear()
+            Forge.Passive.entries.forEach { p -> passiveList.addView(passiveRow(p, have), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(6f) }) }
+            passiveScroll.post { passiveScroll.scrollTo(0, y) }
+            updatePassives()
         }
+    }
+
+    /** Souhrn bonusů nahoře a barva cen podle toho, na co zrovna stačí uhlíky (volá se z refresh). */
+    private fun updatePassives() {
+        val b = Forge.bonuses(st)
+        panelSub.text = "Obrana +${pct(b.defense)} · HP +${pct(b.hp)} · únik z ballu −${pct(b.escape)}" + (if (st.reborns >= 2) " · Kovadlina ×2" else "")
+        passiveUpdaters.forEach { it() }
+    }
+
+    private fun passiveRow(p: Forge.Passive, have: Map<String, Int>): View {
+        val font = ResourcesCompat.getFont(this, R.font.jersey_15)
+        val cream = Color.parseColor("#FFF2D8"); val soft = Color.parseColor("#F4DEC0"); val bad = Color.parseColor("#FF8A7A")
+        fun label(t: String, size: Float, color: Int) = TextView(this).apply { text = t; typeface = font; textSize = size; setTextColor(color) }
+        val lvl = Forge.passiveLevel(st, p)
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(10f), dp(8f), dp(10f), dp(8f))
+            background = GradientDrawable().apply { setColor(Color.parseColor("#7A3C1C")); cornerRadius = dp(6f).toFloat(); setStroke(dp(3f), Color.parseColor("#2A120A")) }
+        }
+        row.addView(pixelIcon(bitmapPixels(ForgeArt.icon(this, p.icon)), ForgeArt.ICON, ForgeArt.ICON, 40f))
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10f), 0, dp(8f), 0) }
+        col.addView(label("${p.label}  ${if (p.maxLevel > 1) "$lvl/${p.maxLevel}" else if (lvl > 0) "✓" else ""}", 18f, cream))
+        col.addView(label(p.text, 14f, soft))
+        if (lvl < p.maxLevel) {
+            val need = Forge.passiveCoals(st, p)
+            val (coin, s) = Forge.amount(need)
+            val costRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            costRow.addView(pixelIcon(bitmapPixels(ForgeArt.icon(this, coin.icon)), ForgeArt.ICON, ForgeArt.ICON, 18f))
+            val coalTv = label(" $s  ", 14f, cream); costRow.addView(coalTv)
+            p.materials.forEach { (r, n) ->
+                MaterialArt.icon(r)?.let { costRow.addView(pixelIcon(it, SkillArt.ITEM, SkillArt.ITEM, 18f)) }
+                costRow.addView(label(" ${have[r.itemId] ?: 0}/$n  ", 14f, if ((have[r.itemId] ?: 0) >= n) cream else bad))
+            }
+            col.addView(costRow)
+            passiveUpdaters += { coalTv.setTextColor(if (st.coals >= need) cream else bad) }
+        }
+        row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        if (lvl < p.maxLevel) row.addView(woodButton("UKOVAT", 16f) { buyPassive(p) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36f)))
+        return row
+    }
+
+    private fun buyPassive(p: Forge.Passive) {
+        lifecycleScope.launch {
+            val next = withContext(Dispatchers.IO) { ForgeStore.buyPassive(this@ForgeActivity, st, p) }
+            if (next == null) Toast.makeText(this@ForgeActivity, "Chybí uhlíky nebo suroviny.", Toast.LENGTH_SHORT).show()
+            else { st = next; saved = next; refresh(); loadPassives() }
+        }
+    }
+
+    /** Pixelová ikona zvětšená celočíselným násobkem, bez vyhlazení. */
+    private fun pixelIcon(pixels: IntArray, w: Int, h: Int, sizeDp: Float) = ImageView(this).apply {
+        val k = maxOf(1, dp(sizeDp) / maxOf(w, h))
+        setImageBitmap(Bitmap.createScaledBitmap(Bitmap.createBitmap(pixels, w, h, Bitmap.Config.ARGB_8888), w * k, h * k, false))
+        layoutParams = LinearLayout.LayoutParams(w * k, h * k)
     }
 
     private fun pct(v: Double) = "${Math.round(v * 100)} %"
@@ -215,6 +302,7 @@ class ForgeActivity : AppCompatActivity() {
         val rc = Forge.rebornCost(st)
         furnace.rebornLabel = rc?.let { "PŘETAVIT · ${Forge.format(it)}" } ?: "VŠECHNY ARTEFAKTY UKOVÁNY"
         furnace.rebornReady = Forge.canReborn(st)
+        if (showingPassives) updatePassives()
     }
 
     private fun describe(up: Forge.Up): String {

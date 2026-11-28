@@ -83,11 +83,11 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MaterialComponents.Light.NoActionBar" />
 
-        <!-- Výheň – minihra regionu 1, na šířku (docs/adr/0118) -->
+        <!-- Výheň – minihra regionu 1, na výšku (docs/adr/0118) -->
         <activity
             android:name=".pokemon.forge.ForgeActivity"
             android:exported="false"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MaterialComponents.Light.NoActionBar" />
 
         <receiver
