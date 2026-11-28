@@ -65,6 +65,39 @@ class ForgeTest {
         assertEquals(50_000.0 * 4 * 4, Forge.passiveCoals(Forge.State(passives = mapOf("kaleni" to 2)), Forge.Passive.TEMPER), 1e-6)
     }
 
+    @Test fun `odemykani vylepseni podle vydelanych uhliku`() {
+        fun earned(v: Double) = Forge.State(coals = 0.0, earned = v)
+        assertTrue(Forge.unlocked(earned(0.0), Up.BELLOWS))
+        Up.entries.drop(1).forEach { assertTrue(!Forge.unlocked(earned(0.0), it)) }           // na začátku jen Silnější měch
+        assertTrue(!Forge.unlocked(earned(99.0), Up.SPARK)); assertTrue(Forge.unlocked(earned(100.0), Up.SPARK))
+        assertTrue(!Forge.unlocked(earned(999.0), Up.DISCOUNT)); assertTrue(Forge.unlocked(earned(1_000.0), Up.DISCOUNT))
+        assertTrue(Forge.unlocked(earned(500_000.0), Up.ASH)); assertTrue(!Forge.unlocked(earned(500_000.0), Up.STEPS))
+        assertTrue(Up.entries.all { Forge.unlocked(earned(2_000_000.0), it) })
+        assertEquals(Up.SPARK to 100.0, Forge.nextUnlock(earned(0.0)))
+        assertEquals(Up.DISCOUNT to 1_000.0, Forge.nextUnlock(earned(100.0)))
+        assertNull(Forge.nextUnlock(earned(2e6)))
+        assertEquals(Up.entries.size - 1, Forge.UNLOCK.size)
+        assertEquals(Forge.UNLOCK.sorted(), Forge.UNLOCK)
+        // zamčené vylepšení nejde koupit ani s dostatkem uhlíků; Silnější měch ano
+        assertNull(Forge.buy(Forge.State(coals = 1e6), Up.SPARK))
+        assertTrue(Forge.buy(Forge.State(coals = 1e6), Up.BELLOWS) != null)
+        // útrata prahy nesnižuje, vydělek ano
+        val s = Forge.earn(Forge.State(), 150.0)
+        assertEquals(150.0, s.earned, 0.0); assertEquals(150.0, Forge.buy(s, Up.BELLOWS)!!.earned, 0.0)
+        // už koupená úroveň (starší uložení) zůstává odemčená; přetavení zamkne a vynuluje vydělané
+        assertTrue(Forge.unlocked(Forge.State(levels = Up.entries.map { if (it == Up.HEARTH) 1 else 0 }), Up.HEARTH))
+        assertEquals(0.0, Forge.reborn(Forge.State(coals = 1e7, earned = 5e7))!!.earned, 0.0)
+    }
+
+    @Test fun `ceny jsou strme a rostou s poradim vylepseni`() {
+        val first = Up.entries.map { it.base }
+        assertEquals(first.sorted(), first)
+        assertEquals(Up.entries.map { it.growth }.sorted(), Up.entries.map { it.growth })
+        assertTrue(Up.SLEEP.base >= 10 * Up.AUTO.base)
+        // každé vylepšení jde poprvé koupit nejdřív po odemčení (cena první úrovně nepřeskakuje další práh)
+        Up.entries.drop(1).forEach { assertTrue("${it.label} první úroveň", it.base <= Forge.UNLOCK.last() * 2) }
+    }
+
     @Test fun `meny – stribrne a zlate uhliky`() {
         assertEquals("12 345 uhlíků", Forge.format(12_345.9))
         assertEquals("99 999 999 uhlíků", Forge.format(99_999_999.0))

@@ -59,6 +59,9 @@ class ForgeCardView(ctx: Context, private val onBuy: (max: Boolean) -> Unit) : V
     var costIcon: Bitmap? = null
     var cost = ""
     var affordable = false
+    /** Zamčená karta (vylepšení se odemkne až po vydělání prahu): ztmavená, místo popisu a ceny ukazuje [lockText]. */
+    var locked = false
+    var lockText = ""
     private var pressed = false
 
     private val dp = resources.displayMetrics.density
@@ -88,7 +91,7 @@ class ForgeCardView(ctx: Context, private val onBuy: (max: Boolean) -> Unit) : V
     override fun onDraw(c: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
         // karta je na výšku úzká (3 vedle sebe): písmo a ikona se škálují podle velikosti karty
-        val k = min(w / (112 * dp), h / (124 * dp)).coerceIn(0.7f, 1.4f)
+        val k = min(w / (104 * dp), h / (118 * dp)).coerceIn(0.8f, 1.5f)
         val inset = if (pressed) 2 * dp else 0f
         r.set(inset, inset, w - inset, h - inset)
         // dřevěná karta: tmavý okraj, teplý přechod, světlejší vnitřní lem
@@ -110,34 +113,42 @@ class ForgeCardView(ctx: Context, private val onBuy: (max: Boolean) -> Unit) : V
             c.drawBitmap(it, Rect(0, 0, it.width, it.height), RectF(left, left, left + s, left + s), ForgeArt.pixel)
         }
         text.color = Color.parseColor("#FFF2D8")
-        text.textSize = 14 * dp * k
+        text.textSize = 17 * dp * k
         text.textAlign = Paint.Align.RIGHT
-        drawShadowed(c, "Lv $level", w - left, left + text.textSize, w)
+        drawShadowed(c, if (locked) "ZAMČENO" else "Lv $level", w - left, left + text.textSize, w - left - iconS - 4 * dp)
         // název pod ikonou
-        text.textSize = 14.5f * dp * k
+        text.textSize = 17 * dp * k
         text.textAlign = Paint.Align.CENTER
         val titleY = left + iconS + 3 * dp * k + text.textSize
         drawShadowed(c, title.uppercase(), w / 2, titleY, w - 2 * pad)
-        // dole cena s mincí
-        text.textSize = 14 * dp * k
-        text.textAlign = Paint.Align.RIGHT
-        val by = h - pad - inset
-        val coinS = text.textSize * 1.1f
-        val cx = w - pad - inset
-        val costTop = by - text.textSize
-        costIcon?.let { c.drawBitmap(it, Rect(0, 0, it.width, it.height), RectF(cx - coinS, by - coinS * 0.85f, cx, by + coinS * 0.15f), ForgeArt.pixel) }
-        text.color = if (affordable) Color.parseColor("#FFF2D8") else Color.parseColor("#FF8A7A")
-        drawShadowed(c, cost, cx - coinS - 3 * dp, by, w)
-        // popis mezi názvem a cenou, kolik řádků se vejde
-        text.textSize = 11.5f * dp * k
+        val costTop: Float
+        if (!locked) {
+            // dole cena s mincí
+            text.textSize = 17 * dp * k
+            text.textAlign = Paint.Align.RIGHT
+            val by = h - pad - inset
+            val coinS = text.textSize * 1.1f
+            val cx = w - pad - inset
+            costTop = by - text.textSize
+            costIcon?.let { c.drawBitmap(it, Rect(0, 0, it.width, it.height), RectF(cx - coinS, by - coinS * 0.85f, cx, by + coinS * 0.15f), ForgeArt.pixel) }
+            text.color = if (affordable) Color.parseColor("#FFF2D8") else Color.parseColor("#FF8A7A")
+            drawShadowed(c, cost, cx - coinS - 3 * dp, by, w)
+        } else costTop = h - pad - inset
+        // popis (u zamčené karty podmínka odemčení) mezi názvem a cenou, kolik řádků se vejde
+        text.textSize = 13.5f * dp * k
         text.color = Color.parseColor("#F4DEC0")
         text.textAlign = Paint.Align.CENTER
         val lineH = text.textSize * 1.1f
         var y = titleY + 4 * dp * k + text.textSize
-        for (l in wrap(desc, w - 2 * pad - 2 * inset)) {
+        for (l in wrap(if (locked) lockText else desc, w - 2 * pad - 2 * inset)) {
             if (y > costTop - dp) break
             c.drawText(l, w / 2, y, text)
             y += lineH
+        }
+        if (locked) {                                           // ztmavení: karta je vidět, ale nedá se koupit
+            fill.color = Color.argb(110, 20, 8, 4)
+            r.set(inset, inset, w - inset, h - inset)
+            c.drawRoundRect(r, 6 * dp, 6 * dp, fill)
         }
     }
 
@@ -157,6 +168,46 @@ class ForgeCardView(ctx: Context, private val onBuy: (max: Boolean) -> Unit) : V
         }
         if (cur.isNotEmpty()) out += cur
         return out
+    }
+}
+
+/**
+ * Bar mezi pecí a spodním panelem (docs/adr/0118): kolik uhlíků je vydělaných v tomto kole a kolik chybí do dalšího
+ * prahu, který odemkne další vylepšení. Číslo je uvnitř baru („100 / 1 000“), nad ním název toho, co se odemkne.
+ */
+class ForgeProgressView(ctx: Context) : View(ctx) {
+    var caption = ""
+    var value = ""
+    var progress = 0f
+
+    private val dp = resources.displayMetrics.density
+    private val font: Typeface? = ResourcesCompat.getFont(ctx, R.font.jersey_15)
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; textAlign = Paint.Align.CENTER }
+    private val r = RectF()
+
+    override fun onDraw(c: Canvas) {
+        val w = width.toFloat(); val h = height.toFloat()
+        text.textSize = 17 * dp; text.color = Color.parseColor("#F4DEC0")
+        c.drawText(caption, w / 2, 17 * dp, text)
+        val top = 24 * dp; val bottom = h - 3 * dp
+        r.set(3 * dp, top, w - 3 * dp, bottom)
+        fill.color = Color.parseColor("#2A120A"); c.drawRoundRect(r, 8 * dp, 8 * dp, fill)
+        val inner = RectF(r.left + 3 * dp, r.top + 3 * dp, r.right - 3 * dp, r.bottom - 3 * dp)
+        fill.color = Color.parseColor("#4A2414"); c.drawRoundRect(inner, 5 * dp, 5 * dp, fill)
+        val fw = inner.width() * progress.coerceIn(0f, 1f)
+        if (fw > 0f) {
+            val bar = RectF(inner.left, inner.top, inner.left + max(fw, 2 * 5 * dp), inner.bottom)
+            fill.shader = LinearGradient(0f, bar.top, 0f, bar.bottom, Color.parseColor("#FFB04A"), Color.parseColor("#C0601E"), Shader.TileMode.CLAMP)
+            c.drawRoundRect(bar, 5 * dp, 5 * dp, fill); fill.shader = null
+        }
+        stroke.strokeWidth = 3 * dp; stroke.color = Color.parseColor("#2A120A")
+        c.drawRoundRect(r, 8 * dp, 8 * dp, stroke)
+        text.textSize = 19 * dp
+        val ty = r.centerY() + text.textSize * 0.32f
+        text.color = Color.parseColor("#2A120A"); c.drawText(value, w / 2 + dp, ty + dp, text)
+        text.color = Color.parseColor("#FFF2D8"); c.drawText(value, w / 2, ty, text)
     }
 }
 
@@ -191,7 +242,7 @@ class FurnaceView(ctx: Context) : View(ctx) {
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
         val f = ForgeArt.furnace(context)
-        val topPad = 76 * dp                                 // bublina s uhlíky a řádek s výnosy nad pecí
+        val topPad = 82 * dp                                 // bublina s uhlíky a řádek s výnosy nad pecí
         val slot = 26 * dp
         val gap = 8 * dp
         val below = 6 * dp + slot + 6 * dp + 34 * dp + 6 * dp  // artefakty a tlačítko přetavení pod pecí
@@ -203,7 +254,7 @@ class FurnaceView(ctx: Context) : View(ctx) {
         val sy = furnaceRect.bottom + 6 * dp
         val sx0 = w / 2f - (3 * slot + 2 * gap) / 2
         slotRects.forEachIndexed { i, r -> r.set(sx0 + i * (slot + gap), sy, sx0 + i * (slot + gap) + slot, sy + slot) }
-        val bw = min(w * 0.8f, 260 * dp)
+        val bw = min(w * 0.9f, 300 * dp)
         rebornRect.set(w / 2f - bw / 2, sy + slot + 6 * dp, w / 2f + bw / 2, sy + slot + 40 * dp)
     }
 
@@ -281,17 +332,17 @@ class FurnaceView(ctx: Context) : View(ctx) {
             }
         }
         // bublina s uhlíky (jako sova v předloze)
-        text.textSize = 26 * dp
-        val tw = text.measureText(amount) + 40 * dp
-        val br = RectF(w / 2 - tw / 2, 10 * dp, w / 2 + tw / 2, 10 * dp + 40 * dp)
+        text.textSize = 30 * dp
+        val tw = text.measureText(amount) + 46 * dp
+        val br = RectF(w / 2 - tw / 2, 10 * dp, w / 2 + tw / 2, 10 * dp + 44 * dp)
         paint.color = Color.parseColor("#6E3418"); c.drawRoundRect(br, 20 * dp, 20 * dp, paint)
         paint.style = Paint.Style.STROKE; paint.strokeWidth = 3 * dp; paint.color = Color.parseColor("#2A120A")
         c.drawRoundRect(br, 20 * dp, 20 * dp, paint); paint.style = Paint.Style.FILL
-        amountIcon?.let { c.drawBitmap(it, Rect(0, 0, it.width, it.height), RectF(br.right - 34 * dp, br.top + 6 * dp, br.right - 6 * dp, br.top + 34 * dp), ForgeArt.pixel) }
+        amountIcon?.let { c.drawBitmap(it, Rect(0, 0, it.width, it.height), RectF(br.right - 38 * dp, br.top + 7 * dp, br.right - 8 * dp, br.top + 37 * dp), ForgeArt.pixel) }
         text.color = Color.parseColor("#FFF2D8"); text.textAlign = Paint.Align.CENTER
-        c.drawText(amount, br.centerX() - 14 * dp, br.bottom - 12 * dp, text)
-        text.textSize = 15 * dp; text.color = Color.parseColor("#F4DEC0")
-        c.drawText(rates, w / 2, br.bottom + 18 * dp, text)
+        c.drawText(amount, br.centerX() - 15 * dp, br.bottom - 12 * dp, text)
+        text.textSize = 18 * dp; text.color = Color.parseColor("#F4DEC0")
+        c.drawText(rates, w / 2, br.bottom + 21 * dp, text)
         // artefakty pod pecí
         Forge.Artifact.entries.forEachIndexed { i, a ->
             val r = slotRects[i]
@@ -307,7 +358,7 @@ class FurnaceView(ctx: Context) : View(ctx) {
         c.drawRoundRect(rebornRect, 8 * dp, 8 * dp, paint)
         paint.style = Paint.Style.STROKE; paint.strokeWidth = 3 * dp; paint.color = Color.parseColor("#2A120A")
         c.drawRoundRect(rebornRect, 8 * dp, 8 * dp, paint); paint.style = Paint.Style.FILL
-        text.textSize = 17 * dp; text.color = if (rebornReady) Color.parseColor("#FFF2D8") else Color.parseColor("#C8A890")
+        text.textSize = 19 * dp; text.color = if (rebornReady) Color.parseColor("#FFF2D8") else Color.parseColor("#C8A890")
         c.drawText(rebornLabel, rebornRect.centerX(), rebornRect.centerY() + 6 * dp, text)
         heat = max(0f, heat - 0.02f)
         postInvalidateOnAnimation()

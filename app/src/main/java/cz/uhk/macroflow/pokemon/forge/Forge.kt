@@ -11,6 +11,8 @@ import kotlin.math.pow
  *
  *  - Měna: uhlíky. Klepnutím šlape hráč měch, výheň hoří i sama (i když hra neběží – Popelník).
  *  - Devět nekonečných vylepšení jen za uhlíky. Sleva: cena × 1 / (1 + 0,1 × úroveň).
+ *    Odemykají se postupně: od začátku jen Silnější měch, každé další po vydělání určité částky v tomto kole
+ *    ([UNLOCK], bar mezi pecí a panelem). Přetavení zamkne vše znovu.
  *  - Přetavení (reborn): vynuluje uhlíky a vylepšení za uhlíky, nechá pasivní bonusy; cena roste o řády
  *    (10 mil., 1 000 stříbrných, 10 000 stříbrných) a každé dá legendární artefakt.
  *  - Pasivní bonusy pro běžné hraní (obrana, HP, únik z ballu, odolnosti proti elementům) za uhlíky + suroviny
@@ -21,25 +23,43 @@ object Forge {
 
     enum class Up(val icon: Int, val label: String, val base: Double, val growth: Double) {
         BELLOWS(0, "Silnější měch", 10.0, 1.15),
-        SPARK(1, "Jiskra", 60.0, 1.18),
-        DISCOUNT(2, "Sleva", 150.0, 1.25),
-        AUTO(3, "Výheň hoří sama", 25.0, 1.15),
-        HEARTH(4, "Druhé ohniště", 600.0, 1.17),
-        HEAT(5, "Násobič žáru", 1_500.0, 1.20),
-        ASH(6, "Popelník", 3_000.0, 1.22),
-        STEPS(7, "Bonus za kroky", 5_000.0, 1.20),
-        SLEEP(8, "Bonus za spánek", 5_000.0, 1.20);
+        SPARK(1, "Jiskra", 60.0, 1.16),
+        DISCOUNT(2, "Sleva", 200.0, 1.17),
+        AUTO(3, "Výheň hoří sama", 500.0, 1.18),
+        HEARTH(4, "Druhé ohniště", 2_500.0, 1.19),
+        HEAT(5, "Násobič žáru", 8_000.0, 1.20),
+        ASH(6, "Popelník", 30_000.0, 1.22),
+        STEPS(7, "Bonus za kroky", 120_000.0, 1.24),
+        SLEEP(8, "Bonus za spánek", 400_000.0, 1.26);
     }
+
+    /**
+     * Kolik uhlíků je potřeba vydělat celkem v tomto kole, aby se odemklo vylepšení s daným pořadím
+     * (index 0 = Jiskra, tj. druhé v pořadí; Silnější měch je odemčený od začátku).
+     */
+    val UNLOCK = listOf(100.0, 1_000.0, 5_000.0, 25_000.0, 50_000.0, 100_000.0, 500_000.0, 2_000_000.0)
 
     data class State(
         val coals: Double = 0.0,
         val levels: List<Int> = List(Up.entries.size) { 0 },
         val reborns: Int = 0,
         /** Úrovně pasivních bonusů (id → úroveň). */
-        val passives: Map<String, Int> = emptyMap()
+        val passives: Map<String, Int> = emptyMap(),
+        /** Kolik uhlíků se v tomto kole vydělalo celkem (útrata ho nesnižuje); řídí odemykání vylepšení. */
+        val earned: Double = 0.0
     ) {
         fun lvl(u: Up) = levels[u.ordinal]
     }
+
+    /** Přidá vydělané uhlíky (do zůstatku i do počtu vydělaných v tomto kole). */
+    fun earn(st: State, v: Double) = if (v <= 0.0) st else st.copy(coals = st.coals + v, earned = st.earned + v)
+
+    /** Je vylepšení odemčené? Silnější měch vždy, ostatní po vydělání prahu (nebo když už mají úroveň – starší uložení). */
+    fun unlocked(st: State, u: Up) = u.ordinal == 0 || st.lvl(u) > 0 || st.earned >= UNLOCK[u.ordinal - 1]
+
+    /** Práh, který se odemkne příště: vylepšení a počet uhlíků; null, když je odemčeno všechno. */
+    fun nextUnlock(st: State): Pair<Up, Double>? =
+        Up.entries.firstOrNull { !unlocked(st, it) }?.let { it to UNLOCK[it.ordinal - 1] }
 
     /** Skutečný den: kroky dnes a spánek poslední noci v hodinách. */
     data class Life(val steps: Int = 0, val sleepHours: Double = 0.0)
@@ -88,6 +108,7 @@ object Forge {
     fun cost(st: State, u: Up): Double = u.base * u.growth.pow(st.lvl(u)) * discountMult(st.lvl(Up.DISCOUNT)) * hammerMult(st)
 
     fun buy(st: State, u: Up): State? {
+        if (!unlocked(st, u)) return null
         val c = cost(st, u)
         if (st.coals < c) return null
         return st.copy(coals = st.coals - c, levels = st.levels.toMutableList().also { it[u.ordinal]++ })
@@ -114,7 +135,7 @@ object Forge {
     fun canReborn(st: State) = rebornCost(st)?.let { st.coals >= it } == true
 
     fun reborn(st: State): State? =
-        if (!canReborn(st)) null else State(reborns = st.reborns + 1, passives = st.passives)
+        if (!canReborn(st)) null else State(reborns = st.reborns + 1, passives = st.passives)   // earned = 0: vylepšení se zamknou
 
     fun artifacts(st: State) = Artifact.entries.take(st.reborns.coerceAtMost(Artifact.entries.size))
 

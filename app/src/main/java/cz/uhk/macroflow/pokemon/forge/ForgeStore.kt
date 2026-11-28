@@ -16,8 +16,11 @@ object ForgeStore {
 
     fun load(ctx: Context): Forge.State {
         val p = prefs(ctx)
+        val coals = Double.fromBits(p.getLong("coals", 0.0.toRawBits()))
         return Forge.State(
-            coals = Double.fromBits(p.getLong("coals", 0.0.toRawBits())),
+            coals = coals,
+            // starší uložení (před odemykáním) „earned“ nemá – vezme se zůstatek; vylepšení s úrovní jsou odemčená tak jako tak
+            earned = if (p.contains("earned")) Double.fromBits(p.getLong("earned", 0.0.toRawBits())) else coals,
             levels = Forge.Up.entries.map { p.getInt("l${it.ordinal}", 0) },
             reborns = SkillStore.count(ctx, REBORN_ITEM),
             passives = Forge.Passive.entries.mapNotNull { pa -> SkillStore.count(ctx, pa.itemId).takeIf { it > 0 }?.let { pa.id to it } }.toMap()
@@ -28,6 +31,7 @@ object ForgeStore {
     fun save(ctx: Context, st: Forge.State, before: Forge.State? = null) {
         prefs(ctx).edit().apply {
             putLong("coals", st.coals.toRawBits())
+            putLong("earned", st.earned.toRawBits())
             st.levels.forEachIndexed { i, l -> putInt("l$i", l) }
             putLong("seen", System.currentTimeMillis())
         }.apply()

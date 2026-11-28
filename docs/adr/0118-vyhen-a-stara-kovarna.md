@@ -37,3 +37,18 @@ hráče poprvé seznámí s výhní (příznak `kovarna_magmor`), pak minihru ot
 - `Smithy.DOOR_NODE` je v `clickableNodes`; šipka u dveří i klepnutí na dveře vedou do `walkInto(SMITHY, kv_vstup)`.
 - Maska chůze Hor se přegenerovala (`tools/walkmask/gen_walkmask.py`): domek je pevný, před dveřmi zůstává průchod
   a z rozcestí se k nim dojde (ověřeno prohledáváním masky; ostatní uzly Hor zůstaly dosažitelné).
+
+**Odemykání vylepšení a ceny (úprava pacingu).** Na začátku kola je k dispozici jen Silnější měch. Mezi pecí a spodním
+panelem je bar „vydělané uhlíky / práh dalšího vylepšení“ (číslo uvnitř baru, nad ním název toho, co se odemkne).
+Prahy v `Forge.UNLOCK` se počítají z uhlíků vydělaných celkem v tomto kole (`State.earned`, útrata je nesnižuje):
+100 → Jiskra, 1 000 → Sleva, 5 000 → Výheň hoří sama, 25 000 → Druhé ohniště, 50 000 → Násobič žáru,
+100 000 → Popelník, 500 000 → Bonus za kroky, 2 000 000 → Bonus za spánek (poslední práh je můj odhad). Zamčená karta je
+ztmavená a píše podmínku; přetavení vylepšení zamkne a `earned` vynuluje. Starší uložení bez `earned` bere zůstatek
+a vylepšení, která už mají úroveň, zůstávají odemčená.
+- Nové ceny (základ × růst): měch 10 × 1,15; Jiskra 60 × 1,16; Sleva 200 × 1,17; Hoří sama 500 × 1,18; Druhé ohniště
+  2 500 × 1,19; Násobič žáru 8 000 × 1,20; Popelník 30 000 × 1,22; Kroky 120 000 × 1,24; Spánek 400 000 × 1,26.
+  Pozdější vylepšení jsou dražší i zdražují rychleji. Hrubá simulace (greedy nákup, ~10 min hraní denně, 4 klepnutí/s,
+  7 000 kroků, 7,5 h spánku): první přetavení za ~12 dní místo ~1,5 (samotné odemykání ho posune na ~2). Ceny přetavení
+  se nezměnily; je to potřeba odzkoušet na telefonu.
+- Pasivní bonusy: u každé suroviny je její ikona (stejná jako ve skladu, `SkillArt.resourceIcon`) a jen potřebné
+  množství; stav skladu se neukazuje, jen červená barva, když surovina chybí. Písmo v celé minihře je větší.

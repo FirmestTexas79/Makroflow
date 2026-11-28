@@ -22,7 +22,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import cz.uhk.macroflow.R
-import cz.uhk.macroflow.pokemon.skills.MaterialArt
 import cz.uhk.macroflow.pokemon.skills.SkillArt
 import cz.uhk.macroflow.pokemon.skills.SkillStore
 import cz.uhk.macroflow.pokemon.skills.ui.WorkshopMenus
@@ -38,6 +37,8 @@ import kotlin.random.Random
  * Výheň – minihra regionu 1 (docs/adr/0118). Na výšku jako zbytek aplikace: nahoře stará pec (šlápnutí na měch),
  * bublina s uhlíky, přetavení a artefakty; dole panel se 3 × 3 vylepšeními za uhlíky. Tlačítko Pasivní bonusy
  * přepne spodní panel na scrollovací seznam bonusů za suroviny (bez popupu), druhé klepnutí nebo Zpět vrátí vylepšení.
+ * Mezi pecí a panelem je bar odemykání: na začátku kola je k dispozici jen Silnější měch, další vylepšení se otevírají
+ * po vydělání prahů [Forge.UNLOCK].
  */
 class ForgeActivity : AppCompatActivity() {
     private var st = Forge.State()
@@ -45,6 +46,8 @@ class ForgeActivity : AppCompatActivity() {
     private var life = Forge.Life()
     private lateinit var cards: List<ForgeCardView>
     private lateinit var furnace: FurnaceView
+    private lateinit var unlockBar: ForgeProgressView
+    private var lastUnlocked = -1
     private lateinit var root: FrameLayout
     private var loaded = false
 
@@ -78,7 +81,7 @@ class ForgeActivity : AppCompatActivity() {
                 val l = ForgeStore.life(this@ForgeActivity)
                 Triple(s, l, ForgeStore.offline(this@ForgeActivity, s, l))
             }
-            st = s.copy(coals = s.coals + off); saved = s; life = l; loaded = true
+            st = Forge.earn(s, off); saved = s; life = l; loaded = true
             refresh()
             if (off >= 1) Toast.makeText(this@ForgeActivity, "🔥 Výheň mezitím hořela: +${Forge.format(off)}", Toast.LENGTH_LONG).show()
             loop()
@@ -87,7 +90,7 @@ class ForgeActivity : AppCompatActivity() {
 
     private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
-    private fun woodButton(label: String, size: Float = 17f, onClick: () -> Unit) = TextView(this).apply {
+    private fun woodButton(label: String, size: Float = 19f, onClick: () -> Unit) = TextView(this).apply {
         text = label; typeface = ResourcesCompat.getFont(this@ForgeActivity, R.font.jersey_15); textSize = size; gravity = Gravity.CENTER
         setTextColor(Color.parseColor("#FFF2D8"))
         background = GradientDrawable().apply { setColor(Color.parseColor("#8A4420")); cornerRadius = dp(6f).toFloat(); setStroke(dp(3f), Color.parseColor("#2A120A")) }
@@ -111,7 +114,9 @@ class ForgeActivity : AppCompatActivity() {
             onReborn = { askReborn() }
             onArtifact = { a -> Toast.makeText(this@ForgeActivity, a?.let { "${it.label}: ${it.text}" } ?: "Artefakt se ukove při přetavení výhně.", Toast.LENGTH_LONG).show() }
         }
-        col.addView(furnace, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.45f))
+        col.addView(furnace, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.42f))
+        unlockBar = ForgeProgressView(this)
+        col.addView(unlockBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(58f)).apply { setMargins(dp(14f), dp(2f), dp(14f), dp(2f)) })
 
         // dolní polovina: dřevěný panel – nahoře název, uprostřed mřížka vylepšení / seznam bonusů, dole tlačítka
         val panel = LinearLayout(this).apply {
@@ -121,14 +126,14 @@ class ForgeActivity : AppCompatActivity() {
                 setColor(Color.parseColor("#4A2414")); cornerRadius = dp(10f).toFloat(); setStroke(dp(4f), Color.parseColor("#2A120A"))
             }
         }
-        col.addView(panel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.55f).apply { setMargins(dp(8f), dp(2f), dp(8f), dp(8f)) })
+        col.addView(panel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.58f).apply { setMargins(dp(8f), dp(2f), dp(8f), dp(8f)) })
         panelTitle = TextView(this).apply {
-            text = "VÝHEŇ KOVÁŘE MAGMORA"; typeface = font; textSize = 20f; gravity = Gravity.CENTER
+            text = "VÝHEŇ KOVÁŘE MAGMORA"; typeface = font; textSize = 24f; gravity = Gravity.CENTER
             setTextColor(Color.parseColor("#FFE2B0")); setShadowLayer(0f, 2f, 2f, Color.parseColor("#2A120A"))
         }
         panel.addView(panelTitle)
         panelSub = TextView(this).apply {
-            typeface = font; textSize = 14f; gravity = Gravity.CENTER; visibility = View.GONE
+            typeface = font; textSize = 17f; gravity = Gravity.CENTER; visibility = View.GONE
             setTextColor(Color.parseColor("#F4DEC0"))
         }
         panel.addView(panelSub)
@@ -158,7 +163,7 @@ class ForgeActivity : AppCompatActivity() {
         content.addView(passiveScroll, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val bar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        panel.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40f)).apply { topMargin = dp(6f) })
+        panel.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46f)).apply { topMargin = dp(6f) })
         bar.addView(woodButton("← ZPĚT") { finish() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         bar.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
         passBtn = woodButton("⚒ PASIVNÍ BONUSY") { showPassives(!showingPassives) }
@@ -170,12 +175,13 @@ class ForgeActivity : AppCompatActivity() {
         if (!loaded) return 0.0
         val crit = Random.nextDouble() < Forge.critChance(st.lvl(Forge.Up.SPARK))
         val gain = Forge.perTap(st, life) * if (crit) Forge.CRIT_MULT else 1.0
-        st = st.copy(coals = st.coals + gain)
+        st = Forge.earn(st, gain)
         return gain
     }
 
     private fun buy(up: Forge.Up, max: Boolean) {
         if (!loaded) return
+        if (!Forge.unlocked(st, up)) { Toast.makeText(this, "Zamčeno – vydělej ${Forge.format(Forge.UNLOCK[up.ordinal - 1])}.", Toast.LENGTH_SHORT).show(); return }
         val (next, n) = if (max) Forge.buyMax(st, up) else (Forge.buy(st, up)?.let { it to 1 } ?: (st to 0))
         if (n == 0) { Toast.makeText(this, "Málo uhlíků – šlapej měch.", Toast.LENGTH_SHORT).show(); return }
         st = next
@@ -188,7 +194,7 @@ class ForgeActivity : AppCompatActivity() {
         val next = Forge.Artifact.entries[st.reborns]
         WorkshopMenus.show(root, "Přetavit výheň", "Cena: ${Forge.format(cost)}") { ui, body, close ->
             body.addView(ui.text("Výheň se rozžhaví do běla a všechno, co sis za uhlíky vylepšil, se roztaví. Uhlíky zmizí.\n\n" +
-                "Pasivní bonusy za suroviny zůstanou. A z taveniny se ukove artefakt, který se už nikdy neztratí:\n\n" +
+                "Vylepšení výhně se zase zamknou a odemykají se od začátku. Pasivní bonusy za suroviny zůstanou. A z taveniny se ukove artefakt, který se už nikdy neztratí:\n\n" +
                 "${next.label} – ${next.text}", 15f))
             body.addView(ui.spacer(12f))
             body.addView(ui.button(if (Forge.canReborn(st)) "🔥 Přetavit" else "Zatím málo uhlíků", Forge.canReborn(st)) {
@@ -237,28 +243,31 @@ class ForgeActivity : AppCompatActivity() {
         val lvl = Forge.passiveLevel(st, p)
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10f), dp(8f), dp(10f), dp(8f))
+            setPadding(dp(10f), dp(10f), dp(10f), dp(10f))
             background = GradientDrawable().apply { setColor(Color.parseColor("#7A3C1C")); cornerRadius = dp(6f).toFloat(); setStroke(dp(3f), Color.parseColor("#2A120A")) }
         }
-        row.addView(pixelIcon(bitmapPixels(ForgeArt.icon(this, p.icon)), ForgeArt.ICON, ForgeArt.ICON, 40f))
+        row.addView(pixelIcon(bitmapPixels(ForgeArt.icon(this, p.icon)), ForgeArt.ICON, ForgeArt.ICON, 44f))
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10f), 0, dp(8f), 0) }
-        col.addView(label("${p.label}  ${if (p.maxLevel > 1) "$lvl/${p.maxLevel}" else if (lvl > 0) "✓" else ""}", 18f, cream))
-        col.addView(label(p.text, 14f, soft))
+        col.addView(label("${p.label}  ${if (p.maxLevel > 1) "$lvl/${p.maxLevel}" else if (lvl > 0) "✓" else ""}", 22f, cream))
+        col.addView(label(p.text, 17f, soft))
         if (lvl < p.maxLevel) {
             val need = Forge.passiveCoals(st, p)
-            val (coin, s) = Forge.amount(need)
+            val (coin, amount) = Forge.amount(need)
+            // cena: mince + částka a za ní ikona každé suroviny s potřebným množstvím (kolik máš ve skladu se neukazuje,
+            // jen barva: červená = chybí)
             val costRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-            costRow.addView(pixelIcon(bitmapPixels(ForgeArt.icon(this, coin.icon)), ForgeArt.ICON, ForgeArt.ICON, 18f))
-            val coalTv = label(" $s  ", 14f, cream); costRow.addView(coalTv)
+            costRow.addView(pixelIcon(bitmapPixels(ForgeArt.icon(this, coin.icon)), ForgeArt.ICON, ForgeArt.ICON, 26f))
+            val coalTv = label(" $amount", 18f, cream); costRow.addView(coalTv)
             p.materials.forEach { (r, n) ->
-                MaterialArt.icon(r)?.let { costRow.addView(pixelIcon(it, SkillArt.ITEM, SkillArt.ITEM, 18f)) }
-                costRow.addView(label(" ${have[r.itemId] ?: 0}/$n  ", 14f, if ((have[r.itemId] ?: 0) >= n) cream else bad))
+                costRow.addView(View(this), LinearLayout.LayoutParams(dp(12f), 1))
+                SkillArt.resourceIcon(r).let { costRow.addView(pixelIcon(it, SkillArt.ITEM, SkillArt.ITEM, 28f)) }
+                costRow.addView(label(" $n", 18f, if ((have[r.itemId] ?: 0) >= n) cream else bad))
             }
             col.addView(costRow)
             passiveUpdaters += { coalTv.setTextColor(if (st.coals >= need) cream else bad) }
         }
         row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        if (lvl < p.maxLevel) row.addView(woodButton("UKOVAT", 16f) { buyPassive(p) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36f)))
+        if (lvl < p.maxLevel) row.addView(woodButton("UKOVAT", 18f) { buyPassive(p) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42f)))
         return row
     }
 
@@ -292,8 +301,11 @@ class ForgeActivity : AppCompatActivity() {
             val (coin, s) = Forge.amount(cost)
             c.costIcon = ForgeArt.icon(this, coin.icon); c.cost = s
             c.affordable = st.coals >= cost
+            c.locked = !Forge.unlocked(st, up)
+            c.lockText = if (c.locked) "Odemkne se po vydělání ${Forge.format(Forge.UNLOCK[up.ordinal - 1])}" else ""
             c.invalidate()
         }
+        refreshUnlockBar()
         val (coin, s) = Forge.amount(st.coals)
         furnace.amount = s
         furnace.amountIcon = ForgeArt.icon(this, coin.icon)
@@ -303,6 +315,25 @@ class ForgeActivity : AppCompatActivity() {
         furnace.rebornLabel = rc?.let { "PŘETAVIT · ${Forge.format(it)}" } ?: "VŠECHNY ARTEFAKTY UKOVÁNY"
         furnace.rebornReady = Forge.canReborn(st)
         if (showingPassives) updatePassives()
+    }
+
+    private fun refreshUnlockBar() {
+        val count = Forge.Up.entries.count { Forge.unlocked(st, it) }
+        if (lastUnlocked in 0 until count) {
+            val fresh = Forge.Up.entries.last { Forge.unlocked(st, it) }
+            Toast.makeText(this, "🔓 Odemčeno: ${fresh.label}", Toast.LENGTH_SHORT).show()
+        }
+        lastUnlocked = count
+        val next = Forge.nextUnlock(st)
+        if (next == null) {
+            unlockBar.caption = "Všechna vylepšení jsou odemčená"; unlockBar.value = "✓"; unlockBar.progress = 1f
+        } else {
+            val (up, need) = next
+            unlockBar.caption = "Další vylepšení: ${up.label}"
+            unlockBar.value = "${Forge.amount(st.earned).second} / ${Forge.amount(need).second}"
+            unlockBar.progress = (st.earned / need).toFloat()
+        }
+        unlockBar.invalidate()
     }
 
     private fun describe(up: Forge.Up): String {
@@ -327,7 +358,7 @@ class ForgeActivity : AppCompatActivity() {
             while (isActive) {
                 delay(250)
                 val now = System.currentTimeMillis()
-                st = st.copy(coals = st.coals + Forge.perSecond(st, life) * (now - last) / 1000.0)
+                st = Forge.earn(st, Forge.perSecond(st, life) * (now - last) / 1000.0)
                 last = now
                 refresh()
                 if (now - lastSave > 10_000) { save(); lastSave = now }
