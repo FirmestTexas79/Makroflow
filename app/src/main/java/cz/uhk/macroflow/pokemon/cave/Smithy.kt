@@ -22,6 +22,8 @@ object Smithy {
     /** Tři podstavce u pece (střed, horní plocha) – na ně aplikace staví relikvie ukované přetavením Výhně (gen_smithy.py: PEDESTALS). */
     val PEDESTALS = listOf(100 to 88, 116 to 88, 132 to 88)
     const val PEDESTAL_NODE = "kv_podstavce"
+    /** Ústí pece v místnosti – odtud po přetavení přiletí nová relikvie na podstavec. */
+    val FURNACE_MOUTH = 40 to 98
 
     val MAP = CaveMap(
         artW = 176, artH = 352,

@@ -83,3 +83,9 @@ Výheň už při nedostatku uhlíků nic nehlásí (cena je červená).
 který dotyk spotřeboval (chůze / akce uzlu), takže posluchači klepnutí na dekoracích (sběratelské předměty – např. stránka
 kuchařky u západní stezky v Horách –, roztržené listy, šipky) se nikdy nezavolali. Teď má přednost `tapDecorAt`: klikací
 dekorace pod prstem (nejvyšší elevace) se spustí, jinak se pokračuje mapou.
+
+**Animace ukování.** Po potvrzení přetavení se pec rozžhaví do běla a otřese (jiskry z ústí), záblesk, z ústí vyletí relikvie,
+nad pecí se zvětší v rotujících paprscích své barvy s nápisem „Ukováno · název“, pak obloukem odletí do svého slotu vpravo
+(stopa jisker, prstenec při dopadu, otevře se popis bonusu); slot se rozsvítí až po doletu (`FurnaceView.playForge`).
+Ve Staré kovárně relikvie, kterou tam hráč ještě neviděl (`smithy_relics_shown`), přiletí z ústí pece (`Smithy.FURNACE_MOUTH`)
+obloukem na svůj podstavec, při dopadu blikne záře a ukáže se hláška.

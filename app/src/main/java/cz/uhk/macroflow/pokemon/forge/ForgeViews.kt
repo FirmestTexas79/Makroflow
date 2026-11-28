@@ -249,6 +249,21 @@ class FurnaceView(ctx: Context) : View(ctx) {
     private val start = System.currentTimeMillis()
 
     private class Particle(var x: Float, var y: Float, var vx: Float, var vy: Float, var life: Float, val size: Float, val color: Int, val text: String? = null)
+
+    /** Probíhající ukování relikvie po přetavení (docs/adr/0118); během něj se na pec neklepe. */
+    private class ForgeAnim(val index: Int, val start: Long, val onDone: () -> Unit) { var landed = false; var flashed = false }
+    private var forgeAnim: ForgeAnim? = null
+    val forging get() = forgeAnim != null
+    private val GLOW = intArrayOf(Color.parseColor("#FF8A2A"), Color.parseColor("#5FE8F0"), Color.parseColor("#FFD25A"))
+
+    /**
+     * Animace ukování: pec se rozžhaví do běla a otřese, z ústí vyletí relikvie, nad pecí se zvětší v paprscích s nápisem
+     * „Ukováno“, pak odletí obloukem do svého slotu vpravo, kde se rozzáří a otevře se její popis. [onDone] při dopadu.
+     */
+    fun playForge(index: Int, onDone: () -> Unit) {
+        selected = -1
+        forgeAnim = ForgeAnim(index, System.currentTimeMillis(), onDone)
+    }
     private val parts = mutableListOf<Particle>()
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
@@ -286,6 +301,7 @@ class FurnaceView(ctx: Context) : View(ctx) {
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(e: MotionEvent): Boolean {
         if (e.actionMasked != MotionEvent.ACTION_DOWN) return true
+        if (forgeAnim != null) return true
         val x = e.x; val y = e.y
         when {
             rebornRect.contains(x, y) -> onReborn()
@@ -322,6 +338,14 @@ class FurnaceView(ctx: Context) : View(ctx) {
     override fun onDraw(c: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
         val t = (System.currentTimeMillis() - start) / 1000f
+        // otřesy při rozžhavení (první fáze ukování)
+        val fa = forgeAnim
+        val ft = fa?.let { (System.currentTimeMillis() - it.start) / 1000f } ?: -1f
+        c.save()
+        if (ft in 0f..1.6f) {
+            val k = min(1f, ft / 1.4f) * (if (ft > 1.4f) (1.6f - ft) / 0.2f else 1f)
+            c.translate(kotlin.math.sin(ft * 63f) * 4 * dp * k, kotlin.math.cos(ft * 51f) * 3 * dp * k)
+        }
         // dílna: pozadí ve stejném měřítku pixelů jako pec; co pozadí nepokryje, je ve stejné barvě jako jeho okraj
         val bg = ForgeArt.bg(context)
         paint.shader = null; paint.color = Color.parseColor("#17100E"); c.drawRect(0f, 0f, w, h, paint)
@@ -406,8 +430,95 @@ class FurnaceView(ctx: Context) : View(ctx) {
         val fit = rebornRect.width() - 16 * dp
         if (text.measureText(rebornLabel) > fit) text.textSize *= fit / text.measureText(rebornLabel)   // dlouhý popisek se zmenší
         c.drawText(rebornLabel, rebornRect.centerX(), rebornRect.centerY() + text.textSize * 0.34f, text)
+        c.restore()
+        if (fa != null) drawForgeAnim(c, fa, ft)
         heat = max(0f, heat - 0.02f)
         postInvalidateOnAnimation()
+    }
+
+    private fun ease(p: Float) = p * p * (3 - 2 * p)
+
+    private fun drawForgeAnim(c: Canvas, a: ForgeAnim, t: Float) {
+        val w = width.toFloat()
+        val col = GLOW[a.index.coerceIn(0, GLOW.size - 1)]
+        val (mx, my) = mouth()
+        val big = ForgeArt.RELIC * scale * 1.7f
+        val small = ForgeArt.RELIC * scale.toFloat()
+        val center = w / 2f to (furnaceRect.top + furnaceRect.height() * 0.30f)
+        val slot = slotRects.getOrNull(a.index) ?: slotRects.last()
+        // 1) rozžhavení: pec do běla, jiskry z ústí
+        if (t < 1.4f) {
+            heat = 1f
+            val k = t / 1.4f
+            paint.shader = RadialGradient(mx, my, furnaceRect.width() * (0.4f + 0.8f * k), Color.argb((200 * k).toInt(), 255, 236, 190), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+            c.drawRect(0f, 0f, w, height.toFloat(), paint); paint.shader = null
+            repeat(3) {
+                parts += Particle(mx + (Random.nextFloat() - 0.5f) * 40 * dp, my, (Random.nextFloat() - 0.5f) * 7, -(3 + Random.nextFloat() * 7), 1f,
+                    scale * (1 + Random.nextInt(2)), if (Random.nextBoolean()) Color.parseColor("#FFF2B0") else col)
+            }
+        }
+        // záblesk ve chvíli, kdy relikvie vyletí
+        if (t in 1.4f..1.9f) {
+            if (!a.flashed) { a.flashed = true; performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS) }
+            paint.color = Color.argb((230 * (1 - (t - 1.4f) / 0.5f)).toInt(), 255, 246, 220)
+            c.drawRect(0f, 0f, w, height.toFloat(), paint)
+        }
+        if (t < 1.4f) return
+        // pozice a velikost relikvie
+        val (x, y, size) = when {
+            t < 2.4f -> { val p = ease(((t - 1.4f) / 1.0f).coerceIn(0f, 1f)); Triple(mx + (center.first - mx) * p, my + (center.second - my) * p, big * (0.2f + 0.8f * p)) }
+            t < 3.5f -> Triple(center.first, center.second + kotlin.math.sin((t - 2.4f) * 3f) * 3 * dp, big)
+            else -> {
+                val p = ease(((t - 3.5f) / 0.8f).coerceIn(0f, 1f))
+                val cx = center.first; val cy = center.second; val ex = slot.centerX(); val ey = slot.centerY()
+                val kx = (cx + ex) / 2f; val ky = min(cy, ey) - 50 * dp                    // oblouk přes kontrolní bod nahoře
+                val q = 1 - p
+                Triple(q * q * cx + 2 * q * p * kx + p * p * ex, q * q * cy + 2 * q * p * ky + p * p * ey, big + (small - big) * p)
+            }
+        }
+        // paprsky a záře za relikvií (slábnou při odletu)
+        val rays = if (t < 3.5f) min(1f, (t - 1.4f) / 0.6f) else max(0f, 1 - (t - 3.5f) / 0.5f)
+        if (rays > 0f) {
+            paint.shader = RadialGradient(x, y, size * 1.4f, (col and 0x00FFFFFF) or ((170 * rays).toInt() shl 24), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+            c.drawCircle(x, y, size * 1.4f, paint); paint.shader = null
+            c.save(); c.rotate(t * 35f, x, y)
+            paint.color = (col and 0x00FFFFFF) or ((90 * rays).toInt() shl 24)
+            val path = android.graphics.Path()
+            for (i in 0 until 12) {
+                val a0 = Math.toRadians(i * 30.0 - 5); val a1 = Math.toRadians(i * 30.0 + 5)
+                path.moveTo(x, y)
+                path.lineTo(x + kotlin.math.cos(a0).toFloat() * size * 1.6f, y + kotlin.math.sin(a0).toFloat() * size * 1.6f)
+                path.lineTo(x + kotlin.math.cos(a1).toFloat() * size * 1.6f, y + kotlin.math.sin(a1).toFloat() * size * 1.6f)
+                path.close()
+            }
+            c.drawPath(path, paint); c.restore()
+        }
+        // relikvie (ostře; při odletu zanechává jiskry)
+        val ic = ForgeArt.relic(context, a.index.coerceIn(0, 2))
+        c.drawBitmap(ic, Rect(0, 0, ic.width, ic.height), RectF(x - size / 2, y - size / 2, x + size / 2, y + size / 2), ForgeArt.pixel)
+        if (t > 3.5f && t < 4.3f) parts += Particle(x, y, (Random.nextFloat() - 0.5f) * 2, (Random.nextFloat() - 0.5f) * 2, 0.8f, scale.toFloat(), col)
+        // nápis
+        if (t in 1.8f..3.6f) {
+            val al = (min(1f, (t - 1.8f) / 0.4f) * min(1f, (3.6f - t) / 0.3f)).coerceIn(0f, 1f)
+            val art = Forge.Artifact.entries[a.index.coerceIn(0, Forge.Artifact.entries.size - 1)]
+            text.textAlign = Paint.Align.CENTER
+            text.textSize = 18 * dp; text.color = Color.argb((255 * al).toInt(), 255, 236, 190)
+            drawOutlined(c, "✦ UKOVÁNO ✦", w / 2f, center.second + big / 2 + 26 * dp)
+            text.textSize = 30 * dp; text.color = (col and 0x00FFFFFF) or ((255 * al).toInt() shl 24)
+            drawOutlined(c, art.label.uppercase(), w / 2f, center.second + big / 2 + 58 * dp)
+        }
+        // dopad do slotu: prstenec jisker, otevře se popis
+        if (t >= 4.3f && !a.landed) {
+            a.landed = true
+            repeat(24) { i ->
+                val ang = i / 24f * 2 * Math.PI.toFloat()
+                parts += Particle(slot.centerX(), slot.centerY(), kotlin.math.cos(ang) * 5, kotlin.math.sin(ang) * 5, 1f, scale.toFloat() * 1.5f, col)
+            }
+            performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            forgeAnim = null
+            a.onDone()
+            selected = a.index
+        }
     }
 
     private fun drawOutlined(c: Canvas, s: String, x: Float, y: Float) {

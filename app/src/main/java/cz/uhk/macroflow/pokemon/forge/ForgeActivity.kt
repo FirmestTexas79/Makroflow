@@ -59,6 +59,7 @@ class ForgeActivity : AppCompatActivity() {
     private lateinit var passiveList: LinearLayout
     private lateinit var passBtn: TextView
     private var showingPassives = false
+    private var forgingRelic = false
     private val passiveUpdaters = mutableListOf<() -> Unit>()
     private val backToUpgrades = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() { showPassives(false) }
@@ -197,8 +198,13 @@ class ForgeActivity : AppCompatActivity() {
                 "${next.label} – ${next.text}", 15f))
             body.addView(ui.spacer(12f))
             body.addView(ui.button(if (Forge.canReborn(st)) "🔥 Přetavit" else "Zatím málo uhlíků", Forge.canReborn(st)) {
-                Forge.reborn(st)?.let { st = it; close(); save(); refresh()
-                    Toast.makeText(this, "✨ Ukován artefakt: ${next.label}", Toast.LENGTH_LONG).show() }
+                Forge.reborn(st)?.let { nxt ->
+                    val idx = st.reborns
+                    close(); st = nxt; save()
+                    // ukování: relikvie se objeví ve slotu až po doletu (do té doby zůstává starý seznam)
+                    forgingRelic = true; refresh()
+                    furnace.playForge(idx) { forgingRelic = false; refresh() }
+                }
             })
         }
     }
@@ -309,7 +315,7 @@ class ForgeActivity : AppCompatActivity() {
         furnace.amount = s
         furnace.amountIcon = ForgeArt.icon(this, coin.icon)
         furnace.rates = "+${Forge.amount(Forge.perTap(st, life)).second} za šlápnutí · +${Forge.amount(Forge.perSecond(st, life)).second}/s"
-        furnace.artifacts = Forge.artifacts(st)
+        if (!forgingRelic) furnace.artifacts = Forge.artifacts(st)
         val rc = Forge.rebornCost(st)
         furnace.rebornLabel = rc?.let { "PŘETAVIT · ${Forge.format(it)}" } ?: "VŠECHNY ARTEFAKTY UKOVÁNY"
         furnace.rebornReady = Forge.canReborn(st)

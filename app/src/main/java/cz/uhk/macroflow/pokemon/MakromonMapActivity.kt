@@ -492,6 +492,7 @@ class MakromonMapActivity : AppCompatActivity() {
     }
 
     private val smithyRelicViews = mutableListOf<View>()
+    private val SMITHY_RELICS_SHOWN = "smithy_relics_shown"
 
     /**
      * Relikvie na podstavcích ve Staré kovárně (docs/adr/0118): kolik přetavení, tolik relikvií – stejné sprity jako ve Výhni,
@@ -507,6 +508,9 @@ class MakromonMapActivity : AppCompatActivity() {
             val s = worldScale.toFloat()
             val px = kotlin.math.max(1, worldScale / 3)
             val glowColors = intArrayOf(0xFFFF8A2A.toInt(), 0xFF5FE8F0.toInt(), 0xFFFFD25A.toInt())
+            // nově ukované relikvie (ještě je tu hráč neviděl) přiletí z pece na podstavec
+            val shown = gamePrefs.getInt(SMITHY_RELICS_SHOWN, 0).coerceAtMost(reborns)
+            if (shown != reborns) gamePrefs.edit().putInt(SMITHY_RELICS_SHOWN, reborns).apply()
             cz.uhk.macroflow.pokemon.cave.Smithy.PEDESTALS.take(reborns.coerceAtMost(3)).forEachIndexed { i, (x, y) ->
                 val bmp = cz.uhk.macroflow.pokemon.forge.ForgeArt.relic(this@MakromonMapActivity, i)
                 val size = bmp.width * px
@@ -522,9 +526,41 @@ class MakromonMapActivity : AppCompatActivity() {
                 }
                 addDecor(glow); addDecor(relic)
                 smithyRelicViews += glow; smithyRelicViews += relic
-                bob(relic, 2 * resources.displayMetrics.density, 2600L + i * 300L)
-                crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.35f, 0.9f, 0.35f).apply {
-                    duration = 2200; repeatCount = android.animation.ValueAnimator.INFINITE; startDelay = i * 400L; start()
+                val settle = {
+                    bob(relic, 2 * resources.displayMetrics.density, 2600L + i * 300L)
+                    crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.35f, 0.9f, 0.35f).apply {
+                        duration = 2200; repeatCount = android.animation.ValueAnimator.INFINITE; startDelay = i * 400L; start()
+                    }
+                }
+                if (i < shown) settle() else {
+                    // přílet: z ústí pece obloukem na podstavec, roste; po dopadu záblesk záře
+                    val (fx, fy) = cz.uhk.macroflow.pokemon.cave.Smithy.FURNACE_MOUTH
+                    val endX = relic.x; val endY = relic.y
+                    val startX = fx * s - size / 2f; val startY = fy * s - size / 2f
+                    val ctrlX = (startX + endX) / 2f; val ctrlY = kotlin.math.min(startY, endY) - 40 * s
+                    glow.alpha = 0f; relic.alpha = 0f
+                    crystalAnimators += android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+                        duration = 1300; startDelay = 700L + (i - shown) * 900L
+                        interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+                        addUpdateListener { va ->
+                            val p = va.animatedValue as Float; val q = 1 - p
+                            relic.x = q * q * startX + 2 * q * p * ctrlX + p * p * endX
+                            relic.y = q * q * startY + 2 * q * p * ctrlY + p * p * endY
+                            relic.alpha = kotlin.math.min(1f, p * 4f)
+                            relic.scaleX = 0.3f + 0.7f * p; relic.scaleY = relic.scaleX
+                            relic.rotation = (1 - p) * 360f
+                        }
+                        addListener(object : android.animation.AnimatorListenerAdapter() {
+                            override fun onAnimationEnd(animation: android.animation.Animator) {
+                                if (isFinishing) return
+                                relic.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                                glow.alpha = 1f; glow.scaleX = 1.8f; glow.scaleY = 1.8f
+                                glow.animate().scaleX(1f).scaleY(1f).alpha(0.6f).setDuration(600).withEndAction { if (!isFinishing) settle() }.start()
+                                showMapToast("✨ ${cz.uhk.macroflow.pokemon.forge.Forge.Artifact.entries[i].label} teď stojí na podstavci.")
+                            }
+                        })
+                        start()
+                    }
                 }
             }
         }
