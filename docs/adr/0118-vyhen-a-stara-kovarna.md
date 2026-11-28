@@ -53,10 +53,12 @@ a vylepšení, která už mají úroveň, zůstávají odemčená.
 - Pasivní bonusy: u každé suroviny je její ikona (stejná jako ve skladu, `SkillArt.resourceIcon`) a jen potřebné
   množství; stav skladu se neukazuje, jen červená barva, když surovina chybí. Písmo v celé minihře je větší.
 
-**Vzhled dílny a relikvie.** Pozadí (`forge_bg.png`, 400 × 400) je teď ve stejném pixelovém měřítku jako pec: aplikace kreslí
+**Vzhled dílny a relikvie.** Pozadí (`forge_bg.png`, 400 × 560 – zeď sahá až k horní hraně) je teď ve stejném pixelovém měřítku jako pec: aplikace kreslí
 pec, pozadí, relikvie a oheň ve stejném celočíselném násobku, takže se nemíchají velikosti pixelů. Pozadí má kamenné kvádry
 nestejné velikosti s hranami, prasklinami a sazemi, dubový trám, cihlový komínový tah, který navazuje na komín pece,
-police s lahvičkami, nářadí, sud, dlažbu v perspektivě, světlo z ohně a kontaktní stín pod soklem (sokl stojí přesně na
-řádku podlahy, `ForgeArt.BG_FLOOR_ROW`). Relikvie z přetavení jsou nové sprity 32 × 32 (`forge_relics.png`) ve velkých slotech
-vpravo od pece; klepnutí ukáže panel s názvem a bonusem (u neukované řekne, při kterém přetavení se ukove), druhé klepnutí
+police s lahvičkami, nářadí, dlažbu v perspektivě, světlo z ohně a kontaktní stín pod soklem (sokl stojí přesně na
+řádku podlahy, `ForgeArt.BG_FLOOR_ROW`). Relikvie z přetavení jsou sprity 40 × 40 (`tools/mapgen/forge_relics.py` → `forge_relics.png`): obsidiánové Srdce výhně
+rozpraskané magmatem se zlatou korunkou a plamínky, Kovadlina předků z temné oceli se zlatou intarzií a tyrkysovými runami,
+Kladivo mistra se zlatými objímkami, rubínem a koženým toporem; každá má vlastní barvu záře. Pec a bublina s uhlíky jsou
+uprostřed, relikvie ve velkých slotech v pravé polovině vedle pece (měřítko se volí tak, aby se vešly); klepnutí ukáže panel s názvem a bonusem (u neukované řekne, při kterém přetavení se ukove), druhé klepnutí
 ho schová. Generátor: `tools/mapgen/gen_forge.py`.

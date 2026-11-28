@@ -43,11 +43,11 @@ object ForgeArt {
     }.also { fire = it }
     fun bg(ctx: Context) = bg ?: decode(ctx, R.drawable.forge_bg).also { bg = it }
 
-    /** Relikvie z přetavení 32 × 32 (Srdce výhně, Kovadlina předků, Kladivo mistra) – větší a detailnější než ikony. */
-    const val RELIC = 32
+    /** Relikvie z přetavení 40 × 40 (tools/mapgen/forge_relics.py): Srdce výhně, Kovadlina předků, Kladivo mistra. */
+    const val RELIC = 40
     const val BG_FURNACE_X = 136          // kam v pozadí padne levý horní roh pece (tools/mapgen/gen_forge.py)
-    const val BG_FURNACE_Y = 138
-    const val BG_FLOOR_ROW = 276          // řádek pozadí, na kterém stojí sokl pece
+    const val BG_FURNACE_Y = 298
+    const val BG_FLOOR_ROW = 436          // řádek pozadí, na kterém stojí sokl pece
     fun relic(ctx: Context, i: Int): Bitmap = (relics ?: decode(ctx, R.drawable.forge_relics).let { a ->
         (0 until a.width / RELIC).map { Bitmap.createBitmap(a, it * RELIC, 0, RELIC, RELIC) }
     }.also { relics = it })[i]
@@ -256,25 +256,29 @@ class FurnaceView(ctx: Context) : View(ctx) {
         val topPad = 84 * dp                                 // bublina s uhlíky a řádek s výnosy nad pecí
         val below = 6 * dp + 40 * dp + 8 * dp                // tlačítko přetavení pod pecí
         val gap = 10 * dp
-        // sloupec relikvií vpravo od pece: čtvercové sloty, ikona 32 px v celočíselném měřítku
-        // (dvě třetiny šířky patří peci – měřítko pixelů je pro pec, pozadí i relikvie společné)
-        scale = max(1, min((h - topPad - below) / f.height, (w * 0.62f) / f.width).toInt()).toFloat()
-        val slot = ForgeArt.RELIC * scale + 10 * dp
-        val colW = slot + 2 * gap
+        val slotPad = 10 * dp
+        // pec je přesně uprostřed; sloupec relikvií se musí vejít do pravé poloviny vedle ní:
+        // 64·s (půl pece) + mezera + slot (40·s + okraj) + mezera ≤ w / 2. Měřítko pixelů je společné pro pec, pozadí i relikvie.
+        val byWidth = ((w / 2f - 2 * gap - slotPad) / (f.width / 2f + ForgeArt.RELIC)).toInt()
+        val byHeight = ((h - topPad - below) / f.height).toInt()
+        scale = max(1, min(byWidth, byHeight)).toFloat()
+        val slot = ForgeArt.RELIC * scale + slotPad
         val fw = f.width * scale; val fh = f.height * scale
-        val left = Math.round((w - colW - fw) / 2f + (gap / 2f)).toFloat()
+        val left = Math.round((w - fw) / 2f).toFloat()
         val top = Math.round(topPad + max(0f, h - topPad - below - fh) / 2).toFloat()
         furnaceRect.set(left, top, left + fw, top + fh)
         // pozadí: stejné celočíselné měřítko, sokl pece přesně na řádku podlahy
-        val k = scale
-        val bgLeft = left - ForgeArt.BG_FURNACE_X * k
-        val bgTop = top - ForgeArt.BG_FURNACE_Y * k
-        bgRect.set(bgLeft, bgTop, bgLeft + 400 * k, bgTop + 400 * k)
-        // relikvie: svislý sloupec vpravo od pece, vystředěný na pec
-        val sx = furnaceRect.right + gap
-        val totalH = slotRects.size * slot + (slotRects.size - 1) * gap
-        val sy0 = furnaceRect.top + (fh - totalH) / 2f
-        slotRects.forEachIndexed { i, r -> r.set(sx, sy0 + i * (slot + gap), sx + slot, sy0 + i * (slot + gap) + slot) }
+        val bg = ForgeArt.bg(context)
+        val bgLeft = left - ForgeArt.BG_FURNACE_X * scale
+        val bgTop = top - ForgeArt.BG_FURNACE_Y * scale
+        bgRect.set(bgLeft, bgTop, bgLeft + bg.width * scale, bgTop + bg.height * scale)
+        // relikvie: svislý sloupec vpravo od pece, vystředěný na výšku pece; v pravé polovině vystředěný mezi pecí a okrajem
+        val freeL = furnaceRect.right; val freeR = w.toFloat()
+        val sx = max(freeL + gap, (freeL + freeR) / 2f - slot / 2f).coerceAtMost(w - gap - slot)
+        val vgap = 8 * dp
+        val totalH = slotRects.size * slot + (slotRects.size - 1) * vgap
+        val sy0 = max(topPad - 10 * dp, furnaceRect.top + (fh - totalH) / 2f)
+        slotRects.forEachIndexed { i, r -> r.set(sx, sy0 + i * (slot + vgap), sx + slot, sy0 + i * (slot + vgap) + slot) }
         val bw = min(w - 2 * gap, 340 * dp)
         rebornRect.set(w / 2f - bw / 2, h - below + 2 * dp, w / 2f + bw / 2, h - 8 * dp)
     }
@@ -363,7 +367,7 @@ class FurnaceView(ctx: Context) : View(ctx) {
         // bublina s uhlíky (jako sova v předloze)
         text.textSize = 30 * dp
         val tw = text.measureText(amount) + 46 * dp
-        val bx = furnaceRect.centerX()
+        val bx = w / 2f
         val br = RectF(bx - tw / 2, 10 * dp, bx + tw / 2, 10 * dp + 44 * dp)
         paint.color = Color.parseColor("#6E3418"); c.drawRoundRect(br, 22 * dp, 22 * dp, paint)
         paint.style = Paint.Style.STROKE; paint.strokeWidth = 3 * dp; paint.color = Color.parseColor("#2A120A")
