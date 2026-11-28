@@ -19,16 +19,20 @@ object Smithy {
     const val MAGMOR_X = 116
     const val MAGMOR_Y = 172
 
+    /** Tři podstavce u pece (střed, horní plocha) – na ně aplikace staví relikvie ukované přetavením Výhně (gen_smithy.py: PEDESTALS). */
+    val PEDESTALS = listOf(100 to 88, 116 to 88, 132 to 88)
+    const val PEDESTAL_NODE = "kv_podstavce"
+
     val MAP = CaveMap(
         artW = 176, artH = 352,
         nodes = listOf(
             CaveNode(ENTRY_NODE, 88, 342), CaveNode("kv_stred", 88, 238), CaveNode(MAGMOR_NODE, 114, 190), CaveNode(FORGE_NODE, 40, 124),
             CaveNode("kv_kovadlina", 76, 188), CaveNode("kv_brus", 150, 200), CaveNode("kv_stojan", 144, 268), CaveNode("kv_ponk", 40, 258),
-            CaveNode("kv_police", 152, 122)
+            CaveNode("kv_police", 152, 122), CaveNode(PEDESTAL_NODE, 116, 124)
         ),
         edges = listOf(ENTRY_NODE to "kv_stred", "kv_stred" to MAGMOR_NODE, "kv_stred" to "kv_kovadlina", "kv_kovadlina" to FORGE_NODE,
             "kv_stred" to "kv_brus", "kv_stred" to "kv_stojan", "kv_stred" to "kv_ponk", MAGMOR_NODE to "kv_police",
-            "kv_brus" to "kv_police", MAGMOR_NODE to FORGE_NODE),
+            "kv_brus" to "kv_police", MAGMOR_NODE to FORGE_NODE, MAGMOR_NODE to PEDESTAL_NODE),
         exitNode = ENTRY_NODE,
         mountainNode = DOOR_NODE,
         crystalNode = null,
@@ -39,7 +43,7 @@ object Smithy {
         tapAreas = mapOf(
             ENTRY_NODE to Triple(88, 346, 12), MAGMOR_NODE to Triple(116, 160, 14), FORGE_NODE to Triple(40, 84, 26),
             "kv_kovadlina" to Triple(76, 166, 12), "kv_brus" to Triple(150, 173, 12), "kv_stojan" to Triple(144, 240, 18),
-            "kv_ponk" to Triple(40, 235, 20), "kv_police" to Triple(152, 88, 16)
+            "kv_ponk" to Triple(40, 235, 20), "kv_police" to Triple(152, 88, 16), PEDESTAL_NODE to Triple(116, 88, 22)
         )
     )
 
@@ -50,6 +54,8 @@ object Smithy {
         "kv_stojan" to "🗡️ Stojan se zbraněmi. Meče, sekera, kopí. Nikdo je nevyzvedl. Na každé visí cedulka „HOTOVO“ a pod ní datum, " +
             "které už nikdo nepočítá.",
         "kv_ponk" to "🔨 Ponk: kus kůže, rozdělaná čepel, kleště. Všechno připravené, jako by kovář jen na chvíli odešel. Magmor ale stojí u kovadliny.",
+        PEDESTAL_NODE to "🏺 Tři kamenné podstavce se zlatou obrubou. Každý má v desce mělké lůžko. Magmor říká, že na ně patří " +
+            "relikvie, které vzejdou z přetavení výhně – Srdce výhně, Kovadlina předků a Kladivo mistra.",
         "kv_police" to "🧪 Regál s lahvičkami. Kalicí oleje, sůl, borax – a jedna lahvička bez nálepky, ve které se pomalu točí světlo."
     )
 

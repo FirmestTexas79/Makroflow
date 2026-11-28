@@ -650,5 +650,6 @@ if __name__ == "__main__":
     save(fire_frames(), "forge_fire.png")
     save(background(), "forge_bg.png")
     save(forge_relics.sheet(), "forge_relics.png")
+    save(furnace_mini(24, 28), "forge_furnace_icon.png")      # ikona Staré kovárny na mapě zóny
     save(forge_icons.atlas(), "forge_icons.png")
     print("ikony:", ", ".join(f"{i}={n}" for i, (n, _) in enumerate(ICONS)))

@@ -44,6 +44,16 @@ class ZoneMapView(context: Context, val zone: Int = 1) : View(context) {
     var current = "TOWN"
     var heroFrac: PointF? = null
     var heroHead: Bitmap? = null
+
+    /** Místa s ikonou na mapě (lokace, pozice v lokaci jako u hráče, ikona): Stará kovárna v Horách (docs/adr/0118). */
+    private class Poi(val biome: String, val frac: PointF, val icon: Bitmap?)
+    private val pois: List<Poi> by lazy {
+        listOfNotNull(
+            cz.uhk.macroflow.pokemon.BiomeRegistry.nodePos(cz.uhk.macroflow.pokemon.BiomeRegistry.MOUNTAINS_GRAPH, cz.uhk.macroflow.pokemon.cave.Smithy.DOOR_NODE)?.let {
+                Poi("MOUNTAINS", it, BitmapFactory.decodeResource(resources, cz.uhk.macroflow.R.drawable.forge_furnace_icon, BitmapFactory.Options().apply { inScaled = false }))
+            }
+        )
+    }
     var seen: Set<String> = setOf("TOWN")
         set(v) { field = v; invalidate() }
     var onPick: ((String) -> Unit)? = null
@@ -162,6 +172,20 @@ class ZoneMapView(context: Context, val zone: Int = 1) : View(context) {
             val st = state[n.biome]
             if (st != ZoneOne.Shown.KNOWN && st != ZoneOne.Shown.HERE) continue
             badge(canvas, n.pos.x, n.pos.y, 27f, n.head, ink)
+        }
+        // místa s ikonou (Stará kovárna): pec v papírovém kolečku, jen v objevené lokaci
+        for (p in pois) {
+            val st = state[p.biome]
+            if (st != ZoneOne.Shown.KNOWN && st != ZoneOne.Shown.HERE) continue
+            val loc = locs[p.biome] ?: continue
+            val px = loc.map[0] + p.frac.x * loc.map[1]
+            val py = loc.map[2] + p.frac.y * loc.map[3]
+            fill.color = paper; canvas.drawCircle(px, py, 22f, fill)
+            p.icon?.let {
+                val k = 36f / max(it.width, it.height)
+                canvas.drawBitmap(it, null, RectF(px - it.width * k / 2f, py - it.height * k / 2f, px + it.width * k / 2f, py + it.height * k / 2f), bmpPaint)
+            }
+            stroke.color = ink; stroke.strokeWidth = 4f; canvas.drawCircle(px, py, 22f, stroke)
         }
         // hráč
         val here = locs[current]

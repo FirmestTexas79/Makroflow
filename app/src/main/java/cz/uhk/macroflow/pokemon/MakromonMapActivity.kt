@@ -487,6 +487,47 @@ class MakromonMapActivity : AppCompatActivity() {
         startRestTimer()
         // AFK těžba / kácení: po návratu ukázat, co se za tu dobu udělalo (docs/adr/0035)
         mapWorld.postDelayed({ reportAfk() }, 700)
+        // návrat z Výhně: po přetavení se na podstavci objeví nová relikvie
+        if (currentBiome == BiomeType.SMITHY && worldScale > 0) placeSmithyRelics()
+    }
+
+    private val smithyRelicViews = mutableListOf<View>()
+
+    /**
+     * Relikvie na podstavcích ve Staré kovárně (docs/adr/0118): kolik přetavení, tolik relikvií – stejné sprity jako ve Výhni,
+     * ostře (celočíselný násobek), nad podstavcem se vznášejí a pod nimi dýchá záře v barvě relikvie.
+     */
+    private fun placeSmithyRelics() {
+        val ctx = applicationContext
+        lifecycleScope.launch {
+            val reborns = kotlinx.coroutines.withContext(Dispatchers.IO) { cz.uhk.macroflow.pokemon.forge.ForgeStore.load(ctx).reborns }
+            if (isFinishing || currentBiome != BiomeType.SMITHY || worldScale <= 0) return@launch
+            smithyRelicViews.forEach { v -> (v.parent as? ViewGroup)?.removeView(v); decorViews -= v }
+            smithyRelicViews.clear()
+            val s = worldScale.toFloat()
+            val px = kotlin.math.max(1, worldScale / 3)
+            val glowColors = intArrayOf(0xFFFF8A2A.toInt(), 0xFF5FE8F0.toInt(), 0xFFFFD25A.toInt())
+            cz.uhk.macroflow.pokemon.cave.Smithy.PEDESTALS.take(reborns.coerceAtMost(3)).forEachIndexed { i, (x, y) ->
+                val bmp = cz.uhk.macroflow.pokemon.forge.ForgeArt.relic(this@MakromonMapActivity, i)
+                val size = bmp.width * px
+                val glow = glowView((size * 1.1f).toInt(), glowColors[i], 0x77).apply {
+                    this.x = x * s - size * 0.55f; this.y = y * s - size * 0.55f - size * 0.35f; elevation = 1.9f
+                }
+                val relic = ImageView(this@MakromonMapActivity).apply {
+                    layoutParams = FrameLayout.LayoutParams(size, size)
+                    setImageDrawable(android.graphics.drawable.BitmapDrawable(resources, bmp).apply { isFilterBitmap = false })
+                    scaleType = ImageView.ScaleType.FIT_XY
+                    this.x = x * s - size / 2f; this.y = y * s - size + size * 0.12f; elevation = 2f
+                    contentDescription = cz.uhk.macroflow.pokemon.forge.Forge.Artifact.entries[i].label
+                }
+                addDecor(glow); addDecor(relic)
+                smithyRelicViews += glow; smithyRelicViews += relic
+                bob(relic, 2 * resources.displayMetrics.density, 2600L + i * 300L)
+                crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.35f, 0.9f, 0.35f).apply {
+                    duration = 2200; repeatCount = android.animation.ValueAnimator.INFINITE; startDelay = i * 400L; start()
+                }
+            }
+        }
     }
 
     /** Červená tečka na tlačítku Arény, když někdo vyzval tvého ducha (docs/adr/0081). */
@@ -1598,8 +1639,11 @@ class MakromonMapActivity : AppCompatActivity() {
                 currentBiome == BiomeType.TOWER_WATER -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.WATER)
                 currentBiome == BiomeType.TOWER_DORM -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.DORM)
                 // Stará kovárna (docs/adr/0118): kovář Magmor ostře z originálu (jako ostatní Makromoni na mapách), dívá se ke kovadlině
-                currentBiome == BiomeType.SMITHY -> if (worldScale > 0) placeMakromonNpc(R.drawable.makromon_47_magmor,
-                    cz.uhk.macroflow.pokemon.cave.Smithy.MAGMOR_X, cz.uhk.macroflow.pokemon.cave.Smithy.MAGMOR_Y, cz.uhk.macroflow.pokemon.cave.Smithy.NAME).apply { scaleX = -1f }
+                currentBiome == BiomeType.SMITHY -> if (worldScale > 0) {
+                    placeMakromonNpc(R.drawable.makromon_47_magmor,
+                        cz.uhk.macroflow.pokemon.cave.Smithy.MAGMOR_X, cz.uhk.macroflow.pokemon.cave.Smithy.MAGMOR_Y, cz.uhk.macroflow.pokemon.cave.Smithy.NAME).apply { scaleX = -1f }
+                    placeSmithyRelics()
+                }
                 currentBiome == BiomeType.TOWER_ICE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.ICE)
                 currentBiome == BiomeType.TOWER_FIRE -> if (worldScale > 0) addInteriorFx(cz.uhk.macroflow.pokemon.cave.InteriorFxView.FIRE)
                 currentBiome == BiomeType.TOWER_OFFICE -> if (worldScale > 0) addInteriorFx(if (StoryFlags.isSet(this@MakromonMapActivity, cz.uhk.macroflow.pokemon.story.TowerStory.OBJ019_KEY)) cz.uhk.macroflow.pokemon.cave.InteriorFxView.OFFICE_BURNED else cz.uhk.macroflow.pokemon.cave.InteriorFxView.OFFICE)
@@ -1694,6 +1738,9 @@ class MakromonMapActivity : AppCompatActivity() {
             val paper = pixelView(Insight.pageIcon(), Insight.ICON, Insight.ICON, paperSize, paperSize).apply {
                 x = cx - paperSize / 2f; y = cy - paperSize / 2f; elevation = 2.6f; rotation = -12f
             }
+            // klepnutí přímo na papír (nebo záři) – dřív šel list sebrat jen přes uzel, a u uzlů mimo klikatelné nešel vůbec
+            val pick = View.OnClickListener { triggerHotspotAction(page.node) }
+            glow.setOnClickListener(pick); paper.setOnClickListener(pick)
             addDecor(glow); addDecor(paper)
             bob(paper, 3 * d, 2400)
             crystalAnimators += android.animation.ObjectAnimator.ofFloat(glow, "alpha", 0.25f, 0.9f, 0.25f).apply {

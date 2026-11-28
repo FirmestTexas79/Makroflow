@@ -182,7 +182,7 @@ class ForgeActivity : AppCompatActivity() {
         if (!loaded) return
         if (!Forge.unlocked(st, up)) { Toast.makeText(this, "Zamčeno – vydělej ${Forge.format(Forge.UNLOCK[up.ordinal - 1])}.", Toast.LENGTH_SHORT).show(); return }
         val (next, n) = if (max) Forge.buyMax(st, up) else (Forge.buy(st, up)?.let { it to 1 } ?: (st to 0))
-        if (n == 0) { Toast.makeText(this, "Málo uhlíků – šlapej měch.", Toast.LENGTH_SHORT).show(); return }
+        if (n == 0) return                                   // málo uhlíků: cena je červená, hláška netřeba
         st = next
         if (max) Toast.makeText(this, "${up.label} +$n", Toast.LENGTH_SHORT).show()
         refresh()

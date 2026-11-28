@@ -34,11 +34,14 @@ NODES = {
     "kv_vstup": (88, 342), "kv_stred": (88, 238), "kv_magmor": (114, 190), "kv_vyhen": (40, 124),
     "kv_kovadlina": (76, 188), "kv_brus": (150, 200), "kv_stojan": (144, 268), "kv_ponk": (40, 258), "kv_police": (152, 122),
 }
+# Tři podstavce na relikvie z přetavení (střed, horní plocha) – aplikace na ně kreslí ukované relikvie (Smithy.PEDESTALS)
+PEDESTALS = [(100, 88), (116, 88), (132, 88)]
+NODES["kv_podstavce"] = (116, 124)
 # Kovář Magmor: pata spritu (aplikace ho kreslí přes mapu, tady se jen blokuje místo pod ním)
 MAGMOR_X, MAGMOR_Y = 116, 172
 EDGES = [("kv_vstup", "kv_stred"), ("kv_stred", "kv_magmor"), ("kv_stred", "kv_kovadlina"), ("kv_kovadlina", "kv_vyhen"),
          ("kv_stred", "kv_brus"), ("kv_stred", "kv_stojan"), ("kv_stred", "kv_ponk"), ("kv_magmor", "kv_police"),
-         ("kv_brus", "kv_police"), ("kv_magmor", "kv_vyhen")]
+         ("kv_brus", "kv_police"), ("kv_magmor", "kv_vyhen"), ("kv_magmor", "kv_podstavce")]
 
 img = np.zeros((AH, AW, 4), np.uint8); img[:, :, 3] = 255
 block = np.zeros((AH, AW), bool)
@@ -69,7 +72,45 @@ FURNACE = from_forge(gen_forge.furnace_mini(46, 56))
 forge = place(FURNACE, 40, 110, foot=(42, 16))
 place(P.bellows(26, 22), 80, 108, foot=(24, 7))
 place(P.potion_shelf(26, 32), 152, 104, foot=(26, 7))
-place(P.log_pile(24, 13), 120, 108, foot=(22, 6))
+
+
+def pedestal():
+    """Kamenný podstavec 12 × 18: deska se zlatou obrubou a prázdným lůžkem, štíhlý dřík s rýhami, rozšířená pata."""
+    s_ = Spr(12, 18); a = s_.a
+    ST = [np.array(c, np.uint8) for c in ((58, 54, 60), (92, 88, 96), (128, 124, 132), (170, 166, 172), (206, 202, 206))]
+    GOLD = [np.array(c, np.uint8) for c in ((120, 76, 18), (198, 140, 34), (246, 202, 86))]
+    def put(x, y, c):
+        a[y, x, :3] = c; a[y, x, 3] = 255
+    for x in range(12):                                     # horní deska (pohled shora – vidět plocha)
+        for y in range(0, 4):
+            c = ST[4] if y == 0 else ST[3] if x < 6 else ST[2]
+            if y == 3: c = GOLD[1] if x % 3 else GOLD[2]
+            put(x, y, c)
+    for x in range(4, 8): put(x, 1, ST[1])                  # lůžko pro relikvii
+    put(5, 1, (60, 40, 30)); put(6, 1, (60, 40, 30))
+    for y in range(4, 14):                                  # dřík
+        for x in range(3, 9):
+            c = ST[3] if x < 5 else ST[2] if x < 7 else ST[1]
+            if x in (4, 6) and 5 < y < 13: c = ST[1]          # rýhy
+            put(x, y, c)
+    for y in range(14, 18):                                 # pata
+        for x in range(1 if y > 14 else 2, 11 if y > 14 else 10):
+            c = ST[3] if x < 6 else ST[2]
+            if y == 14: c = GOLD[1]
+            if y == 17: c = ST[0]
+            put(x, y, c)
+    for y in range(18):
+        for x in range(12):
+            if a[y, x, 3]: continue
+            if any(0 <= x + dx < 12 and 0 <= y + dy < 18 and a[y + dy, x + dx, 3] == 255 and tuple(a[y + dy, x + dx, :3]) != (22, 14, 18)
+                   for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                a[y, x, :3] = (22, 14, 18); a[y, x, 3] = 254
+    a[a[:, :, 3] == 254, 3] = 255
+    return s_
+
+
+for (px_, py_) in PEDESTALS:
+    place(pedestal(), px_, py_ + 18, foot=(10, 5))
 anvil = place(P.anvil_stump(20, 20), 76, 176, foot=(16, 7))
 place(P.quench_tub(18, 13), 48, 178, foot=(16, 6))
 block[MAGMOR_Y - 7:MAGMOR_Y, MAGMOR_X - 10:MAGMOR_X + 10] = True

@@ -72,3 +72,9 @@ ingoty, sudy, bedny. Magmor už není zapečený do obrázku (Lanczos ho rozmaza
 (`placeMakromonNpc`, jako Gudwin nebo Drakirra), pata v `Smithy.MAGMOR_X/Y`.
 - Výheň: tlačítko přetavení je jen pod pecí (šířka pece, popisek se zmenší, když se nevejde), relikvie nad ním; panel
   relikvie roste podle délky textu.
+
+**Podstavce s relikviemi, ikona na mapě.** Ve Staré kovárně stojí vedle pece tři kamenné podstavce se zlatou obrubou
+(`gen_smithy.py: PEDESTALS`, uzel `kv_podstavce` s textem). Kolik přetavení, tolik relikvií: aplikace je na podstavce staví
+ze stejných spritů jako Výheň (`placeSmithyRelics`, celočíselný násobek, vznášejí se a pod nimi dýchá záře v barvě relikvie);
+obnoví se i po návratu z Výhně. Na mapě zóny je u kovárny v Horách ikona pece (`forge_furnace_icon.png` = `furnace_mini(24, 28)`).
+Výheň už při nedostatku uhlíků nic nehlásí (cena je červená).
